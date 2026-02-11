@@ -1,0 +1,33 @@
+RewriteEngine On
+
+# ========================================
+# CUSTOM ERROR PAGES (auto-redirect)
+# ========================================
+# If page doesn't exist -> redirect to 404 page
+ErrorDocument 404 /makueni-west/errors/404
+
+# If access denied -> redirect to 403 page  
+ErrorDocument 403 /makueni-west/errors/403
+
+# If server error -> redirect to 500 page
+ErrorDocument 500 /makueni-west/errors/500
+
+# ========================================
+# REMOVE .php FROM URL BAR
+# ========================================
+# If someone types .php, redirect to remove it
+RewriteCond %{THE_REQUEST} \.php
+RewriteRule ^(.*)\.php$ /$1 [R=301,L]
+
+# ========================================
+# ADD .php TO FILES (GLOBAL RULE)
+# ========================================
+# Automatically add .php to ALL pages
+# /diocese/dashboard/compliance -> /diocese/dashboard/compliance.php
+# /profile -> /profile.php
+# /errors/404 -> /errors/404.php
+
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.*)$ $1.php [L]

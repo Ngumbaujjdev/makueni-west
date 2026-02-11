@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+        <testsuite name="Diocese">
+            <directory>tests/Feature/Diocese</directory>
+        </testsuite>
+        <testsuite name="Financial">
+            <directory>tests/Feature/Financial</directory>
+        </testsuite>
+        <testsuite name="Demographics">
+            <directory>tests/Feature/Demographics</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+        <exclude>
+            <directory>app/Console</directory>
+            <file>app/Http/Kernel.php</file>
+        </exclude>
+    </source>
+    <php>
+        <!-- Application Environment -->
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_NAME" value="Makueni-West-Diocese-Test"/>
+        <env name="APP_KEY" value="base64:test-key-for-diocese-testing"/>
+        <env name="APP_DEBUG" value="true"/>
+        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+
+        <!-- Performance -->
+        <env name="BCRYPT_ROUNDS" value="4"/>
+
+        <!-- Broadcasting & Communication -->
+        <env name="BROADCAST_CONNECTION" value="null"/>
+        <env name="MAIL_MAILER" value="array"/>
+        <env name="SMS_SERVICE_URL" value="mock"/>
+
+        <!-- Cache & Sessions -->
+        <env name="CACHE_STORE" value="array"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+
+        <!-- Database Configuration -->
+        <env name="DB_CONNECTION" value="mysql_test"/>
+        <env name="DB_HOST" value="127.0.0.1"/>
+        <env name="DB_PORT" value="3307"/>
+        <env name="DB_DATABASE" value="makueni_west_diocese_test"/>
+        <env name="DB_USERNAME" value="root"/>
+        <env name="DB_PASSWORD" value=""/>
+
+        <!-- Redis Configuration for Testing -->
+        <env name="REDIS_HOST" value="127.0.0.1"/>
+        <env name="REDIS_PORT" value="6379"/>
+        <env name="REDIS_DB" value="15"/>
+        <env name="REDIS_CACHE_DB" value="14"/>
+        <env name="REDIS_SESSION_DB" value="13"/>
+        <env name="REDIS_QUEUE_DB" value="12"/>
+
+        <!-- Disable Monitoring Tools -->
+        <env name="PULSE_ENABLED" value="false"/>
+        <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="ACTIVITY_LOGGER_ENABLED" value="false"/>
+
+        <!-- Diocese Specific Testing -->
+        <env name="DIOCESE_NAME" value="Test Diocese"/>
+        <env name="DIOCESE_TIMEZONE" value="Africa/Nairobi"/>
+        <env name="DIOCESE_CURRENCY" value="KES"/>
+        <env name="DEFAULT_TITHE_PERCENTAGE" value="10"/>
+
+        <!-- Security Testing -->
+        <env name="SANCTUM_STATEFUL_DOMAINS" value="localhost"/>
+        <env name="SESSION_SECURE_COOKIE" value="false"/>
+
+        <!-- File Testing -->
+        <env name="FILESYSTEM_DISK" value="local"/>
+        <env name="MAX_UPLOAD_SIZE" value="1024"/>
+        <env name="ALLOWED_FILE_TYPES" value="pdf,jpg,png"/>
+
+        <!-- Notification Testing -->
+        <env name="BACKUP_NOTIFICATION_EMAIL" value="test@diocese.test"/>
+        <env name="MAIL_FROM_ADDRESS" value="test@diocese.test"/>
+        <env name="MAIL_FROM_NAME" value="Test Diocese"/>
+    </php>
+</phpunit>

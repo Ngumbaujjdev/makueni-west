@@ -1,0 +1,4095 @@
+MAKUENI WEST DIOCESE MANAGEMENT SYSTEM
+Comprehensive Module Specification Document
+
+TABLE OF CONTENTS
+1.Authentication & User Access
+2.System Setup & Configuration (Super Admin)
+3.Diocese Portal Modules
+4.Regional Portal Modules
+5.Subregion Portal Modules
+6.Church Portal Modules
+7.Shared Modules (Cross-Level Access)
+
+1. AUTHENTICATION & USER ACCESS
+
+Login (/auth/login)
+Purpose: Secure authentication for all organizational levels
+Contents:
+Email or phone number input field
+Password input with show/hide toggle
+Role-based automatic redirection after successful login
+"Remember me" checkbox for persistent sessions
+"Forgot password" link
+Multi-factor authentication (SMS OTP) for sensitive roles
+Login attempt tracking and account lockout after failed attempts
+Session timeout settings
+Last login timestamp display
+Device fingerprinting for security
+Support for multiple active sessions across devices
+
+User Registration (/auth/register)
+Purpose: New user account creation with approval workflow
+Contents:
+Personal information form (full name, phone, email, ID number)
+Organization selection dropdown (Diocese/Region/Subregion/Church)
+Specific organization selection based on type
+Role request selection (Pastor, Council Member, Overseer, etc.)
+Password creation with strength indicator
+Password confirmation field
+Email verification via OTP
+Phone verification via SMS OTP
+Terms and conditions acceptance checkbox
+Data privacy policy acknowledgment
+Profile photo upload (optional)
+Pending approval notification
+Admin notification for approval queue
+Registration confirmation email/SMS
+
+Password Reset (/auth/password-reset)
+Purpose: Secure password recovery process
+Contents:
+Email or phone number input for account identification
+Identity verification via OTP
+OTP delivery method selection (SMS/Email)
+OTP input field with resend option
+OTP expiration timer (10 minutes)
+New password creation field
+Password strength requirements display
+Password confirmation field
+Security question verification (optional)
+Success notification with auto-redirect to login
+Password reset confirmation email/SMS
+
+Two-Factor Authentication Setup (/auth/2fa-setup)
+Purpose: Enhanced security for user accounts
+Contents:
+2FA activation toggle
+Authentication method selection (SMS/Email/Authenticator App)
+Phone number verification for SMS
+QR code generation for authenticator apps
+Backup codes generation and download
+Test 2FA functionality before activation
+2FA status indicator
+Trusted devices management
+2FA deactivation process with identity verification
+
+Session Management (/auth/sessions)
+Purpose: Manage active user sessions across devices
+Contents:
+List of active sessions with device information
+Last activity timestamp per session
+IP address and location per session
+Browser/device type identification
+Current session indicator
+Terminate session functionality
+"Logout all other devices" option
+Session history log (last 30 days)
+Suspicious activity alerts
+
+2. SYSTEM SETUP & CONFIGURATION
+(Super Admin / Diocese Council Only)
+
+Initial Diocese Setup (/setup/diocese/initial)
+Purpose: First-time diocese system configuration
+Contents:
+Diocese official name
+Diocese acronym/short name
+Bishop information (name, contact, photo)
+Diocese establishment date
+Diocese headquarters address
+Physical location coordinates (for mapping)
+Diocese phone numbers (office, emergency)
+Diocese email addresses (official, support)
+Diocese website URL
+Diocese logo upload (multiple sizes)
+Diocese letterhead template upload
+Diocese motto/vision statement
+Diocese mission statement
+Primary contact person details
+Timezone selection
+Primary currency selection
+Secondary currencies (if applicable)
+Fiscal year start month
+Language preferences
+Date format preferences (DD/MM/YYYY or MM/DD/YYYY)
+
+Region Management (/setup/regions)
+Purpose: Create and manage regional divisions
+Contents:
+Add new region button
+Region creation form: 
+oRegion name
+oRegion code/identifier
+oGeographic coverage description
+oHas subregions flag (YES/NO)
+oRegional overseer assignment (searchable dropdown)
+oRegional overseer contact details
+oRegion office address (if applicable)
+oRegion phone number
+oRegion email address
+oRegion establishment date
+oRegion status (Active/Inactive)
+List of all regions (table view): 
+oRegion name and code
+oRegional overseer name
+oNumber of subregions (if applicable)
+oNumber of churches under region
+oTotal members in region
+oRegion status
+oAction buttons (View/Edit/Delete)
+Region details view: 
+oFull region information
+oSubregions list (if has_subregions = TRUE)
+oChurches list (if has_subregions = FALSE)
+oRegion statistics dashboard
+oRegion performance metrics
+Edit region functionality
+Delete region (with confirmation and validation)
+Bulk region import from CSV/Excel
+Region export functionality
+Region hierarchy visualization (tree view)
+
+Subregion Management (/setup/subregions)
+Purpose: Create and manage subregional divisions
+Contents:
+Filter by region dropdown
+Add new subregion button
+Subregion creation form: 
+oParent region selection (dropdown)
+oSubregion name
+oSubregion code/identifier
+oGeographic coverage description
+oSubregion overseer assignment
+oSubregion overseer contact details
+oSubregion office address (if applicable)
+oSubregion phone number
+oSubregion email address
+oSubregion establishment date
+oSubregion status (Active/Inactive)
+List of all subregions (table view): 
+oSubregion name and code
+oParent region name
+oSubregion overseer name
+oNumber of churches
+oTotal members
+oStatus
+oAction buttons (View/Edit/Delete)
+Subregion details view: 
+oFull subregion information
+oChurches under this subregion
+oSubregion statistics
+oPerformance metrics
+Edit subregion functionality
+Delete subregion (with validation)
+Transfer subregion to different region
+Bulk subregion import
+Subregion export functionality
+
+Church Registration (/setup/churches)
+Purpose: Register and manage all churches in diocese
+Contents:
+Add new church button
+Church registration form: 
+oChurch full name
+oChurch acronym/short name
+oChurch code/identifier (auto-generated or manual)
+oRegion selection (dropdown)
+oSubregion selection (conditional - only if region has subregions)
+oParent organization determination (automatic based on structure)
+oPastor assignment (searchable dropdown of pastors)
+oPastor contact details
+oChurch physical address
+oChurch GPS coordinates (for mapping)
+oChurch phone numbers
+oChurch email address
+oChurch establishment date
+oChurch registration date in diocese
+oChurch building ownership status (Owned/Rented/Borrowed)
+oChurch capacity (seating)
+oChurch status (Active/Inactive/Under Construction)
+oService times configuration: 
+Sunday service times (multiple services)
+Midweek service times
+Prayer meeting times
+Other regular services
+List of all churches (table/grid view): 
+oChurch name and code
+oRegion and subregion (if applicable)
+oPastor name
+oTotal members
+oChurch status
+oTithe compliance status
+oLast report submitted date
+oAction buttons (View/Edit/Delete/Transfer)
+Church details view: 
+oFull church information
+oDemographics summary
+oFinancial summary
+oRecent activities
+oCompliance status
+oPerformance metrics
+Edit church functionality
+Transfer church to different subregion/region
+Church status management (activate/deactivate)
+Bulk church import from CSV/Excel
+Church export functionality
+Church location map view (all churches plotted)
+Church search and advanced filtering: 
+oBy region/subregion
+oBy pastor name
+oBy establishment date
+oBy status
+oBy compliance status
+
+User Management (/setup/users)
+Purpose: Manage all system users across all levels
+Contents:
+Add new user button
+User creation form: 
+oFull name
+oEmail address
+oPhone number
+oNational ID number
+oOrganization type (Diocese/Region/Subregion/Church)
+oSpecific organization selection
+oRole assignment (dropdown)
+oMultiple role assignment capability
+oInitial password setup
+oAccount status (Active/Inactive/Suspended)
+oProfile photo upload
+oEmployment start date
+oEmployment status
+List of all users (table view): 
+oUser name and photo
+oEmail and phone
+oOrganization name and type
+oRole(s)
+oAccount status
+oLast login timestamp
+oAction buttons (View/Edit/Delete/Suspend/Reset Password)
+User profile view: 
+oComplete user information
+oOrganization details
+oRole and permissions summary
+oActivity log (recent actions)
+oLogin history
+oAssigned permissions list
+Edit user functionality
+User role modification
+User transfer to different organization
+User account suspension
+User account deletion (with audit trail)
+Password reset functionality
+Bulk user import from CSV
+User export functionality
+User search and filtering: 
+oBy organization
+oBy role
+oBy status
+oBy last login
+oBy name/email/phone
+
+Roles & Permissions (/setup/roles)
+Purpose: Define and manage system access control
+Contents:
+Pre-defined system roles list: 
+oSuper Admin (Diocese Council)
+oDiocese Administrator
+oRegional Overseer
+oRegional Team Member
+oSubregion Overseer
+oSubregion Team Member
+oPastor (Church Admin)
+oChurch Council Member
+oChurch Secretary
+oChurch Treasurer
+oChurch Youth Leader
+oView-Only User
+Add custom role button
+Role creation/edit form: 
+oRole name
+oRole description
+oOrganization level (Diocese/Region/Subregion/Church/All)
+oRole status (Active/Inactive)
+Permission matrix (table view): 
+oModules listed in rows
+oPermissions in columns (View/Create/Edit/Delete/Approve)
+oCheckboxes for each permission per module
+o"Select All" functionality per module
+Module categories for permissions: 
+oDashboard & Analytics
+oDemographics Management
+oFinancial Management (Tithe, Budget, Allocation, Income, Expenses)
+oInitiatives Management
+oEvents Management
+oCommunications
+oReports & Analytics
+oUser Management
+oSystem Settings
+Permission inheritance visualization (how permissions flow)
+Role assignment history
+Users per role count
+Role analytics (most used permissions)
+Clone role functionality
+Export role configuration
+Permission testing tool (test what a role can see/do)
+
+Compliance Requirements Configuration (/setup/compliance)
+Purpose: Set mandatory reporting and data submission rules
+Contents:
+Compliance rules dashboard: 
+oActive compliance rules count
+oChurches in compliance percentage
+oRecent compliance violations
+Add new compliance rule button
+Compliance rule creation form: 
+oRule name
+oRule description
+oRule category (Demographics/Financial/Events/Other)
+oRequired data fields (multi-select): 
+Total members count
+Youth count
+Women's fellowship count
+Men's fellowship count
+Baptisms this month
+Communion participation
+New conversions
+Monthly income
+Tithe payment
+Expense summary
+oSubmission frequency (Monthly/Quarterly/Annually)
+oSubmission deadline (day of month)
+oGrace period (days after deadline)
+oApplies to (All Churches/Specific Region/Specific Subregion)
+oRule status (Active/Inactive)
+oConsequence of non-compliance (Alert Only/Escalation/Report to Bishop)
+Validation rules configuration: 
+oData type validation
+oRange validation (min/max values)
+oCross-field validation (e.g., youth count ≤ total members)
+oMandatory field indicators
+Automatic reminder settings: 
+oReminder schedule (days before deadline)
+oReminder method (SMS/Email/Both)
+oReminder recipients (Pastor/Church Council/Overseer)
+oEscalation reminders for overdue submissions
+Compliance exceptions management: 
+oRequest exception functionality
+oException approval workflow
+oTemporary exemption reasons
+oException expiration dates
+Compliance reporting: 
+oCompliance rate by church
+oCompliance rate by region/subregion
+oCompliance trends over time
+oNon-compliant churches list
+oExport compliance reports
+
+Financial Configuration (/setup/financial)
+Purpose: Configure financial rules and parameters
+Contents:
+Tithe configuration: 
+oDefault tithe percentage (e.g., 10%)
+oTithe calculation method (Gross Income/Net Income)
+oTithe payment deadline (day of month)
+oGrace period for late payments
+oLate payment penalties (if any)
+oTithe exemption rules
+Budget cycle configuration: 
+oFiscal year start month
+oBudget approval workflow
+oBudget revision periods
+oBudget reporting frequency
+Allocation configuration: 
+oAllocation categories (Pastoral Support/Building/Training/Emergency)
+oAllocation approval thresholds
+oAllocation request workflow
+oAllocation criteria setup
+oAllocation formula builder (based on members, income, location, etc.)
+Financial reporting configuration: 
+oRequired financial reports
+oFinancial report submission deadlines
+oFinancial report approval workflow
+oFinancial statement templates
+Expense categories: 
+oChurch-level expense categories
+oSubregion-level expense categories
+oRegional-level expense categories
+oDiocese-level expense categories
+oAdd/edit/delete expense categories
+Income categories: 
+oOffering types (Sunday, Midweek, Special)
+oFundraising categories
+oDonation categories
+oOther income sources
+oAdd/edit/delete income categories
+Currency and exchange rate settings: 
+oSupported currencies list
+oManual exchange rate entry
+oExchange rate update frequency
+oDefault currency per region/store
+oMulti-currency transaction handling
+
+Communication Settings (/setup/communication)
+Purpose: Configure SMS and email communication
+Contents:
+SMS gateway configuration: 
+oSMS provider selection
+oAPI credentials setup
+oSender ID configuration
+oSMS balance monitoring
+oSMS pricing per message
+oSMS delivery reports
+Email configuration: 
+oSMTP server settings
+oSender email address
+oEmail display name
+oEmail signature template
+oEmail delivery tracking
+Message templates: 
+oCompliance reminder template
+oTithe reminder template
+oEvent invitation template
+oReport approval template
+oGeneral announcement template
+oCustom template builder
+oTemplate variables (dynamic fields)
+oTemplate preview functionality
+Communication rules: 
+oMessage scheduling options
+oBulk messaging limits
+oOpt-out management
+oSpam prevention rules
+oMessage priority levels
+Notification preferences: 
+oDefault notification methods per role
+oNotification frequency settings
+oQuiet hours configuration
+oEmergency notification bypass
+Communication logs: 
+oAll sent messages log
+oDelivery status tracking
+oFailed message retry mechanism
+oMessage cost tracking
+
+3. DIOCESE PORTAL MODULES
+
+Diocese Dashboard (/diocese/dashboard)
+Purpose: Comprehensive overview of entire diocese operations
+Contents:
+Key metrics cards: 
+oTotal churches count
+oTotal members across diocese
+oTotal youth count
+oTotal women's fellowship count
+oTotal men's fellowship count
+oTotal tithe collected this month
+oTotal baptisms this month
+oTotal new conversions this month
+oActive initiatives count
+oUpcoming events count
+Diocese-wide trends chart: 
+oMembership growth trend (last 12 months)
+oFinancial collection trend
+oBaptism trend
+oConversion trend
+Regional comparison chart: 
+oMembers by region (bar chart)
+oTithe collection by region
+oGrowth rate by region
+Compliance dashboard: 
+oChurches compliant with demographics reporting
+oChurches compliant with financial reporting
+oOverdue reports count
+oChurches requiring attention
+Recent activities feed: 
+oRecent reports submitted
+oRecent tithe payments
+oRecent initiatives created
+oRecent events scheduled
+oRecent compliance alerts
+Quick actions: 
+oCreate new initiative
+oCreate new event
+oSend diocese-wide announcement
+oGenerate comprehensive report
+oView all non-compliant churches
+Diocese calendar: 
+oUpcoming events
+oImportant deadlines
+oScheduled meetings
+Financial summary: 
+oTotal income this month (tithe + other)
+oTotal expenses this month
+oNet position
+oBudget utilization percentage
+Map view: 
+oAll churches plotted on map
+oColor-coded by compliance status
+oClick to view church details
+
+All Churches Overview (/diocese/churches/all)
+Purpose: View and analyze all churches in diocese
+Contents:
+Summary statistics: 
+oTotal churches count
+oActive churches count
+oChurches by region breakdown
+oChurches by subregion breakdown
+oAverage church size
+oTotal diocese membership
+Church list (table view): 
+oChurch name and code
+oRegion and subregion
+oPastor name
+oTotal members
+oYouth count
+oLast report date
+oTithe status (Paid/Pending/Overdue)
+oCompliance status (Compliant/Non-compliant)
+oAction button (View Details)
+Advanced search and filtering: 
+oFilter by region
+oFilter by subregion
+oFilter by compliance status
+oFilter by tithe status
+oFilter by membership size
+oSearch by church name
+oSearch by pastor name
+Sorting options: 
+oSort by name
+oSort by membership size
+oSort by tithe amount
+oSort by growth rate
+oSort by compliance score
+Bulk actions: 
+oSend message to selected churches
+oExport selected churches data
+oGenerate comparison report
+Church comparison tool: 
+oSelect multiple churches
+oCompare demographics
+oCompare financials
+oCompare growth trends
+oCompare initiative participation
+Map view of all churches
+Grid view / List view toggle
+Export all churches data (CSV/Excel/PDF)
+Print churches directory
+
+Individual Church Details (/diocese/churches/{church_id})
+Purpose: Detailed view of specific church (Read-Only for Diocese)
+Contents:
+Church basic information: 
+oChurch name and code
+oRegion and subregion
+oPastor name and photo
+oChurch address
+oChurch contact details
+oEstablishment date
+oBuilding ownership status
+oService times
+oChurch status
+Demographics dashboard: 
+oTotal members (current + trend)
+oYouth count (current + trend)
+oWomen's fellowship count (current + trend)
+oMen's fellowship count (current + trend)
+oSunday school enrollment
+oAge distribution chart
+oGender distribution chart
+oMembership growth chart (last 12 months)
+Spiritual activities: 
+oBaptisms (monthly count + trend)
+oCommunion participation (monthly + trend)
+oNew conversions (monthly + trend)
+oMember transfers in/out
+Financial summary: 
+oMonthly income (last 12 months chart)
+oAverage monthly income
+oTithe payment history (table)
+oTithe compliance percentage
+oOutstanding tithe amount (if any)
+oFinancial health indicator
+Initiatives participation: 
+oDiocese initiatives this church participated in
+oRegional initiatives participated in
+oSubregion initiatives participated in
+oChurch's own initiatives list
+oParticipation rate analysis
+Events attendance: 
+oDiocese events attended
+oRegional events attended
+oSubregion events attended
+oChurch-hosted events
+oAverage attendance analysis
+Compliance status: 
+oDemographics reporting compliance
+oFinancial reporting compliance
+oOverdue reports list
+oCompliance score (percentage)
+oCompliance trend (improving/declining)
+Recent reports submitted: 
+oMonthly reports list (last 6 months)
+oView submitted reports
+oDownload reports
+Church council members: 
+oPastor information
+oSecretary information
+oTreasurer information
+oOther council members
+Communication history: 
+oMessages sent to this church
+oMessages from this church
+oLast contact date
+Quick actions for diocese: 
+oSend message to church
+oSend message to pastor
+oView full financial history
+oExport church data
+oFlag for attention
+oAdd notes about church
+Church performance score: 
+oOverall performance rating
+oGrowth score
+oFinancial health score
+oCompliance score
+oEngagement score
+
+Demographics Analytics (/diocese/analytics/demographics)
+Purpose: Diocese-wide demographic analysis and insights
+Contents:
+Overall demographics summary: 
+oTotal members across diocese
+oTotal youth
+oTotal women's fellowship
+oTotal men's fellowship
+oTotal Sunday school enrollment
+oAverage church size
+Demographic breakdown charts: 
+oMembers by region (bar chart)
+oMembers by subregion (grouped bar chart)
+oAge distribution across diocese (pie chart)
+oGender distribution (pie chart)
+Growth analysis: 
+oMembership growth rate (month-over-month)
+oMembership growth rate (year-over-year)
+oGrowth by region comparison
+oFastest growing churches (top 10)
+oDeclining churches (bottom 10)
+oNew conversions trend (last 12 months)
+oBaptism trend (last 12 months)
+Comparative analysis: 
+oCompare demographics across regions
+oCompare youth participation rates
+oCompare women/men fellowship ratios
+oCompare Sunday school enrollment rates
+Demographic forecasting: 
+oProjected membership next quarter
+oProjected youth growth
+oSeasonal trend analysis
+Demographic heatmap: 
+oGeographic distribution of members
+oMember density by area
+oGrowth hotspots identification
+Export options: 
+oExport demographic reports (PDF/Excel)
+oExport charts and visualizations
+oSchedule automatic demographic reports
+Filter options: 
+oFilter by date range
+oFilter by region/subregion
+oFilter by church size
+oFilter by growth rate
+
+Tithe Management (/diocese/financial/tithe)
+Purpose: Monitor and manage tithe collections from all churches
+Contents:
+Tithe overview dashboard: 
+oTotal tithe collected this month
+oTotal tithe expected this month
+oCollection rate percentage
+oOutstanding tithe amount
+oTithe collected year-to-date
+oComparison to previous month
+oComparison to previous year
+Tithe collection by region: 
+oRegion-wise collection table
+oCollection rate by region
+oOutstanding by region
+oRegional trends chart
+Church tithe compliance: 
+oChurches that paid on time (count)
+oChurches that paid late (count)
+oChurches with outstanding tithe (count)
+oCompliance rate trend (last 12 months)
+Church tithe list (table view): 
+oChurch name
+oRegion/Subregion
+oReported monthly income
+oTithe percentage
+oTithe amount due
+oTithe amount paid
+oPayment date
+oPayment status (Paid/Pending/Overdue/Partial)
+oDays overdue (if applicable)
+oAction button (View Details/Send Reminder)
+Search and filter: 
+oFilter by region/subregion
+oFilter by payment status
+oFilter by date range
+oSearch by church name
+Individual church tithe details: 
+oChurch name and info
+oMonthly income breakdown
+oTithe calculation details
+oPayment history (last 12 months)
+oAverage monthly tithe
+oPayment punctuality score
+Tithe payment recording: 
+oRecord tithe payment for church
+oPayment amount input
+oPayment date selection
+oPayment method (Bank Transfer/Cash/Mobile Money)
+oPayment reference number
+oPayment receipt upload
+oPartial payment handling
+Tithe reminders: 
+oSend reminder to specific church
+oSend bulk reminders to overdue churches
+oView reminder history
+oSchedule automatic reminders
+Tithe analytics: 
+oTithe collection trends (line chart)
+oBest performing churches (by compliance)
+oChurches requiring follow-up
+oSeasonal tithe patterns
+oTithe forecast for next month
+Tithe reports generation: 
+oMonthly tithe collection report
+oQuarterly tithe summary
+oAnnual tithe report
+oCompliance report
+oExport to Excel/PDF
+oSchedule automatic report delivery
+
+Diocese Budget Management (/diocese/financial/budget)
+Purpose: Manage diocese master budget and allocations
+Contents:
+Budget overview dashboard: 
+oCurrent fiscal year
+oTotal approved budget
+oBudget spent to date
+oBudget remaining
+oBudget utilization percentage
+oBudget vs actual comparison
+Budget categories: 
+oDiocese operations
+oBishop's office
+oDiocese staff salaries
+oDiocese programs and events
+oAllocations to regions
+oDiocese building/rent
+oAdministrative costs
+oTraining and development
+oEmergency fund
+oMissions and outreach
+oCapital projects
+oOther expenses
+Create/Edit annual budget: 
+oFiscal year selection
+oBudget start and end date
+oCategory-wise budget allocation
+oBudget amount per category
+oBudget justification/notes
+oBudget approval workflow
+oBudget revision history
+Budget allocation planning: 
+oPlanned allocations to regions
+oAllocation by category (pastoral support, building, training, etc.)
+oAllocation amounts and recipients
+oAllocation schedule (quarterly/annually)
+Budget tracking: 
+oActual expenses vs budgeted (by category)
+oVariance analysis (over/under budget)
+oBudget burn rate
+oProjected year-end position
+oCategory-wise spending chart
+Budget approval workflow: 
+oSubmit budget for approval
+oDiocese council approval
+oBishop approval
+oBudget status tracking
+oApproval history
+Budget adjustments: 
+oMid-year budget revisions
+oCategory reallocation
+oAdjustment justifications
+oAdjustment approval workflow
+Budget comparison: 
+oCompare current year to previous years
+oCompare planned vs actual spending
+oYear-over-year budget growth
+Budget reports: 
+oBudget summary report
+oBudget variance report
+oCategory-wise spending report
+oBudget vs actual detailed report
+oExport to Excel/PDF
+oPrint budget documents
+
+Resource Allocation Management (/diocese/financial/allocations)
+Purpose: Manage distribution of funds from diocese to lower levels
+Contents:
+Allocations dashboard: 
+oTotal allocated this year
+oTotal allocation budget
+oAllocations by category (pie chart)
+oAllocations by region (bar chart)
+oPending allocation requests count
+oApproved allocations count
+Allocation categories: 
+oGeneral allocations to regions
+oPastoral support program
+oChurch building support
+oTraining and equipment
+oEmergency assistance
+oConference/event sponsorship
+oMinistry development
+oOutreach and missions
+Create new allocation program: 
+oProgram name
+oProgram description
+oAllocation category
+oTotal budget available
+oEligibility criteria
+oAllocation formula setup: 
+Based on church size (members count)
+Based on church income level
+Based on church location (rural/urban)
+Based on church age
+Based on initiative participation
+Custom formula builder
+oApplication process (Open Application vs Direct Allocation)
+oApplication deadline (if applicable)
+oAllocation distribution method
+oProgram start and end date
+oProgram approval status
+Calculate allocations: 
+oAuto-calculate based on formula
+oPreview allocation amounts per church
+oAdjust allocations manually if needed
+oGenerate allocation list
+Allocation approval workflow: 
+oSubmit allocation program for approval
+oDiocese council review
+oBishop approval
+oApproval status tracking
+Disbursement management: 
+oApprove disbursement to regions
+oRegions disburse to subregions
+oSubregions disburse to churches
+oDisbursement status tracking
+oPayment method selection
+oPayment reference recording
+oDisbursement receipt upload
+Allocation requests: 
+oView incoming requests from churches/regions
+oRequest details (church, amount, purpose, justification)
+oSupporting documents
+oRequest evaluation
+oApprove/reject requests
+oRequest approval workflow
+oCommunication with requestor
+Allocation utilization tracking: 
+oChurches submit utilization reports
+oView how allocations were used
+oCompare intended use vs actual use
+oFlag misuse of allocations
+oRequire supporting documents (receipts, photos)
+oUtilization compliance rate
+Allocation history: 
+oAll past allocation programs
+oHistorical allocation amounts
+oRecipients list per program
+oUtilization reports archive
+Allocation analytics: 
+oAllocation effectiveness analysis
+oCorrelation between allocations and church growth
+oMost effective allocation categories
+oROI analysis per program
+oChurches benefiting most/least
+oGeographic allocation distribution
+Allocation reports: 
+oAllocation summary report
+oAllocation by region/subregion report
+oAllocation utilization report
+oAllocation impact report
+oExport to Excel/PDF
+oSchedule automatic reports
+
+Diocese Income Tracking (/diocese/financial/income)
+Purpose: Track all income sources for diocese operations
+Contents:
+Income dashboard: 
+oTotal income this month
+oTotal income this year
+oIncome by source (pie chart)
+oIncome trend (last 12 months line chart)
+oComparison to previous month
+oComparison to previous year
+oProjected income next month
+Income sources: 
+oTithe from churches (main source)
+oDonations to diocese
+oGrants from external organizations
+oDiocese fundraising events
+oDiocese investments returns
+oConference registration fees
+oProperty rental income
+oOther income sources
+Record new income: 
+oIncome date
+oIncome source selection
+oIncome amount
+oCurrency selection
+oPayment method (Bank Transfer/Cash/Mobile Money/Cheque)
+oPayment reference number
+oPayer information
+oIncome category/subcategory
+oIncome description/notes
+oReceipt upload
+oRecord entry
+Income breakdown by source: 
+oTithe income (auto-populated from tithe module)
+oDonations list (donor names optional for privacy)
+oGrants received
+oFundraising income
+oInvestment returns
+oOther income detailed
+Income search and filter: 
+oFilter by date range
+oFilter by income source
+oFilter by amount range
+oFilter by payment method
+oSearch by reference number
+Income analytics: 
+oIncome sources contribution percentage
+oMost reliable income sources
+oIncome seasonality analysis
+oIncome forecast based on trends
+oIncome diversification score
+Income reports: 
+oMonthly income summary
+oQuarterly income report
+oAnnual income statement
+oIncome by source report
+oExport to Excel/PDF
+oPrint income reports
+
+Diocese Expense Tracking (/diocese/financial/expenses)
+Purpose: Record and monitor all diocese operational expenses
+Contents:
+Expense dashboard: 
+oTotal expenses this month
+oTotal expenses this year
+oExpenses by category (pie chart)
+oExpense trend (last 12 months)
+oBudget vs actual expenses
+oOverspent categories alert
+Expense categories: 
+oDiocese staff salaries
+oBishop's office expenses
+oDiocese building/rent
+oUtilities (electricity, water, internet)
+oTransportation and fuel
+oOffice supplies and equipment
+oDiocese programs and events
+oAllocations to regions (tracked separately)
+oTraining and development
+oCommunications (phone, internet)
+oLegal and professional fees
+oMaintenance and repairs
+oInsurance
+oDonations and contributions
+oOther administrative expenses
+Record new expense: 
+oExpense date
+oExpense category selection
+oExpense subcategory
+oExpense amount
+oPayment method (Cash/Bank Transfer/Mobile Money/Cheque)
+oPayment reference number
+oVendor/supplier name
+oExpense description
+oReceipt/invoice upload
+oApproval status
+oRecord entry
+Expense approval workflow: 
+oExpenses above threshold require approval
+oSubmit expense for approval
+oDiocese treasurer review
+oDiocese council approval (for large expenses)
+oBishop approval (for very large expenses)
+oApproval status tracking
+Expense list (table view): 
+oExpense date
+oCategory
+oDescription
+oAmount
+oPayment method
+oVendor
+oApproval status
+oAction buttons (View/Edit/Delete/Approve)
+Expense search and filter: 
+oFilter by date range
+oFilter by category
+oFilter by amount range
+oFilter by approval status
+oSearch by vendor name
+oSearch by reference number
+Expense analytics: 
+oExpense breakdown by category
+oLargest expense categories
+oExpense trends over time
+oBudget utilization by category
+oOverspending alerts
+oExpense forecast
+Expense reports: 
+oMonthly expense summary
+oQuarterly expense report
+oAnnual expense statement
+oExpense by category report
+oBudget vs actual report
+oExport to Excel/PDF
+oPrint expense reports
+
+Financial Reports (/diocese/financial/reports)
+Purpose: Generate comprehensive financial reports for diocese
+Contents:
+Report templates: 
+oMonthly financial statement
+oQuarterly financial report
+oAnnual financial report
+oProfit and loss statement
+oCash flow statement
+oBudget vs actual report
+oTithe collection report
+oAllocation report
+oIncome and expense report
+oFinancial health dashboard
+Generate report: 
+oSelect report type
+oSelect date range (month/quarter/year)
+oSelect comparison period (optional)
+oSelect filters (region/category)
+oGenerate report button
+Report contents (varies by type): 
+oExecutive summary
+oTotal income breakdown
+oTotal expenses breakdown
+oNet position (income - expenses)
+oTithe collection summary
+oAllocations distributed
+oBudget utilization
+oKey financial ratios
+oTrends and comparisons
+oNotes and explanations
+Report visualization: 
+oCharts and graphs
+oTables with detailed data
+oSummary cards
+oTrend lines
+oColor-coded indicators (red/yellow/green)
+Report export: 
+oExport as PDF
+oExport as Excel
+oPrint report
+oEmail report
+oSchedule automatic report generation
+oSchedule automatic report distribution
+Historical reports archive: 
+oAccess past generated reports
+oCompare reports across time periods
+oDownload archived reports
+Custom report builder: 
+oSelect data fields to include
+oSelect time period
+oSelect grouping (by region, category, etc.)
+oSelect visualization type
+oSave custom report template
+oReuse custom templates
+
+Diocese Initiatives Management (/diocese/initiatives)
+Purpose: Create and manage diocese-wide training, seminars, and programs
+Contents:
+Initiatives dashboard: 
+oTotal active initiatives
+oTotal participants across all initiatives
+oInitiatives by type (pie chart)
+oUpcoming initiatives
+oRecently completed initiatives
+oInitiative participation rate
+Initiative types: 
+oPastoral training programs
+oLeadership development courses
+oEvangelism seminars
+oYouth ministry training
+oWorship and music training
+oCounseling and discipleship
+oChurch administration
+oFinance and stewardship training
+oConference and conventions
+oOutreach and missions programs
+oOther diocesan programs
+Create new initiative: 
+oInitiative title
+oInitiative description
+oInitiative type selection
+oTarget audience (Pastors/Church Council/Youth/Women/Men/All)
+oVisibility (Diocese-wide/Open to All Churches)
+oStart date
+oEnd date
+oInitiative duration (days/weeks/months)
+oInitiative frequency (One-time/Recurring)
+oLocation/venue
+oFacilitators/trainers
+oInitiative coordinator (user assignment)
+oBudget allocated
+oRegistration required (Yes/No)
+oRegistration deadline
+oMaximum participants (if limited)
+oPrerequisite requirements
+oCertificate upon completion (Yes/No)
+oInitiative materials (documents upload)
+oInitiative image/banner
+oStatus (Draft/Published/Active/Completed)
+Initiative registration management: 
+oOpen/close registration
+oView registered participants list
+oParticipant details (name, church, role)
+oApprove/reject registrations
+oSend confirmation emails/SMS
+oWaitlist management
+Initiative participation tracking: 
+oMark attendance (session-by-session for multi-day)
+oAttendance percentage per participant
+oCompletion status per participant
+oIssue completion certificates
+oParticipant feedback collection
+oParticipant evaluation/scoring
+Initiative communication: 
+oSend announcements to all participants
+oSend reminders before sessions
+oShare training materials
+oPost-initiative follow-up communication
+Initiative analytics: 
+oTotal participants count
+oParticipation by church
+oParticipation by region
+oCompletion rate
+oDropout rate and reasons
+oParticipant satisfaction scores
+oPre and post-initiative assessments
+oInitiative impact on church growth
+oCost per participant
+Initiatives calendar: 
+oView all initiatives on calendar
+oFilter by type/status/audience
+oMonthly/weekly/daily view
+oDownload calendar
+Initiatives list (table/grid view): 
+oInitiative title
+oType
+oStart and end dates
+oTarget audience
+oRegistered participants
+oStatus
+oAction buttons (View/Edit/Delete/Duplicate/Report)
+Initiative details view: 
+oFull initiative information
+oParticipant list with attendance
+oBudget vs actual costs
+oCommunications sent
+oFeedback summary
+oImpact assessment
+Initiative reports: 
+oInitiative summary report
+oParticipation report
+oBudget utilization report
+oImpact assessment report
+oExport to Excel/PDF
+oSchedule automatic reports
+View all churches/regions initiatives: 
+oSee initiatives created at regional level
+oSee initiatives created at subregion level
+oSee initiatives created at church level
+oInitiative participation overview
+oCross-initiative analysis
+
+
+Diocese Events Management (/diocese/events)
+Purpose: Create and manage diocese-wide events, conferences, and gatherings
+Contents:
+Events dashboard: 
+oTotal upcoming events
+oTotal past events (this year)
+oTotal registered attendees across all events
+oEvents by type (pie chart)
+oEvent calendar view
+oRecently completed events
+oHigh-attendance events
+Event types: 
+oDiocese conferences
+oLeadership meetings
+oRevival meetings
+oYouth conventions
+oWomen's conferences
+oMen's conferences
+oPrayer conferences
+oWorship nights
+oOutreach events
+oTraining workshops
+oFundraising events
+oSpecial celebrations
+oOther events
+Create new event: 
+oEvent title
+oEvent description
+oEvent type selection
+oEvent category (Spiritual/Administrative/Social/Fundraising)
+oTarget audience (Pastors/Leaders/Youth/Women/Men/General/All)
+oVisibility (Diocese-wide/Regional/Specific Churches)
+oEvent date and time
+oEvent end date and time (for multi-day events)
+oEvent venue/location
+oEvent capacity (maximum attendees)
+oEvent speakers/facilitators
+oEvent coordinator assignment
+oRegistration required (Yes/No)
+oRegistration fee (if applicable)
+oRegistration opening date
+oRegistration deadline
+oEvent budget
+oEvent sponsors (if any)
+oEvent poster/banner upload
+oEvent program/agenda upload
+oAccommodation arrangements (if applicable)
+oTransportation arrangements (if applicable)
+oSpecial requirements/notes
+oEvent status (Draft/Published/Active/Completed/Cancelled)
+Event registration management: 
+oOpen/close registration
+oView registered attendees list
+oAttendee details (name, church, role, contact)
+oApprove/reject registrations (if approval required)
+oSend registration confirmation
+oPayment tracking (if registration fee)
+oGenerate registration reports
+oExport attendee list
+oPrint badges/name tags
+oWaitlist management (if capacity reached)
+Event attendance tracking: 
+oCheck-in attendees on event day
+oMark attendance per session (multi-day events)
+oAttendance percentage tracking
+oNo-show tracking
+oLate arrivals tracking
+oGenerate attendance reports
+Event communication: 
+oSend event announcements
+oSend invitations to churches/regions
+oSend reminders before event
+oShare event program/schedule
+oSend updates and changes
+oPost-event follow-up messages
+oEvent communication history
+Event financials: 
+oBudget allocation
+oRegistration fee collection
+oEvent expenses tracking
+oDonations received during event
+oOfferings collected during event
+oFinancial summary (income vs expenses)
+oProfitability analysis (for fundraising events)
+Event feedback and evaluation: 
+oPost-event feedback form
+oParticipant satisfaction survey
+oSpeaker/facilitator ratings
+oVenue ratings
+oOverall event rating
+oSuggestions for improvement
+oTestimonies collection
+oFeedback analysis and summary
+Event impact assessment: 
+oSpiritual impact (conversions, commitments)
+oKnowledge gained (for training events)
+oRelationships built (networking)
+oAttendance by church/region analysis
+oParticipation trends
+oEvent ROI calculation
+Events calendar: 
+oView all events on calendar
+oMonthly/weekly/daily view
+oFilter by type/status/audience
+oColor-coded by event type
+oDownload/sync calendar
+oSubscribe to event calendar
+Events list (table/grid view): 
+oEvent title and banner
+oEvent date and venue
+oEvent type and audience
+oRegistered attendees count
+oCapacity utilization
+oEvent status
+oAction buttons (View/Edit/Delete/Duplicate/Report)
+Event details view: 
+oFull event information
+oRegistered attendees with attendance
+oEvent budget vs actual costs
+oCommunications sent
+oFeedback summary
+oPhotos/videos gallery
+oEvent report
+Event reports: 
+oEvent summary report
+oAttendance report
+oFinancial report
+oFeedback summary report
+oImpact assessment report
+oComparative events analysis
+oExport to Excel/PDF
+Integration with external events: 
+oLink to external event systems (like Youth Summit)
+oPull attendance data from external systems
+oSync event information
+oConsolidated event analytics
+View lower-level events: 
+oSee regional events
+oSee subregion events
+oSee church events
+oAttendance patterns analysis
+oCross-event participation tracking
+
+Diocese Communications Hub (/diocese/communications)
+Purpose: Centralized communication management for entire diocese
+Contents:
+Communications dashboard: 
+oTotal messages sent this month
+oTotal messages sent this year
+oMessages by type (SMS/Email)
+oMessages by recipient level (Region/Subregion/Church)
+oDelivery success rate
+oRecent communications log
+oScheduled messages queue
+Compose new message: 
+oMessage type (SMS/Email/Both)
+oMessage priority (Normal/Urgent/Emergency)
+oSubject line (for email)
+oMessage body (with formatting for email)
+oCharacter count (for SMS)
+oSMS preview
+oEmail preview
+oRecipient selection: 
+All churches
+Specific region(s)
+Specific subregion(s)
+Specific church(es)
+All regional overseers
+All subregion overseers
+All pastors
+Custom recipient list (upload CSV)
+oSend immediately or schedule
+oSchedule date and time
+oAttach documents (email only)
+oAdd links
+oRequest read receipt
+oSave as draft
+oSave as template
+Message templates: 
+oPre-saved message templates
+oTemplate categories (Announcements/Reminders/Invitations/Reports)
+oCreate new template
+oEdit existing template
+oUse template for new message
+oTemplate variables (auto-fill recipient name, church name, etc.)
+oTemplate library (system templates + custom templates)
+Broadcast messages: 
+oDiocese-wide announcements
+oEmergency notifications
+oEvent invitations
+oCompliance reminders
+oTithe reminders
+oReport submission reminders
+oGeneral updates
+oSeasonal greetings
+oSpecial announcements
+Hierarchical messaging: 
+oDiocese → All Regions
+oDiocese → Specific Region → All Subregions
+oDiocese → Specific Region → Specific Subregion → All Churches
+oDiocese → Direct to specific churches (bypass hierarchy)
+oRoute confirmation before sending
+Message scheduling: 
+oSchedule messages for future dates
+oRecurring messages setup (daily/weekly/monthly)
+oCancel scheduled messages
+oEdit scheduled messages
+oView scheduled messages queue
+Message tracking: 
+oDelivery status (Sent/Delivered/Failed)
+oRead receipts (for email)
+oDelivery reports
+oFailed deliveries list with reasons
+oRetry failed messages
+oBounce management
+Communications history: 
+oAll sent messages log
+oFilter by date range
+oFilter by recipient level
+oFilter by message type
+oSearch messages
+oView message details
+oResend previous messages
+oExport communications log
+SMS management: 
+oSMS balance monitoring
+oSMS cost tracking
+oSMS provider settings
+oSMS sender ID configuration
+oSMS character limit warnings
+oBulk SMS management
+Email management: 
+oEmail delivery tracking
+oEmail open rate
+oEmail click rate (for links)
+oEmail bounce management
+oSpam complaint monitoring
+oEmail list management
+oEmail signature setup
+Communication analytics: 
+oMessages sent over time (trend)
+oMessages by type breakdown
+oMessages by recipient level
+oDelivery success rate
+oRead rate (email)
+oCost per message
+oMost active communication periods
+oRecipient engagement analysis
+Communication preferences: 
+oSet default sender details
+oSet notification preferences
+oConfigure automatic reminders
+oSet communication limits (daily/weekly)
+oConfigure quiet hours (no messages sent)
+oEmergency override settings
+Inbox (incoming messages): 
+oMessages from churches/regions/subregions
+oContact form submissions
+oPrayer requests from public website
+oFeedback and suggestions
+oComplaint management
+oResponse and follow-up tracking
+Communication reports: 
+oMonthly communication summary
+oDelivery success report
+oCost report
+oEngagement report
+oExport to Excel/PDF
+
+Diocese Reports & Analytics (/diocese/reports)
+Purpose: Comprehensive reporting and data analytics for strategic decisions
+Contents:
+Reports dashboard: 
+oRecently generated reports
+oScheduled reports
+oMost accessed reports
+oReport categories overview
+oQuick report generation shortcuts
+Report categories: 
+oDemographics reports
+oFinancial reports
+oCompliance reports
+oInitiatives reports
+oEvents reports
+oGrowth and trends reports
+oComparative reports
+oCustom reports
+Pre-configured report templates: 
+oMonthly diocese summary report
+oQuarterly performance report
+oAnnual comprehensive report
+oTithe collection report
+oBudget utilization report
+oAllocation impact report
+oChurch growth report
+oCompliance status report
+oInitiative participation report
+oEvent attendance report
+oRegional comparison report
+oSubregional comparison report
+oChurch ranking report
+oFinancial health report
+oMembership trends report
+Generate report wizard: 
+oStep 1: Select report type/template
+oStep 2: Select date range or period
+oStep 3: Select comparison period (optional)
+oStep 4: Select filters: 
+Specific region(s)
+Specific subregion(s)
+Specific church(es)
+Church size range
+Compliance status
+Other criteria
+oStep 5: Select data fields to include
+oStep 6: Select grouping/aggregation
+oStep 7: Select visualization type (charts/tables/both)
+oStep 8: Preview report
+oStep 9: Generate final report
+Monthly summary report contents: 
+oExecutive summary
+oTotal churches count and status
+oTotal membership and growth
+oDemographics breakdown
+oBaptisms and conversions
+oTithe collection summary
+oFinancial position
+oBudget utilization
+oInitiatives and events summary
+oCompliance status
+oKey achievements
+oAreas of concern
+oRecommendations
+oRegional highlights
+oComparative data (month-over-month)
+Quarterly performance report contents: 
+oQuarter overview and highlights
+oMembership growth analysis
+oFinancial performance
+oTithe collection trends
+oBudget vs actual comparison
+oInitiatives impact assessment
+oEvents summary and attendance
+oCompliance improvement areas
+oRegional performance ranking
+oChurch growth leaders
+oStrategic recommendations
+oQuarter-over-quarter comparisons
+Annual comprehensive report contents: 
+oYear in review executive summary
+oDiocese vision and achievements
+oMembership statistics and growth
+oDemographics analysis
+oBaptisms and conversions
+oFinancial statements (income, expenses, net position)
+oTithe collection full year
+oBudget execution report
+oAllocation programs summary
+oInitiatives conducted and impact
+oEvents hosted and attendance
+oCompliance improvements
+oRegional analysis
+oChurch success stories
+oChallenges and lessons learned
+oStrategic goals for next year
+oAcknowledgments and appreciation
+oYear-over-year comparisons
+Comparative reports: 
+oCompare regions side-by-side
+oCompare subregions within region
+oCompare churches within subregion
+oCompare time periods (month/quarter/year)
+oBenchmarking against diocese averages
+oGrowth rate comparisons
+oFinancial health comparisons
+oCompliance rate comparisons
+oInitiative participation comparisons
+Real-time analytics dashboards: 
+oLive membership count
+oLive financial position
+oLive compliance status
+oLive event attendance
+oTrend charts with auto-refresh
+oKPI indicators (green/yellow/red)
+oAlerts and notifications
+Custom report builder: 
+oDrag-and-drop report builder interface
+oSelect data sources (demographics/financials/events/etc.)
+oSelect metrics and dimensions
+oApply filters and conditions
+oChoose visualization types
+oAdd calculated fields
+oGroup and aggregate data
+oAdd sorting and ranking
+oSave custom report template
+oShare custom reports with team
+oSchedule custom reports
+Report visualization options: 
+oTables and data grids
+oBar charts and column charts
+oLine charts and area charts
+oPie charts and donut charts
+oHeatmaps and geographic maps
+oGauges and KPI cards
+oTreemaps and sunburst charts
+oCombo charts (multiple chart types)
+oCustomizable colors and themes
+Report scheduling: 
+oSchedule automatic report generation
+oSelect frequency (daily/weekly/monthly/quarterly)
+oSelect delivery method (email/download)
+oSelect recipients
+oSet report format (PDF/Excel)
+oActive scheduled reports management
+oPause/resume scheduled reports
+Report sharing and distribution: 
+oShare report via email
+oGenerate shareable link
+oDownload report (PDF/Excel/CSV)
+oPrint report
+oEmbed report in presentations
+oExport charts as images
+oCopy data to clipboard
+Report access control: 
+oSet report visibility (Public/Private/Role-based)
+oGrant access to specific users
+oAccess log tracking
+oPrevent unauthorized downloads
+Reports archive: 
+oHistorical reports storage
+oOrganized by date and type
+oSearch archived reports
+oCompare historical reports
+oDownload archived reports
+oArchive management (retention policy)
+Report analytics: 
+oMost viewed reports
+oMost downloaded reports
+oReport generation frequency
+oUser report preferences
+oReport performance metrics
+
+Diocese Compliance Monitoring (/diocese/compliance)
+Purpose: Monitor church compliance with reporting and financial requirements
+Contents:
+Compliance dashboard: 
+oOverall compliance rate (percentage)
+oChurches in compliance count
+oChurches non-compliant count
+oCompliance by category (demographics/financial/events)
+oCompliance trend (last 12 months)
+oRecent compliance alerts
+oChurches requiring immediate attention
+Compliance categories: 
+oDemographics reporting compliance
+oFinancial reporting compliance
+oTithe payment compliance
+oEvent participation compliance
+oInitiative participation compliance
+oMonthly report submission compliance
+oOverall compliance score
+Church compliance list (table view): 
+oChurch name and region/subregion
+oOverall compliance score (percentage)
+oDemographics compliance status
+oFinancial compliance status
+oTithe compliance status
+oLast report submitted date
+oDays since last report
+oCompliance trend (improving/declining/stable)
+oAction buttons (View Details/Send Reminder/Contact Pastor)
+Compliance status indicators: 
+oFully compliant (green) - all requirements met
+oPartially compliant (yellow) - some requirements met
+oNon-compliant (red) - requirements not met
+oOverdue (red with alert) - deadlines passed
+oExempt (blue) - temporary exemption granted
+Individual church compliance details: 
+oChurch name and information
+oCompliance summary by category
+oDemographics compliance: 
+Required fields list
+Submitted fields
+Missing fields
+Last submission date
+Submission history
+oFinancial compliance: 
+Monthly report submission status
+Tithe payment status
+Expense report submission
+Financial statement completeness
+oReport compliance: 
+Monthly reports submission status (last 6 months)
+Report completeness score
+Report quality score
+Pastor comments included
+oCompliance timeline: 
+Historical compliance tracking
+Compliance improvements
+Recurring issues
+Compliance requirements tracking: 
+oActive compliance rules
+oRequired data fields per rule
+oSubmission deadlines per rule
+oGrace periods
+oChurches subject to each rule
+oRule compliance rate
+Compliance alerts: 
+oUpcoming deadline alerts
+oOverdue submission alerts
+oMissing required data alerts
+oCompliance violation alerts
+oEscalation alerts (repeated violations)
+oAlert priority levels
+oAlert management (acknowledge/dismiss/action)
+Compliance reminders: 
+oSend reminder to specific church
+oSend bulk reminders to non-compliant churches
+oAutomatic reminder scheduling
+oReminder templates
+oReminder delivery method (SMS/Email)
+oReminder frequency settings
+oEscalation reminders (to overseers)
+oReminder history log
+Compliance exceptions: 
+oException requests from churches
+oException reason and justification
+oException approval workflow
+oGrant temporary exemption
+oSet exemption expiration date
+oTrack exemption utilization
+oExemption history
+oExpired exemptions
+Compliance improvement plans: 
+oIdentify churches with persistent issues
+oCreate improvement action plan
+oAssign accountability (overseer/pastor)
+oSet improvement milestones
+oTrack progress
+oSupport interventions
+oFollow-up meetings
+oSuccess measurement
+Compliance by region/subregion: 
+oRegional compliance summary
+oSubregional compliance summary
+oCompliance ranking
+oBest performing regions/subregions
+oWorst performing regions/subregions
+oRegional/subregional trends
+oComparative analysis
+Compliance reports: 
+oMonthly compliance report
+oQuarterly compliance summary
+oAnnual compliance review
+oNon-compliance report with reasons
+oCompliance improvement report
+oException report
+oCompliance trend report
+oExport to Excel/PDF
+Compliance analytics: 
+oCompliance patterns and trends
+oCommon compliance issues
+oSeasonal compliance variations
+oCorrelation between compliance and church growth
+oImpact of reminders on compliance
+oEffectiveness of compliance rules
+oPredictive compliance forecasting
+
+Diocese Calendar (/diocese/calendar)
+Purpose: Unified calendar view of all diocese activities and deadlines
+Contents:
+Calendar views: 
+oMonthly calendar view
+oWeekly calendar view
+oDaily agenda view
+oList view
+oYear view (overview)
+Calendar filters: 
+oShow/hide events
+oShow/hide initiatives
+oShow/hide deadlines
+oShow/hide meetings
+oShow/hide regional events
+oShow/hide subregion events
+oShow/hide church events
+oFilter by region/subregion
+oFilter by event type
+oColor-coding by category
+Calendar entries: 
+oDiocese events (from events module)
+oDiocese initiatives (from initiatives module)
+oRegional events (visibility)
+oSubregion events (visibility)
+oChurch events (visibility)
+oReport submission deadlines
+oTithe payment deadlines
+oBudget deadlines
+oCompliance deadlines
+oDiocese meetings
+oBishop's schedule
+oPublic holidays
+oSpecial observances (religious dates)
+Create calendar entry: 
+oEvent/meeting title
+oEvent type
+oDate and time
+oDuration
+oLocation
+oParticipants/invitees
+oDescription
+oReminders
+oRecurrence settings
+oVisibility settings
+oColor coding
+Calendar entry details: 
+oFull event information
+oParticipants list
+oRSVP tracking
+oLocation map
+oAttached documents
+oRelated events
+oEdit/delete entry
+Calendar synchronization: 
+oSync with personal calendar (Google/Outlook)
+oExport calendar (iCal format)
+oSubscribe to calendar feed
+oImport events from file
+Calendar reminders: 
+oAutomatic reminders for upcoming events
+oDeadline reminders
+oCustomizable reminder times
+oReminder delivery method (Email/SMS/Push)
+Calendar sharing: 
+oShare calendar with team
+oPublic calendar view (for public website)
+oEmbed calendar in external sites
+oPrint calendar
+oDownload calendar PDF
+Meeting scheduler: 
+oPropose meeting times
+oCheck availability of participants
+oSend meeting invitations
+oTrack RSVP responses
+oMeeting agenda creation
+oMeeting minutes recording
+Calendar reports: 
+oUpcoming events summary
+oMonthly activities report
+oQuarterly calendar summary
+oEvent participation report
+oDeadline compliance tracking
+
+Diocese Settings (/diocese/settings)
+Purpose: Configure diocese-level system settings and preferences
+Contents:
+General settings: 
+oDiocese name (edit)
+oDiocese logo (update)
+oDiocese contact details (update)
+oDiocese address (update)
+oTimezone settings
+oLanguage preferences
+oDate format preferences
+oCurrency settings
+oFiscal year configuration
+Diocese information management: 
+oBishop information (update)
+oDiocese council members
+oDiocese staff directory
+oDiocese departments
+oDiocese organizational chart
+oDiocese history and milestones
+Email and SMS settings: 
+oSMTP configuration
+oEmail sender name and address
+oEmail signature template
+oSMS gateway settings
+oSMS sender ID
+oMessage templates management
+oNotification preferences
+Financial settings: 
+oTithe percentage configuration
+oTithe calculation method
+oTithe payment deadline
+oBudget approval thresholds
+oAllocation approval thresholds
+oCurrency and exchange rates
+oFinancial report templates
+oAccounting period settings
+Compliance settings: 
+oEdit compliance rules
+oSet submission deadlines
+oConfigure automatic reminders
+oSet escalation rules
+oManage exceptions policy
+oCompliance scoring methodology
+User management settings: 
+oPassword policies
+oSession timeout settings
+oMulti-factor authentication requirements
+oUser role definitions
+oPermission matrix configuration
+oUser approval workflow
+System appearance: 
+oSystem theme/color scheme
+oLogo display settings
+oDashboard layout preferences
+oDefault landing page
+oMenu customization
+Notifications settings: 
+oEmail notifications preferences
+oSMS notifications preferences
+oPush notifications preferences
+oNotification frequency
+oNotification categories
+oQuiet hours configuration
+Data backup and security: 
+oAutomatic backup schedule
+oBackup storage location
+oData retention policy
+oSecurity settings
+oAccess logs
+oAudit trail settings
+Integration settings: 
+oExternal systems integration
+oAPI keys management
+oWebhook configurations
+oThird-party service connections
+System maintenance: 
+oSystem updates
+oScheduled maintenance windows
+oSystem health monitoring
+oPerformance optimization
+oDatabase maintenance
+Help and support: 
+oSystem documentation
+oTutorial videos
+oContact support
+oFeature requests
+oBug reporting
+oSystem changelog
+
+4. REGIONAL PORTAL MODULES
+
+Regional Dashboard (/regional/dashboard)
+Purpose: Overview of all subregions and churches under this region
+Contents:
+Regional metrics summary: 
+oTotal subregions count (if applicable)
+oTotal churches count
+oTotal members in region
+oTotal youth in region
+oTotal women's fellowship in region
+oTotal men's fellowship in region
+oTithe collected this month (region total)
+oBaptisms this month (region total)
+oNew conversions this month (region total)
+Regional trends: 
+oMembership growth trend (last 12 months)
+oFinancial collection trend (last 12 months)
+oBaptism and conversion trends
+oRegional growth rate
+Subregion comparison (if region has subregions): 
+oMembers by subregion (bar chart)
+oTithe collection by subregion
+oGrowth rate by subregion
+oCompliance by subregion
+oRanking subregions by performance
+Church comparison (if region has no subregions): 
+oMembers by church (bar chart)
+oTithe collection by church
+oGrowth rate by church
+oCompliance by church
+oRanking churches by performance
+Regional compliance dashboard: 
+oSubregions/churches compliant with reporting
+oOverdue reports count
+oTithe compliance rate
+oChurches requiring attention
+Recent activities: 
+oRecent reports submitted by churches/subregions
+oRecent tithe payments
+oRecent initiatives created
+oRecent events scheduled
+oRecent compliance alerts
+Quick actions: 
+oCreate regional initiative
+oCreate regional event
+oSend message to all subregions/churches
+oView non-compliant churches
+oGenerate regional report
+Regional calendar: 
+oUpcoming regional events
+oUpcoming regional initiatives
+oImportant deadlines
+oDiocese events visible
+Financial summary: 
+oTotal income this month (tithe + allocations received)
+oTotal expenses this month
+oBudget allocated from diocese
+oBudget utilization
+oAllocations distributed to subregions/churches
+Regional map: 
+oAll churches/subregions plotted
+oColor-coded by compliance or size
+oClick to view details
+
+Subregions Management (/regional/subregions)
+(Only if this region has subregions)
+Purpose: View and monitor all subregions under this region
+Contents:
+Subregions summary: 
+oTotal subregions count
+oTotal churches across all subregions
+oTotal members across all subregions
+oAverage subregion size
+Subregions list (table view): 
+oSubregion name
+oSubregion overseer name
+oNumber of churches
+oTotal members
+oTithe compliance rate
+oLast report submitted
+oSubregion status
+oAction button (View Details)
+Subregion details view (Read-Only): 
+oSubregion basic information
+oSubregion overseer details
+oChurches under subregion
+oDemographics summary
+oFinancial summary
+oRecent activities
+oCompliance status
+oPerformance metrics
+Subregion comparison: 
+oCompare demographics across subregions
+oCompare financial performance
+oCompare growth rates
+oCompare compliance rates
+oIdentify best and worst performing
+Subregion communication: 
+oSend message to specific subregion overseer
+oSend message to all subregions
+oCommunication history
+Subregion reports: 
+oGenerate subregion comparison report
+oExport subregion data
+
+Churches Management (/regional/churches)
+Purpose: View and monitor all churches under this region (directly or through subregions)
+Contents:
+Churches summary: 
+oTotal churches count in region
+oTotal active churches
+oChurches by subregion breakdown (if applicable)
+oAverage church size
+oTotal regional membership
+Churches list (table view): 
+oChurch name
+oSubregion (if applicable)
+oPastor name
+oTotal members
+oYouth count
+oLast report date
+oTithe status
+oCompliance status
+oAction button (View Details)
+Church details view (Read-Only): 
+oChurch basic information
+oPastor details
+oDemographics dashboard
+oSpiritual activities summary
+oFinancial summary
+oTithe payment history
+oInitiatives participation
+oEvents attendance
+oCompliance status
+oRecent reports
+oPerformance score
+Church search and filter: 
+oFilter by subregion (if applicable)
+oFilter by compliance status
+oFilter by tithe status
+oFilter by size
+oSearch by church name
+oSearch by pastor name
+Church comparison: 
+oSelect multiple churches
+oCompare demographics
+oCompare financials
+oCompare growth trends
+oIdentify best practices
+Church communication: 
+oSend message to specific church/pastor
+oSend message to all churches
+oSend message to churches in specific subregion
+oCommunication history
+Churches map view: 
+oAll churches plotted on regional map
+oColor-coded by status/compliance
+oClick for church details
+Church reports: 
+oGenerate churches comparison report
+oRegional church directory
+oExport churches data
+
+Regional Financial Management (/regional/financial)
+Purpose: Manage regional budget and finances
+Contents:
+Regional financial dashboard: 
+oBudget allocated from diocese
+oBudget spent to date
+oBudget remaining
+oTithe collected from churches (view-only)
+oAllocations received from diocese
+oAllocations distributed to subregions/churches
+oRegional operational expenses
+Regional budget: 
+oView allocated budget from diocese
+oRegional expense categories
+oBudget utilization tracking
+oBudget vs actual comparison
+Regional income: 
+oAllocations received from diocese
+oRecord regional fundraising
+oOther regional income sources
+oIncome summary
+Regional expenses: 
+oRecord regional expenses: 
+Regional overseer allowance
+Transport for regional activities
+Regional events costs
+Regional office expenses (if any)
+Communications costs
+Other operational expenses
+oExpense categories
+oExpense approval (if required)
+oExpense tracking
+Allocations to subregions/churches: 
+oDiocese allocations received for distribution
+oAllocate funds to subregions (if applicable)
+oAllocate funds directly to churches
+oAllocation tracking
+oAllocation utilization monitoring
+Financial reports: 
+oRegional financial summary
+oBudget utilization report
+oExpense report
+oAllocation report
+oSubmit financial report to diocese
+oExport financial data
+
+Regional Initiatives (/regional/initiatives)
+Purpose: Create and manage region-specific initiatives
+Contents:
+Regional initiatives dashboard: 
+oTotal active regional initiatives
+oTotal participants across initiatives
+oUpcoming initiatives
+oCompleted initiatives
+oInitiative participation rate
+Create regional initiative: 
+oInitiative title
+oInitiative description
+oInitiative type
+oTarget audience (Pastors/Leaders/Youth/Women/Men/All)
+oVisibility (All churches in region/Specific subregions/Specific churches)
+oStart and end dates
+oLocation/venue
+oFacilitators/trainers
+oBudget allocated
+oRegistration required
+oMaximum participants
+oCertificate upon completion
+oInitiative materials upload
+oStatus (Draft/Published/Active/Completed)
+Initiative registration management: 
+oView registered participants
+oParticipant details (name, church, subregion)
+oApprove/reject registrations
+oSend confirmation
+Initiative participation tracking: 
+oMark attendance
+oTrack completion
+oIssue certificates
+oCollect feedback
+Initiative analytics: 
+oParticipants by church/subregion
+oCompletion rate
+oParticipant satisfaction
+oInitiative impact assessment
+Initiatives calendar: 
+oView all regional initiatives
+oView diocese initiatives (visible)
+oFilter by type/status
+Initiatives list: 
+oAll regional initiatives
+oInitiative details
+oEdit/delete initiatives
+Initiative reports: 
+oInitiative summary
+oParticipation report
+oImpact report
+oExport reports
+
+Regional Events (/regional/events)
+Purpose: Create and manage region-specific events
+Contents:
+Regional events dashboard: 
+oTotal upcoming regional events
+oTotal past regional events
+oTotal registered attendees
+oEvent calendar
+Create regional event: 
+oEvent title
+oEvent description
+oEvent type
+oTarget audience
+oVisibility (All churches in region/Specific subregions)
+oEvent date, time, and venue
+oEvent capacity
+oEvent speakers
+oRegistration required
+oRegistration fee (if any)
+oEvent budget
+oEvent poster upload
+oEvent program upload
+oStatus (Draft/Published/Active/Completed)
+Event registration management: 
+oView registered attendees
+oAttendee details
+oApprove/reject registrations
+oPayment tracking
+oGenerate attendee list
+oPrint badges
+Event attendance tracking: 
+oCheck-in attendees
+oMark attendance
+oAttendance reports
+Event communication: 
+oSend invitations
+oSend reminders
+oShare event updates
+oPost-event follow-up
+Event financials: 
+oBudget allocation
+oRegistration fee collection
+oEvent expenses
+oDonations/offerings collected
+oFinancial summary
+Event feedback: 
+oPost-event feedback form
+oParticipant satisfaction survey
+oFeedback analysis
+Events calendar: 
+oView all regional events
+oView diocese events (visible)
+oMonthly/weekly view
+Events list: 
+oAll regional events
+oEvent details
+oEdit/delete events
+Event reports: 
+oEvent summary
+oAttendance report
+oFinancial report
+oFeedback summary
+oExport reports
+
+Regional Communications (/regional/communications)
+Purpose: Communicate with subregions and churches in this region
+Contents:
+Communications dashboard: 
+oTotal messages sent
+oRecent communications
+oScheduled messages
+oDelivery success rate
+Compose new message: 
+oMessage type (SMS/Email/Both)
+oMessage priority
+oSubject and body
+oRecipient selection: 
+All churches in region
+All subregions
+Specific subregion(s)
+Specific church(es)
+All subregion overseers
+All pastors in region
+oSend immediately or schedule
+oAttach documents
+oSave as template
+Message templates: 
+oRegional message templates
+oUse existing templates
+oCreate new templates
+Message tracking: 
+oDelivery status
+oRead receipts
+oFailed deliveries
+oRetry failed messages
+Communications history: 
+oAll sent messages log
+oFilter by date/type/recipient
+oSearch messages
+oResend messages
+Inbox: 
+oMessages from diocese
+oMessages from subregions/churches
+oResponse and follow-up
+Communication reports: 
+oCommunication summary
+oDelivery success report
+oExport communication log
+
+Regional Reports (/regional/reports)
+Purpose: Generate regional reports and submit to diocese
+Contents:
+Regional reports dashboard: 
+oRecently generated reports
+oReports pending submission to diocese
+oScheduled reports
+Report templates: 
+oMonthly regional summary
+oQuarterly regional performance
+oRegional financial report
+oRegional compliance report
+oRegional growth report
+oSubregion comparison report
+oChurch comparison report
+Generate report: 
+oSelect report type
+oSelect date range
+oSelect comparison period
+oSelect filters (subregion/church)
+oGenerate report
+Monthly regional summary report: 
+oRegional overview
+oTotal churches and members
+oDemographics breakdown
+oBaptisms and conversions
+oTithe collection summary
+oFinancial position
+oBudget utilization
+oInitiatives and events summary
+oCompliance status
+oSubregion highlights (if applicable)
+oChurch highlights
+oChallenges and achievements
+oRegional overseer comments
+Submit report to diocese: 
+oReview generated report
+oAdd overseer comments
+oAttach supporting documents
+oSubmit for diocese review
+oTrack submission status
+Report history: 
+oPreviously submitted reports
+oDownload past reports
+Custom report builder: 
+oBuild custom regional reports
+oSelect data fields
+oSelect visualizations
+oSave custom templates
+Export reports: 
+oExport to PDF
+oExport to Excel
+oPrint reports
+
+Regional Compliance Monitoring (/regional/compliance)
+Purpose: Monitor compliance of subregions and churches in this region
+Contents:
+Regional compliance dashboard: 
+oRegional compliance rate
+oChurches/subregions in compliance
+oNon-compliant churches/subregions
+oCompliance by category
+oCompliance trend
+oRecent compliance alerts
+Compliance list: 
+oChurch/subregion name
+oCompliance score
+oDemographics compliance
+oFinancial compliance
+oTithe compliance
+oLast report submitted
+oCompliance status
+oAction buttons (View Details/Send Reminder)
+Compliance details: 
+oChurch/subregion compliance breakdown
+oRequired vs submitted data
+oMissing data fields
+oCompliance history
+oRecurring issues
+Compliance reminders: 
+oSend reminder to specific church/subregion
+oSend bulk reminders
+oReminder history
+Compliance reports: 
+oRegional compliance summary
+oNon-compliance report
+oCompliance improvement report
+oSubmit compliance report to diocese
+
+Regional Calendar (/regional/calendar)
+Purpose: Regional activities and deadlines calendar
+Contents:
+Calendar views: 
+oMonthly/weekly/daily views
+oList view
+Calendar entries: 
+oRegional events
+oRegional initiatives
+oDiocese events (visible)
+oSubregion events (visible, if applicable)
+oChurch events (visible)
+oReport deadlines
+oTithe deadlines
+oRegional meetings
+Create calendar entry: 
+oEvent/meeting title
+oDate, time, location
+oParticipants
+oReminders
+oRecurrence
+Calendar synchronization: 
+oSync with personal calendar
+oExport calendar
+Calendar sharing: 
+oShare with regional team
+
+Regional Settings (/regional/settings)
+Purpose: Configure regional-level settings
+Contents:
+Regional information: 
+oRegion name
+oRegional overseer details
+oRegion contact information
+oUpdate regional information
+Regional team: 
+oAdd regional team members
+oAssign roles to team members
+oManage team permissions
+Notification preferences: 
+oEmail notifications settings
+oSMS notifications settings
+oNotification frequency
+Regional preferences: 
+oDashboard layout
+oReport templates
+oCommunication templates
+
+Would you like me to continue with Subregion Portal Modules and Church Portal Modules?
+MAKUENI WEST DIOCESE MANAGEMENT SYSTEM
+Comprehensive Module Specification Document (CONTINUED)
+
+5. SUBREGION PORTAL MODULES
+
+Subregion Dashboard (/subregion/dashboard)
+Purpose: Overview of all churches under this subregion
+Contents:
+Subregion metrics summary: 
+oTotal churches count in subregion
+oTotal members in subregion
+oTotal youth in subregion
+oTotal women's fellowship in subregion
+oTotal men's fellowship in subregion
+oTithe collected this month (subregion total)
+oBaptisms this month (subregion total)
+oNew conversions this month (subregion total)
+Subregion trends: 
+oMembership growth trend (last 12 months)
+oFinancial collection trend (last 12 months)
+oBaptism and conversion trends
+oSubregion growth rate
+Church comparison: 
+oMembers by church (bar chart)
+oTithe collection by church
+oGrowth rate by church
+oCompliance by church
+oRanking churches by performance
+Subregion compliance dashboard: 
+oChurches compliant with reporting
+oOverdue reports count
+oTithe compliance rate
+oChurches requiring attention
+Recent activities: 
+oRecent reports submitted by churches
+oRecent tithe payments
+oRecent subregion initiatives
+oRecent subregion events
+oRecent compliance alerts
+Quick actions: 
+oCreate subregion initiative
+oCreate subregion event
+oSend message to all churches
+oView non-compliant churches
+oGenerate subregion report
+Subregion calendar: 
+oUpcoming subregion events
+oUpcoming subregion initiatives
+oImportant deadlines
+oRegional events visible
+oDiocese events visible
+Financial summary: 
+oAllocations received from region
+oSubregion operational expenses
+oBudget utilization
+oAllocations distributed to churches (if any)
+Subregion map: 
+oAll churches in subregion plotted
+oColor-coded by compliance or size
+oClick to view church details
+
+Churches Management (/subregion/churches)
+Purpose: View and monitor all churches under this subregion
+Contents:
+Churches summary: 
+oTotal churches count
+oTotal active churches
+oAverage church size
+oTotal subregion membership
+Churches list (table view): 
+oChurch name
+oPastor name
+oTotal members
+oYouth count
+oLast report date
+oTithe status
+oCompliance status
+oAction button (View Details)
+Church details view (Read-Only): 
+oChurch basic information
+oPastor details
+oDemographics dashboard: 
+Total members (current + trend)
+Youth count (current + trend)
+Women's fellowship count
+Men's fellowship count
+Sunday school enrollment
+Membership growth chart
+oSpiritual activities: 
+Baptisms (monthly + trend)
+Communion participation
+New conversions
+Member transfers
+oFinancial summary: 
+Monthly income trend
+Tithe payment history
+Tithe compliance rate
+Outstanding tithe
+Financial health indicator
+oInitiatives participation: 
+Diocese initiatives participated
+Regional initiatives participated
+Subregion initiatives participated
+Church's own initiatives
+oEvents attendance: 
+Diocese events attended
+Regional events attended
+Subregion events attended
+Church-hosted events
+oCompliance status: 
+Demographics compliance
+Financial compliance
+Overdue reports
+Compliance score
+Compliance trend
+oRecent reports submitted
+oChurch council members
+oCommunication history
+oPerformance score
+Church search and filter: 
+oFilter by compliance status
+oFilter by tithe status
+oFilter by size
+oSearch by church name
+oSearch by pastor name
+oSort by various criteria
+Church comparison: 
+oSelect multiple churches
+oCompare demographics
+oCompare financials
+oCompare growth trends
+oIdentify best practices
+oBenchmark against subregion averages
+Church communication: 
+oSend message to specific church/pastor
+oSend message to all churches
+oCommunication history
+Churches map view: 
+oAll churches plotted on map
+oColor-coded by status
+oClick for details
+Church reports: 
+oGenerate churches comparison report
+oSubregion church directory
+oExport churches data
+
+Subregion Financial Management (/subregion/financial)
+Purpose: Manage subregion budget and finances
+Contents:
+Subregion financial dashboard: 
+oAllocations received from region
+oBudget spent to date
+oBudget remaining
+oTithe collected from churches (view-only)
+oAllocations distributed to churches (if any)
+oSubregion operational expenses
+oBudget utilization percentage
+Subregion budget: 
+oView allocated budget from region
+oSubregion expense categories: 
+Subregion overseer allowance
+Transport for oversight visits
+Subregion events costs
+Office expenses (if any)
+Communications
+Other operational costs
+oBudget utilization tracking
+oBudget vs actual comparison
+Subregion income: 
+oAllocations received from region
+oRecord subregion fundraising
+oOther subregion income sources
+oIncome summary
+oIncome history
+Subregion expenses: 
+oRecord new expense: 
+Expense date
+Expense category
+Amount
+Payment method
+Vendor/supplier
+Description
+Receipt upload
+Approval status
+oExpense list
+oExpense approval (if required)
+oExpense tracking
+oExpense analysis
+Allocations to churches: 
+oRegional allocations received for distribution
+oAllocate funds to churches
+oAllocation tracking
+oAllocation utilization monitoring
+oChurch allocation reports
+Financial reports: 
+oSubregion financial summary
+oBudget utilization report
+oExpense report
+oAllocation report
+oSubmit financial report to region
+oExport financial data
+
+Subregion Initiatives (/subregion/initiatives)
+Purpose: Create and manage subregion-specific initiatives
+Contents:
+Subregion initiatives dashboard: 
+oTotal active subregion initiatives
+oTotal participants
+oUpcoming initiatives
+oCompleted initiatives
+oParticipation rate
+Create subregion initiative: 
+oInitiative title
+oInitiative description
+oInitiative type (Training/Seminar/Workshop/Conference/Other)
+oTarget audience (Pastors/Church Council/Youth/Women/Men/All)
+oVisibility (All churches in subregion/Specific churches)
+oStart and end dates
+oLocation/venue
+oFacilitators/trainers
+oBudget allocated
+oRegistration required (Yes/No)
+oRegistration deadline
+oMaximum participants
+oCertificate upon completion (Yes/No)
+oInitiative materials upload
+oInitiative image/banner
+oStatus (Draft/Published/Active/Completed)
+Initiative registration management: 
+oOpen/close registration
+oView registered participants
+oParticipant details (name, church, role)
+oApprove/reject registrations
+oSend confirmation emails/SMS
+oWaitlist management
+Initiative participation tracking: 
+oMark attendance
+oAttendance percentage tracking
+oTrack completion status
+oIssue completion certificates
+oCollect participant feedback
+oParticipant evaluation
+Initiative communication: 
+oSend announcements to participants
+oSend reminders before sessions
+oShare training materials
+oPost-initiative follow-up
+Initiative analytics: 
+oTotal participants by church
+oCompletion rate
+oDropout rate
+oParticipant satisfaction scores
+oInitiative impact on churches
+oCost per participant
+Initiatives calendar: 
+oView all subregion initiatives
+oView regional initiatives (visible)
+oView diocese initiatives (visible)
+oFilter by type/status
+oMonthly/weekly view
+Initiatives list: 
+oAll subregion initiatives
+oInitiative details
+oEdit/delete initiatives
+oDuplicate initiative
+Initiative reports: 
+oInitiative summary report
+oParticipation report
+oBudget utilization report
+oImpact assessment report
+oExport reports
+
+Subregion Events (/subregion/events)
+Purpose: Create and manage subregion-specific events
+Contents:
+Subregion events dashboard: 
+oTotal upcoming subregion events
+oTotal past events this year
+oTotal registered attendees
+oEvent calendar
+oHigh-attendance events
+Create subregion event: 
+oEvent title
+oEvent description
+oEvent type (Conference/Meeting/Revival/Youth Event/Women's Event/Other)
+oTarget audience
+oVisibility (All churches in subregion/Specific churches)
+oEvent date and time
+oEvent end date and time (multi-day)
+oEvent venue/location
+oEvent capacity
+oEvent speakers/facilitators
+oEvent coordinator
+oRegistration required (Yes/No)
+oRegistration fee (if any)
+oRegistration deadline
+oEvent budget
+oEvent sponsors
+oEvent poster/banner upload
+oEvent program/agenda upload
+oAccommodation details
+oTransportation details
+oSpecial requirements
+oStatus (Draft/Published/Active/Completed/Cancelled)
+Event registration management: 
+oOpen/close registration
+oView registered attendees list
+oAttendee details
+oApprove/reject registrations
+oSend registration confirmation
+oPayment tracking (if fee applies)
+oGenerate attendee reports
+oExport attendee list
+oPrint badges/name tags
+oWaitlist management
+Event attendance tracking: 
+oCheck-in attendees
+oMark attendance per session
+oAttendance percentage
+oNo-show tracking
+oLate arrival tracking
+oGenerate attendance reports
+Event communication: 
+oSend event announcements
+oSend invitations to churches
+oSend reminders before event
+oShare event program
+oSend updates and changes
+oPost-event follow-up
+oCommunication history
+Event financials: 
+oBudget allocation
+oRegistration fee collection
+oEvent expenses tracking
+oDonations received
+oOfferings collected
+oFinancial summary
+oEvent profitability analysis
+Event feedback: 
+oPost-event feedback form
+oParticipant satisfaction survey
+oSpeaker ratings
+oVenue ratings
+oOverall event rating
+oSuggestions for improvement
+oTestimonies collection
+oFeedback analysis
+Event impact assessment: 
+oSpiritual impact (conversions, commitments)
+oKnowledge gained
+oAttendance by church analysis
+oEvent ROI calculation
+Events calendar: 
+oView all subregion events
+oView regional events (visible)
+oView diocese events (visible)
+oMonthly/weekly/daily view
+oColor-coded by type
+oDownload calendar
+Events list: 
+oAll subregion events
+oEvent details
+oEdit/delete events
+oDuplicate event
+oGenerate reports
+Event reports: 
+oEvent summary report
+oAttendance report
+oFinancial report
+oFeedback summary report
+oImpact assessment report
+oExport reports
+
+Subregion Communications (/subregion/communications)
+Purpose: Communicate with churches in this subregion
+Contents:
+Communications dashboard: 
+oTotal messages sent this month
+oTotal messages sent this year
+oRecent communications
+oScheduled messages
+oDelivery success rate
+Compose new message: 
+oMessage type (SMS/Email/Both)
+oMessage priority (Normal/Urgent/Emergency)
+oSubject line (for email)
+oMessage body
+oCharacter count (for SMS)
+oSMS preview
+oEmail preview
+oRecipient selection: 
+All churches in subregion
+Specific church(es)
+All pastors in subregion
+Specific pastor(s)
+All church council members
+Custom recipient list
+oSend immediately or schedule
+oSchedule date and time
+oAttach documents (email only)
+oAdd links
+oRequest read receipt
+oSave as draft
+oSave as template
+Message templates: 
+oPre-saved subregion message templates
+oTemplate categories
+oCreate new template
+oEdit existing template
+oUse template for new message
+oTemplate variables
+Broadcast messages: 
+oSubregion-wide announcements
+oEvent invitations
+oInitiative invitations
+oCompliance reminders
+oReport submission reminders
+oGeneral updates
+oSeasonal greetings
+Message scheduling: 
+oSchedule messages for future
+oRecurring messages setup
+oCancel scheduled messages
+oEdit scheduled messages
+oView scheduled queue
+Message tracking: 
+oDelivery status (Sent/Delivered/Failed)
+oRead receipts (email)
+oDelivery reports
+oFailed deliveries with reasons
+oRetry failed messages
+oBounce management
+Communications history: 
+oAll sent messages log
+oFilter by date range
+oFilter by recipient
+oFilter by message type
+oSearch messages
+oView message details
+oResend previous messages
+oExport communication log
+Inbox: 
+oMessages from region
+oMessages from diocese
+oMessages from churches
+oResponse and follow-up tracking
+Communication analytics: 
+oMessages sent over time
+oMessages by type
+oDelivery success rate
+oRead rate (email)
+oRecipient engagement
+Communication reports: 
+oMonthly communication summary
+oDelivery success report
+oEngagement report
+oExport reports
+
+Subregion Reports (/subregion/reports)
+Purpose: Generate subregion reports and submit to region
+Contents:
+Subregion reports dashboard: 
+oRecently generated reports
+oReports pending submission to region
+oScheduled reports
+oReport templates
+Report templates: 
+oMonthly subregion summary
+oQuarterly subregion performance
+oSubregion financial report
+oSubregion compliance report
+oSubregion growth report
+oChurch comparison report
+Generate report: 
+oSelect report type
+oSelect date range
+oSelect comparison period
+oSelect filters (specific churches)
+oGenerate report
+Monthly subregion summary report contents: 
+oSubregion overview
+oTotal churches and members
+oDemographics breakdown
+oBaptisms and conversions
+oTithe collection summary
+oFinancial position
+oBudget utilization
+oInitiatives and events summary
+oCompliance status
+oChurch highlights
+oChallenges and achievements
+oSubregion overseer comments
+oRecommendations
+Submit report to region: 
+oReview generated report
+oAdd overseer comments
+oAttach supporting documents
+oSubmit for regional review
+oTrack submission status
+oView submission history
+Report history: 
+oPreviously submitted reports
+oDownload past reports
+oCompare reports over time
+Custom report builder: 
+oBuild custom subregion reports
+oSelect data fields
+oSelect visualizations
+oSave custom templates
+oReuse custom templates
+Export reports: 
+oExport to PDF
+oExport to Excel
+oPrint reports
+oEmail reports
+
+Subregion Compliance Monitoring (/subregion/compliance)
+Purpose: Monitor compliance of churches in this subregion
+Contents:
+Subregion compliance dashboard: 
+oSubregion compliance rate
+oChurches in compliance count
+oNon-compliant churches count
+oCompliance by category
+oCompliance trend (last 12 months)
+oRecent compliance alerts
+oChurches requiring attention
+Church compliance list: 
+oChurch name
+oCompliance score (percentage)
+oDemographics compliance status
+oFinancial compliance status
+oTithe compliance status
+oLast report submitted date
+oDays overdue
+oCompliance trend
+oAction buttons (View Details/Send Reminder/Contact Pastor)
+Church compliance details: 
+oChurch name and information
+oCompliance breakdown by category
+oDemographics compliance: 
+Required fields
+Submitted fields
+Missing fields
+Last submission date
+oFinancial compliance: 
+Monthly report status
+Tithe payment status
+Expense report status
+oReport compliance: 
+Monthly reports status (last 6 months)
+Report completeness
+Pastor comments included
+oCompliance timeline
+oRecurring issues
+oImprovement tracking
+Compliance reminders: 
+oSend reminder to specific church
+oSend bulk reminders to non-compliant churches
+oReminder templates
+oReminder history
+oSchedule automatic reminders
+oEscalation reminders (to regional overseer)
+Compliance reports: 
+oSubregion compliance summary
+oNon-compliance report
+oCompliance improvement report
+oChurches at risk report
+oSubmit compliance report to region
+oExport compliance data
+
+Subregion Calendar (/subregion/calendar)
+Purpose: Subregion activities and deadlines calendar
+Contents:
+Calendar views: 
+oMonthly calendar view
+oWeekly calendar view
+oDaily agenda view
+oList view
+Calendar filters: 
+oShow/hide subregion events
+oShow/hide subregion initiatives
+oShow/hide regional events
+oShow/hide diocese events
+oShow/hide church events
+oShow/hide deadlines
+oColor-coding by category
+Calendar entries: 
+oSubregion events
+oSubregion initiatives
+oRegional events (visible)
+oDiocese events (visible)
+oChurch events (visible)
+oReport submission deadlines
+oTithe payment deadlines
+oCompliance deadlines
+oSubregion meetings
+oChurch visit schedules
+Create calendar entry: 
+oEvent/meeting title
+oEvent type
+oDate and time
+oDuration
+oLocation
+oParticipants
+oDescription
+oReminders
+oRecurrence settings
+oVisibility
+Calendar synchronization: 
+oSync with personal calendar
+oExport calendar (iCal)
+oSubscribe to calendar feed
+Calendar sharing: 
+oShare with subregion team
+oShare with churches
+oPrint calendar
+
+Subregion Settings (/subregion/settings)
+Purpose: Configure subregion-level settings
+Contents:
+Subregion information: 
+oSubregion name
+oSubregion overseer details
+oSubregion contact information
+oUpdate subregion information
+Subregion team: 
+oAdd subregion team members
+oAssign roles to team members
+oManage team permissions
+oTeam member list
+Notification preferences: 
+oEmail notifications settings
+oSMS notifications settings
+oNotification frequency
+oQuiet hours configuration
+Subregion preferences: 
+oDashboard layout preferences
+oDefault landing page
+oReport templates
+oCommunication templates
+oCalendar preferences
+Communication settings: 
+oMessage signature
+oDefault message templates
+oReminder schedules
+
+6. CHURCH PORTAL MODULES
+
+Church Dashboard (/church/dashboard)
+Purpose: Overview of church operations and key metrics
+Contents:
+Church metrics summary: 
+oTotal members count
+oTotal youth count
+oTotal women's fellowship count
+oTotal men's fellowship count
+oSunday school enrollment
+oBaptisms this month
+oNew conversions this month
+oCommunion participation this month
+Church trends: 
+oMembership growth trend (last 12 months)
+oBaptism trend (last 12 months)
+oConversion trend (last 12 months)
+oFinancial giving trend (last 12 months)
+Financial summary: 
+oTotal income this month
+oTotal expenses this month
+oTithe paid this month
+oTithe status (Paid/Pending/Overdue)
+oOutstanding tithe amount (if any)
+oBudget utilization
+Recent activities: 
+oRecent demographic updates
+oRecent financial transactions
+oRecent tithe payments
+oRecent reports submitted
+oRecent events attended
+oRecent initiatives participated
+Compliance status: 
+oDemographics reporting status
+oFinancial reporting status
+oTithe payment status
+oOverall compliance score
+oUpcoming deadlines
+oOverdue items alert
+Quick actions: 
+oUpdate demographics
+oRecord income
+oRecord expense
+oPay tithe
+oSubmit monthly report
+oCreate church initiative
+oCreate church event
+oSend message to members
+Church calendar: 
+oUpcoming church services
+oUpcoming church events
+oChurch initiatives
+oDiocese events (visible)
+oRegional events (visible)
+oSubregion events (visible)
+oImportant deadlines
+Notifications: 
+oCompliance reminders
+oTithe reminders
+oEvent invitations
+oInitiative invitations
+oMessages from subregion/region/diocese
+oSystem notifications
+Church information card: 
+oChurch name
+oPastor name and photo
+oChurch address
+oService times
+oContact details
+
+Demographics Management (/church/demographics)
+Purpose: Manage and update church demographic data
+Contents:
+Current demographics overview: 
+oTotal members (current count)
+oYouth count (ages 13-35)
+oWomen's fellowship count
+oMen's fellowship count
+oSunday school enrollment (children)
+oSenior citizens count
+oAge distribution chart
+oGender distribution chart
+Update demographics form: 
+oMonth and year selection
+oTotal members count input
+oYouth group count input
+oWomen's fellowship count input
+oMen's fellowship count input
+oSunday school enrollment input
+oNew members added this month
+oMembers transferred out this month
+oBaptisms performed this month
+oCommunion participants this month
+oNew conversions this month
+oData validation (youth ≤ total members, etc.)
+oSave as draft
+oSubmit for approval
+Spiritual activities tracking: 
+oBaptisms: 
+Number of baptisms this month
+Baptism dates
+Notes (optional)
+oCommunion participation: 
+Number of participants
+Communion service dates
+oNew conversions: 
+Number of new converts
+Conversion dates
+Follow-up status
+oMember transfers: 
+Transfers in (from which church)
+Transfers out (to which church)
+Reasons for transfer
+Demographics history: 
+oView past demographic submissions
+oCompare month-over-month changes
+oView growth trends
+oDownload demographic reports
+Demographic analytics: 
+oMembership growth rate
+oYouth participation rate
+oWomen's fellowship participation rate
+oMen's fellowship participation rate
+oBaptism rate
+oConversion rate
+oRetention rate
+oGrowth projections
+Demographics reports: 
+oMonthly demographic summary
+oQuarterly demographic report
+oAnnual demographic report
+oGrowth analysis report
+oExport to Excel/PDF
+Compliance status: 
+oRequired fields completion status
+oLast submission date
+oNext submission deadline
+oSubmission history
+oCompliance alerts
+
+Financial Management (/church/financial)
+Purpose: Comprehensive church financial tracking and management
+Contents:
+Financial dashboard: 
+oTotal income this month
+oTotal income this year
+oTotal expenses this month
+oTotal expenses this year
+oNet position (income - expenses)
+oTithe owed this month
+oTithe paid this month
+oBudget utilization percentage
+oFinancial health indicator
+Income tracking: 
+oRecord new income: 
+Income date
+Income source (Sunday Offering/Midweek Offering/Special Offering/Tithe/Donations/Fundraising/Other)
+Income category
+Amount
+Currency
+Payment method (Cash/Bank Transfer/Mobile Money)
+Payer name (optional)
+Description/notes
+Receipt number
+Receipt upload
+oIncome list (table view): 
+Date
+Source
+Category
+Amount
+Payment method
+Recorded by
+Action buttons (View/Edit/Delete)
+oIncome by source breakdown
+oIncome trends (line chart)
+oWeekly income tracking
+oMonthly income summary
+Expense tracking: 
+oRecord new expense: 
+Expense date
+Expense category (Rent/Utilities/Salaries/Maintenance/Ministry/Transportation/Supplies/Tithe/Other)
+Expense subcategory
+Amount
+Payment method
+Vendor/supplier name
+Description
+Receipt/invoice upload
+Approval status
+oExpense list (table view): 
+Date
+Category
+Description
+Amount
+Payment method
+Approval status
+Action buttons (View/Edit/Delete/Approve)
+oExpense by category breakdown
+oExpense trends (line chart)
+oMonthly expense summary
+Tithe management: 
+oAutomatic tithe calculation: 
+Based on monthly income
+Tithe percentage (e.g., 10%)
+Tithe amount due
+oTithe payment recording: 
+Payment date
+Amount paid
+Payment method
+Payment reference
+Receipt upload
+oTithe payment history: 
+All past tithe payments
+Payment dates
+Amounts paid
+Payment status
+Outstanding balance
+oTithe compliance status
+oTithe payment reminders
+Budget management: 
+oCreate annual budget: 
+Fiscal year selection
+Income budget by source
+Expense budget by category
+Total projected income
+Total budgeted expenses
+Budget approval workflow
+oBudget tracking: 
+Budget vs actual comparison
+Variance analysis (over/under budget)
+Budget utilization by category
+Overspending alerts
+Budget burn rate
+oBudget reports: 
+Monthly budget vs actual
+Quarterly budget summary
+Annual budget report
+Financial reports: 
+oMonthly financial statement: 
+Income summary
+Expense summary
+Net position
+Tithe payment status
+oQuarterly financial report
+oAnnual financial report
+oCash flow statement
+oIncome and expense report by category
+oTithe payment report
+oSubmit financial report to subregion/region
+oExport financial reports (PDF/Excel)
+oPrint financial statements
+Financial analytics: 
+oIncome trends over time
+oExpense trends over time
+oIncome vs expense comparison
+oFinancial health score
+oGiving patterns analysis
+oSeasonal financial patterns
+oFinancial forecasting
+
+Church Initiatives Management (/church/initiatives)
+Purpose: Create and manage church-level training, programs, and activities
+Contents:
+Church initiatives dashboard: 
+oTotal active church initiatives
+oTotal participants
+oUpcoming initiatives
+oCompleted initiatives
+oParticipation rate
+Create church initiative: 
+oInitiative title
+oInitiative description
+oInitiative type (Training/Bible Study/Prayer Group/Evangelism/Youth Program/Women's Program/Men's Program/Other)
+oTarget audience (Youth/Women/Men/Children/Leaders/All Members)
+oVisibility (Internal - Church members only/Open - Can invite from other churches)
+oStart date
+oEnd date
+oInitiative duration
+oInitiative frequency (One-time/Weekly/Monthly/Quarterly)
+oMeeting day and time
+oLocation/venue
+oFacilitator/leader
+oBudget allocated (if any)
+oRegistration required (Yes/No)
+oMaximum participants (if limited)
+oInitiative materials (documents/handouts)
+oInitiative image
+oStatus (Draft/Active/Completed/Cancelled)
+Initiative registration: 
+oOpen/close registration
+oView registered participants
+oParticipant details (name, contact, age group)
+oApprove/reject registrations (if approval needed)
+oSend confirmation
+Initiative participation tracking: 
+oMark attendance per session
+oAttendance percentage per participant
+oCompletion status
+oIssue completion acknowledgment
+oCollect feedback
+oParticipant progress tracking
+Initiative communication: 
+oSend announcements to participants
+oSend reminders before sessions
+oShare materials
+oPost-initiative follow-up
+Initiative analytics: 
+oTotal participants
+oAttendance trends
+oCompletion rate
+oDropout rate and reasons
+oParticipant satisfaction
+oInitiative impact (spiritual growth, behavior change)
+Initiatives calendar: 
+oView all church initiatives
+oFilter by type/status
+oMonthly/weekly view
+Initiatives list: 
+oAll church initiatives
+oInitiative details
+oEdit/delete/duplicate initiatives
+Participation in external initiatives: 
+oView diocese initiatives
+oView regional initiatives
+oView subregion initiatives
+oRegister church members
+oTrack participation
+Initiative reports: 
+oInitiative summary
+oParticipation report
+oImpact assessment
+oExport reports
+
+Church Events Management (/church/events)
+Purpose: Create and manage church-level events and gatherings
+Contents:
+Church events dashboard: 
+oTotal upcoming church events
+oTotal past events this year
+oTotal event attendees
+oEvent calendar
+Create church event: 
+oEvent title
+oEvent description
+oEvent type (Sunday Service/Midweek Service/Prayer Meeting/Youth Kesha/Revival/Wedding/Funeral/Fundraising/Special Service/Other)
+oEvent category (Worship/Prayer/Fellowship/Evangelism/Celebration/Administrative)
+oTarget audience (Youth/Women/Men/Children/Families/All Members/Open to Public)
+oVisibility (Internal/Open to other churches)
+oEvent date and time
+oEvent end time (or multi-day)
+oEvent venue (Church building/External venue/Outdoor)
+oEvent capacity (if limited)
+oEvent speakers/facilitators
+oEvent coordinator
+oRegistration required (Yes/No)
+oEvent budget (if applicable)
+oEvent poster/banner
+oEvent program/agenda
+oSpecial requirements (sound system, chairs, food, etc.)
+oStatus (Draft/Published/Active/Completed/Cancelled)
+Event registration: 
+oOpen/close registration
+oView registered attendees
+oAttendee details
+oSend confirmation
+oGenerate attendee list
+Event attendance tracking: 
+oCheck-in attendees
+oMark attendance
+oCount total attendance
+oTrack visitors (non-members)
+oAttendance summary
+Event financials: 
+oOfferings collected during event
+oDonations received
+oEvent expenses
+oFinancial summary
+Event feedback: 
+oPost-event feedback form
+oTestimonies collection
+oImpact assessment
+Events calendar: 
+oView all church events
+oView diocese events (visible)
+oView regional events (visible)
+oView subregion events (visible)
+oMonthly/weekly view
+oService schedule
+Events list: 
+oAll church events
+oEvent details
+oEdit/delete events
+oDuplicate recurring events
+Event reports: 
+oEvent summary
+oAttendance report
+oFinancial report
+oImpact report
+oExport reports
+
+Church Members Management (/church/members)
+(Optional - For churches that want detailed member tracking)
+Purpose: Maintain church membership database (Private - Diocese never sees names)
+Contents:
+Members dashboard: 
+oTotal active members
+oNew members this month
+oMembers by age group
+oMembers by gender
+oMembers by ministry involvement
+Add new member: 
+oFull name
+oDate of birth
+oGender
+oPhone number
+oEmail address
+oPhysical address
+oNational ID number
+oMarital status
+oOccupation
+oProfile photo (optional)
+oDate joined church
+oHow they joined (Conversion/Transfer/Birth)
+oPrevious church (if transfer)
+oBaptism status (Yes/No)
+oBaptism date (if applicable)
+oMinistry involvement (Youth/Women/Men/Choir/Sunday School/Other)
+oSpecial skills/talents
+oEmergency contact
+oNotes
+Members list (table view): 
+oMember name and photo
+oAge
+oGender
+oPhone number
+oDate joined
+oBaptism status
+oMinistry involvement
+oStatus (Active/Inactive/Transferred)
+oAction buttons (View/Edit/Delete)
+Member profile view: 
+oFull member information
+oSpiritual journey: 
+Conversion date
+Baptism date
+Growth milestones
+oMinistry involvement history
+oEvent attendance history
+oInitiative participation history
+oGiving history (optional - amount not shown, just frequency)
+oNotes and pastoral care records
+Member search and filter: 
+oSearch by name
+oFilter by age group
+oFilter by gender
+oFilter by ministry
+oFilter by baptism status
+oFilter by status (active/inactive)
+Member communication: 
+oSend SMS to member
+oSend email to member
+oSend bulk message to filtered members
+oBirthday reminders
+oAnniversary reminders
+Member reports: 
+oMember directory (for internal use)
+oMembers by ministry
+oNew members report
+oInactive members report
+oBirthday list
+oExport member data (internal use only)
+Privacy and security: 
+oMember data is encrypted
+oOnly church council has access
+oDiocese/Region/Subregion NEVER sees individual member names
+oOnly aggregated statistics shared upward
+
+Monthly Reporting (/church/reports)
+Purpose: Submit required monthly reports to subregion/region
+Contents:
+Monthly report dashboard: 
+oCurrent month reporting status
+oReport submission deadline
+oDays until deadline
+oRequired sections completion status
+oPast reports history
+Create monthly report: 
+oReport month and year selection
+oDemographics section: 
+Total members
+Youth count
+Women's fellowship
+Men's fellowship
+Sunday school enrollment
+Baptisms this month
+Communion participants
+New conversions
+Member transfers
+(Auto-populated from demographics module)
+oFinancial section: 
+Total income this month
+Total expenses this month
+Tithe amount paid
+Financial highlights
+(Auto-populated from financial module)
+oActivities section: 
+Church services held
+Special events conducted
+Initiatives progress
+Outreach activities
+Pastoral visits made
+oPastor's comments: 
+Achievements this month
+Challenges faced
+Prayer requests
+Support needed
+Testimonies and highlights
+Plans for next month
+oAttachments: 
+Supporting documents
+Photos from events
+Financial statements
+Report preview: 
+oReview all sections
+oCheck completeness
+oIdentify missing information
+oEdit before submission
+Submit report: 
+oFinal review
+oSubmit to subregion overseer (or regional overseer if no subregion)
+oSubmission confirmation
+oTrack submission status
+oEmail confirmation sent
+Report submission tracking: 
+oSubmission date and time
+oSubmitted by (user)
+oSubmission status (Pending Review/Reviewed by Subregion/Approved by Region/Approved by Diocese)
+oComments from subregion overseer
+oComments from regional overseer
+oApproval history
+Report history: 
+oView past submitted reports (last 12 months)
+oDownload past reports
+oCompare reports over time
+oTrack report trends
+Report templates: 
+oSave report as template
+oUse previous report as template
+oPre-fill recurring information
+Report reminders: 
+oAutomatic reminders before deadline
+oOverdue report alerts
+oSMS/Email reminders to pastor
+
+Church Communications (/church/communications)
+Purpose: Send messages to church members and receive messages from diocese/region/subregion
+Contents:
+Communications dashboard: 
+oTotal messages sent
+oRecent messages received
+oScheduled messages
+oMessage delivery statistics
+Compose new message: 
+oMessage type (SMS/Email/Both)
+oMessage priority
+oSubject (for email)
+oMessage body
+oRecipient selection: 
+All members
+Youth group
+Women's fellowship
+Men's fellowship
+Church council
+Specific ministry
+Custom recipient list (upload CSV)
+Specific individuals
+oSend immediately or schedule
+oSchedule date and time
+oAttach documents (email)
+oSave as draft
+oSave as template
+Message templates: 
+oPre-saved church message templates
+oService reminder template
+oEvent invitation template
+oMeeting reminder template
+oBirthday wishes template
+oAnnouncement template
+oCreate new template
+oUse template for new message
+Broadcast messages: 
+oWeekly service reminders
+oEvent announcements
+oInitiative invitations
+oPrayer requests
+oUrgent announcements
+oSeasonal greetings
+oOffering appeals
+Message scheduling: 
+oSchedule recurring messages (weekly service reminders)
+oSchedule one-time messages
+oCancel scheduled messages
+oEdit scheduled messages
+Message tracking: 
+oDelivery status
+oRead receipts (email)
+oFailed deliveries
+oRetry failed messages
+Inbox: 
+oMessages from diocese
+oMessages from region
+oMessages from subregion
+oSystem notifications
+oRead/unread status
+oReply to messages
+oArchive messages
+Communications history: 
+oAll sent messages log
+oFilter by date/type/recipient
+oSearch messages
+oResend messages
+oExport communication log
+Communication reports: 
+oMonthly communication summary
+oDelivery success report
+oEngagement report
+
+Church Council Management (/church/users)
+Purpose: Manage church council members and their system access
+Contents:
+Church users dashboard: 
+oTotal church users
+oUsers by role
+oRecently active users
+oUser login activity
+Add new church user: 
+oUser full name
+oUser email
+oUser phone number
+oUser role selection: 
+Pastor (Church Admin - full access)
+Church Secretary (Edit demographics, view finances)
+Church Treasurer (Full financial access)
+Youth Leader (Youth initiatives and events access)
+Women's Leader (Women's fellowship access)
+Men's Leader (Men's fellowship access)
+Council Member (View-only access)
+Custom role
+oUser permissions assignment: 
+View demographics
+Edit demographics
+View finances
+Edit finances
+Record income/expenses
+View members
+Edit members
+Create initiatives
+Create events
+Send messages
+Submit reports
+View reports
+Manage users
+oInitial password setup
+oUser status (Active/Inactive)
+oUser profile photo
+Users list: 
+oUser name and photo
+oEmail and phone
+oRole
+oPermissions summary
+oLast login
+oStatus
+oAction buttons (View/Edit/Delete/Suspend/Reset Password)
+User profile view: 
+oComplete user information
+oAssigned role and permissions
+oActivity log (recent actions)
+oLogin history
+Edit user: 
+oUpdate user information
+oChange user role
+oModify user permissions
+oUpdate contact details
+User management: 
+oSuspend user account
+oReactivate user account
+oDelete user account
+oReset user password
+oForce password change on next login
+User activity tracking: 
+oUser login history
+oUser actions log
+oChanges made by user
+oFinancial transactions by user
+oReports submitted by user
+
+Church Calendar (/church/calendar)
+Purpose: Church activities, services, and deadlines calendar
+Contents:
+Calendar views: 
+oMonthly calendar view
+oWeekly calendar view
+oDaily agenda view
+oList view
+Calendar filters: 
+oShow/hide church services
+oShow/hide church events
+oShow/hide church initiatives
+oShow/hide diocese events
+oShow/hide regional events
+oShow/hide subregion events
+oShow/hide deadlines
+oColor-coding by category
+Calendar entries: 
+oChurch services (Sunday/Midweek)
+oChurch events
+oChurch initiatives
+oDiocese events (visible)
+oRegional events (visible)
+oSubregion events (visible)
+oReport submission deadlines
+oTithe payment deadlines
+oChurch meetings
+oPastoral visits
+oSpecial observances
+Create calendar entry: 
+oService/event/meeting title
+oType
+oDate and time
+oDuration
+oLocation
+oDescription
+oReminders
+oRecurrence (for regular services)
+oVisibility
+Service schedule management: 
+oSunday service times
+oMidweek service times
+oPrayer meeting schedule
+oRecurring event setup
+Calendar synchronization: 
+oSync with personal calendar
+oExport calendar (iCal)
+oSubscribe to church calendar
+Calendar sharing: 
+oShare with church members
+oPrint calendar
+oDownload calendar PDF
+Calendar reminders: 
+oService reminders
+oEvent reminders
+oDeadline reminders
+oMeeting reminders
+
+Church Settings (/church/settings)
+Purpose: Configure church-level settings and preferences
+Contents:
+Church information: 
+oChurch name
+oChurch acronym
+oChurch address
+oChurch phone numbers
+oChurch email
+oChurch website (if any)
+oChurch logo upload
+oService times configuration
+oUpdate church information
+Pastor information: 
+oPastor name
+oPastor photo
+oPastor phone
+oPastor email
+oPastor bio
+oOrdination date
+oUpdate pastor information
+Church council: 
+oSecretary information
+oTreasurer information
+oOther council members
+oUpdate council information
+Service schedule: 
+oSunday service times
+oMidweek service times
+oPrayer meeting times
+oOther regular services
+oService location details
+Financial settings: 
+oTithe percentage (view-only - set by diocese)
+oIncome categories customization
+oExpense categories customization
+oBudget template preferences
+Notification preferences: 
+oEmail notifications ON/OFF
+oSMS notifications ON/OFF
+oNotification frequency
+oQuiet hours (no notifications)
+oNotification categories
+Church preferences: 
+oDashboard layout
+oDefault landing page
+oReport templates
+oCommunication templates
+oCalendar preferences
+oDate format
+oTime format
+Data and privacy: 
+oMember data access control
+oData export settings
+oData retention policy
+oPrivacy settings
+
+7. SHARED MODULES (Cross-Level Access)
+
+User Profile Management (/profile)
+(Available to all users at all levels)
+Purpose: Manage personal user profile and account settings
+Contents:
+Profile information: 
+oProfile photo upload/change
+oFull name
+oEmail address
+oPhone number
+oNational ID number
+oDate of birth
+oPhysical address
+oEmergency contact
+oUpdate profile information
+Account security: 
+oChange password
+oCurrent password verification
+oNew password entry
+oPassword confirmation
+oPassword strength indicator
+oEnable/disable two-factor authentication
+oView active sessions
+oLogout all other devices
+Notification preferences: 
+oEmail notifications settings
+oSMS notifications settings
+oPush notifications settings
+oNotification categories selection
+oNotification frequency
+oQuiet hours configuration
+Display preferences: 
+oLanguage selection
+oTimezone selection
+oDate format preference
+oTime format preference
+oDashboard layout preference
+oTheme/color preference
+Activity log: 
+oRecent login history
+oRecent actions performed
+oRecent reports submitted
+oRecent messages sent
+Account information: 
+oOrganization name
+oRole assignment
+oPermissions summary
+oAccount creation date
+oLast password change date
+
+Notifications Center (/notifications)
+(Available to all users at all levels)
+Purpose: View and manage all system notifications
+Contents:
+Notifications dashboard: 
+oUnread notifications count
+oRecent notifications
+oNotification categories
+Notification categories: 
+oCompliance reminders
+oReport submission reminders
+oTithe payment reminders
+oEvent invitations
+oInitiative invitations
+oMessages received
+oSystem updates
+oApproval requests
+oAlerts and warnings
+Notification list: 
+oNotification title
+oNotification category
+oNotification message
+oDate and time received
+oRead/unread status
+oNotification priority
+oAction button (if applicable)
+Notification actions: 
+oMark as read
+oMark as unread
+oDelete notification
+oMark all as read
+oClear all notifications
+oFilter by category
+oSearch notifications
+Notification settings: 
+oEnable/disable by category
+oNotification delivery method
+oNotification frequency
+oQuiet hours
+oEmail digest settings
+
+Help & Support (/help)
+(Available to all users at all levels)
+Purpose: Access system help, documentation, and support
+Contents:
+Help center: 
+oFrequently asked questions (FAQs)
+oUser guides by role: 
+Diocese user guide
+Regional user guide
+Subregion user guide
+Church user guide
+oModule-specific help: 
+Demographics help
+Financial management help
+Initiatives help
+Events help
+Communications help
+Reports help
+Video tutorials: 
+oGetting started video
+oHow to update demographics
+oHow to record finances
+oHow to submit monthly report
+oHow to create initiatives
+oHow to create events
+oHow to send messages
+oHow to generate reports
+System documentation: 
+oUser manual (downloadable PDF)
+oQuick reference guides
+oFeature documentation
+oRelease notes and changelog
+Contact support: 
+oSupport request form: 
+Issue category (Technical/Account/Training/Feature Request/Bug Report)
+Issue description
+Priority level
+Attach screenshots
+Submit request
+oSupport ticket tracking
+oView support history
+oLive chat (if available)
+oSupport email address
+oSupport phone number
+Feature requests: 
+oSubmit feature request
+oVote on existing requests
+oView feature roadmap
+oFeature request status
+Bug reporting: 
+oReport a bug form
+oBug description
+oSteps to reproduce
+oAttach screenshots/logs
+oBug tracking
+oBug resolution notifications
+System status: 
+oSystem uptime status
+oScheduled maintenance notices
+oKnown issues
+oRecent updates
+
+END OF SPECIFICATION DOCUMENT

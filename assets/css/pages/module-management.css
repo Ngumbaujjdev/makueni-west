@@ -1,0 +1,130 @@
+/**
+ * Module Management - Drag and Drop Styles
+ * Styles for the module structure tab with drag-and-drop functionality
+ */
+
+/* ============================================================================ */
+/* DRAG HANDLE STYLING */
+/* ============================================================================ */
+
+.drag-handle {
+    cursor: grab !important;
+    padding: 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.drag-handle:hover {
+    background-color: rgba(var(--primary-rgb), 0.1);
+    color: var(--primary);
+}
+
+.drag-handle:active {
+    cursor: grabbing !important;
+}
+
+/* ============================================================================ */
+/* DRAGULA STATES */
+/* ============================================================================ */
+
+.gu-mirror {
+    position: fixed !important;
+    margin: 0 !important;
+    z-index: 9999 !important;
+    opacity: 0.8;
+    list-style-type: none;
+}
+
+.gu-hide {
+    display: none !important;
+}
+
+.gu-unselectable {
+    user-select: none !important;
+}
+
+.gu-transit {
+    opacity: 0.4;
+}
+
+/* ============================================================================ */
+/* DROP ZONE HIGHLIGHTING */
+/* ============================================================================ */
+
+.module-list.gu-over,
+.submodule-list.gu-over {
+    background-color: rgba(var(--success-rgb), 0.05);
+    border: 2px dashed var(--success);
+    border-radius: 8px;
+    padding: 8px;
+    min-height: 50px;
+}
+
+/* ============================================================================ */
+/* MODULE & SUBMODULE ITEM STYLING */
+/* ============================================================================ */
+
+.module-item,
+.submodule-item {
+    transition: all 0.2s;
+}
+
+.module-item:hover,
+.submodule-item:hover {
+    transform: translateX(4px);
+}
+
+/* Module item specific */
+.module-item {
+    position: relative;
+}
+
+.module-item .drag-handle {
+    font-size: 1.125rem; /* 18px */
+}
+
+/* Submodule item specific */
+.submodule-item {
+    position: relative;
+}
+
+.submodule-item .drag-handle {
+    font-size: 1rem; /* 16px */
+}
+
+/* ============================================================================ */
+/* MODULE TREE CONTAINER */
+/* ============================================================================ */
+
+#moduleTreeContainer {
+    min-height: 300px;
+}
+
+#moduleTreeContainer .module-list {
+    min-height: 40px;
+}
+
+#moduleTreeContainer .submodule-list {
+    min-height: 30px;
+}
+
+/* ============================================================================ */
+/* COLLAPSE/EXPAND FUNCTIONALITY */
+/* ============================================================================ */
+
+.collapse-icon {
+    transition: transform 0.2s ease-in-out;
+}
+
+.collapse-icon.rotate-90 {
+    transform: rotate(90deg);
+}
+
+/* Collapsed state */
+.collapse:not(.show) {
+    display: none;
+}
+
+.collapse.show {
+    display: block;
+}
