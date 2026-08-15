@@ -25,7 +25,7 @@ if (isset($_COOKIE[session_name()])) {
 // If we have a token, try to invalidate it on backend (optional - doesn't block logout)
 if ($authToken) {
     try {
-        $apiUrl = 'http://127.0.0.1:8004/api/auth/logout';
+        $apiUrl = BACKEND_API_URL . '/auth/logout';
         
         $ch = curl_init($apiUrl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

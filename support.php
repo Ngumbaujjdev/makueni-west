@@ -76,6 +76,9 @@ $currentRole = getCurrentRole();
 </head>
 
 <body>
+    <!-- App config (must load before any page script that uses AppConfig) -->
+    <script src="<?= SITE_URL ?>/assets/js/config/app.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
     <!-- Start Switcher -->
     <?php  include "includes/start-switcher.php" ?>
     <!-- End Switcher -->

@@ -13,6 +13,15 @@ if (!defined('SITE_URL')) {
     define('SITE_URL', '/makueni-west');
 }
 
+// Backend API base URL — PHP-side mirror of assets/js/config/app.js's
+// AppConfig.API_BASE_URL. The handful of PHP files that call the backend
+// directly (not via the frontend JS) should use this instead of hardcoding
+// the URL — that's exactly what broke when the backend moved from port 8000
+// to 8004 and several files needed hand-fixing instead of a one-line change.
+if (!defined('BACKEND_API_URL')) {
+    define('BACKEND_API_URL', 'http://127.0.0.1:8004/api');
+}
+
 // Session configuration
 ini_set('session.cookie_httponly', 1);
 ini_set('session.use_only_cookies', 1);

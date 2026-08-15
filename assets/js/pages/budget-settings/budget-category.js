@@ -77,7 +77,7 @@
         try {
             console.log('📡 Fetching budget categories...');
 
-            const API_BASE = window.AppConfig?.API_BASE_URL || 'http://localhost:8004/api';
+            const API_BASE = window.AppConfig.API_BASE_URL;
             const authToken = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
 
             const response = await fetch(`${API_BASE}/budget-categories`, {
@@ -398,7 +398,7 @@
                 data.slug = slug;
             }
 
-            const API_BASE = window.AppConfig?.API_BASE_URL || 'http://localhost:8004/api';
+            const API_BASE = window.AppConfig.API_BASE_URL;
             const authToken = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
 
             const isEdit = editingCategoryId !== null;
@@ -448,7 +448,7 @@
 
     async function confirmDelete() {
         try {
-            const API_BASE = window.AppConfig?.API_BASE_URL || 'http://localhost:8004/api';
+            const API_BASE = window.AppConfig.API_BASE_URL;
             const authToken = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
 
             const response = await fetch(`${API_BASE}/budget-categories/${editingCategoryId}`, {
@@ -531,7 +531,7 @@
 
     async function loadCategoryAuditTrail(categoryId) {
         try {
-            const API_BASE = window.AppConfig?.API_BASE_URL || 'http://localhost:8004/api';
+            const API_BASE = window.AppConfig.API_BASE_URL;
             const authToken = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
 
             const response = await fetch(`${API_BASE}/budget-categories/${categoryId}/audits`, {

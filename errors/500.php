@@ -36,6 +36,9 @@
 </head>
 
 <body>
+    <!-- App config (must load before any page script that uses AppConfig) -->
+    <script src="<?= SITE_URL ?>/assets/js/config/app.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
     <!-- Start Switcher -->
     <div class="offcanvas offcanvas-end" tabindex="-1" id="switcher-canvas" aria-labelledby="offcanvasRightLabel">
         <div class="offcanvas-header border-bottom">

@@ -25,7 +25,7 @@
   // ========================================================================
 
   const API_BASE =
-    window.AppConfig?.API_BASE_URL || "http://localhost:8004/api";
+    window.AppConfig.API_BASE_URL;
 
   /**
    * Get auth token from localStorage
