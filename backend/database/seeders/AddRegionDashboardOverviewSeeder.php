@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Module;
+use App\Models\ModuleGroup;
 use App\Models\Submodule;
 use App\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -17,6 +18,16 @@ class AddRegionDashboardOverviewSeeder extends Seeder
         $this->command->info('Creating Region Dashboard module with Dashboard Overview...');
         $this->command->info('');
 
+        // The region-tier "Overview" module group is what every other region
+        // module (Reporting, etc.) actually belongs to - a module with no
+        // module_group_id doesn't resolve to any territory_scope, which is
+        // exactly what happened here originally (Module::create below never
+        // set it) and made this module invisible to territory_scope-based
+        // permission queries despite the permission rows existing.
+        $overviewGroup = ModuleGroup::where('name', 'Overview')
+            ->where('territory_scope', 'region')
+            ->first();
+
         // === STEP 1: CREATE OR GET REGION DASHBOARD MODULE ===
         $this->command->info('📊 Creating/Finding Region Dashboard Module...');
 
@@ -26,6 +37,12 @@ class AddRegionDashboardOverviewSeeder extends Seeder
         if ($dashboardModule) {
             $this->command->info("   ✅ Found existing Module: {$dashboardModule->name} (ID: {$dashboardModule->id}, Number: {$dashboardModule->number})");
             $this->command->info("   Using existing module for dashboard overview...");
+
+            if ($overviewGroup && $dashboardModule->module_group_id !== $overviewGroup->id) {
+                $dashboardModule->module_group_id = $overviewGroup->id;
+                $dashboardModule->save();
+                $this->command->info("   🔧 Fixed module_group_id -> {$overviewGroup->id} (Overview/region)");
+            }
         } else {
             // Find the next available module number (check all modules, not just 11-20)
             $maxModuleNumber = Module::max('number');
@@ -37,6 +54,7 @@ class AddRegionDashboardOverviewSeeder extends Seeder
                 'name' => 'Region Dashboard',
                 'icon' => 'dashboard',
                 'number' => $nextNumber,
+                'module_group_id' => $overviewGroup?->id,
                 'description' => 'Comprehensive overview of regional operations',
                 'is_active' => true,
             ]);
