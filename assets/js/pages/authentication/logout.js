@@ -37,7 +37,7 @@ async function handleLogout() {
     );
   } catch (error) {
     console.error("Logout error:", error);
-    window.location.href = "/makueni-west/authentication/logout.php";
+    window.location.href = "/makueni-west/logout";
   }
 }
 
@@ -99,7 +99,7 @@ async function performLogout(userName) {
     }, 2500);
   } catch (error) {
     console.error("Logout error:", error);
-    window.location.href = "/makueni-west/authentication/logout.php";
+    window.location.href = "/makueni-west/logout";
   }
 }
 

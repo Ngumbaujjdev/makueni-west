@@ -1,18 +1,14 @@
 <?php
 /**
  * Logout Handler
- * 
+ *
  * Handles user logout by:
  * 1. Calling backend API to invalidate token
  * 2. Destroying PHP session
  * 3. Clearing cookies
  * 4. Redirecting to login page
  */
-
-// Start session if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/../includes/session-manager.php';
 
 // Get auth token before destroying session
 $authToken = $_SESSION['auth_token'] ?? null;
@@ -52,5 +48,5 @@ if ($authToken) {
 }
 
 // Redirect to login page with logout message
-header('Location: /makueni-west/authentication/login.php?logged_out=1');
+header('Location: ' . SITE_URL . '/login?logged_out=1');
 exit;
