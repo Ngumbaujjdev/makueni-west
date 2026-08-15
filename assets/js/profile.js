@@ -2,7 +2,9 @@
     "use strict"
 
     var myElement1 = document.getElementById('profile-posts-scroll');
-    new SimpleBar(myElement1, { autoHide: true });
+    if (myElement1) {
+        new SimpleBar(myElement1, { autoHide: true });
+    }
 
     var lightboxVideo = GLightbox({
         selector: '.glightbox'
