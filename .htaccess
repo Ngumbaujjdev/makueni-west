@@ -1,6 +1,14 @@
 RewriteEngine On
 
 # ========================================
+# SHORT LOGIN/LOGOUT ALIASES
+# ========================================
+# /login and /logout are the natural URLs to guess/type; the real pages live
+# under authentication/. Map the short form to the real one.
+RewriteRule ^login/?$ authentication/login [L]
+RewriteRule ^logout/?$ authentication/logout [L]
+
+# ========================================
 # CUSTOM ERROR PAGES (auto-redirect)
 # ========================================
 # If page doesn't exist -> redirect to 404 page
