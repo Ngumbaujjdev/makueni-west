@@ -13,11 +13,10 @@ Laravel 12 API for the diocese management system. See the root `../CLAUDE.md` fo
 4. Commit, push, `gh pr create` — pointed at the backend repo's own remote.
 5. Don't force-push over that repo's `main` — its history predates the move into `makueni-west` and shouldn't be silently overwritten; let a PR reconcile it.
 
-**Working in this local copy** (same rules as the root `CLAUDE.md`, repeated here so this file stands alone):
-- Branch from `main`. Never commit directly to `main`. Prefixes: `feature/<name>`, `bugfix/<name>`, `hotfix/<name>`. One branch per task.
-- Before starting: `git checkout main && git pull origin main`.
-- After finishing: run `composer test`, fix anything broken, commit with a why-focused message, `git push -u origin <branch>`, `gh pr create` with a real title/summary/test-plan.
-- Merge the PR once it's up (`gh pr merge --merge`) — don't leave it sitting open waiting for a separate go-ahead.
+**Working in this local copy** (same rules as the root `CLAUDE.md`, repeated here so this file stands alone), always in this order:
+- Before starting: `git checkout main && git pull origin main`, then `composer test` to confirm `main` itself is green — a failure here is pre-existing, not caused by the work you're about to do. **Then** `git checkout -b <prefix>/<name>`. Prefixes: `feature/<name>`, `bugfix/<name>`, `hotfix/<name>`. One branch per task. Never commit directly to `main`.
+- After finishing: run `composer test` again — all green before going further — commit with a why-focused message, `git push -u origin <branch>`, `gh pr create` with a real title/summary/test-plan.
+- `gh pr merge --merge` — **the push → PR → merge sequence is pre-authorized**, complete it without stopping to ask once the branch is committed and verified. Only pause if something is uncommitted, unverified, or unrelated to the task.
 - Never commit `.env` or any file containing real credentials.
 
 ## Stack
