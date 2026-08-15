@@ -90,6 +90,11 @@ class DatabaseSeeder extends Seeder
             // PHASE 10: Budgets (Last - depends on all above)
             // ==========================================
             BudgetSeeder::class,
+
+            // ==========================================
+            // PHASE 11: Demographics Focus Mode (temporary - see seeder docblock)
+            // ==========================================
+            MuteNonDemographicsChurchModulesSeeder::class,
         ]);
     }
 }
