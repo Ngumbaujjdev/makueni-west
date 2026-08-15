@@ -38,7 +38,7 @@
 
 <body class="bg-white">
     <!-- Start Switcher -->
-    <?php include "./includes/start-switcher.php" ?>
+    <?php include "../includes/start-switcher.php" ?>
     <!-- End Switcher -->
 
     <div class="row authentication mx-0">
