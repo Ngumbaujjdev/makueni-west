@@ -248,7 +248,7 @@
       if (typeof EDIT_USER_ID === 'undefined' || !EDIT_USER_ID) {
         Toast.error("User ID not found");
         setTimeout(() => {
-          window.location.href = "http://localhost:8080/makueni-west/diocese/settings/admin/users";
+          window.location.href = "/makueni-west/diocese/settings/admin/users";
         }, 2000);
         return;
       }
@@ -323,7 +323,7 @@
       console.error("Error loading user data:", error);
       Toast.error(error.message || "Failed to load user data");
       setTimeout(() => {
-        window.location.href = "http://localhost:8080/makueni-west/diocese/settings/admin/users";
+        window.location.href = "/makueni-west/diocese/settings/admin/users";
       }, 3000);
     }
   }
@@ -1851,7 +1851,7 @@
 
       // Redirect to users page after short delay
       setTimeout(() => {
-        window.location.href = "http://localhost:8080/makueni-west/diocese/settings/admin/users";
+        window.location.href = "/makueni-west/diocese/settings/admin/users";
       }, 1500);
 
     } catch (error) {

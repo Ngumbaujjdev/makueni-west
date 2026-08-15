@@ -25,7 +25,7 @@
       return state.text;
     }
     var baseUrl =
-      "http://localhost:8080/makueni-west/assets/images/faces/select2";
+      "/makueni-west/assets/images/faces/select2";
     var $state = $(
       '<span><img src="' +
         baseUrl +
@@ -49,7 +49,7 @@
       return client.text;
     }
     var $client = $(
-      '<span><img src="http://localhost:8080/makueni-west/assets/images/faces/select2/' +
+      '<span><img src="/makueni-west/assets/images/faces/select2/' +
         client.element.value.toLowerCase() +
         '.jpg" /> ' +
         client.text +
@@ -123,7 +123,7 @@
         return state.text;
       }
       var baseUrl =
-        "http://localhost:8080/makueni-west/assets/images/faces/select2";
+        "/makueni-west/assets/images/faces/select2";
       var $state = $(
         '<span><img src="' +
           baseUrl +
@@ -147,7 +147,7 @@
         return client.text;
       }
       var $client = $(
-        '<span><img src="http://localhost:8080/makueni-west/assets/images/faces/select2/' +
+        '<span><img src="/makueni-west/assets/images/faces/select2/' +
           client.element.value.toLowerCase() +
           '.jpg" /> ' +
           client.text +

@@ -409,7 +409,7 @@
         // Use the same token retrieval method as APIHandler
         const authToken = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
         
-        const auditResponse = await fetch(`${window.AppConfig?.API_BASE_URL || 'http://localhost:8000/api'}/auth/user/${userId}/audits`, {
+        const auditResponse = await fetch(`${AppConfig.API_BASE_URL}/auth/user/${userId}/audits`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

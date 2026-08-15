@@ -995,7 +995,7 @@
       opacity: 0.87,
       image: {
         src: [
-          "http://localhost:8080/makueni-west/assets/images/media/media-64.jpg",
+          "/makueni-west/assets/images/media/media-64.jpg",
         ],
         width: 466,
         height: 406,

@@ -1,10 +1,26 @@
 <?php
 /**
  * Session Manager
- * 
+ *
  * Handles session initialization, validation, and management
  * Include this file at the top of every page that needs session handling
  */
+
+// Site base URL — single source of truth for the frontend's own root-relative
+// path, mirroring assets/js/config/app.js's FRONTEND_BASE_URL. If this app ever
+// moves to a different subfolder or a domain root, change it here only.
+if (!defined('SITE_URL')) {
+    define('SITE_URL', '/makueni-west');
+}
+
+// Backend API base URL — PHP-side mirror of assets/js/config/app.js's
+// AppConfig.API_BASE_URL. The handful of PHP files that call the backend
+// directly (not via the frontend JS) should use this instead of hardcoding
+// the URL — that's exactly what broke when the backend moved from port 8000
+// to 8004 and several files needed hand-fixing instead of a one-line change.
+if (!defined('BACKEND_API_URL')) {
+    define('BACKEND_API_URL', 'http://127.0.0.1:8004/api');
+}
 
 // Session configuration
 ini_set('session.cookie_httponly', 1);

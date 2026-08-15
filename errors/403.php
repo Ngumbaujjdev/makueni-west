@@ -1,8 +1,5 @@
 <?php
-// Start session to get error details
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/../includes/session-manager.php';
 
 // Get error details from session
 $requiredPermission = $_SESSION['required_permission'] ?? 'Unknown';
@@ -34,21 +31,21 @@ $userName = $_SESSION['user']['firstname'] ?? 'User';
         content="blazor bootstrap, c# blazor, admin panel, blazor c#, template dashboard, admin, bootstrap admin template, blazor, blazorbootstrap, bootstrap 5 templates, dashboard, dashboard template bootstrap, admin dashboard bootstrap." />
 
     <!-- Favicon -->
-    <link rel="icon" href="http://localhost:8080/makueni-west/assets/images/brand-logos/favicon/favicon.ico"
+    <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico"
         type="image/x-icon" />
 
     <!-- Main Theme Js -->
-    <script src="http://localhost:8080/makueni-west/assets/js/authentication-main.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/authentication-main.js"></script>
 
     <!-- Bootstrap Css -->
-    <link id="style" href="http://localhost:8080/makueni-west/assets/libs/bootstrap/css/bootstrap.min.css"
+    <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css"
         rel="stylesheet" />
 
     <!-- Style Css -->
-    <link href="http://localhost:8080/makueni-west/assets/css/styles.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/css/styles.min.css" rel="stylesheet" />
 
     <!-- Icons Css -->
-    <link href="http://localhost:8080/makueni-west/assets/css/icons.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/css/icons.min.css" rel="stylesheet" />
 </head>
 
 <body>
@@ -563,15 +560,15 @@ $userName = $_SESSION['user']['firstname'] ?? 'User';
         <!-- End::error-page -->
 
         <!-- Bootstrap JS -->
-        <script src="http://localhost:8080/makueni-west/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+        <script src="<?= SITE_URL ?>/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
 
         <!-- Particles JS -->
-        <script src="http://localhost:8080/makueni-west/assets/libs/particles.js/particles.js"></script>
+        <script src="<?= SITE_URL ?>/assets/libs/particles.js/particles.js"></script>
 
         <!-- Error JS -->
-        <script src="http://localhost:8080/makueni-west/assets/js/error.js"></script>
-        <script src="http://localhost:8080/makueni-west/assets/js/config/app.js"></script>
-        <script src="http://localhost:8080/makueni-west/assets/js/config/constants.js"></script>
+        <script src="<?= SITE_URL ?>/assets/js/error.js"></script>
+        <script src="<?= SITE_URL ?>/assets/js/config/app.js"></script>
+        <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
         <!-- Smart Dashboard Redirect -->
         <script>
         function backToDashboard() {
@@ -585,21 +582,21 @@ $userName = $_SESSION['user']['firstname'] ?? 'User';
                 switch (territoryType) {
                     case 'global':
                     case 'diocese':
-                        window.location.href = 'http://localhost:8080/makueni-west/diocese/dashboard';
+                        window.location.href = '<?= SITE_URL ?>/diocese/dashboard';
                         break;
                     case 'region':
                     case 'subregion':
-                        window.location.href = 'http://localhost:8080/makueni-west/region/oversight';
+                        window.location.href = '<?= SITE_URL ?>/region/oversight';
                         break;
                     case 'church':
-                        window.location.href = 'http://localhost:8080/makueni-west/church/member-management';
+                        window.location.href = '<?= SITE_URL ?>/church/member-management';
                         break;
                     default:
-                        window.location.href = 'http://localhost:8080/makueni-west/';
+                        window.location.href = '<?= SITE_URL ?>/';
                 }
             } else {
                 // User not logged in - redirect to login
-                window.location.href = 'http://localhost:8080/makueni-west/';
+                window.location.href = '<?= SITE_URL ?>/';
             }
         }
         </script>

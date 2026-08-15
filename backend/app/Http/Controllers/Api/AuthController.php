@@ -634,47 +634,60 @@ public function getUserAudits(Request $request, $userId)
     // === HELPER METHODS ===
 
     /**
-     * Get user permissions for current role
-     */
-    /**
-     * Get user permissions ONLY from PRIMARY assignment
-     * AND filter by territory scope matching the primary assignment's territory type
+     * Get user permissions for a specific assignment (their active "hat"), or
+     * their PRIMARY assignment if no assignment_id is given (e.g. on login,
+     * before any role has been switched to).
+     *
+     * Previously this always resolved from the PRIMARY assignment regardless
+     * of $assignmentId, including when called from switchRole() — so switching
+     * to a secondary assignment (e.g. a pastor's Regional Committee Member or
+     * Diocese Council Member seat) changed what the UI displayed but not what
+     * the user was actually permitted to do.
      */
     public function getUserPermissions(User $user, $assignmentId = null)
     {
-        // Get PRIMARY assignment
-        $primaryAssignment = $user->activeAssignments()
+        $assignment = $assignmentId
+            ? $user->activeAssignments()->where('id', $assignmentId)->with(['role.permissions', 'territory'])->first()
+            : null;
+
+        // Fall back to PRIMARY if no assignment_id was given, or it didn't
+        // resolve to one of this user's active assignments.
+        if (!$assignment) {
+            $assignment = $user->activeAssignments()
                                  ->where('assignment_type', 'primary')
                                  ->with(['role.permissions', 'territory'])
                                  ->first();
+        }
 
-        if (!$primaryAssignment) {
-            Log::error('No primary assignment found for user', [
+        if (!$assignment) {
+            Log::error('No resolvable assignment found for user', [
                 'user_id' => $user->id,
                 'username' => $user->username,
+                'requested_assignment_id' => $assignmentId,
             ]);
             return [];
         }
 
-        // Get the territory type of the PRIMARY assignment
-        $primaryTerritoryType = $primaryAssignment->territory->territory_type;
+        // Get the territory type of the resolved assignment
+        $territoryType = $assignment->territory->territory_type;
 
         // Get all permissions from the role, but FILTER by territory_scope
-        $permissions = $primaryAssignment->role->permissions()
-                                               ->where('territory_scope', $primaryTerritoryType)
+        $permissions = $assignment->role->permissions()
+                                               ->where('territory_scope', $territoryType)
                                                ->pluck('name')
                                                ->toArray();
 
-        Log::info('Permissions loaded from PRIMARY assignment with territory filtering', [
+        Log::info('Permissions loaded from assignment with territory filtering', [
             'user_id' => $user->id,
             'username' => $user->username,
-            'primary_assignment_id' => $primaryAssignment->id,
-            'territory_name' => $primaryAssignment->territory->name,
-            'territory_type' => $primaryTerritoryType,
-            'role_name' => $primaryAssignment->role->name,
-            'total_role_permissions' => $primaryAssignment->role->permissions->count(),
+            'assignment_id' => $assignment->id,
+            'assignment_type' => $assignment->assignment_type,
+            'territory_name' => $assignment->territory->name,
+            'territory_type' => $territoryType,
+            'role_name' => $assignment->role->name,
+            'total_role_permissions' => $assignment->role->permissions->count(),
             'filtered_permissions_count' => count($permissions),
-            'territory_scope_filter' => $primaryTerritoryType,
+            'territory_scope_filter' => $territoryType,
         ]);
 
         return $permissions;

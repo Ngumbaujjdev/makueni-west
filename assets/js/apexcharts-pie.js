@@ -233,10 +233,10 @@ var options = {
     opacity: 0.85,
     image: {
       src: [
-        "http://localhost:8080/makueni-west/assets/images/media/media-21.jpg",
-        "http://localhost:8080/makueni-west/assets/images/media/media-21.jpg",
-        "http://localhost:8080/makueni-west/assets/images/media/media-21.jpg",
-        "http://localhost:8080/makueni-west/assets/images/media/media-21.jpg",
+        "/makueni-west/assets/images/media/media-21.jpg",
+        "/makueni-west/assets/images/media/media-21.jpg",
+        "/makueni-west/assets/images/media/media-21.jpg",
+        "/makueni-west/assets/images/media/media-21.jpg",
       ],
       width: 25,
       imagedHeight: 25,

@@ -24,21 +24,33 @@ class DatabaseSeeder extends Seeder
             SampleUsersSeeder::class,
 
             // ==========================================
-            // PHASE 3: Modules & Permissions
+            // PHASE 3: Module Groups & Roles
             // ==========================================
             ModuleGroupSeeder::class,
             AdministrationModuleGroupSeeder::class,
             RoleSeeder::class,
-            DioceseRolePermissionsSeeder::class,
-            RegionRolePermissionsSeeder::class,
-            GlobalAdministratorPermissionsSeeder::class,
 
             // ==========================================
             // PHASE 4: System Seeders (Modules per level)
             // ==========================================
+            // Must run BEFORE the role-permission seeders below — they assign
+            // permissions FOR these modules, and previously ran first (Phase 3),
+            // so they found 0 modules and silently assigned nothing. Confirmed on
+            // the dev DB: Bishop/Subregional Overseer had 0 permissions, Regional
+            // Overseer had 2 (not the intended "full access to all region
+            // modules") — this ordering bug was live, not just theoretical.
             DioceseSystemSeeder::class,
             RegionSystemSeeder::class,
             ChurchSystemSeeder::class,
+
+            // ==========================================
+            // PHASE 4.5: Role Permissions (must run after Phase 4's modules exist)
+            // ==========================================
+            DioceseRolePermissionsSeeder::class,
+            RegionRolePermissionsSeeder::class,
+            ChurchRolePermissionsSeeder::class,
+            AdditionalRolePermissionsSeeder::class,
+            GlobalAdministratorPermissionsSeeder::class,
 
             // ==========================================
             // PHASE 5: Dashboard Overview Seeders

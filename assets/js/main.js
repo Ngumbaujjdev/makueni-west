@@ -12,7 +12,7 @@
       .querySelector("#style")
       ?.setAttribute(
         "href",
-        "http://localhost:8080/makueni-west/assets/libs/bootstrap/css/bootstrap.rtl.min.css"
+        "/makueni-west/assets/libs/bootstrap/css/bootstrap.rtl.min.css"
       );
   }
   if (localStorage.ynexlayout) {

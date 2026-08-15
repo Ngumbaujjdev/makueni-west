@@ -37,7 +37,7 @@ async function handleLogout() {
     );
   } catch (error) {
     console.error("Logout error:", error);
-    window.location.href = "/makueni-west/authentication/logout.php";
+    window.location.href = "/makueni-west/logout";
   }
 }
 
@@ -51,7 +51,7 @@ async function performLogout(userName) {
     // Call backend API to invalidate token
     if (token) {
       try {
-        await fetch("http://127.0.0.1:8000/api/auth/logout", {
+        await fetch(`${AppConfig.API_BASE_URL}/auth/logout`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -99,7 +99,7 @@ async function performLogout(userName) {
     }, 2500);
   } catch (error) {
     console.error("Logout error:", error);
-    window.location.href = "/makueni-west/authentication/logout.php";
+    window.location.href = "/makueni-west/logout";
   }
 }
 

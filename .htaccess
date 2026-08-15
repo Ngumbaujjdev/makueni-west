@@ -1,6 +1,14 @@
 RewriteEngine On
 
 # ========================================
+# SHORT LOGIN/LOGOUT ALIASES
+# ========================================
+# /login and /logout are the natural URLs to guess/type; the real pages live
+# under authentication/. Map the short form to the real one.
+RewriteRule ^login/?$ authentication/login [L]
+RewriteRule ^logout/?$ authentication/logout [L]
+
+# ========================================
 # CUSTOM ERROR PAGES (auto-redirect)
 # ========================================
 # If page doesn't exist -> redirect to 404 page
@@ -15,9 +23,15 @@ ErrorDocument 500 /makueni-west/errors/500
 # ========================================
 # REMOVE .php FROM URL BAR
 # ========================================
-# If someone types .php, redirect to remove it
+# If someone types .php, redirect to remove it.
+# Explicit /makueni-west/ prefix, matching the ErrorDocument lines above —
+# a bare relative substitution ($1) resolves against the filesystem path for
+# an external [R] redirect, not the URL path, and produces garbage. Previously
+# this used an absolute /$1 with NO prefix at all, which dropped /makueni-west
+# entirely (e.g. .../authentication/login.php 404'd at /authentication/login
+# instead of /makueni-west/authentication/login) — that's what broke logout.
 RewriteCond %{THE_REQUEST} \.php
-RewriteRule ^(.*)\.php$ /$1 [R=301,L]
+RewriteRule ^(.*)\.php$ /makueni-west/$1 [R=301,L]
 
 # ========================================
 # ADD .php TO FILES (GLOBAL RULE)

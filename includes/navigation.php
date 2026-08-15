@@ -6,19 +6,19 @@
              <!-- Start::header-element -->
              <div class="header-element">
                  <div class="horizontal-logo pl-4">
-                     <a href="http://localhost:8080/makueni-west/dashboard.php" class="header-logo">
-                         <img src="http://localhost:8080/makueni-west/assets/images/brand-logos/desktop-logo.png"
+                     <a href="<?= SITE_URL ?>/dashboard.php" class="header-logo">
+                         <img src="<?= SITE_URL ?>/assets/images/brand-logos/desktop-logo.png"
                              alt="logo" class="desktop-logo" />
                          <img style="object-fit: contain!important; "
-                             src="http://localhost:8080/makueni-west/assets/images/brand-logos/toggle-logo.png"
+                             src="<?= SITE_URL ?>/assets/images/brand-logos/toggle-logo.png"
                              alt="logo" class="toggle-logo" />
-                         <img src="http://localhost:8080/makueni-west/assets/images/brand-logos/desktop-dark.png"
+                         <img src="<?= SITE_URL ?>/assets/images/brand-logos/desktop-dark.png"
                              alt="logo" class="desktop-dark" />
-                         <img src="http://localhost:8080/makueni-west/assets/images/brand-logos/toggle-dark.png"
+                         <img src="<?= SITE_URL ?>/assets/images/brand-logos/toggle-dark.png"
                              alt="logo" class="toggle-dark" />
-                         <img src="http://localhost:8080/makueni-west/assets/images/brand-logos/desktop-white.png"
+                         <img src="<?= SITE_URL ?>/assets/images/brand-logos/desktop-white.png"
                              alt="logo" class="desktop-white" />
-                         <img src="http://localhost:8080/makueni-west/assets/images/brand-logos/toggle-white.png"
+                         <img src="<?= SITE_URL ?>/assets/images/brand-logos/toggle-white.png"
                              alt="logo" class="toggle-white" />
                      </a>
                  </div>
@@ -50,7 +50,7 @@
                  <a href="javascript:void(0);" class="header-link dropdown-toggle" data-bs-auto-close="outside"
                      data-bs-toggle="dropdown">
 
-                     <img src="http://localhost:8080/makueni-west/assets/images/flags/kenya.png" alt="img"
+                     <img src="<?= SITE_URL ?>/assets/images/flags/kenya.png" alt="img"
                          class="rounded-circle header-link-icon" />
                  </a>
                  <!-- End::header-link|dropdown-toggle -->
@@ -86,7 +86,7 @@
                      <!-- <ul class="list-unstyled mb-0" id="header-cart-items-scroll">
                          <li class="dropdown-item">
                              <div class="d-flex align-items-start cart-dropdown-item">
-                                 <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/jpg/1.jpg"
+                                 <img src="<?= SITE_URL ?>/assets/images/ecommerce/jpg/1.jpg"
                                      alt="img" class="avatar avatar-sm avatar-rounded br-5 me-3" />
                                  <div class="flex-grow-1">
                                      <div class="d-flex align-items-start justify-content-between mb-0">
@@ -111,7 +111,7 @@
                          </li>
                          <li class="dropdown-item">
                              <div class="d-flex align-items-start cart-dropdown-item">
-                                 <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/jpg/3.jpg"
+                                 <img src="<?= SITE_URL ?>/assets/images/ecommerce/jpg/3.jpg"
                                      alt="img" class="avatar avatar-sm avatar-rounded br-5 me-3" />
                                  <div class="flex-grow-1">
                                      <div class="d-flex align-items-start justify-content-between mb-0">
@@ -139,7 +139,7 @@
                          </li>
                          <li class="dropdown-item">
                              <div class="d-flex align-items-start cart-dropdown-item">
-                                 <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/jpg/5.jpg"
+                                 <img src="<?= SITE_URL ?>/assets/images/ecommerce/jpg/5.jpg"
                                      alt="img" class="avatar avatar-sm avatar-rounded br-5 me-3" />
                                  <div class="flex-grow-1">
                                      <div class="d-flex align-items-start justify-content-between mb-0">
@@ -163,7 +163,7 @@
                          </li>
                          <li class="dropdown-item">
                              <div class="d-flex align-items-start cart-dropdown-item">
-                                 <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/jpg/4.jpg"
+                                 <img src="<?= SITE_URL ?>/assets/images/ecommerce/jpg/4.jpg"
                                      alt="img" class="avatar avatar-sm avatar-rounded br-5 me-3" />
                                  <div class="flex-grow-1">
                                      <div class="d-flex align-items-start justify-content-between mb-0">
@@ -188,7 +188,7 @@
                          </li>
                          <li class="dropdown-item">
                              <div class="d-flex align-items-start cart-dropdown-item">
-                                 <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/jpg/6.jpg"
+                                 <img src="<?= SITE_URL ?>/assets/images/ecommerce/jpg/6.jpg"
                                      alt="img" class="avatar avatar-sm avatar-rounded br-5 me-3" />
                                  <div class="flex-grow-1">
                                      <div class="d-flex align-items-start justify-content-between mb-0">
@@ -409,13 +409,13 @@
                                     ?>
                              <?php foreach($admins as $admin): ?>
                              <?php if(($admin->Admin_profile)==='male'):?>
-                             <img src="http://localhost:8080/makueni-west/assets/images/faces/13.jpg" alt="img"
+                             <img src="<?= SITE_URL ?>/assets/images/faces/13.jpg" alt="img"
                                  width="32" height="32" class="rounded-circle" />
                              <?php elseif(($admin->Admin_profile)==='female'):?>
-                             <img src="http://localhost:8080/makueni-west/assets/images/faces/2.jpg" alt="img" width="32"
+                             <img src="<?= SITE_URL ?>/assets/images/faces/2.jpg" alt="img" width="32"
                                  height="32" class="rounded-circle" />
                              <?php else: ?>
-                             <img src="http://localhost:8080/makueni-west/assets/images/faces/21.jpg" alt="img"
+                             <img src="<?= SITE_URL ?>/assets/images/faces/21.jpg" alt="img"
                                  width="32" height="32" class="rounded-circle" />
                              <?php endif; ?>
                              <?php endforeach; ?>
@@ -440,12 +440,12 @@
                  <ul class="main-header-dropdown dropdown-menu pt-0 overflow-hidden header-profile-dropdown dropdown-menu-end"
                      aria-labelledby="mainHeaderProfile">
                      <li>
-                         <a class="dropdown-item d-flex" href="http://localhost:8080/makueni-west/profile.php"><i
+                         <a class="dropdown-item d-flex" href="<?= SITE_URL ?>/profile.php"><i
                                  class="ti ti-user-circle fs-18 me-2 op-7"></i>Profile</a>
                      </li>
                      <li>
                          <a class="dropdown-item d-flex"
-                             href="http://localhost:8080/makueni-west/authentication/logout.php"><i
+                             href="<?= SITE_URL ?>/authentication/logout.php"><i
                                  class="ti ti-logout fs-18 me-2 op-7"></i>Log Out</a>
                      </li>
                  </ul>

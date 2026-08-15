@@ -105,7 +105,7 @@
             console.log('📡 Fetching module groups for territory:', currentTerritoryLevel || 'All');
 
             // Use the proper API handler with correct auth token
-            const API_BASE = window.AppConfig?.API_BASE_URL || 'http://localhost:8000/api';
+            const API_BASE = AppConfig.API_BASE_URL;
             const queryParams = currentTerritoryLevel ? `territory_scope=${currentTerritoryLevel}` : '';
             const url = `${API_BASE}/module-groups${queryParams ? '?' + queryParams : ''}`;
 

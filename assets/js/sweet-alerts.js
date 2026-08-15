@@ -123,7 +123,7 @@
       title: "Sweet!",
       text: "Modal with a custom image.",
       imageUrl:
-        "http://localhost:8080/makueni-west/assets/images/media/media-59.jpg",
+        "/makueni-west/assets/images/media/media-59.jpg",
       imageWidth: 400,
       imageHeight: 200,
       imageAlt: "Custom image",
@@ -136,10 +136,10 @@
       padding: "3em",
       color: "#716add",
       background:
-        "url(http://localhost:8080/makueni-west/assets/images/media/media-19.jpg)",
+        "url(/makueni-west/assets/images/media/media-19.jpg)",
       backdrop: `
               rgba(0,0,0,0.3)
-              url(http://localhost:8080/makueni-west/assets/images/gif's/1.gif)
+              url(/makueni-west/assets/images/gif's/1.gif)
               left top
               no-repeat
             `,

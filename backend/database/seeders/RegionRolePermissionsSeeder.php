@@ -19,8 +19,13 @@ class RegionRolePermissionsSeeder extends Seeder
         $this->command->info('Assigning Region Module permissions to Regional roles...');
         $this->command->info('');
 
-        // Get Region Modules (11-18)
-        $regionModules = Module::whereBetween('number', [11, 18])->get();
+        // Region modules, by the module's actual scope (module_groups.territory_scope)
+        // — NOT a number range. Modules 11-12 (Pastoral Care, Church Reporting) sit
+        // inside this number range but are church-scoped, not region-scoped;
+        // whereBetween('number', [11, 18]) wrongly included them.
+        $regionModules = Module::whereHas('moduleGroup', function ($query) {
+            $query->where('territory_scope', 'region');
+        })->get();
 
         if ($regionModules->count() === 0) {
             $this->command->error('❌ No region modules found! Please run RegionSystemSeeder first.');
@@ -48,11 +53,13 @@ class RegionRolePermissionsSeeder extends Seeder
         // 2. REGIONAL SECRETARY - Full Access to All Region Modules
         $this->assignPermissionsToRole('Regional Secretary', $allRegionPermissions, 'Full access to all region modules');
 
-        // 3. SENIOR PASTOR - Full Access (as Regional Committee Member)
-        $this->assignPermissionsToRole('Senior Pastor', $allRegionPermissions, 'Full access to region modules (as committee member)');
-
-        // 4. ASSOCIATE PASTOR - Full Access (as Regional Committee Member)
-        $this->assignPermissionsToRole('Associate Pastor', $allRegionPermissions, 'Full access to region modules (as committee member)');
+        // Senior Pastor / Associate Pastor previously got full region access
+        // granted directly to the church-scoped Pastor role itself ("as
+        // committee member") — superseded by AdditionalRolePermissionsSeeder's
+        // dedicated Regional Committee Member role, which RegionalLeadershipSeeder
+        // now actually assigns pastors to as their secondary seat. Keeping both
+        // would leave dead, confusing permission weight on the Pastor roles for
+        // a territory context (region) their assignments no longer use.
 
         // === SUMMARY ===
         $this->command->info('');

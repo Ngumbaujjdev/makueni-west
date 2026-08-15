@@ -7,10 +7,10 @@
 
 const AppConfig = {
   // Backend API Configuration
-  API_BASE_URL: "http://127.0.0.1:8000/api",
+  API_BASE_URL: "http://127.0.0.1:8004/api",
 
   // Frontend Base URL
-  FRONTEND_BASE_URL: "http://localhost:8080/makueni-west",
+  FRONTEND_BASE_URL: "/makueni-west",
 
   // Application Information
   APP_NAME: "Makueni West Diocese Management System",
@@ -109,29 +109,29 @@ const AppConfig = {
     AFTER_LOGIN: null,
 
     // Static redirects (ABSOLUTE)
-    AFTER_LOGOUT: "http://localhost:8080/makueni-west/",
+    AFTER_LOGOUT: "/makueni-west/",
     FORCE_PASSWORD_CHANGE:
-      "http://localhost:8080/makueni-west/authentication/force-password-change",
-    UNAUTHORIZED: "http://localhost:8080/makueni-west/errors/403",
+      "/makueni-west/authentication/force-password-change",
+    UNAUTHORIZED: "/makueni-west/errors/403",
 
     // Territory-specific dashboards (ABSOLUTE PATHS)
     DASHBOARDS: {
-      GLOBAL: "http://localhost:8080/makueni-west/diocese/dashboard/",
-      DIOCESE: "http://localhost:8080/makueni-west/diocese/dashboard/",
-      REGION: "http://localhost:8080/makueni-west/region/dashboard/",
-      SUBREGION: "http://localhost:8080/makueni-west/region/dashboard/",
-      CHURCH: "http://localhost:8080/makueni-west/church/dashboard/",
+      GLOBAL: "/makueni-west/diocese/dashboard/",
+      DIOCESE: "/makueni-west/diocese/dashboard/",
+      REGION: "/makueni-west/region/dashboard/",
+      SUBREGION: "/makueni-west/region/dashboard/",
+      CHURCH: "/makueni-west/church/dashboard/",
     },
   },
 
   // Error Pages (ABSOLUTE PATHS)
   ERROR_PAGES: {
-    NOT_FOUND: "http://localhost:8080/makueni-west/errors/404.php",
-    FORBIDDEN: "http://localhost:8080/makueni-west/errors/403.php",
-    SERVER_ERROR: "http://localhost:8080/makueni-west/errors/500.php",
+    NOT_FOUND: "/makueni-west/errors/404.php",
+    FORBIDDEN: "/makueni-west/errors/403.php",
+    SERVER_ERROR: "/makueni-west/errors/500.php",
     SESSION_EXPIRED:
-      "http://localhost:8080/makueni-west/errors/session-expired.php",
-    NO_DASHBOARD: "http://localhost:8080/makueni-west/errors/no-dashboard.php",
+      "/makueni-west/errors/session-expired.php",
+    NO_DASHBOARD: "/makueni-west/errors/no-dashboard.php",
   },
 };
 

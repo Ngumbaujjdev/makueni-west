@@ -103,46 +103,58 @@ class SuperAdminSeeder extends Seeder
      */
     private function createDioceseRoles(): void
     {
+        // territory_level drives both the Role Management admin UI's filter AND
+        // real module/sidebar visibility (RoleController, ModuleController both key
+        // off it) — every role needs one except Global Administrator, which bypasses
+        // territory scoping entirely via SuperAdminConfig's global_access flag.
         $roles = [
             // Global Level
-            'Global Administrator',
+            'Global Administrator' => null,
 
             // Diocese Level
-            'Bishop',
-            'Diocese Council Member',
-            'Diocese Secretary',
-            'Diocese Treasurer',
-            'Diocese Administrator',
+            'Bishop' => 'diocese',
+            'Diocese Council Member' => 'diocese',
+            'Diocese Secretary' => 'diocese',
+            'Diocese Treasurer' => 'diocese',
+            'Diocese Administrator' => 'diocese',
 
             // Regional Level
-            'Regional Overseer',
-            'Regional Secretary',
+            'Regional Overseer' => 'region',
+            'Regional Secretary' => 'region',
 
             // Subregional Level
-            'Subregional Overseer',
+            'Subregional Overseer' => 'subregion',
 
             // Church Level
-            'Senior Pastor',
-            'Associate Pastor',
-            'Church Secretary',
-            'Church Treasurer',
-            'Church Committee Member',
-            'Elder',
-            'Deacon',
+            'Senior Pastor' => 'church',
+            'Associate Pastor' => 'church',
+            'Church Secretary' => 'church',
+            'Church Treasurer' => 'church',
+            'Church Committee Member' => 'church',
+            'Elder' => 'church',
+            'Deacon' => 'church',
 
             // Ministry Leaders
-            'Youth Leader',
-            "Women's Ministry Leader",
-            "Men's Ministry Leader",
-            "Children's Ministry Leader",
-            'Music Director',
+            'Youth Leader' => 'church',
+            "Women's Ministry Leader" => 'church',
+            "Men's Ministry Leader" => 'church',
+            "Children's Ministry Leader" => 'church',
+            'Music Director' => 'church',
         ];
 
-        foreach ($roles as $roleName) {
-            Role::firstOrCreate([
+        foreach ($roles as $roleName => $territoryLevel) {
+            $role = Role::firstOrCreate([
                 'name' => $roleName,
                 'guard_name' => 'web'
             ]);
+
+            // firstOrCreate only sets attributes on the INSERT path, so on a
+            // database that already has these roles (created before this fix),
+            // territory_level needs to be applied on every run, not just once.
+            if ($role->territory_level !== $territoryLevel) {
+                $role->territory_level = $territoryLevel;
+                $role->save();
+            }
         }
 
         $this->command->info('✅ Diocese roles created successfully');

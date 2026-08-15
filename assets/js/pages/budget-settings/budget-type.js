@@ -92,7 +92,7 @@
 
             console.log('📡 Fetching budget types...');
 
-            const API_BASE = window.AppConfig?.API_BASE_URL || 'http://localhost:8000/api';
+            const API_BASE = AppConfig.API_BASE_URL;
             const authToken = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
 
             const response = await fetch(`${API_BASE}/budget-types`, {
@@ -387,7 +387,7 @@
                 data.duration_months = parseInt(durationMonths);
             }
 
-            const API_BASE = window.AppConfig?.API_BASE_URL || 'http://localhost:8000/api';
+            const API_BASE = AppConfig.API_BASE_URL;
             const authToken = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
 
             const isEdit = editingTypeId !== null;
@@ -444,7 +444,7 @@
             deleteBtn.disabled = true;
             deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Deleting...';
 
-            const API_BASE = window.AppConfig?.API_BASE_URL || 'http://localhost:8000/api';
+            const API_BASE = AppConfig.API_BASE_URL;
             const authToken = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
 
             const response = await fetch(`${API_BASE}/budget-types/${editingTypeId}`, {
@@ -530,7 +530,7 @@
 
     async function loadAuditTrail(typeId) {
         try {
-            const API_BASE = window.AppConfig?.API_BASE_URL || 'http://localhost:8000/api';
+            const API_BASE = AppConfig.API_BASE_URL;
             const authToken = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
 
             const response = await fetch(`${API_BASE}/budget-types/${typeId}/audits`, {

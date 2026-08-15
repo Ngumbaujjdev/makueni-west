@@ -1062,7 +1062,7 @@
 
         // Redirect to users page after short delay
         setTimeout(() => {
-          window.location.href = "http://localhost:8080/makueni-west/diocese/settings/admin/users";
+          window.location.href = "/makueni-west/diocese/settings/admin/users";
         }, 1500);
       } else {
         Toast.error(response.message || "Failed to create user");

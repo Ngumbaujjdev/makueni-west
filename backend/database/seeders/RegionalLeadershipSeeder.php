@@ -23,6 +23,8 @@ class RegionalLeadershipSeeder extends Seeder
         $this->command->info('Seeding Regional Committees (Overseer + Spouse + All Pastors)...');
         $this->command->info('');
 
+        $diocese = Territory::where('territory_type', TerritoryType::DIOCESE)->first();
+
         // Get all 5 regions
         $regions = Territory::where('territory_type', TerritoryType::REGION)
             ->orderBy('code')
@@ -86,7 +88,7 @@ class RegionalLeadershipSeeder extends Seeder
                 }
 
                 $employeeCode = $employeeCodeBase + $pastorIndex;
-                $pastor = $this->createPastor($pastorData, $church, $region, $overseer, $employeeCode);
+                $pastor = $this->createPastor($pastorData, $church, $region, $diocese, $overseer, $employeeCode);
 
                 if ($pastor) {
                     $regionCommitteeMembers[] = $pastor;
@@ -260,9 +262,11 @@ class RegionalLeadershipSeeder extends Seeder
         return $bases[$regionCode] ?? 399000;
     }
 
-    private function createPastor($data, $church, $region, $overseer, $employeeCode)
+    private function createPastor($data, $church, $region, $diocese, $overseer, $employeeCode)
     {
         $seniorPastorRole = Role::where('name', 'Senior Pastor')->first();
+        $regionalCommitteeMemberRole = Role::where('name', 'Regional Committee Member')->first();
+        $dioceseCouncilMemberRole = Role::where('name', 'Diocese Council Member')->first();
 
         $lastnameParts = explode(' ', $data['lastname']);
         $firstLastname = $lastnameParts[0];
@@ -289,6 +293,16 @@ class RegionalLeadershipSeeder extends Seeder
 
             $pastor->assignRole('Senior Pastor');
 
+            // Self-heal: remove the old, incorrectly-scoped secondary assignment
+            // (Senior Pastor role at the Region territory) from before this fix —
+            // firstOrCreate below won't touch it since it's a different role_id at
+            // the same territory, which would otherwise leave a stale duplicate.
+            UserTerritoryAssignment::where('user_id', $pastor->id)
+                ->where('territory_id', $region->id)
+                ->where('role_id', $seniorPastorRole->id)
+                ->where('assignment_type', AssignmentType::SECONDARY)
+                ->delete();
+
             // Primary assignment: Church level
             UserTerritoryAssignment::firstOrCreate(
                 [
@@ -309,12 +323,17 @@ class RegionalLeadershipSeeder extends Seeder
                 ]
             );
 
-            // Secondary assignment: Regional Committee Member
+            // Secondary assignment: Regional Committee Member — was wrongly reusing
+            // the Senior Pastor role_id (church-scoped permissions) at a region
+            // territory, which resolves to zero usable permissions once switch-role
+            // actually respects which assignment is active. Regional Committee
+            // Member is the real, distinct, region-scoped role for this seat.
+            $pastor->assignRole('Regional Committee Member');
             UserTerritoryAssignment::firstOrCreate(
                 [
                     'user_id' => $pastor->id,
                     'territory_id' => $region->id,
-                    'role_id' => $seniorPastorRole->id,
+                    'role_id' => $regionalCommitteeMemberRole->id,
                 ],
                 [
                     'assignment_type' => AssignmentType::SECONDARY,
@@ -323,6 +342,29 @@ class RegionalLeadershipSeeder extends Seeder
                     'can_manage_users' => false,
                     'can_manage_finances' => false,
                     'assignment_reason' => "Regional Committee Member for {$region->name}",
+                    'assigned_by' => $overseer->id,
+                    'approved_by' => $overseer->id,
+                    'approved_at' => now(),
+                ]
+            );
+
+            // Tertiary assignment: Diocese Council Member — every pastor also sits
+            // on the diocese council ex-officio, same role Regional Overseers hold
+            // for their diocese seat (see DioceseLeadershipSeeder).
+            $pastor->assignRole('Diocese Council Member');
+            UserTerritoryAssignment::firstOrCreate(
+                [
+                    'user_id' => $pastor->id,
+                    'territory_id' => $diocese->id,
+                    'role_id' => $dioceseCouncilMemberRole->id,
+                ],
+                [
+                    'assignment_type' => AssignmentType::SECONDARY,
+                    'can_see_children' => true,
+                    'can_see_siblings' => true,
+                    'can_manage_users' => false,
+                    'can_manage_finances' => false,
+                    'assignment_reason' => "Diocese Council Member (ex-officio as pastor)",
                     'assigned_by' => $overseer->id,
                     'approved_by' => $overseer->id,
                     'approved_at' => now(),

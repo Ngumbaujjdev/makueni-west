@@ -388,7 +388,7 @@
           <td>${statusBadge}</td>
           <td class="text-center">
             <div class="d-flex gap-1 justify-content-center role-actions">
-              <a href="http://localhost:8080/makueni-west/diocese/settings/admin/roles/edit-permissions?id=${role.id}" 
+              <a href="/makueni-west/diocese/settings/admin/roles/edit-permissions?id=${role.id}" 
                  class="btn btn-sm btn-icon btn-primary-light role-action-btn" 
                  title="Manage Permissions"
                  data-bs-toggle="tooltip">

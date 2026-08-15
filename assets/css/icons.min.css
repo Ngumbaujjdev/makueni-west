@@ -1,15 +1,15 @@
 @font-face {
   font-family: remixicon;
-  src: url(http://localhost:8080/makueni-west/assets/icon-fonts/RemixIcons/fonts/remixicondf6d.eot?t=1590207869815);
-  src: url(http://localhost:8080/makueni-west/assets/icon-fonts/RemixIcons/fonts/remixicondf6d.eot?t=1590207869815#iefix)
+  src: url(/makueni-west/assets/icon-fonts/RemixIcons/fonts/remixicondf6d.eot?t=1590207869815);
+  src: url(/makueni-west/assets/icon-fonts/RemixIcons/fonts/remixicondf6d.eot?t=1590207869815#iefix)
       format("embedded-opentype"),
-    url(http://localhost:8080/makueni-west/assets/icon-fonts/RemixIcons/fonts/remixicondf6d.woff2?t=1590207869815)
+    url(/makueni-west/assets/icon-fonts/RemixIcons/fonts/remixicondf6d.woff2?t=1590207869815)
       format("woff2"),
-    url(http://localhost:8080/makueni-west/assets/icon-fonts/RemixIcons/fonts/remixicondf6d.woff?t=1590207869815)
+    url(/makueni-west/assets/icon-fonts/RemixIcons/fonts/remixicondf6d.woff?t=1590207869815)
       format("woff"),
-    url(http://localhost:8080/makueni-west/assets/icon-fonts/RemixIcons/fonts/remixicondf6d.ttf?t=1590207869815)
+    url(/makueni-west/assets/icon-fonts/RemixIcons/fonts/remixicondf6d.ttf?t=1590207869815)
       format("truetype"),
-    url(http://localhost:8080/makueni-west/assets/icon-fonts/RemixIcons/fonts/remixicondf6d.svg?t=1590207869815#remixicon)
+    url(/makueni-west/assets/icon-fonts/RemixIcons/fonts/remixicondf6d.svg?t=1590207869815#remixicon)
       format("svg");
   font-display: swap;
 }
@@ -6888,12 +6888,12 @@
 }
 @font-face {
   font-family: feather;
-  src: url(http://localhost:8080/makueni-west/assets/icon-fonts/feather/fonts/feather/feather-webfont6cfa.eot?t=1501841394106);
-  src: url(http://localhost:8080/makueni-west/assets/icon-fonts/feather/fonts/feather/feather-webfont6cfa.eot?t=1501841394106)
+  src: url(/makueni-west/assets/icon-fonts/feather/fonts/feather/feather-webfont6cfa.eot?t=1501841394106);
+  src: url(/makueni-west/assets/icon-fonts/feather/fonts/feather/feather-webfont6cfa.eot?t=1501841394106)
       format("embedded-opentype"),
-    url(http://localhost:8080/makueni-west/assets/icon-fonts/feather/fonts/feather/feather-webfont.ttf)
+    url(/makueni-west/assets/icon-fonts/feather/fonts/feather/feather-webfont.ttf)
       format("truetype"),
-    url(http://localhost:8080/makueni-west/assets/icon-fonts/feather/fonts/feather/feather-webfont.svg)
+    url(/makueni-west/assets/icon-fonts/feather/fonts/feather/feather-webfont.svg)
       format("svg");
 }
 .fe {
@@ -7699,9 +7699,9 @@
 }
 @font-face {
   font-family: bootstrap-icons;
-  src: url(http://localhost:8080/makueni-west/assets/icon-fonts/bootstrap-icons/icons/font/fonts/bootstrap-iconse8a7.woff2?08efbba7c53d8c5413793eecb19b20bb)
+  src: url(/makueni-west/assets/icon-fonts/bootstrap-icons/icons/font/fonts/bootstrap-iconse8a7.woff2?08efbba7c53d8c5413793eecb19b20bb)
       format("woff2"),
-    url(http://localhost:8080/makueni-west/assets/icon-fonts/bootstrap-icons/icons/font/fonts/bootstrap-iconse8a7.woff?08efbba7c53d8c5413793eecb19b20bb)
+    url(/makueni-west/assets/icon-fonts/bootstrap-icons/icons/font/fonts/bootstrap-iconse8a7.woff?08efbba7c53d8c5413793eecb19b20bb)
       format("woff");
 }
 .bi::before,
@@ -12775,22 +12775,22 @@
   font-family: tabler-icons;
   font-style: normal;
   font-weight: 400;
-  src: url(http://localhost:8080/makueni-west/assets/icon-fonts/tabler-icons/iconfont/fonts/tabler-icons.eot);
-  src: url(http://localhost:8080/makueni-west/assets/icon-fonts/tabler-icons/iconfont/fonts/tabler-iconsd41d.eot?#iefix)
+  src: url(/makueni-west/assets/icon-fonts/tabler-icons/iconfont/fonts/tabler-icons.eot);
+  src: url(/makueni-west/assets/icon-fonts/tabler-icons/iconfont/fonts/tabler-iconsd41d.eot?#iefix)
       format("embedded-opentype"),
-    url(http://localhost:8080/makueni-west/assets/icon-fonts/tabler-icons/iconfont/fonts/tabler-icons.woff2)
+    url(/makueni-west/assets/icon-fonts/tabler-icons/iconfont/fonts/tabler-icons.woff2)
       format("woff2"),
-    url(http://localhost:8080/makueni-west/assets/icon-fonts/tabler-icons/iconfont/fonts/tabler-icons.woff)
+    url(/makueni-west/assets/icon-fonts/tabler-icons/iconfont/fonts/tabler-icons.woff)
       format("woff"),
-    url(http://localhost:8080/makueni-west/assets/icon-fonts/tabler-icons/iconfont/fonts/tabler-icons.ttf)
+    url(/makueni-west/assets/icon-fonts/tabler-icons/iconfont/fonts/tabler-icons.ttf)
       format("truetype"),
-    url(http://localhost:8080/makueni-west/assets/icon-fonts/tabler-icons/iconfont/fonts/tabler-icons.svg#tabler-icons)
+    url(/makueni-west/assets/icon-fonts/tabler-icons/iconfont/fonts/tabler-icons.svg#tabler-icons)
       format("svg");
 }
 @media screen and (-webkit-min-device-pixel-ratio: 0) {
   @font-face {
     font-family: tabler-icons;
-    src: url(http://localhost:8080/makueni-west/assets/icon-fonts/tabler-icons/iconfont/fonts/tabler-icons.svg#tabler-icons)
+    src: url(/makueni-west/assets/icon-fonts/tabler-icons/iconfont/fonts/tabler-icons.svg#tabler-icons)
       format("svg");
   }
 }

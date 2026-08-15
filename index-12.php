@@ -17,43 +17,43 @@
         content="blazor bootstrap, c# blazor, admin panel, blazor c#, template dashboard, admin, bootstrap admin template, blazor, blazorbootstrap, bootstrap 5 templates, dashboard, dashboard template bootstrap, admin dashboard bootstrap." />
 
     <!-- Favicon -->
-    <link rel="icon" href="http://localhost:8080/makueni-west/assets/img/favicon.ico" type="image/x-icon" />
+    <link rel="icon" href="<?= SITE_URL ?>/assets/img/favicon.ico" type="image/x-icon" />
 
     <!-- Choices JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/choices.js/public/assets/scripts/choices.min.js">
+    <script src="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/scripts/choices.min.js">
     </script>
 
     <!-- Main Theme Js -->
-    <script src="http://localhost:8080/makueni-west/assets/js/main.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/main.js"></script>
 
     <!-- Bootstrap Css -->
-    <link id="style" href="http://localhost:8080/makueni-west/assets/libs/bootstrap/css/bootstrap.min.css"
+    <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css"
         rel="stylesheet" />
 
     <!-- Style Css -->
-    <link href="http://localhost:8080/makueni-west/assets/css/styles.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/css/styles.min.css" rel="stylesheet" />
 
     <!-- Icons Css -->
-    <link href="http://localhost:8080/makueni-west/assets/css/icons.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />
 
     <!-- Node Waves Css -->
-    <link href="http://localhost:8080/makueni-west/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
 
     <!-- Simplebar Css -->
-    <link href="http://localhost:8080/makueni-west/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
 
     <!-- Color Picker Css -->
-    <link rel="stylesheet" href="http://localhost:8080/makueni-west/assets/libs/flatpickr/flatpickr.min.css" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/flatpickr/flatpickr.min.css" />
     <link rel="stylesheet"
-        href="http://localhost:8080/makueni-west/assets/libs/%40simonwep/pickr/themes/nano.min.css" />
+        href="<?= SITE_URL ?>/assets/libs/%40simonwep/pickr/themes/nano.min.css" />
 
     <!-- Choices Css -->
     <link rel="stylesheet"
-        href="http://localhost:8080/makueni-west/assets/libs/choices.js/public/assets/styles/choices.min.css" />
+        href="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/styles/choices.min.css" />
 
-    <link rel="stylesheet" href="http://localhost:8080/makueni-west/assets/libs/jsvectormap/css/jsvectormap.min.css" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/jsvectormap/css/jsvectormap.min.css" />
 
-    <link rel="stylesheet" href="http://localhost:8080/makueni-west/assets/libs/swiper/swiper-bundle.min.css" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/swiper/swiper-bundle.min.css" />
 </head>
 
 <body>
@@ -557,17 +557,17 @@
                     <div class="header-element">
                         <div class="horizontal-logo">
                             <a href="index.html" class="header-logo">
-                                <img src="http://localhost:8080/makueni-west/assets/images/brand-logos/desktop-logo.png"
+                                <img src="<?= SITE_URL ?>/assets/images/brand-logos/desktop-logo.png"
                                     alt="logo" class="desktop-logo" />
-                                <img src="http://localhost:8080/makueni-west/assets/images/brand-logos/toggle-logo.png"
+                                <img src="<?= SITE_URL ?>/assets/images/brand-logos/toggle-logo.png"
                                     alt="logo" class="toggle-logo" />
                                 <img src="vassets/images/brand-logos/desktop-dark.png" alt="logo"
                                     class="desktop-dark" />
-                                <img src="http://localhost:8080/makueni-west/assets/images/brand-logos/toggle-dark.png"
+                                <img src="<?= SITE_URL ?>/assets/images/brand-logos/toggle-dark.png"
                                     alt="logo" class="toggle-dark" />
-                                <img src="http://localhost:8080/makueni-west/assets/images/brand-logos/desktop-white.png"
+                                <img src="<?= SITE_URL ?>/assets/images/brand-logos/desktop-white.png"
                                     alt="logo" class="desktop-white" />
-                                <img src="http://localhost:8080/makueni-west/assets/images/brand-logos/toggle-white.png"
+                                <img src="<?= SITE_URL ?>/assets/images/brand-logos/toggle-white.png"
                                     alt="logo" class="toggle-white" />
                             </a>
                         </div>
@@ -604,7 +604,7 @@
                         <!-- Start::header-link|dropdown-toggle -->
                         <a href="javascript:void(0);" class="header-link dropdown-toggle" data-bs-auto-close="outside"
                             data-bs-toggle="dropdown">
-                            <img src="http://localhost:8080/makueni-west/assets/images/flags/us_flag.jpg" alt="img"
+                            <img src="<?= SITE_URL ?>/assets/images/flags/us_flag.jpg" alt="img"
                                 class="rounded-circle header-link-icon" />
                         </a>
                         <!-- End::header-link|dropdown-toggle -->
@@ -612,7 +612,7 @@
                             <li>
                                 <a class="dropdown-item d-flex align-items-center" href="javascript:void(0);">
                                     <span class="avatar avatar-xs lh-1 me-2">
-                                        <img src="http://localhost:8080/makueni-west/assets/images/flags/us_flag.jpg"
+                                        <img src="<?= SITE_URL ?>/assets/images/flags/us_flag.jpg"
                                             alt="img" />
                                     </span>
                                     English
@@ -621,7 +621,7 @@
                             <li>
                                 <a class="dropdown-item d-flex align-items-center" href="javascript:void(0);">
                                     <span class="avatar avatar-xs lh-1 me-2">
-                                        <img src="http://localhost:8080/makueni-west/assets/images/flags/spain_flag.jpg"
+                                        <img src="<?= SITE_URL ?>/assets/images/flags/spain_flag.jpg"
                                             alt="img" />
                                     </span>
                                     Spanish
@@ -630,7 +630,7 @@
                             <li>
                                 <a class="dropdown-item d-flex align-items-center" href="javascript:void(0);">
                                     <span class="avatar avatar-xs lh-1 me-2">
-                                        <img src="http://localhost:8080/makueni-west/assets/images/flags/french_flag.jpg"
+                                        <img src="<?= SITE_URL ?>/assets/images/flags/french_flag.jpg"
                                             alt="img" />
                                     </span>
                                     French
@@ -639,7 +639,7 @@
                             <li>
                                 <a class="dropdown-item d-flex align-items-center" href="javascript:void(0);">
                                     <span class="avatar avatar-xs lh-1 me-2">
-                                        <img src="http://localhost:8080/makueni-west/assets/images/flags/germany_flag.jpg"
+                                        <img src="<?= SITE_URL ?>/assets/images/flags/germany_flag.jpg"
                                             alt="img" />
                                     </span>
                                     German
@@ -648,7 +648,7 @@
                             <li>
                                 <a class="dropdown-item d-flex align-items-center" href="javascript:void(0);">
                                     <span class="avatar avatar-xs lh-1 me-2">
-                                        <img src="http://localhost:8080/makueni-west/assets/images/flags/italy_flag.jpg"
+                                        <img src="<?= SITE_URL ?>/assets/images/flags/italy_flag.jpg"
                                             alt="img" />
                                     </span>
                                     Italian
@@ -657,7 +657,7 @@
                             <li>
                                 <a class="dropdown-item d-flex align-items-center" href="javascript:void(0);">
                                     <span class="avatar avatar-xs lh-1 me-2">
-                                        <img src="http://localhost:8080/makueni-west/assets/images/flags/russia_flag.jpg"
+                                        <img src="<?= SITE_URL ?>/assets/images/flags/russia_flag.jpg"
                                             alt="img" />
                                     </span>
                                     Russian
@@ -709,7 +709,7 @@
                             <ul class="list-unstyled mb-0" id="header-cart-items-scroll">
                                 <li class="dropdown-item">
                                     <div class="d-flex align-items-start cart-dropdown-item">
-                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/jpg/1.jpg"
+                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/jpg/1.jpg"
                                             alt="img" class="avatar avatar-sm avatar-rounded br-5 me-3" />
                                         <div class="flex-grow-1">
                                             <div class="d-flex align-items-start justify-content-between mb-0">
@@ -735,7 +735,7 @@
                                 </li>
                                 <li class="dropdown-item">
                                     <div class="d-flex align-items-start cart-dropdown-item">
-                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/jpg/3.jpg"
+                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/jpg/3.jpg"
                                             alt="img" class="avatar avatar-sm avatar-rounded br-5 me-3" />
                                         <div class="flex-grow-1">
                                             <div class="d-flex align-items-start justify-content-between mb-0">
@@ -764,7 +764,7 @@
                                 </li>
                                 <li class="dropdown-item">
                                     <div class="d-flex align-items-start cart-dropdown-item">
-                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/jpg/5.jpg"
+                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/jpg/5.jpg"
                                             alt="img" class="avatar avatar-sm avatar-rounded br-5 me-3" />
                                         <div class="flex-grow-1">
                                             <div class="d-flex align-items-start justify-content-between mb-0">
@@ -789,7 +789,7 @@
                                 </li>
                                 <li class="dropdown-item">
                                     <div class="d-flex align-items-start cart-dropdown-item">
-                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/jpg/4.jpg"
+                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/jpg/4.jpg"
                                             alt="img" class="avatar avatar-sm avatar-rounded br-5 me-3" />
                                         <div class="flex-grow-1">
                                             <div class="d-flex align-items-start justify-content-between mb-0">
@@ -815,7 +815,7 @@
                                 </li>
                                 <li class="dropdown-item">
                                     <div class="d-flex align-items-start cart-dropdown-item">
-                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/jpg/6.jpg"
+                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/jpg/6.jpg"
                                             alt="img" class="avatar avatar-sm avatar-rounded br-5 me-3" />
                                         <div class="flex-grow-1">
                                             <div class="d-flex align-items-start justify-content-between mb-0">
@@ -841,7 +841,7 @@
                             </ul>
                             <div class="p-3 empty-header-item border-top">
                                 <div class="d-grid">
-                                    <a href="http://localhost:8080/makueni-west/my-payment/payment"
+                                    <a href="<?= SITE_URL ?>/my-payment/payment"
                                         class="btn btn-primary">Proceed
                                         to checkout</a>
                                 </div>
@@ -1038,7 +1038,7 @@
                                         <a href="javascript:void(0);">
                                             <div class="text-center p-3 related-app">
                                                 <span class="avatar avatar-sm avatar-rounded">
-                                                    <img src="http://localhost:8080/makueni-west/assets/images/apps/figma.png"
+                                                    <img src="<?= SITE_URL ?>/assets/images/apps/figma.png"
                                                         alt="" />
                                                 </span>
                                                 <span class="d-block fs-12">Figma</span>
@@ -1049,7 +1049,7 @@
                                         <a href="javascript:void(0);">
                                             <div class="text-center p-3 related-app">
                                                 <span class="avatar avatar-sm avatar-rounded">
-                                                    <img src="http://localhost:8080/makueni-west/assets/images/apps/microsoft-powerpoint.png"
+                                                    <img src="<?= SITE_URL ?>/assets/images/apps/microsoft-powerpoint.png"
                                                         alt="" />
                                                 </span>
                                                 <span class="d-block fs-12">Power Point</span>
@@ -1060,7 +1060,7 @@
                                         <a href="javascript:void(0);">
                                             <div class="text-center p-3 related-app">
                                                 <span class="avatar avatar-sm avatar-rounded">
-                                                    <img src="http://localhost:8080/makueni-west/assets/images/apps/microsoft-word.png"
+                                                    <img src="<?= SITE_URL ?>/assets/images/apps/microsoft-word.png"
                                                         alt="" />
                                                 </span>
                                                 <span class="d-block fs-12">MS Word</span>
@@ -1071,7 +1071,7 @@
                                         <a href="javascript:void(0);">
                                             <div class="text-center p-3 related-app">
                                                 <span class="avatar avatar-sm avatar-rounded">
-                                                    <img src="http://localhost:8080/makueni-west/assets/images/apps/calender.png"
+                                                    <img src="<?= SITE_URL ?>/assets/images/apps/calender.png"
                                                         alt="" />
                                                 </span>
                                                 <span class="d-block fs-12">Calendar</span>
@@ -1082,7 +1082,7 @@
                                         <a href="javascript:void(0);">
                                             <div class="text-center p-3 related-app">
                                                 <span class="avatar avatar-sm avatar-rounded">
-                                                    <img src="http://localhost:8080/makueni-west/assets/images/apps/sketch.png"
+                                                    <img src="<?= SITE_URL ?>/assets/images/apps/sketch.png"
                                                         alt="" />
                                                 </span>
                                                 <span class="d-block fs-12">Sketch</span>
@@ -1093,7 +1093,7 @@
                                         <a href="javascript:void(0);">
                                             <div class="text-center p-3 related-app">
                                                 <span class="avatar avatar-sm avatar-rounded">
-                                                    <img src="http://localhost:8080/makueni-west/assets/images/apps/google-docs.png"
+                                                    <img src="<?= SITE_URL ?>/assets/images/apps/google-docs.png"
                                                         alt="" />
                                                 </span>
                                                 <span class="d-block fs-12">Docs</span>
@@ -1104,7 +1104,7 @@
                                         <a href="javascript:void(0);">
                                             <div class="text-center p-3 related-app">
                                                 <span class="avatar avatar-sm avatar-rounded">
-                                                    <img src="http://localhost:8080/makueni-west/assets/images/apps/google.png"
+                                                    <img src="<?= SITE_URL ?>/assets/images/apps/google.png"
                                                         alt="" />
                                                 </span>
                                                 <span class="d-block fs-12">Google</span>
@@ -1115,7 +1115,7 @@
                                         <a href="javascript:void(0);">
                                             <div class="text-center p-3 related-app">
                                                 <span class="avatar avatar-sm avatar-rounded">
-                                                    <img src="http://localhost:8080/makueni-west/assets/images/apps/translate.png"
+                                                    <img src="<?= SITE_URL ?>/assets/images/apps/translate.png"
                                                         alt="" />
                                                 </span>
                                                 <span class="d-block fs-12">Translate</span>
@@ -1126,7 +1126,7 @@
                                         <a href="javascript:void(0);">
                                             <div class="text-center p-3 related-app">
                                                 <span class="avatar avatar-sm avatar-rounded">
-                                                    <img src="http://localhost:8080/makueni-west/assets/images/apps/google-sheets.png"
+                                                    <img src="<?= SITE_URL ?>/assets/images/apps/google-sheets.png"
                                                         alt="" />
                                                 </span>
                                                 <span class="d-block fs-12">Sheets</span>
@@ -1163,7 +1163,7 @@
                             data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                             <div class="d-flex align-items-center">
                                 <div class="me-sm-2 me-0">
-                                    <img src="http://localhost:8080/makueni-west/assets/images/faces/9.jpg" alt="img"
+                                    <img src="<?= SITE_URL ?>/assets/images/faces/9.jpg" alt="img"
                                         width="32" height="32" class="rounded-circle" />
                                 </div>
                                 <div class="d-sm-block d-none">
@@ -1231,17 +1231,17 @@
             <!-- Start::main-sidebar-header -->
             <div class="main-sidebar-header">
                 <a href="index.html" class="header-logo">
-                    <img src="http://localhost:8080/makueni-west/assets/images/brand-logos/desktop-logo.png" alt="logo"
+                    <img src="<?= SITE_URL ?>/assets/images/brand-logos/desktop-logo.png" alt="logo"
                         class="desktop-logo" />
-                    <img src="http://localhost:8080/makueni-west/assets/images/brand-logos/toggle-logo.png" alt="logo"
+                    <img src="<?= SITE_URL ?>/assets/images/brand-logos/toggle-logo.png" alt="logo"
                         class="toggle-logo" />
-                    <img src="http://localhost:8080/makueni-west/assets/images/brand-logos/desktop-dark.png" alt="logo"
+                    <img src="<?= SITE_URL ?>/assets/images/brand-logos/desktop-dark.png" alt="logo"
                         class="desktop-dark" />
-                    <img src="http://localhost:8080/makueni-west/assets/images/brand-logos/toggle-dark.png" alt="logo"
+                    <img src="<?= SITE_URL ?>/assets/images/brand-logos/toggle-dark.png" alt="logo"
                         class="toggle-dark" />
-                    <img src="http://localhost:8080/makueni-west/assets/images/brand-logos/desktop-white.png" alt="logo"
+                    <img src="<?= SITE_URL ?>/assets/images/brand-logos/desktop-white.png" alt="logo"
                         class="desktop-white" />
-                    <img src="http://localhost:8080/makueni-west/assets/images/brand-logos/toggle-white.png" alt="logo"
+                    <img src="<?= SITE_URL ?>/assets/images/brand-logos/toggle-white.png" alt="logo"
                         class="toggle-white" />
                 </a>
             </div>
@@ -2298,7 +2298,7 @@
                                                     <div class="d-flex align-items-top flex-wrap">
                                                         <div class="me-2">
                                                             <span class="avatar avatar-sm avatar-rounded">
-                                                                <img src="http://localhost:8080/makueni-west/assets/images/faces/10.jpg"
+                                                                <img src="<?= SITE_URL ?>/assets/images/faces/10.jpg"
                                                                     alt="" />
                                                             </span>
                                                         </div>
@@ -2329,7 +2329,7 @@
                                                     <div class="d-flex align-items-top flex-wrap">
                                                         <div class="me-2">
                                                             <span class="avatar avatar-sm avatar-rounded">
-                                                                <img src="http://localhost:8080/makueni-west/assets/images/faces/12.jpg"
+                                                                <img src="<?= SITE_URL ?>/assets/images/faces/12.jpg"
                                                                     alt="" />
                                                             </span>
                                                         </div>
@@ -2651,7 +2651,7 @@
                                                         <td>
                                                             <div class="d-flex align-items-center fw-semibold">
                                                                 <span class="avatar avatar-sm me-2 avatar-rounded">
-                                                                    <img src="http://localhost:8080/makueni-west/assets/images/faces/4.jpg"
+                                                                    <img src="<?= SITE_URL ?>/assets/images/faces/4.jpg"
                                                                         alt="img" />
                                                                 </span>Mayor Kelly
                                                             </div>
@@ -2682,7 +2682,7 @@
                                                         <td>
                                                             <div class="d-flex align-items-center fw-semibold">
                                                                 <span class="avatar avatar-sm me-2 avatar-rounded">
-                                                                    <img src="http://localhost:8080/makueni-west/assets/images/faces/15.jpg"
+                                                                    <img src="<?= SITE_URL ?>/assets/images/faces/15.jpg"
                                                                         alt="img" /> </span>Andrew Garfield
                                                             </div>
                                                         </td>
@@ -2711,7 +2711,7 @@
                                                         <td>
                                                             <div class="d-flex align-items-center fw-semibold">
                                                                 <span class="avatar avatar-sm me-2 avatar-rounded">
-                                                                    <img src="http://localhost:8080/makueni-west/assets/images/faces/11.jpg"
+                                                                    <img src="<?= SITE_URL ?>/assets/images/faces/11.jpg"
                                                                         alt="img" /> </span>Simon Cowel
                                                             </div>
                                                         </td>
@@ -2741,7 +2741,7 @@
                                                         <td>
                                                             <div class="d-flex align-items-center fw-semibold">
                                                                 <span class="avatar avatar-sm me-2 avatar-rounded">
-                                                                    <img src="http://localhost:8080/makueni-west/assets/images/faces/8.jpg"
+                                                                    <img src="<?= SITE_URL ?>/assets/images/faces/8.jpg"
                                                                         alt="img" />
                                                                 </span>Mirinda Hers
                                                             </div>
@@ -2772,7 +2772,7 @@
                                                         <td>
                                                             <div class="d-flex align-items-center fw-semibold">
                                                                 <span class="avatar avatar-sm me-2 avatar-rounded">
-                                                                    <img src="http://localhost:8080/makueni-west/assets/images/faces/9.jpg"
+                                                                    <img src="<?= SITE_URL ?>/assets/images/faces/9.jpg"
                                                                         alt="img" />
                                                                 </span>Jacob Smith
                                                             </div>
@@ -3299,47 +3299,47 @@
     <!-- Scroll To Top -->
 
     <!-- Popper JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/%40popperjs/core/umd/popper.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/%40popperjs/core/umd/popper.min.js"></script>
 
     <!-- Bootstrap JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
 
     <!-- Defaultmenu JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/defaultmenu.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/defaultmenu.min.js"></script>
 
     <!-- Node Waves JS-->
-    <script src="http://localhost:8080/makueni-west/assets/libs/node-waves/waves.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.js"></script>
 
     <!-- Sticky JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/sticky.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/sticky.js"></script>
 
     <!-- Simplebar JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/simplebar/simplebar.min.js"></script>
-    <script src="http://localhost:8080/makueni-west/assets/js/simplebar.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/simplebar.js"></script>
 
     <!-- Color Picker JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/%40simonwep/pickr/pickr.es5.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/%40simonwep/pickr/pickr.es5.min.js"></script>
 
     <!-- JSVector Maps JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/jsvectormap/js/jsvectormap.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/jsvectormap/js/jsvectormap.min.js"></script>
 
     <!-- JSVector Maps MapsJS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/jsvectormap/maps/world-merc.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/jsvectormap/maps/world-merc.js"></script>
 
     <!-- Apex Charts JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/apexcharts/apexcharts.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/apexcharts/apexcharts.min.js"></script>
 
     <!-- Chartjs Chart JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/chart.js/chart.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/chart.js/chart.min.js"></script>
 
     <!-- CRM-Dashboard -->
-    <script src="http://localhost:8080/makueni-west/assets/js/crm-dashboard.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/crm-dashboard.js"></script>
 
     <!-- Custom JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/custom.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
 
     <!-- Custom-Switcher JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/custom-switcher.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/custom-switcher.min.js"></script>
 </body>
 
 <!-- Mirrored from spruko.com/demo/blazor/ynex/ynex/dist/html/index.html by HTTrack Website Copier/3.x [XR&CO'2014], Fri, 05 Jan 2024 16:06:11 GMT -->

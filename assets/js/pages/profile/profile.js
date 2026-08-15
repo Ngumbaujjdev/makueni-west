@@ -15,7 +15,7 @@
   // ========================================================================
 
   const API_BASE =
-    window.APP_CONFIG?.API_BASE_URL || "http://localhost:8000/api";
+    AppConfig.API_BASE_URL;
 
   const STORAGE_KEYS = {
     AUTH_TOKEN: "mwd_auth_token",
@@ -60,7 +60,7 @@
 
       if (!userData || !authToken) {
         console.error("❌ No authentication data found - Redirecting to login");
-        window.location.href = "/authentication/login";
+        window.location.href = "/makueni-west/login";
         return;
       }
 
