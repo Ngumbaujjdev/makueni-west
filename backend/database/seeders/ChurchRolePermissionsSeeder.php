@@ -24,10 +24,13 @@ class ChurchRolePermissionsSeeder extends Seeder
         $this->command->info('Assigning Church Module permissions to Church-level roles...');
         $this->command->info('');
 
-        // Get Church Modules (1-10: Members, Growth, Attendance, Finance,
-        // Diocesan Contributions, Ministries, Service Management, Facility
-        // Management, Communication, Visitors)
-        $churchModules = Module::whereBetween('number', [1, 10])->get();
+        // Church modules, by the module's actual scope (module_groups.territory_scope)
+        // — NOT a number range. Modules 11-12 (Pastoral Care, Church Reporting) are
+        // church-scoped despite sitting right before the region range numerically;
+        // whereBetween('number', [1, 10]) silently dropped them on the first pass.
+        $churchModules = Module::whereHas('moduleGroup', function ($query) {
+            $query->where('territory_scope', 'church');
+        })->get();
 
         if ($churchModules->count() === 0) {
             $this->command->error('❌ No church modules found! Please run ChurchSystemSeeder first.');

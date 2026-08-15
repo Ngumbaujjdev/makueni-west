@@ -49,6 +49,7 @@ class DatabaseSeeder extends Seeder
             DioceseRolePermissionsSeeder::class,
             RegionRolePermissionsSeeder::class,
             ChurchRolePermissionsSeeder::class,
+            AdditionalRolePermissionsSeeder::class,
             GlobalAdministratorPermissionsSeeder::class,
 
             // ==========================================
