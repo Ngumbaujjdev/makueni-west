@@ -188,7 +188,11 @@
       console.log("📦 Activity Log Response:", result);
 
       if (result.success) {
-        return result.data;
+        // Unlike login-history/password-changes (flat arrays), this endpoint
+        // wraps the list: { user, audits, filters_applied }. Returning
+        // result.data directly here made renderActivityLog() call .forEach()
+        // on that whole object instead of the actual list.
+        return result.data.audits || [];
       } else {
         throw new Error(result.message || "Failed to load activity log");
       }
