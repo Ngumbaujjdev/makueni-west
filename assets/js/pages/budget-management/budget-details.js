@@ -103,7 +103,7 @@
     try {
       const token = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
       const API_BASE =
-        window.AppConfig?.API_BASE_URL || "http://localhost:8000/api";
+        window.AppConfig?.API_BASE_URL || "http://localhost:8004/api";
 
       // If no budget ID provided, fetch current year's active budget
       if (!budgetId) {
@@ -190,7 +190,7 @@
 
       const token = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
       const API_BASE =
-        window.AppConfig?.API_BASE_URL || "http://localhost:8000/api";
+        window.AppConfig?.API_BASE_URL || "http://localhost:8004/api";
 
       const response = await fetch(
         `${API_BASE}/budgets/${budgetId}/line-items`,
@@ -224,7 +224,7 @@
 
       const token = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
       const API_BASE =
-        window.AppConfig?.API_BASE_URL || "http://localhost:8000/api";
+        window.AppConfig?.API_BASE_URL || "http://localhost:8004/api";
 
       const response = await fetch(
         `${API_BASE}/budgets/${budgetId}/deductions`,
@@ -257,7 +257,7 @@
 
       const token = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
       const API_BASE =
-        window.AppConfig?.API_BASE_URL || "http://localhost:8000/api";
+        window.AppConfig?.API_BASE_URL || "http://localhost:8004/api";
 
       const response = await fetch(`${API_BASE}/budgets/${budgetId}/logs`, {
         headers: {
@@ -1251,7 +1251,7 @@
     try {
       const token = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
       const API_BASE =
-        window.AppConfig?.API_BASE_URL || "http://localhost:8000/api";
+        window.AppConfig?.API_BASE_URL || "http://localhost:8004/api";
 
       const response = await fetch(`${API_BASE}/budgets/${budgetId}/submit`, {
         method: "POST",
@@ -1281,7 +1281,7 @@
     try {
       const token = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
       const API_BASE =
-        window.AppConfig?.API_BASE_URL || "http://localhost:8000/api";
+        window.AppConfig?.API_BASE_URL || "http://localhost:8004/api";
 
       const response = await fetch(`${API_BASE}/budgets/${budgetId}/approve`, {
         method: "POST",
@@ -1312,7 +1312,7 @@
     try {
       const token = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
       const API_BASE =
-        window.AppConfig?.API_BASE_URL || "http://localhost:8000/api";
+        window.AppConfig?.API_BASE_URL || "http://localhost:8004/api";
 
       const response = await fetch(`${API_BASE}/budgets/${budgetId}/reject`, {
         method: "POST",
@@ -1343,7 +1343,7 @@
     try {
       const token = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
       const API_BASE =
-        window.AppConfig?.API_BASE_URL || "http://localhost:8000/api";
+        window.AppConfig?.API_BASE_URL || "http://localhost:8004/api";
 
       const response = await fetch(`${API_BASE}/budgets/${budgetId}/activate`, {
         method: "POST",

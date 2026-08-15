@@ -15,7 +15,7 @@
   // ========================================================================
 
   const API_BASE =
-    window.APP_CONFIG?.API_BASE_URL || "http://localhost:8000/api";
+    window.APP_CONFIG?.API_BASE_URL || "http://localhost:8004/api";
 
   const STORAGE_KEYS = {
     AUTH_TOKEN: "mwd_auth_token",

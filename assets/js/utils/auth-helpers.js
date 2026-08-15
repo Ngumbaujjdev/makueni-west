@@ -42,7 +42,7 @@ async function autoRefreshAssignments() {
     console.log("Auto-refreshing user assignments and modules...");
 
     // Call backend to get fresh user data with assignments
-    const response = await fetch("http://127.0.0.1:8000/api/user", {
+    const response = await fetch("http://127.0.0.1:8004/api/user", {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -131,7 +131,7 @@ async function autoRefreshAssignments() {
     if (assignmentId) {
       // Switch to current role to get fresh permissions
       const roleResponse = await fetch(
-        "http://127.0.0.1:8000/api/auth/switch-role",
+        "http://127.0.0.1:8004/api/auth/switch-role",
         {
           method: "POST",
           headers: {
@@ -230,8 +230,8 @@ async function refreshModules(token, currentRole) {
     
     // ✅ Use different endpoints based on user type
     const endpoint = isGlobalAdmin 
-      ? "http://127.0.0.1:8000/api/modules"  // Global Admin: ALL modules
-      : "http://127.0.0.1:8000/api/modules/for-role";  // Regular: Filtered by permissions
+      ? "http://127.0.0.1:8004/api/modules"  // Global Admin: ALL modules
+      : "http://127.0.0.1:8004/api/modules/for-role";  // Regular: Filtered by permissions
     
     console.log(`📡 Refreshing modules as ${isGlobalAdmin ? 'Global Admin' : 'Regular Role'} from: ${endpoint}`);
     

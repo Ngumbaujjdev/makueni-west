@@ -7,7 +7,7 @@
 
 const AppConfig = {
   // Backend API Configuration
-  API_BASE_URL: "http://127.0.0.1:8000/api",
+  API_BASE_URL: "http://127.0.0.1:8004/api",
 
   // Frontend Base URL
   FRONTEND_BASE_URL: "/makueni-west",
