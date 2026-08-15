@@ -17,7 +17,7 @@ Laravel 12 API for the diocese management system. See the root `../CLAUDE.md` fo
 - Branch from `main`. Never commit directly to `main`. Prefixes: `feature/<name>`, `bugfix/<name>`, `hotfix/<name>`. One branch per task.
 - Before starting: `git checkout main && git pull origin main`.
 - After finishing: run `composer test`, fix anything broken, commit with a why-focused message, `git push -u origin <branch>`, `gh pr create` with a real title/summary/test-plan.
-- **Merging needs the repo owner's explicit go-ahead for that specific PR** — opening one proactively is fine, merging isn't.
+- Merge the PR once it's up (`gh pr merge --merge`) — don't leave it sitting open waiting for a separate go-ahead.
 - Never commit `.env` or any file containing real credentials.
 
 ## Stack
