@@ -305,7 +305,13 @@ public function getUserAudits(Request $request, $userId)
                 $query->whereIn('event', ['updated', 'profile_updated']);
                 break;
             case 'status':
-                $query->whereIn('event', ['status_changed', 'account_activated', 'account_deactivated']);
+                // User::transformAudit() names these dynamically per transition
+                // (status_changed_active_to_inactive, etc.) - matches the same
+                // 'status_changed%' pattern already used by
+                // User::getStatusChangeHistory() and UserController::getUserAuditTrail().
+                // 'account_activated'/'account_deactivated' are never produced anywhere
+                // in the app, so they matched nothing and are dropped here.
+                $query->where('event', 'like', 'status_changed%');
                 break;
         }
     }
