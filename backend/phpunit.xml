@@ -34,7 +34,7 @@
         <!-- Application Environment -->
         <env name="APP_ENV" value="testing"/>
         <env name="APP_NAME" value="Makueni-West-Diocese-Test"/>
-        <env name="APP_KEY" value="base64:test-key-for-diocese-testing"/>
+        <env name="APP_KEY" value="base64:RvMKtyXE1ygZ7d9lWtwhZItn0lztqB2wC4ZhPjZZ9lk="/>
         <env name="APP_DEBUG" value="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
 
