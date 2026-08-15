@@ -285,8 +285,11 @@ public function getUserAudits(Request $request, $userId)
     $limit = $request->input('limit', 50); // Default 50, max 100
 
     // Build query - Get audits where user performed the action (causer only)
+    // auditable_type is stored as the morph map alias (see AppServiceProvider::boot()),
+    // e.g. 'user', not the FQCN - resolve it via getMorphClass() instead of hardcoding
+    // 'App\Models\User', which never matches any row once the morph map is enforced.
     $query = \OwenIt\Auditing\Models\Audit::where('user_id', $userId)  // User performed the action
-    ->where('auditable_type', 'App\\Models\\User') // Only user-related audits
+    ->where('auditable_type', (new User())->getMorphClass()) // Only user-related audits
     ->with(['user']); // Load the causer relationship
 
     // ✅ Filter by event type
