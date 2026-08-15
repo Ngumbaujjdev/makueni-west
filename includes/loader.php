@@ -1,3 +1,3 @@
 <div id="loader">
-    <img src="http://localhost:8080/makueni-west/assets/images/brand-logos/desktop-logo.png" alt="" />
+    <img src="<?= SITE_URL ?>/assets/images/brand-logos/desktop-logo.png" alt="" />
 </div>

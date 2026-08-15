@@ -1,3 +1,4 @@
+<?php require_once __DIR__ . '/../includes/session-manager.php'; ?>
 <!DOCTYPE html>
 <html lang="en" dir="ltr" data-nav-layout="vertical" data-vertical-style="overlay" data-theme-mode="light"
     data-header-styles="light" data-menu-styles="light" data-toggled="close">
@@ -17,21 +18,21 @@
         content="blazor bootstrap, c# blazor, admin panel, blazor c#, template dashboard, admin, bootstrap admin template, blazor, blazorbootstrap, bootstrap 5 templates, dashboard, dashboard template bootstrap, admin dashboard bootstrap." />
 
     <!-- Favicon -->
-    <link rel="icon" href="http://localhost:8080/makueni-west/assets/images/brand-logos/favicon/favicon.ico"
+    <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico"
         type="image/x-icon" />
 
     <!-- Main Theme Js -->
-    <script src="http://localhost:8080/makueni-west/assets/js/authentication-main.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/authentication-main.js"></script>
 
     <!-- Bootstrap Css -->
-    <link id="style" href="http://localhost:8080/makueni-west/assets/libs/bootstrap/css/bootstrap.min.css"
+    <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css"
         rel="stylesheet" />
 
     <!-- Style Css -->
-    <link href="http://localhost:8080/makueni-west/assets/css/styles.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/css/styles.min.css" rel="stylesheet" />
 
     <!-- Icons Css -->
-    <link href="http://localhost:8080/makueni-west/assets/css/icons.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/css/icons.min.css" rel="stylesheet" />
 </head>
 
 <body>
@@ -540,8 +541,8 @@
         </div>
     </div>
 
-    <script src="http://localhost:8080/makueni-west/assets/js/config/app.js"></script>
-    <script src="http://localhost:8080/makueni-west/assets/js/config/constants.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/config/app.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
     <script>
     // Show available territorial roles if any
     const territorialRoles = JSON.parse(localStorage.getItem(Constants.STORAGE_KEYS.TERRITORIAL_ROLES) || '[]');
@@ -576,13 +577,13 @@
 
 
     <!-- Bootstrap JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
 
     <!-- Particles JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/particles.js/particles.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/particles.js/particles.js"></script>
 
     <!-- Error JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/error.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/error.js"></script>
 </body>
 
 </html>

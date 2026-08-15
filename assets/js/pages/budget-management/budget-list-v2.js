@@ -531,7 +531,7 @@
   // NAVIGATION FUNCTIONS
   // ========================================================================
 
-  const BASE_URL = window.APP_BASE_URL || 'http://localhost:8080/makueni-west';
+  const BASE_URL = window.APP_BASE_URL || '/makueni-west';
 
   function navigateToCreateBudget() {
     const url = `${BASE_URL}/diocese/budget-management/budget-overview/create-budget`;

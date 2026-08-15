@@ -191,7 +191,7 @@
     },
     editUser: function (userId) {
       console.log("📝 Redirecting to edit user page:", userId);
-      window.location.href = `http://localhost:8080/makueni-west/diocese/settings/admin/edit-user?id=${userId}`;
+      window.location.href = `/makueni-west/diocese/settings/admin/edit-user?id=${userId}`;
     },
     activateUser: function (userId, userName) {
       if (typeof UserManagementActions !== "undefined") {
@@ -236,7 +236,7 @@
       }
 
       // Redirect to edit page
-      window.location.href = `http://localhost:8080/makueni-west/diocese/settings/admin/edit-user?id=${userId}`;
+      window.location.href = `/makueni-west/diocese/settings/admin/edit-user?id=${userId}`;
     },
     resetPasswordFromView: function () {
       // Get current user ID from view modal

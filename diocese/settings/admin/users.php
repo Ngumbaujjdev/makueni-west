@@ -29,40 +29,40 @@ $currentRole = getCurrentRole();
         content="blazor bootstrap, c# blazor, admin panel, blazor c#, template dashboard, admin, bootstrap admin template, blazor, blazorbootstrap, bootstrap 5 templates, dashboard, dashboard template bootstrap, admin dashboard bootstrap." />
 
     <!-- Favicon -->
-    <link rel="icon" href="http://localhost:8080/makueni-west/assets/images/brand-logos/favicon/favicon.ico"
+    <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico"
         type="image/x-icon" />
 
     <!-- Choices JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/choices.js/public/assets/scripts/choices.min.js">
+    <script src="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/scripts/choices.min.js">
     </script>
 
     <!-- Main Theme Js -->
-    <script src="http://localhost:8080/makueni-west/assets/js/main.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/main.js"></script>
 
     <!-- Bootstrap Css -->
-    <link id="style" href="http://localhost:8080/makueni-west/assets/libs/bootstrap/css/bootstrap.min.css"
+    <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css"
         rel="stylesheet" />
 
     <!-- Style Css -->
-    <link href="http://localhost:8080/makueni-west/assets/css/styles.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/css/styles.min.css" rel="stylesheet" />
 
     <!-- Icons Css -->
-    <link href="http://localhost:8080/makueni-west/assets/css/icons.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />
 
     <!-- Node Waves Css -->
-    <link href="http://localhost:8080/makueni-west/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
 
     <!-- Simplebar Css -->
-    <link href="http://localhost:8080/makueni-west/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
 
     <!-- Color Picker Css -->
-    <link rel="stylesheet" href="http://localhost:8080/makueni-west/assets/libs/flatpickr/flatpickr.min.css" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/flatpickr/flatpickr.min.css" />
     <link rel="stylesheet"
-        href="http://localhost:8080/makueni-west/assets/libs/%40simonwep/pickr/themes/nano.min.css" />
+        href="<?= SITE_URL ?>/assets/libs/%40simonwep/pickr/themes/nano.min.css" />
 
     <!-- Choices Css -->
     <link rel="stylesheet"
-        href="http://localhost:8080/makueni-west/assets/libs/choices.js/public/assets/styles/choices.min.css" />
+        href="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/styles/choices.min.css" />
     
 
 </head>
@@ -134,7 +134,7 @@ $currentRole = getCurrentRole();
                                                     <p class="text-muted mb-0 fs-13">Manage system users and their
                                                         assignments</p>
                                                 </div>
-                                                <a href="http://localhost:8080/makueni-west/diocese/settings/admin/add-user" class="btn btn-primary">
+                                                <a href="<?= SITE_URL ?>/diocese/settings/admin/add-user" class="btn btn-primary">
                                                     <i class="ri-user-add-line me-1"></i>Create User
                                                 </a>
                                             </div>
@@ -1095,48 +1095,48 @@ $currentRole = getCurrentRole();
 
 
     <!-- Popper JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/%40popperjs/core/umd/popper.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/%40popperjs/core/umd/popper.min.js"></script>
 
     <!-- Bootstrap JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
 
     <!-- Custom JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/custom.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
     <!-- Logout Handler -->
-    <script src="http://localhost:8080/makueni-west/assets/js/Toasts.js"></script>
-    <script src="http://localhost:8080/makueni-west/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
 
     <!-- Constants (IMPORTANT - Add this!) -->
-    <script src="http://localhost:8080/makueni-west/assets/js/config/constants.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
 
     <!-- Auth Helpers -->
-    <script src="http://localhost:8080/makueni-west/assets/js/utils/auth-helpers.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js"></script>
 
     <!-- Logout Handler -->
-    <script src="http://localhost:8080/makueni-west/assets/js/pages/authentication/logout.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js"></script>
 
     <!-- Dependencies (existing files) -->
-    <script src="http://localhost:8080/makueni-west/assets/js/pages/system-administration/api-handler.js"></script>
-    <script src="http://localhost:8080/makueni-west/assets/js/pages/system-administration/permission-matrix.js">
+    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/api-handler.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/permission-matrix.js">
     </script>
 
     <!-- ============================================================================ -->
     <!-- USER MANAGEMENT MODULES (Load in this exact order!) -->
     <!-- ============================================================================ -->
     <script
-        src="http://localhost:8080/makueni-west/assets/js/pages/system-administration/user-management/user-management-utils.js">
+        src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management-utils.js">
     </script>
     <script
-        src="http://localhost:8080/makueni-west/assets/js/pages/system-administration/user-management/user-management-table.js">
+        src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management-table.js">
     </script>
     <script
-        src="http://localhost:8080/makueni-west/assets/js/pages/system-administration/user-management/user-management-actions.js">
+        src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management-actions.js">
     </script>
     <script
-        src="http://localhost:8080/makueni-west/assets/js/pages/system-administration/user-management/user-management-modals.js">
+        src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management-modals.js">
     </script>
     <script
-        src="http://localhost:8080/makueni-west/assets/js/pages/system-administration/user-management/user-management.js">
+        src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management.js">
     </script>
 
     <!-- ============================================================================ -->

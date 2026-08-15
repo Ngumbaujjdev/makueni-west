@@ -1,3 +1,4 @@
+<?php require_once __DIR__ . '/../includes/session-manager.php'; ?>
 <!DOCTYPE html>
 <html lang="en" dir="ltr" data-nav-layout="vertical" data-vertical-style="overlay" data-theme-mode="light"
     data-header-styles="light" data-menu-styles="light" data-toggled="close">
@@ -16,23 +17,23 @@
         content="blazor bootstrap, c# blazor, admin panel, blazor c#, template dashboard, admin, bootstrap admin template, blazor, blazorbootstrap, bootstrap 5 templates, dashboard, dashboard template bootstrap, admin dashboard bootstrap." />
 
     <!-- Favicon -->
-    <link rel="icon" href="http://localhost:8080/makueni-west/assets/images/brand-logos/favicon/favicon.ico"
+    <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico"
         type="image/x-icon" />
 
     <!-- Main Theme Js -->
-    <script src="http://localhost:8080/makueni-west/assets/js/authentication-main.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/authentication-main.js"></script>
 
     <!-- Bootstrap Css -->
-    <link id="style" href="http://localhost:8080/makueni-west/assets/libs/bootstrap/css/bootstrap.min.css"
+    <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css"
         rel="stylesheet" />
 
     <!-- Style Css -->
-    <link href="http://localhost:8080/makueni-west/assets/css/styles.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/css/styles.min.css" rel="stylesheet" />
 
     <!-- Icons Css -->
-    <link href="http://localhost:8080/makueni-west/assets/css/icons.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/css/icons.min.css" rel="stylesheet" />
 
-    <link rel="stylesheet" href="http://localhost:8080/makueni-west/assets/libs/swiper/swiper-bundle.min.css" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/swiper/swiper-bundle.min.css" />
 </head>
 
 <body class="bg-white">
@@ -163,7 +164,7 @@
                                     class="text-fixed-white text-center p-5 d-flex align-items-center justify-content-center">
                                     <div>
                                         <div class="mb-5">
-                                            <img src="http://localhost:8080/makueni-west/assets/images/authentication/2.png"
+                                            <img src="<?= SITE_URL ?>/assets/images/authentication/2.png"
                                                 class="authentication-image" alt="Diocese Management" />
                                         </div>
                                         <h6 class="fw-semibold text-fixed-white">Makueni West Diocese</h6>
@@ -181,7 +182,7 @@
                                     class="text-fixed-white text-center p-5 d-flex align-items-center justify-content-center">
                                     <div>
                                         <div class="mb-5">
-                                            <img src="http://localhost:8080/makueni-west/assets/images/authentication/3.png"
+                                            <img src="<?= SITE_URL ?>/assets/images/authentication/3.png"
                                                 class="authentication-image" alt="Hierarchical Management" />
                                         </div>
                                         <h6 class="fw-semibold text-fixed-white">Hierarchical Management</h6>
@@ -199,7 +200,7 @@
                                     class="text-fixed-white text-center p-5 d-flex align-items-center justify-content-center">
                                     <div>
                                         <div class="mb-5">
-                                            <img src="http://localhost:8080/makueni-west/assets/images/authentication/2.png"
+                                            <img src="<?= SITE_URL ?>/assets/images/authentication/2.png"
                                                 class="authentication-image" alt="Transparent Stewardship" />
                                         </div>
                                         <h6 class="fw-semibold text-fixed-white">Transparent Stewardship</h6>
@@ -223,30 +224,30 @@
     </div>
 
     <!-- Bootstrap JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
 
     <!-- Swiper JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/swiper/swiper-bundle.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/swiper/swiper-bundle.min.js"></script>
 
     <!-- Internal Sing-Up JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/authentication.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/authentication.js"></script>
 
     <!-- Show Password JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/show-password.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/show-password.js"></script>
     <!-- Toast JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/Toasts.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
     <!-- Load Bootstrap first (if not already loaded) -->
     <script src="assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
 
     <!-- Load config files -->
-    <script src="http://localhost:8080/makueni-west/assets/js/config/app.js"></script>
-    <script src="http://localhost:8080/makueni-west/assets/js/config/constants.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/config/app.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
 
     <!-- Load utilities -->
-    <script src="http://localhost:8080/makueni-west/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
 
     <!-- Load login handler -->
-    <script src="http://localhost:8080/makueni-west/assets/js/pages/authentication/login.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/login.js"></script>
 
 </body>
 

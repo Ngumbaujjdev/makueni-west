@@ -383,7 +383,7 @@
             size: 0,
           },
           image: {
-            path: "http://localhost:8080/makueni-west/assets/images/faces/1.jpg",
+            path: "/makueni-west/assets/images/faces/1.jpg",
           },
         },
       ],

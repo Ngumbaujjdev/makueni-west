@@ -1,10 +1,17 @@
 <?php
 /**
  * Session Manager
- * 
+ *
  * Handles session initialization, validation, and management
  * Include this file at the top of every page that needs session handling
  */
+
+// Site base URL — single source of truth for the frontend's own root-relative
+// path, mirroring assets/js/config/app.js's FRONTEND_BASE_URL. If this app ever
+// moves to a different subfolder or a domain root, change it here only.
+if (!defined('SITE_URL')) {
+    define('SITE_URL', '/makueni-west');
+}
 
 // Session configuration
 ini_set('session.cookie_httponly', 1);

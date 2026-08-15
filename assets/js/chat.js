@@ -51,7 +51,7 @@ let changeTheInfo = (element, name, img, status) => {
   document.querySelectorAll(".chatnameperson").forEach((ele) => {
     ele.innerText = name;
   });
-  let image = `http://localhost:8080/makueni-west/assets/images/faces/${img}.jpg`;
+  let image = `/makueni-west/assets/images/faces/${img}.jpg`;
   document.querySelectorAll(".chatimageperson").forEach((ele) => {
     ele.src = image;
   });

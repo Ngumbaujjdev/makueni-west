@@ -129,11 +129,11 @@
           attribute: "image",
           scale: {
             marker1title: {
-              url: "http://localhost:8080/makueni-west/assets/images/brand-logos/toggle-logo.png",
+              url: "/makueni-west/assets/images/brand-logos/toggle-logo.png",
               offset: [10, 0],
             },
             marker2title: {
-              url: "http://localhost:8080/makueni-west/assets/images/brand-logos/toggle-logo.png",
+              url: "/makueni-west/assets/images/brand-logos/toggle-logo.png",
               offset: [10, 0],
             },
           },

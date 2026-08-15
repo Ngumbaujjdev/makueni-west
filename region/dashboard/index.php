@@ -29,40 +29,40 @@ $currentRole = getCurrentRole();
         content="blazor bootstrap, c# blazor, admin panel, blazor c#, template dashboard, admin, bootstrap admin template, blazor, blazorbootstrap, bootstrap 5 templates, dashboard, dashboard template bootstrap, admin dashboard bootstrap." />
 
     <!-- Favicon -->
-    <link rel="icon" href="http://localhost:8080/makueni-west/assets/images/brand-logos/favicon/favicon.ico"
+    <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico"
         type="image/x-icon" />
 
     <!-- Choices JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/choices.js/public/assets/scripts/choices.min.js">
+    <script src="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/scripts/choices.min.js">
     </script>
 
     <!-- Main Theme Js -->
-    <script src="http://localhost:8080/makueni-west/assets/js/main.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/main.js"></script>
 
     <!-- Bootstrap Css -->
-    <link id="style" href="http://localhost:8080/makueni-west/assets/libs/bootstrap/css/bootstrap.min.css"
+    <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css"
         rel="stylesheet" />
 
     <!-- Style Css -->
-    <link href="http://localhost:8080/makueni-west/assets/css/styles.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/css/styles.min.css" rel="stylesheet" />
 
     <!-- Icons Css -->
-    <link href="http://localhost:8080/makueni-west/assets/css/icons.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />
 
     <!-- Node Waves Css -->
-    <link href="http://localhost:8080/makueni-west/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
 
     <!-- Simplebar Css -->
-    <link href="http://localhost:8080/makueni-west/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
 
     <!-- Color Picker Css -->
-    <link rel="stylesheet" href="http://localhost:8080/makueni-west/assets/libs/flatpickr/flatpickr.min.css" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/flatpickr/flatpickr.min.css" />
     <link rel="stylesheet"
-        href="http://localhost:8080/makueni-west/assets/libs/%40simonwep/pickr/themes/nano.min.css" />
+        href="<?= SITE_URL ?>/assets/libs/%40simonwep/pickr/themes/nano.min.css" />
 
     <!-- Choices Css -->
     <link rel="stylesheet"
-        href="http://localhost:8080/makueni-west/assets/libs/choices.js/public/assets/styles/choices.min.css" />
+        href="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/styles/choices.min.css" />
 </head>
 
 <body>
@@ -251,7 +251,7 @@ $currentRole = getCurrentRole();
                             <div class="col-xxl-6 col-xl-6 col-lg-6 col-md-6">
                                 <div class="card custom-card overflow-hidden">
                                     <div class="ecommerce-sale-image">
-                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/35.png"
+                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/35.png"
                                             class="card-img-top" alt="..." />
                                         <div class="card-img-overlay d-flex flex-column p-4 text-fixed-white">
                                             <p class="mb-1 op-7 fs-12">Spruko Official.Inc</p>
@@ -320,7 +320,7 @@ $currentRole = getCurrentRole();
                                                     <div class="d-flex algn-items-center">
                                                         <div class="lh-1">
                                                             <span class="avatar avatar-md">
-                                                                <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/jpg/1.jpg"
+                                                                <img src="<?= SITE_URL ?>/assets/images/ecommerce/jpg/1.jpg"
                                                                     alt="" />
                                                             </span>
                                                         </div>
@@ -339,7 +339,7 @@ $currentRole = getCurrentRole();
                                                     <div class="d-flex algn-items-center">
                                                         <div class="lh-1">
                                                             <span class="avatar avatar-md">
-                                                                <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/jpg/2.jpg"
+                                                                <img src="<?= SITE_URL ?>/assets/images/ecommerce/jpg/2.jpg"
                                                                     alt="" />
                                                             </span>
                                                         </div>
@@ -358,7 +358,7 @@ $currentRole = getCurrentRole();
                                                     <div class="d-flex algn-items-center">
                                                         <div class="lh-1">
                                                             <span class="avatar avatar-md">
-                                                                <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/jpg/3.jpg"
+                                                                <img src="<?= SITE_URL ?>/assets/images/ecommerce/jpg/3.jpg"
                                                                     alt="" />
                                                             </span>
                                                         </div>
@@ -377,7 +377,7 @@ $currentRole = getCurrentRole();
                                                     <div class="d-flex algn-items-center">
                                                         <div class="lh-1">
                                                             <span class="avatar avatar-md">
-                                                                <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/jpg/4.jpg"
+                                                                <img src="<?= SITE_URL ?>/assets/images/ecommerce/jpg/4.jpg"
                                                                     alt="" />
                                                             </span>
                                                         </div>
@@ -396,7 +396,7 @@ $currentRole = getCurrentRole();
                                                     <div class="d-flex algn-items-center">
                                                         <div class="lh-1">
                                                             <span class="avatar avatar-md">
-                                                                <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/jpg/5.jpg"
+                                                                <img src="<?= SITE_URL ?>/assets/images/ecommerce/jpg/5.jpg"
                                                                     alt="" />
                                                             </span>
                                                         </div>
@@ -415,7 +415,7 @@ $currentRole = getCurrentRole();
                                                     <div class="d-flex algn-items-center">
                                                         <div class="lh-1">
                                                             <span class="avatar avatar-md">
-                                                                <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/jpg/6.jpg"
+                                                                <img src="<?= SITE_URL ?>/assets/images/ecommerce/jpg/6.jpg"
                                                                     alt="" />
                                                             </span>
                                                         </div>
@@ -471,7 +471,7 @@ $currentRole = getCurrentRole();
                                                                         <div class="lh-1">
                                                                             <span
                                                                                 class="avatar avatar-md online avatar-rounded me-2">
-                                                                                <img src="http://localhost:8080/makueni-west/assets/images/faces/4.jpg"
+                                                                                <img src="<?= SITE_URL ?>/assets/images/faces/4.jpg"
                                                                                     alt="" />
                                                                             </span>
                                                                         </div>
@@ -496,7 +496,7 @@ $currentRole = getCurrentRole();
                                                                 </td>
                                                                 <td>
                                                                     <span class="avatar avatar-md">
-                                                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/1.png"
+                                                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/1.png"
                                                                             alt="" />
                                                                     </span>
                                                                 </td>
@@ -513,7 +513,7 @@ $currentRole = getCurrentRole();
                                                                         <div class="lh-1">
                                                                             <span
                                                                                 class="avatar avatar-md online avatar-rounded me-2">
-                                                                                <img src="http://localhost:8080/makueni-west/assets/images/faces/10.jpg"
+                                                                                <img src="<?= SITE_URL ?>/assets/images/faces/10.jpg"
                                                                                     alt="" />
                                                                             </span>
                                                                         </div>
@@ -538,7 +538,7 @@ $currentRole = getCurrentRole();
                                                                 </td>
                                                                 <td>
                                                                     <span class="avatar avatar-md">
-                                                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/2.png"
+                                                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/2.png"
                                                                             alt="" />
                                                                     </span>
                                                                 </td>
@@ -555,7 +555,7 @@ $currentRole = getCurrentRole();
                                                                         <div class="lh-1">
                                                                             <span
                                                                                 class="avatar avatar-md offline avatar-rounded me-2">
-                                                                                <img src="http://localhost:8080/makueni-west/assets/images/faces/12.jpg"
+                                                                                <img src="<?= SITE_URL ?>/assets/images/faces/12.jpg"
                                                                                     alt="" />
                                                                             </span>
                                                                         </div>
@@ -580,7 +580,7 @@ $currentRole = getCurrentRole();
                                                                 </td>
                                                                 <td>
                                                                     <span class="avatar avatar-md">
-                                                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/3.png"
+                                                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/3.png"
                                                                             alt="" />
                                                                     </span>
                                                                 </td>
@@ -597,7 +597,7 @@ $currentRole = getCurrentRole();
                                                                         <div class="lh-1">
                                                                             <span
                                                                                 class="avatar avatar-md online avatar-rounded me-2">
-                                                                                <img src="http://localhost:8080/makueni-west/assets/images/faces/5.jpg"
+                                                                                <img src="<?= SITE_URL ?>/assets/images/faces/5.jpg"
                                                                                     alt="" />
                                                                             </span>
                                                                         </div>
@@ -622,7 +622,7 @@ $currentRole = getCurrentRole();
                                                                 </td>
                                                                 <td>
                                                                     <span class="avatar avatar-md">
-                                                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/4.png"
+                                                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/4.png"
                                                                             alt="" />
                                                                     </span>
                                                                 </td>
@@ -639,7 +639,7 @@ $currentRole = getCurrentRole();
                                                                         <div class="lh-1">
                                                                             <span
                                                                                 class="avatar avatar-md offline avatar-rounded me-2">
-                                                                                <img src="http://localhost:8080/makueni-west/assets/images/faces/14.jpg"
+                                                                                <img src="<?= SITE_URL ?>/assets/images/faces/14.jpg"
                                                                                     alt="" />
                                                                             </span>
                                                                         </div>
@@ -664,7 +664,7 @@ $currentRole = getCurrentRole();
                                                                 </td>
                                                                 <td>
                                                                     <span class="avatar avatar-md">
-                                                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/5.png"
+                                                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/5.png"
                                                                             alt="" />
                                                                     </span>
                                                                 </td>
@@ -690,7 +690,7 @@ $currentRole = getCurrentRole();
                                                                         <div class="lh-1">
                                                                             <span
                                                                                 class="avatar avatar-md offline avatar-rounded me-2">
-                                                                                <img src="http://localhost:8080/makueni-west/assets/images/faces/2.jpg"
+                                                                                <img src="<?= SITE_URL ?>/assets/images/faces/2.jpg"
                                                                                     alt="" />
                                                                             </span>
                                                                         </div>
@@ -715,7 +715,7 @@ $currentRole = getCurrentRole();
                                                                 </td>
                                                                 <td>
                                                                     <span class="avatar avatar-md">
-                                                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/6.png"
+                                                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/6.png"
                                                                             alt="" />
                                                                     </span>
                                                                 </td>
@@ -732,7 +732,7 @@ $currentRole = getCurrentRole();
                                                                         <div class="lh-1">
                                                                             <span
                                                                                 class="avatar avatar-md offline avatar-rounded me-2">
-                                                                                <img src="http://localhost:8080/makueni-west/assets/images/faces/13.jpg"
+                                                                                <img src="<?= SITE_URL ?>/assets/images/faces/13.jpg"
                                                                                     alt="" />
                                                                             </span>
                                                                         </div>
@@ -757,7 +757,7 @@ $currentRole = getCurrentRole();
                                                                 </td>
                                                                 <td>
                                                                     <span class="avatar avatar-md">
-                                                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/7.png"
+                                                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/7.png"
                                                                             alt="" />
                                                                     </span>
                                                                 </td>
@@ -774,7 +774,7 @@ $currentRole = getCurrentRole();
                                                                         <div class="lh-1">
                                                                             <span
                                                                                 class="avatar avatar-md online avatar-rounded me-2">
-                                                                                <img src="http://localhost:8080/makueni-west/assets/images/faces/7.jpg"
+                                                                                <img src="<?= SITE_URL ?>/assets/images/faces/7.jpg"
                                                                                     alt="" />
                                                                             </span>
                                                                         </div>
@@ -799,7 +799,7 @@ $currentRole = getCurrentRole();
                                                                 </td>
                                                                 <td>
                                                                     <span class="avatar avatar-md">
-                                                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/8.png"
+                                                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/8.png"
                                                                             alt="" />
                                                                     </span>
                                                                 </td>
@@ -816,7 +816,7 @@ $currentRole = getCurrentRole();
                                                                         <div class="lh-1">
                                                                             <span
                                                                                 class="avatar avatar-md online avatar-rounded me-2">
-                                                                                <img src="http://localhost:8080/makueni-west/assets/images/faces/12.jpg"
+                                                                                <img src="<?= SITE_URL ?>/assets/images/faces/12.jpg"
                                                                                     alt="" />
                                                                             </span>
                                                                         </div>
@@ -841,7 +841,7 @@ $currentRole = getCurrentRole();
                                                                 </td>
                                                                 <td>
                                                                     <span class="avatar avatar-md">
-                                                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/9.png"
+                                                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/9.png"
                                                                             alt="" />
                                                                     </span>
                                                                 </td>
@@ -858,7 +858,7 @@ $currentRole = getCurrentRole();
                                                                         <div class="lh-1">
                                                                             <span
                                                                                 class="avatar avatar-md online avatar-rounded me-2">
-                                                                                <img src="http://localhost:8080/makueni-west/assets/images/faces/15.jpg"
+                                                                                <img src="<?= SITE_URL ?>/assets/images/faces/15.jpg"
                                                                                     alt="" />
                                                                             </span>
                                                                         </div>
@@ -883,7 +883,7 @@ $currentRole = getCurrentRole();
                                                                 </td>
                                                                 <td>
                                                                     <span class="avatar avatar-md">
-                                                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/10.png"
+                                                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/10.png"
                                                                             alt="" />
                                                                     </span>
                                                                 </td>
@@ -909,7 +909,7 @@ $currentRole = getCurrentRole();
                                                                         <div class="lh-1">
                                                                             <span
                                                                                 class="avatar avatar-md online avatar-rounded me-2">
-                                                                                <img src="http://localhost:8080/makueni-west/assets/images/faces/6.jpg"
+                                                                                <img src="<?= SITE_URL ?>/assets/images/faces/6.jpg"
                                                                                     alt="" />
                                                                             </span>
                                                                         </div>
@@ -934,7 +934,7 @@ $currentRole = getCurrentRole();
                                                                 </td>
                                                                 <td>
                                                                     <span class="avatar avatar-md">
-                                                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/11.png"
+                                                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/11.png"
                                                                             alt="" />
                                                                     </span>
                                                                 </td>
@@ -951,7 +951,7 @@ $currentRole = getCurrentRole();
                                                                         <div class="lh-1">
                                                                             <span
                                                                                 class="avatar avatar-md offline avatar-rounded me-2">
-                                                                                <img src="http://localhost:8080/makueni-west/assets/images/faces/14.jpg"
+                                                                                <img src="<?= SITE_URL ?>/assets/images/faces/14.jpg"
                                                                                     alt="" />
                                                                             </span>
                                                                         </div>
@@ -976,7 +976,7 @@ $currentRole = getCurrentRole();
                                                                 </td>
                                                                 <td>
                                                                     <span class="avatar avatar-md">
-                                                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/12.png"
+                                                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/12.png"
                                                                             alt="" />
                                                                     </span>
                                                                 </td>
@@ -993,7 +993,7 @@ $currentRole = getCurrentRole();
                                                                         <div class="lh-1">
                                                                             <span
                                                                                 class="avatar avatar-md online avatar-rounded me-2">
-                                                                                <img src="http://localhost:8080/makueni-west/assets/images/faces/16.jpg"
+                                                                                <img src="<?= SITE_URL ?>/assets/images/faces/16.jpg"
                                                                                     alt="" />
                                                                             </span>
                                                                         </div>
@@ -1018,7 +1018,7 @@ $currentRole = getCurrentRole();
                                                                 </td>
                                                                 <td>
                                                                     <span class="avatar avatar-md">
-                                                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/13.png"
+                                                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/13.png"
                                                                             alt="" />
                                                                     </span>
                                                                 </td>
@@ -1035,7 +1035,7 @@ $currentRole = getCurrentRole();
                                                                         <div class="lh-1">
                                                                             <span
                                                                                 class="avatar avatar-md online avatar-rounded me-2">
-                                                                                <img src="http://localhost:8080/makueni-west/assets/images/faces/3.jpg"
+                                                                                <img src="<?= SITE_URL ?>/assets/images/faces/3.jpg"
                                                                                     alt="" />
                                                                             </span>
                                                                         </div>
@@ -1060,7 +1060,7 @@ $currentRole = getCurrentRole();
                                                                 </td>
                                                                 <td>
                                                                     <span class="avatar avatar-md">
-                                                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/14.png"
+                                                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/14.png"
                                                                             alt="" />
                                                                     </span>
                                                                 </td>
@@ -1077,7 +1077,7 @@ $currentRole = getCurrentRole();
                                                                         <div class="lh-1">
                                                                             <span
                                                                                 class="avatar avatar-md offline avatar-rounded me-2">
-                                                                                <img src="http://localhost:8080/makueni-west/assets/images/faces/9.jpg"
+                                                                                <img src="<?= SITE_URL ?>/assets/images/faces/9.jpg"
                                                                                     alt="" />
                                                                             </span>
                                                                         </div>
@@ -1102,7 +1102,7 @@ $currentRole = getCurrentRole();
                                                                 </td>
                                                                 <td>
                                                                     <span class="avatar avatar-md">
-                                                                        <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/15.png"
+                                                                        <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/15.png"
                                                                             alt="" />
                                                                     </span>
                                                                 </td>
@@ -1209,7 +1209,7 @@ $currentRole = getCurrentRole();
                                                     <tr>
                                                         <td class="text-center lh-1">
                                                             <span class="avatar avatar-md">
-                                                                <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/36.png"
+                                                                <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/36.png"
                                                                     class="p-2 rounded-pill bg-light" alt="" />
                                                             </span>
                                                         </td>
@@ -1227,7 +1227,7 @@ $currentRole = getCurrentRole();
                                                     <tr>
                                                         <td class="text-center lh-1">
                                                             <span class="avatar avatar-md">
-                                                                <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/38.png"
+                                                                <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/38.png"
                                                                     class="p-2 rounded-pill bg-light" alt="" />
                                                             </span>
                                                         </td>
@@ -1245,7 +1245,7 @@ $currentRole = getCurrentRole();
                                                     <tr>
                                                         <td class="text-center lh-1">
                                                             <span class="avatar avatar-md">
-                                                                <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/39.png"
+                                                                <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/39.png"
                                                                     class="p-2 rounded-pill bg-light" alt="" />
                                                             </span>
                                                         </td>
@@ -1263,7 +1263,7 @@ $currentRole = getCurrentRole();
                                                     <tr>
                                                         <td class="text-center lh-1">
                                                             <span class="avatar avatar-md">
-                                                                <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/40.png"
+                                                                <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/40.png"
                                                                     class="p-2 rounded-pill bg-light" alt="" />
                                                             </span>
                                                         </td>
@@ -1325,7 +1325,7 @@ $currentRole = getCurrentRole();
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <div class="d-flex align-items-center lh-1">
                                                         <span class="avatar avatar-xs me-2 avatar-rounded">
-                                                            <img src="http://localhost:8080/makueni-west/assets/images/flags/french_flag.jpg"
+                                                            <img src="<?= SITE_URL ?>/assets/images/flags/french_flag.jpg"
                                                                 alt="" />
                                                         </span>
                                                         <span class="top-country-name">France</span>
@@ -1340,7 +1340,7 @@ $currentRole = getCurrentRole();
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <div class="d-flex align-items-center lh-1">
                                                         <span class="avatar avatar-xs me-2 avatar-rounded">
-                                                            <img src="http://localhost:8080/makueni-west/assets/images/flags/spain_flag.jpg"
+                                                            <img src="<?= SITE_URL ?>/assets/images/flags/spain_flag.jpg"
                                                                 alt="" />
                                                         </span>
                                                         <span class="top-country-name">spain</span>
@@ -1355,7 +1355,7 @@ $currentRole = getCurrentRole();
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <div class="d-flex align-items-center lh-1">
                                                         <span class="avatar avatar-xs me-2 avatar-rounded">
-                                                            <img src="http://localhost:8080/makueni-west/assets/images/flags/argentina_flag.jpg"
+                                                            <img src="<?= SITE_URL ?>/assets/images/flags/argentina_flag.jpg"
                                                                 alt="" />
                                                         </span>
                                                         <span class="top-country-name">Argentina</span>
@@ -1370,7 +1370,7 @@ $currentRole = getCurrentRole();
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <div class="d-flex align-items-center lh-1">
                                                         <span class="avatar avatar-xs me-2 avatar-rounded">
-                                                            <img src="http://localhost:8080/makueni-west/assets/images/flags/uae_flag.jpg"
+                                                            <img src="<?= SITE_URL ?>/assets/images/flags/uae_flag.jpg"
                                                                 alt="" />
                                                         </span>
                                                         <span class="top-country-name">Uae</span>
@@ -1385,7 +1385,7 @@ $currentRole = getCurrentRole();
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <div class="d-flex align-items-center lh-1">
                                                         <span class="avatar avatar-xs me-2 avatar-rounded">
-                                                            <img src="http://localhost:8080/makueni-west/assets/images/flags/germany_flag.jpg"
+                                                            <img src="<?= SITE_URL ?>/assets/images/flags/germany_flag.jpg"
                                                                 alt="" />
                                                         </span>
                                                         <span class="top-country-name">Germany</span>
@@ -1431,7 +1431,7 @@ $currentRole = getCurrentRole();
                                                         <div class="d-flex align-items-top justify-content-center">
                                                             <div class="me-2">
                                                                 <span class="avatar avatar-md avatar-rounded">
-                                                                    <img src="http://localhost:8080/makueni-west/assets/images/faces/4.jpg"
+                                                                    <img src="<?= SITE_URL ?>/assets/images/faces/4.jpg"
                                                                         alt="" />
                                                                 </span>
                                                             </div>
@@ -1455,7 +1455,7 @@ $currentRole = getCurrentRole();
                                                         <div class="d-flex align-items-top justify-content-center">
                                                             <div class="me-2">
                                                                 <span class="avatar avatar-md avatar-rounded">
-                                                                    <img src="http://localhost:8080/makueni-west/assets/images/faces/15.jpg"
+                                                                    <img src="<?= SITE_URL ?>/assets/images/faces/15.jpg"
                                                                         alt="" />
                                                                 </span>
                                                             </div>
@@ -1479,7 +1479,7 @@ $currentRole = getCurrentRole();
                                                         <div class="d-flex align-items-top justify-content-center">
                                                             <div class="me-2">
                                                                 <span class="avatar avatar-md avatar-rounded">
-                                                                    <img src="http://localhost:8080/makueni-west/assets/images/faces/5.jpg"
+                                                                    <img src="<?= SITE_URL ?>/assets/images/faces/5.jpg"
                                                                         alt="" />
                                                                 </span>
                                                             </div>
@@ -1503,7 +1503,7 @@ $currentRole = getCurrentRole();
                                                         <div class="d-flex align-items-top justify-content-center">
                                                             <div class="me-2">
                                                                 <span class="avatar avatar-md avatar-rounded">
-                                                                    <img src="http://localhost:8080/makueni-west/assets/images/faces/2.jpg"
+                                                                    <img src="<?= SITE_URL ?>/assets/images/faces/2.jpg"
                                                                         alt="" />
                                                                 </span>
                                                             </div>
@@ -1580,7 +1580,7 @@ $currentRole = getCurrentRole();
                                                     <div class="d-flex align-items-center">
                                                         <div class="me-2 lh-1">
                                                             <span class="avatar avatar-sm">
-                                                                <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/36.png"
+                                                                <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/36.png"
                                                                     alt="" />
                                                             </span>
                                                         </div>
@@ -1606,7 +1606,7 @@ $currentRole = getCurrentRole();
                                                     <div class="d-flex align-items-center">
                                                         <div class="me-2 lh-1">
                                                             <span class="avatar avatar-sm">
-                                                                <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/37.png"
+                                                                <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/37.png"
                                                                     alt="" />
                                                             </span>
                                                         </div>
@@ -1634,7 +1634,7 @@ $currentRole = getCurrentRole();
                                                     <div class="d-flex align-items-center">
                                                         <div class="me-2 lh-1">
                                                             <span class="avatar avatar-sm">
-                                                                <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/38.png"
+                                                                <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/38.png"
                                                                     alt="" />
                                                             </span>
                                                         </div>
@@ -1660,7 +1660,7 @@ $currentRole = getCurrentRole();
                                                     <div class="d-flex align-items-center">
                                                         <div class="me-2 lh-1">
                                                             <span class="avatar avatar-sm">
-                                                                <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/39.png"
+                                                                <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/39.png"
                                                                     alt="" />
                                                             </span>
                                                         </div>
@@ -1686,7 +1686,7 @@ $currentRole = getCurrentRole();
                                                     <div class="d-flex align-items-center">
                                                         <div class="me-2 lh-1">
                                                             <span class="avatar avatar-sm">
-                                                                <img src="http://localhost:8080/makueni-west/assets/images/ecommerce/png/40.png"
+                                                                <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/40.png"
                                                                     alt="" />
                                                             </span>
                                                         </div>
@@ -1850,46 +1850,46 @@ $currentRole = getCurrentRole();
     <!-- Scroll To Top -->
 
     <!-- Popper JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/%40popperjs/core/umd/popper.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/%40popperjs/core/umd/popper.min.js"></script>
 
     <!-- Bootstrap JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
 
     <!-- Defaultmenu JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/defaultmenu.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/defaultmenu.min.js"></script>
 
     <!-- Node Waves JS-->
-    <script src="http://localhost:8080/makueni-west/assets/libs/node-waves/waves.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.js"></script>
 
     <!-- Sticky JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/sticky.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/sticky.js"></script>
 
     <!-- Simplebar JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/simplebar/simplebar.min.js"></script>
-    <script src="http://localhost:8080/makueni-west/assets/js/simplebar.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/simplebar.js"></script>
 
     <!-- Color Picker JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/%40simonwep/pickr/pickr.es5.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/%40simonwep/pickr/pickr.es5.min.js"></script>
 
     <!-- Apex Charts JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/apexcharts/apexcharts.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/apexcharts/apexcharts.min.js"></script>
 
     <!-- Ecommerce-Dashboard JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/ecommerce-dashboard.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/ecommerce-dashboard.js"></script>
 
     <!-- Custom-Switcher JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/custom-switcher.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/custom-switcher.min.js"></script>
 
     <!-- Custom JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/custom.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
     <!-- Logout Handler -->
-    <script src="http://localhost:8080/makueni-west/assets/js/pages/authentication/logout.js"></script>
-    <script src="http://localhost:8080/makueni-west/assets/js/utils/auth-helpers.js"></script>"></script>
-    <script src="http://localhost:8080/makueni-west/assets/js/Toasts.js"></script>
-    <script src="http://localhost:8080/makueni-west/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js"></script>"></script>
+    <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
     <!-- pforile js -->
     <!-- Toast JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/pages/profile/profile.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/profile/profile.js"></script>
 
 </body>
 

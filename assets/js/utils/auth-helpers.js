@@ -180,7 +180,7 @@ async function autoRefreshAssignments() {
 
         // Re-sync to PHP session
         await fetch(
-          "http://localhost:8080/makueni-west/authentication/ajax/sync-session",
+          "/makueni-west/authentication/ajax/sync-session",
           {
             method: "POST",
             headers: {

@@ -371,8 +371,8 @@
       opacity: 1,
       image: {
         src: [
-          "http://localhost:8080/makueni-west/assets/images/faces/10.jpg",
-          "http://localhost:8080/makueni-west/assets/images/faces/2.jpg",
+          "/makueni-west/assets/images/faces/10.jpg",
+          "/makueni-west/assets/images/faces/2.jpg",
         ],
         width: 40,
         height: 40,

@@ -12,7 +12,7 @@
       .querySelector("#style")
       ?.setAttribute(
         "href",
-        "http://localhost:8080/makueni-west/assets/libs/bootstrap/css/bootstrap.rtl.min.css"
+        "/makueni-west/assets/libs/bootstrap/css/bootstrap.rtl.min.css"
       );
     // rtlFn();
   }
@@ -72,7 +72,7 @@
         .querySelector("#style")
         ?.setAttribute(
           "href",
-          "http://localhost:8080/makueni-west/assets/libs/bootstrap/css/bootstrap.rtl.min.css"
+          "/makueni-west/assets/libs/bootstrap/css/bootstrap.rtl.min.css"
         );
       setTimeout(() => {
         rtlFn();
@@ -89,7 +89,7 @@ function ltrFn() {
       .querySelector("#style")
       ?.setAttribute(
         "href",
-        "http://localhost:8080/makueni-west/assets/libs/bootstrap/css/bootstrap.min.css"
+        "/makueni-west/assets/libs/bootstrap/css/bootstrap.min.css"
       );
   }
   html.setAttribute("dir", "ltr");
@@ -102,6 +102,6 @@ function rtlFn() {
     .querySelector("#style")
     ?.setAttribute(
       "href",
-      "http://localhost:8080/makueni-west/assets/libs/bootstrap/css/bootstrap.rtl.min.css"
+      "/makueni-west/assets/libs/bootstrap/css/bootstrap.rtl.min.css"
     );
 }

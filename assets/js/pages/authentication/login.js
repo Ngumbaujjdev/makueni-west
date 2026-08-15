@@ -439,7 +439,7 @@
     try {
       // ✅ FIXED: Absolute path without .php extension
       const response = await fetch(
-        "http://localhost:8080/makueni-west/authentication/ajax/sync-session",
+        "/makueni-west/authentication/ajax/sync-session",
         {
           method: Constants.HTTP_METHODS.POST,
           headers: {

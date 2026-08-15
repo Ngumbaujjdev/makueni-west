@@ -29,34 +29,34 @@ $userTerritoryName = $currentRole['territory']['name'] ?? 'Diocese';
     <meta name="Description" content="Create a new budget for your territory" />
 
     <!-- Favicon -->
-    <link rel="icon" href="http://localhost:8080/makueni-west/assets/images/brand-logos/favicon/favicon.ico" type="image/x-icon" />
+    <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico" type="image/x-icon" />
 
     <!-- Choices JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/choices.js/public/assets/scripts/choices.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/scripts/choices.min.js"></script>
 
     <!-- Main Theme Js -->
-    <script src="http://localhost:8080/makueni-west/assets/js/main.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/main.js"></script>
 
     <!-- Bootstrap Css -->
-    <link id="style" href="http://localhost:8080/makueni-west/assets/libs/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+    <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
 
     <!-- Style Css -->
-    <link href="http://localhost:8080/makueni-west/assets/css/styles.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/css/styles.min.css" rel="stylesheet" />
 
     <!-- Icons Css -->
-    <link href="http://localhost:8080/makueni-west/assets/css/icons.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />
 
     <!-- Node Waves Css -->
-    <link href="http://localhost:8080/makueni-west/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
 
     <!-- Simplebar Css -->
-    <link href="http://localhost:8080/makueni-west/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
 
     <!-- Flatpickr Css -->
-    <link rel="stylesheet" href="http://localhost:8080/makueni-west/assets/libs/flatpickr/flatpickr.min.css" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/flatpickr/flatpickr.min.css" />
 
     <!-- Choices Css -->
-    <link rel="stylesheet" href="http://localhost:8080/makueni-west/assets/libs/choices.js/public/assets/styles/choices.min.css" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/styles/choices.min.css" />
 
     <!-- Custom Styles for Choices.js validation -->
     <style>
@@ -106,7 +106,7 @@ $userTerritoryName = $currentRole['territory']['name'] ?? 'Diocese';
                         <nav>
                             <ol class="breadcrumb mb-0">
                                 <li class="breadcrumb-item">
-                                    <a href="/makueni-west/diocese/dashboard"><i class="ri-home-4-line"></i> Home</a>
+                                    <a href="<?= SITE_URL ?>/diocese/dashboard"><i class="ri-home-4-line"></i> Home</a>
                                 </li>
                                 <li class="breadcrumb-item">
                                     <a href="javascript:void(0);">Budget Management</a>
@@ -216,7 +216,7 @@ $userTerritoryName = $currentRole['territory']['name'] ?? 'Diocese';
 
                                             <!-- Step 1 Navigation -->
                                             <div class="mt-4 pt-3 border-top d-flex justify-content-between">
-                                                <a href="/makueni-west/diocese/budget-management/budget-overview/all-budgets" class="btn btn-light">
+                                                <a href="<?= SITE_URL ?>/diocese/budget-management/budget-overview/all-budgets" class="btn btn-light">
                                                     <i class="ri-arrow-left-line me-1"></i>Cancel
                                                 </a>
                                                 <button type="button" class="btn btn-primary" id="nextToStep2">
@@ -406,45 +406,45 @@ $userTerritoryName = $currentRole['territory']['name'] ?? 'Diocese';
     <div id="responsive-overlay"></div>
 
     <!-- Popper JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/@popperjs/core/umd/popper.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/@popperjs/core/umd/popper.min.js"></script>
 
     <!-- Bootstrap JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
 
     <!-- Defaultmenu JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/defaultmenu.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/defaultmenu.min.js"></script>
 
     <!-- Node Waves JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/node-waves/waves.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.js"></script>
 
     <!-- Sticky JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/sticky.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/sticky.js"></script>
 
     <!-- Simplebar JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/simplebar/simplebar.min.js"></script>
-    <script src="http://localhost:8080/makueni-west/assets/js/simplebar.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/simplebar.js"></script>
 
     <!-- Custom-Switcher JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/custom-switcher.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/custom-switcher.min.js"></script>
 
     <!-- Custom JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/custom.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
 
     <!-- Toast JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/Toasts.js"></script>
-    <script src="http://localhost:8080/makueni-west/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
 
     <!-- Flatpickr JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/flatpickr/flatpickr.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/flatpickr/flatpickr.min.js"></script>
 
     <!-- Constants -->
-    <script src="http://localhost:8080/makueni-west/assets/js/config/constants.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
 
     <!-- Budget API Handler -->
-    <script src="http://localhost:8080/makueni-west/assets/js/pages/budget-management/api-handler.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/budget-management/api-handler.js"></script>
 
     <!-- Create Budget JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/pages/budget-management/create-budget.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/budget-management/create-budget.js"></script>
 </body>
 
 </html>

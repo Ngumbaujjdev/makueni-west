@@ -27,43 +27,43 @@ $currentRole = getCurrentRole();
         content="budget types, budget management, monthly, quarterly, yearly, financial management" />
 
     <!-- Favicon -->
-    <link rel="icon" href="http://localhost:8080/makueni-west/assets/images/brand-logos/favicon/favicon.ico"
+    <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico"
         type="image/x-icon" />
 
     <!-- Choices JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/choices.js/public/assets/scripts/choices.min.js">
+    <script src="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/scripts/choices.min.js">
     </script>
 
     <!-- Main Theme Js -->
-    <script src="http://localhost:8080/makueni-west/assets/js/main.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/main.js"></script>
 
     <!-- Bootstrap Css -->
-    <link id="style" href="http://localhost:8080/makueni-west/assets/libs/bootstrap/css/bootstrap.min.css"
+    <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css"
         rel="stylesheet" />
 
     <!-- Style Css -->
-    <link href="http://localhost:8080/makueni-west/assets/css/styles.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/css/styles.min.css" rel="stylesheet" />
 
     <!-- Icons Css -->
-    <link href="http://localhost:8080/makueni-west/assets/css/icons.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />
 
     <!-- Node Waves Css -->
-    <link href="http://localhost:8080/makueni-west/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
 
     <!-- Simplebar Css -->
-    <link href="http://localhost:8080/makueni-west/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
 
     <!-- Color Picker Css -->
-    <link rel="stylesheet" href="http://localhost:8080/makueni-west/assets/libs/flatpickr/flatpickr.min.css" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/flatpickr/flatpickr.min.css" />
     <link rel="stylesheet"
-        href="http://localhost:8080/makueni-west/assets/libs/%40simonwep/pickr/themes/nano.min.css" />
+        href="<?= SITE_URL ?>/assets/libs/%40simonwep/pickr/themes/nano.min.css" />
 
     <!-- Choices Css -->
     <link rel="stylesheet"
-        href="http://localhost:8080/makueni-west/assets/libs/choices.js/public/assets/styles/choices.min.css" />
+        href="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/styles/choices.min.css" />
 
     <!-- DataTables CSS -->
-    <link rel="stylesheet" href="http://localhost:8080/makueni-west/assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css" />
 
 </head>
 
@@ -96,7 +96,7 @@ $currentRole = getCurrentRole();
                         <nav>
                             <ol class="breadcrumb mb-0">
                                 <li class="breadcrumb-item">
-                                    <a href="/makueni-west/diocese/dashboard"><i class="ri-home-4-line"></i> Home</a>
+                                    <a href="<?= SITE_URL ?>/diocese/dashboard"><i class="ri-home-4-line"></i> Home</a>
                                 </li>
                                 <li class="breadcrumb-item">
                                     <a href="javascript:void(0);">Settings</a>
@@ -446,55 +446,55 @@ $currentRole = getCurrentRole();
     <!-- Scroll To Top -->
 
     <!-- Popper JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/%40popperjs/core/umd/popper.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/%40popperjs/core/umd/popper.min.js"></script>
 
     <!-- Bootstrap JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
 
     <!-- Defaultmenu JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/defaultmenu.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/defaultmenu.min.js"></script>
 
     <!-- Node Waves JS-->
-    <script src="http://localhost:8080/makueni-west/assets/libs/node-waves/waves.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.js"></script>
 
     <!-- Sticky JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/sticky.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/sticky.js"></script>
 
     <!-- Simplebar JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/simplebar/simplebar.min.js"></script>
-    <script src="http://localhost:8080/makueni-west/assets/js/simplebar.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/simplebar.js"></script>
 
     <!-- Color Picker JS -->
-    <script src="http://localhost:8080/makueni-west/assets/libs/%40simonwep/pickr/pickr.es5.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/%40simonwep/pickr/pickr.es5.min.js"></script>
 
     <!-- Custom-Switcher JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/custom-switcher.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/custom-switcher.min.js"></script>
 
     <!-- Custom JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/custom.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
 
     <!-- Toast JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/Toasts.js"></script>
-    <script src="http://localhost:8080/makueni-west/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
 
     <!-- Constants -->
-    <script src="http://localhost:8080/makueni-west/assets/js/config/constants.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
 
     <!-- Auth Helpers -->
-    <script src="http://localhost:8080/makueni-west/assets/js/utils/auth-helpers.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js"></script>
 
     <!-- Logout Handler -->
-    <script src="http://localhost:8080/makueni-west/assets/js/pages/authentication/logout.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js"></script>
 
     <!-- jQuery (Required for DataTables) -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 
     <!-- DataTables JS -->
-    <script src="http://localhost:8080/makueni-west/assets/data-tables/1.12.1/js/jquery.dataTables.min.js"></script>
-    <script src="http://localhost:8080/makueni-west/assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/jquery.dataTables.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js"></script>
 
     <!-- Budget Types Management JS -->
-    <script src="http://localhost:8080/makueni-west/assets/js/pages/budget-settings/budget-type.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/budget-settings/budget-type.js"></script>
 
     <!-- Initialize Budget Types Page -->
     <script>
