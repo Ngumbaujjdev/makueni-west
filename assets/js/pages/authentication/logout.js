@@ -51,7 +51,7 @@ async function performLogout(userName) {
     // Call backend API to invalidate token
     if (token) {
       try {
-        await fetch(`${window.AppConfig.API_BASE_URL}/auth/logout`, {
+        await fetch(`${AppConfig.API_BASE_URL}/auth/logout`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,

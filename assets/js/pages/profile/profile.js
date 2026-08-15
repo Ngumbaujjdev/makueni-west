@@ -15,7 +15,7 @@
   // ========================================================================
 
   const API_BASE =
-    window.AppConfig.API_BASE_URL;
+    AppConfig.API_BASE_URL;
 
   const STORAGE_KEYS = {
     AUTH_TOKEN: "mwd_auth_token",

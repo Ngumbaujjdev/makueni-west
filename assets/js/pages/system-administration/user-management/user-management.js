@@ -17,7 +17,7 @@
   // ========================================================================
 
   const API_BASE =
-    window.AppConfig.API_BASE_URL;
+    AppConfig.API_BASE_URL;
 
   const STATE = {
     currentTab: "users",

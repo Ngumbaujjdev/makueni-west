@@ -95,7 +95,7 @@
   async function loadCategories() {
     try {
       const API_BASE =
-        window.AppConfig.API_BASE_URL;
+        AppConfig.API_BASE_URL;
       const authToken = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
 
       const response = await fetch(`${API_BASE}/budget-categories`, {
@@ -139,7 +139,7 @@
       console.log("📡 Fetching budget lines...");
 
       const API_BASE =
-        window.AppConfig.API_BASE_URL;
+        AppConfig.API_BASE_URL;
       const authToken = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
 
       let url = `${API_BASE}/budget-lines/grouped`;
@@ -526,7 +526,7 @@
       }
 
       const API_BASE =
-        window.AppConfig.API_BASE_URL;
+        AppConfig.API_BASE_URL;
       const authToken = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
 
       const isEdit = editingLineId !== null;
@@ -607,7 +607,7 @@
         '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Deleting...';
 
       const API_BASE =
-        window.AppConfig.API_BASE_URL;
+        AppConfig.API_BASE_URL;
       const authToken = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
 
       const response = await fetch(
@@ -722,7 +722,7 @@
   async function loadLineAuditTrail(lineId) {
     try {
       const API_BASE =
-        window.AppConfig.API_BASE_URL;
+        AppConfig.API_BASE_URL;
       const authToken = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
 
       const response = await fetch(

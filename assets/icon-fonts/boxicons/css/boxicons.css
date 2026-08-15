@@ -3,16 +3,16 @@
   font-weight: normal;
   font-style: normal;
 
-  src: url("http://localhost:8080/makueni-west/assets/icon-fonts/boxicons/fonts/boxicons.eot");
-  src: url("http://localhost:8080/makueni-west/assets/icon-fonts/boxicons/fonts/boxicons.eot")
+  src: url("/makueni-west/assets/icon-fonts/boxicons/fonts/boxicons.eot");
+  src: url("/makueni-west/assets/icon-fonts/boxicons/fonts/boxicons.eot")
       format("embedded-opentype"),
-    url("http://localhost:8080/makueni-west/assets/icon-fonts/boxicons/fonts/boxicons.woff2")
+    url("/makueni-west/assets/icon-fonts/boxicons/fonts/boxicons.woff2")
       format("woff2"),
-    url("http://localhost:8080/makueni-west/assets/icon-fonts/boxicons/fonts/boxicons.woff")
+    url("/makueni-west/assets/icon-fonts/boxicons/fonts/boxicons.woff")
       format("woff"),
-    url("http://localhost:8080/makueni-west/assets/icon-fonts/boxicons/fonts/boxicons.ttf")
+    url("/makueni-west/assets/icon-fonts/boxicons/fonts/boxicons.ttf")
       format("truetype"),
-    url("http://localhost:8080/makueni-west/assets/icon-fonts/boxicons/fonts/boxicons.svg?#boxicons")
+    url("/makueni-west/assets/icon-fonts/boxicons/fonts/boxicons.svg?#boxicons")
       format("svg");
 }
 .bx {
