@@ -64,13 +64,25 @@ try {
     $_SESSION['user_role_id'] = $data['user']['role_id'] ?? null;
     $_SESSION['employee_code'] = $data['user']['employee_code'] ?? null;
 
-    // Extract current territorial assignment details for quick access
+    // Extract current territorial assignment details for quick access.
+    // Two different shapes reach here depending on caller: AuthController's
+    // switchRole() sends a nested { territory: { id, name, territory_type }, role: {...} },
+    // but getDefaultRole() (used by login/user-info, and what login.js's
+    // current_role actually is right after a fresh login) sends a FLAT
+    // { territory_type, territory_name, role_name, ... } with no nested
+    // 'territory' key at all. Reading only the nested shape silently left
+    // current_territory_type null on every fresh login until the next
+    // switch-role call corrected it - which is what sent users straight to
+    // errors/no-dashboard.php depending on timing. Handle both.
     if (!empty($data['current_role'])) {
-        $_SESSION['current_territory_id'] = $data['current_role']['territory']['id'] ?? null;
-        $_SESSION['current_territory_name'] = $data['current_role']['territory']['name'] ?? null;
-        $_SESSION['current_territory_type'] = $data['current_role']['territory']['territory_type'] ?? null;
-        $_SESSION['current_role_name'] = $data['current_role']['role']['name'] ?? null;
-        $_SESSION['current_assignment_id'] = $data['current_role']['assignment_id'] ?? null;
+        $currentRole = $data['current_role'];
+        $territory = $currentRole['territory'] ?? null;
+
+        $_SESSION['current_territory_id'] = $territory['id'] ?? $currentRole['territory_id'] ?? null;
+        $_SESSION['current_territory_name'] = $territory['name'] ?? $currentRole['territory_name'] ?? null;
+        $_SESSION['current_territory_type'] = $territory['territory_type'] ?? $currentRole['territory_type'] ?? $currentRole['territory_scope'] ?? null;
+        $_SESSION['current_role_name'] = $currentRole['role']['name'] ?? $currentRole['role_name'] ?? null;
+        $_SESSION['current_assignment_id'] = $currentRole['assignment_id'] ?? null;
     }
 
     // Store password warning if present
