@@ -60,7 +60,7 @@
 
       if (!userData || !authToken) {
         console.error("❌ No authentication data found - Redirecting to login");
-        window.location.href = "/authentication/login";
+        window.location.href = "/makueni-west/login";
         return;
       }
 
