@@ -21,6 +21,8 @@ use App\Http\Controllers\Api\BudgetLogController;
 use App\Http\Controllers\Api\BudgetDeductionController;
 use App\Http\Controllers\Api\FiscalYearController;
 use App\Http\Controllers\Api\BudgetPeriodController;
+use App\Http\Controllers\Api\DemographicsController;
+use App\Http\Controllers\Api\AttendanceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -326,6 +328,28 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Budget Logs (Global)
     Route::prefix('budget-logs')->group(function () {
         Route::get('/recent', [BudgetLogController::class, 'recent']);                           // Get recent logs across all budgets
+    });
+
+    // Demographics (Church-level entry - Phase 3 of the Demographics module plan)
+    Route::prefix('demographics')->group(function () {
+        Route::get('/', [DemographicsController::class, 'index']);                               // List own church's submissions
+        Route::post('/', [DemographicsController::class, 'store']);                              // Create this month's draft
+        Route::get('/{demographic}', [DemographicsController::class, 'show']);                   // Get one submission
+        Route::put('/{demographic}', [DemographicsController::class, 'update']);                 // Update a draft/changes_requested submission
+        Route::post('/{demographic}/submit', [DemographicsController::class, 'submit']);         // Submit for Subregion review
+    });
+
+    // Church entry-mode setting (weekly_and_monthly vs monthly_only)
+    Route::prefix('churches/{church}/entry-mode')->group(function () {
+        Route::get('/', [DemographicsController::class, 'getEntryMode']);
+        Route::put('/', [DemographicsController::class, 'updateEntryMode']);
+    });
+
+    // Attendance (Church-level entry - Phase 3 of the Demographics module plan)
+    Route::prefix('attendance')->group(function () {
+        Route::get('/', [AttendanceController::class, 'index']);                                 // List own church's attendance records
+        Route::post('/', [AttendanceController::class, 'store']);                                // Record one service/event/gathering
+        Route::put('/{attendance}', [AttendanceController::class, 'update']);                    // Update a record
     });
 
     // Budget Deductions
