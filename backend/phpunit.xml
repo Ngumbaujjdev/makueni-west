@@ -10,6 +10,9 @@
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
+            <exclude>tests/Feature/Diocese</exclude>
+            <exclude>tests/Feature/Financial</exclude>
+            <exclude>tests/Feature/Demographics</exclude>
         </testsuite>
         <testsuite name="Diocese">
             <directory>tests/Feature/Diocese</directory>
