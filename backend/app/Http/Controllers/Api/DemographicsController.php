@@ -2,15 +2,22 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\TerritoryType;
 use App\Http\Controllers\Controller;
 use App\Models\Church;
 use App\Models\ChurchDemographic;
+use App\Models\Territory;
+use App\Services\DemographicsGrowthService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class DemographicsController extends Controller
 {
+    public function __construct(private DemographicsGrowthService $growthService)
+    {
+    }
+
     /**
      * Church-level create/update permission - matches the permission tree
      * already seeded under Module 27 "Growth" (see
@@ -537,6 +544,85 @@ class DemographicsController extends Controller
 
         return $user->activeAssignments()
             ->where('territory_id', $territoryId)
+            ->exists();
+    }
+
+    /**
+     * Rolled-up membership/attendance/growth summary for a Subregion,
+     * Region, or Diocese territory - read-only, no write action at these
+     * tiers per the module spec. Reuses the same permission Phase 4 already
+     * granted Subregion Overseers (subregiondemographicsreview.
+     * churchsubmissions.read) rather than adding a duplicate summary-only
+     * permission at that tier.
+     */
+    public function summary(Request $request, Territory $territory)
+    {
+        $user = $request->user();
+
+        $validator = Validator::make($request->all(), [
+            'fiscal_year_id' => 'required|exists:fiscal_years,id',
+            'fiscal_month_id' => 'required|exists:fiscal_months,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'status' => 422,
+                'message' => 'Validation error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $permission = match ($territory->territory_type) {
+            TerritoryType::SUBREGION => 'subregiondemographicsreview.churchsubmissions.read',
+            TerritoryType::REGION => 'regiondemographicsanalytics.summary.read',
+            TerritoryType::DIOCESE, TerritoryType::GLOBAL => 'demographicsanalytics.demographicssummary.read',
+            default => null,
+        };
+
+        if (!$permission || !$user->can($permission)) {
+            return response()->json([
+                'success' => false,
+                'status' => 403,
+                'message' => 'You do not have permission to view this summary.',
+            ], 403);
+        }
+
+        if (!$this->userOverseesTerritory($user, $territory)) {
+            return response()->json([
+                'success' => false,
+                'status' => 403,
+                'message' => 'You do not have access to this territory\'s summary.',
+            ], 403);
+        }
+
+        $data = $this->growthService->summaryFor(
+            $territory,
+            (int) $request->query('fiscal_year_id'),
+            (int) $request->query('fiscal_month_id')
+        );
+
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'message' => 'Summary retrieved successfully',
+            'data' => $data,
+        ]);
+    }
+
+    /**
+     * Whether the user has an active assignment to this exact territory
+     * (Subregion Overseer to their subregion, Regional Overseer to their
+     * region, Diocese role to their diocese). Global admins always pass.
+     */
+    private function userOverseesTerritory($user, Territory $territory): bool
+    {
+        if ($user->hasGlobalAccess()) {
+            return true;
+        }
+
+        return $user->activeAssignments()
+            ->where('territory_id', $territory->id)
             ->exists();
     }
 }
