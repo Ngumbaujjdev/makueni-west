@@ -100,6 +100,11 @@ class DatabaseSeeder extends Seeder
             // PHASE 12: Demographics Permission Scaffolding Fixes
             // ==========================================
             FixDemographicsPermissionScaffoldingSeeder::class,
+
+            // ==========================================
+            // PHASE 13: Subregion Demographics Review (built from scratch)
+            // ==========================================
+            AddSubregionDemographicsReviewSeeder::class,
         ]);
     }
 }

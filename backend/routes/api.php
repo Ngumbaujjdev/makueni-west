@@ -337,6 +337,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/{demographic}', [DemographicsController::class, 'show']);                   // Get one submission
         Route::put('/{demographic}', [DemographicsController::class, 'update']);                 // Update a draft/changes_requested submission
         Route::post('/{demographic}/submit', [DemographicsController::class, 'submit']);         // Submit for Subregion review
+
+        // Subregion review actions (Phase 4)
+        Route::post('/{demographic}/approve', [DemographicsController::class, 'approve']);       // Approve, forward to region
+        Route::post('/{demographic}/flag', [DemographicsController::class, 'flag']);              // Flag an anomaly, doesn't block forwarding
+        Route::post('/{demographic}/request-changes', [DemographicsController::class, 'requestChanges']); // Send back to pastor
     });
 
     // Church entry-mode setting (weekly_and_monthly vs monthly_only)
