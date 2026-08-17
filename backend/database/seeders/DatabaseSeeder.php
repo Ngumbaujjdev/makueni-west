@@ -121,6 +121,11 @@ class DatabaseSeeder extends Seeder
             // Ndutoni, duplicate CCI MAKINDU)
             // ==========================================
             FixTerritoryDataGapsSeeder::class,
+
+            // ==========================================
+            // PHASE 17: Fix & Seed Real Church Leadership (pastors, associates, spouses)
+            // ==========================================
+            FixAndSeedRealChurchLeadershipSeeder::class,
         ]);
     }
 }
