@@ -115,6 +115,12 @@ class DatabaseSeeder extends Seeder
             // PHASE 15: Real Historical Demographics (2024-2025)
             // ==========================================
             SeedRealHistoricalDemographicsSeeder::class,
+
+            // ==========================================
+            // PHASE 16: Territory Data Gap Fixes (Kikumini, Kavuthu,
+            // Ndutoni, duplicate CCI MAKINDU)
+            // ==========================================
+            FixTerritoryDataGapsSeeder::class,
         ]);
     }
 }
