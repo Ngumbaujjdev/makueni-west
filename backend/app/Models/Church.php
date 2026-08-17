@@ -56,12 +56,12 @@ class Church extends Territory
     // Church-specific methods
     public function isUnderSubregion(): bool
     {
-        return $this->parentTerritory->territory_type === TerritoryType::SUBREGION;
+        return $this->parentTerritory?->territory_type === TerritoryType::SUBREGION;
     }
 
     public function isUnderRegion(): bool
     {
-        return $this->parentTerritory->territory_type === TerritoryType::REGION;
+        return $this->parentTerritory?->territory_type === TerritoryType::REGION;
     }
 
     public function getMembershipEstimate(): int

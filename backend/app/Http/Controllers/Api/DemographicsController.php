@@ -318,6 +318,137 @@ class DemographicsController extends Controller
     }
 
     /**
+     * Approve a submitted demographics submission - Subregion Overseer only,
+     * scoped to churches directly under their own subregion.
+     */
+    public function approve(Request $request, ChurchDemographic $demographic)
+    {
+        return $this->reviewAction(
+            $request,
+            $demographic,
+            'subregiondemographicsreview.churchsubmissions.approve',
+            'approved',
+            'Demographics approved and forwarded to region'
+        );
+    }
+
+    /**
+     * Flag a submission - stays visible with a flag, does not block it from
+     * being forwarded/rolled up, per the module spec (surfaces an anomaly
+     * like "youth up 40%" without necessarily rejecting).
+     */
+    public function flag(Request $request, ChurchDemographic $demographic)
+    {
+        return $this->reviewAction(
+            $request,
+            $demographic,
+            'subregiondemographicsreview.churchsubmissions.flag',
+            'flagged',
+            'Demographics flagged'
+        );
+    }
+
+    /**
+     * Send a submission back to the Pastor for correction.
+     */
+    public function requestChanges(Request $request, ChurchDemographic $demographic)
+    {
+        return $this->reviewAction(
+            $request,
+            $demographic,
+            'subregiondemographicsreview.churchsubmissions.requestchanges',
+            'changes_requested',
+            'Sent back to pastor for changes'
+        );
+    }
+
+    private function reviewAction(
+        Request $request,
+        ChurchDemographic $demographic,
+        string $permission,
+        string $newStatus,
+        string $successMessage
+    ) {
+        $user = $request->user();
+
+        if (!$user->can($permission)) {
+            return response()->json([
+                'success' => false,
+                'status' => 403,
+                'message' => 'You do not have permission to review demographics.',
+            ], 403);
+        }
+
+        if (!$this->userOverseesChurch($user, $demographic->territory_id)) {
+            return response()->json([
+                'success' => false,
+                'status' => 403,
+                'message' => 'You can only review submissions from churches in your own subregion.',
+            ], 403);
+        }
+
+        if ($demographic->status !== 'submitted') {
+            return response()->json([
+                'success' => false,
+                'status' => 422,
+                'message' => "Cannot review a submission in '{$demographic->status}' status.",
+            ], 422);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'notes' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'status' => 422,
+                'message' => 'Validation error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $demographic->update([
+            'status' => $newStatus,
+            'reviewed_by' => $user->id,
+            'reviewed_at' => now(),
+            'review_notes' => $request->input('notes'),
+            'updated_by' => $user->id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'message' => $successMessage,
+            'data' => $demographic,
+        ]);
+    }
+
+    /**
+     * Whether the given user is a Subregion-tier reviewer whose assigned
+     * subregion is this church's direct parent territory. A church without
+     * a subregion parent (attached straight to a Region - real in this
+     * data set, per the audit) has no subregion reviewer at all; that's
+     * expected, not a bug - Region/Diocese are summary-only per the spec.
+     */
+    private function userOverseesChurch($user, int $territoryId): bool
+    {
+        if ($user->hasGlobalAccess()) {
+            return true;
+        }
+
+        $church = Church::find($territoryId);
+
+        if (!$church || !$church->isUnderSubregion()) {
+            return false;
+        }
+
+        return $user->activeAssignments()
+            ->where('territory_id', $church->parent_territory_id)
+            ->exists();
+    }
+
+    /**
      * Read the caller's own church's entry-mode setting.
      */
     public function getEntryMode(Request $request, Church $church)
