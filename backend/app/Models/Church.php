@@ -83,4 +83,15 @@ class Church extends Territory
     {
         return $this->metadata['leadership_structure'] ?? [];
     }
+
+    /**
+     * Demographics data-entry mode: 'weekly_and_monthly' (default) or
+     * 'monthly_only' - for churches with unreliable internet where weekly
+     * attendance entry isn't realistic. Self-service, set by the Pastor.
+     * See docs/specs/demographics-module-spec.md.
+     */
+    public function getAttendanceMode(): string
+    {
+        return $this->metadata['attendance_mode'] ?? 'weekly_and_monthly';
+    }
 }
