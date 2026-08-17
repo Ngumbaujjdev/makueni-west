@@ -110,6 +110,11 @@ class DatabaseSeeder extends Seeder
             // PHASE 14: Region Demographics Summary (built from scratch)
             // ==========================================
             AddRegionDemographicsSummarySeeder::class,
+
+            // ==========================================
+            // PHASE 15: Real Historical Demographics (2024-2025)
+            // ==========================================
+            SeedRealHistoricalDemographicsSeeder::class,
         ]);
     }
 }
