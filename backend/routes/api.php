@@ -342,6 +342,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/{demographic}/approve', [DemographicsController::class, 'approve']);       // Approve, forward to region
         Route::post('/{demographic}/flag', [DemographicsController::class, 'flag']);              // Flag an anomaly, doesn't block forwarding
         Route::post('/{demographic}/request-changes', [DemographicsController::class, 'requestChanges']); // Send back to pastor
+
+        // Rollup summary - Subregion/Region/Diocese, read-only (Phase 5)
+        Route::get('/summary/{territory}', [DemographicsController::class, 'summary']);
     });
 
     // Church entry-mode setting (weekly_and_monthly vs monthly_only)

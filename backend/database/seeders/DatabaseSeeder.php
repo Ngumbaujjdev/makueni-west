@@ -105,6 +105,11 @@ class DatabaseSeeder extends Seeder
             // PHASE 13: Subregion Demographics Review (built from scratch)
             // ==========================================
             AddSubregionDemographicsReviewSeeder::class,
+
+            // ==========================================
+            // PHASE 14: Region Demographics Summary (built from scratch)
+            // ==========================================
+            AddRegionDemographicsSummarySeeder::class,
         ]);
     }
 }
