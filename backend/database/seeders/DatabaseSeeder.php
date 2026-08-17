@@ -95,6 +95,11 @@ class DatabaseSeeder extends Seeder
             // PHASE 11: Demographics Focus Mode (temporary - see seeder docblock)
             // ==========================================
             MuteNonDemographicsChurchModulesSeeder::class,
+
+            // ==========================================
+            // PHASE 12: Demographics Permission Scaffolding Fixes
+            // ==========================================
+            FixDemographicsPermissionScaffoldingSeeder::class,
         ]);
     }
 }
