@@ -682,28 +682,6 @@ public function show(Request $request, Territory $territory)
     }
 
     /**
-     * Get user's highest territorial level
-     */
-    private function getUserHighestTerritorialLevel($user): string
-    {
-        $levelHierarchy = ['church', 'subregion', 'region', 'diocese'];
-        $userLevels = $user->activeAssignments()
-                          ->with('role')
-                          ->get()
-                          ->pluck('role.territory_level')
-                          ->unique()
-                          ->filter();
-
-        foreach (array_reverse($levelHierarchy) as $level) {
-            if ($userLevels->contains($level)) {
-                return $level;
-            }
-        }
-
-        return 'church';
-    }
-
-    /**
      * Validate territorial hierarchy rules (FLEXIBLE - NO STATIC SUBREGIONS)
      */
     private function validateTerritorialHierarchy($type, $parentId, $excludeId = null): bool
