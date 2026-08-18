@@ -4,7 +4,9 @@
  * ============================================================================
  * FullCalendar month view - click a Sunday to record that week's attendance,
  * click an existing event to edit it. Respects the church's entry-mode
- * setting (weekly_and_monthly vs monthly_only).
+ * setting (weekly_and_monthly vs monthly_only). Sunday columns get a
+ * persistent subtle teal tint (see renderCalendar's dayCellClassNames) so
+ * the weekly cadence reads even before any event exists yet.
  *
  * Dependencies: DemographicsAPIHandler, DemographicsUI, AttendanceFormShared,
  * Toast, FullCalendar v5 (assets/libs/fullcalendar/main.min.js)
@@ -14,7 +16,8 @@
 const AttendanceServices = (function () {
   "use strict";
 
-  const SERVICE_TYPE = "sunday_service";
+  const CATEGORY_SLUG = "sunday_service";
+  let categoryId = null;
   let calendar = null;
   let allRows = [];
   let entryMode = "weekly_and_monthly";
@@ -26,6 +29,16 @@ const AttendanceServices = (function () {
       Toast.error("No church assigned to your account");
       return;
     }
+
+    const categoriesResult = await DemographicsAPIHandler.getGatheringCategories();
+    const category = categoriesResult.success ? (categoriesResult.data || []).find((c) => c.slug === CATEGORY_SLUG) : null;
+
+    if (!category) {
+      Toast.error("Could not load gathering categories");
+      return;
+    }
+
+    categoryId = category.id;
 
     await loadEntryMode();
     await loadRecords();
@@ -51,7 +64,7 @@ const AttendanceServices = (function () {
   }
 
   async function loadRecords() {
-    const result = await DemographicsAPIHandler.getAttendance(USER_TERRITORY.id, { service_type: SERVICE_TYPE });
+    const result = await DemographicsAPIHandler.getAttendance(USER_TERRITORY.id, { gathering_category_id: categoryId });
     allRows = result.success ? result.data || [] : [];
   }
 
@@ -79,6 +92,9 @@ const AttendanceServices = (function () {
       headerToolbar: { left: "prev,next today", center: "title", right: "" },
       height: "auto",
       events: buildEventSource(),
+      // Sunday-highlight UX: tint every Sunday cell so the weekly cadence
+      // reads before any event dot appears, not just after data exists.
+      dayCellClassNames: (arg) => (arg.date.getDay() === 0 ? ["fc-sunday-highlight"] : []),
       dateClick: (info) => {
         if (!CAN_WRITE_ATTENDANCE) return;
 
@@ -113,9 +129,9 @@ const AttendanceServices = (function () {
 
   function openEntry(record, defaultDate) {
     AttendanceFormShared.openEntryModal({
-      serviceType: SERVICE_TYPE,
+      gatheringCategoryId: categoryId,
+      isWeekly: true,
       territoryId: USER_TERRITORY.id,
-      eventNameRequired: false,
       record,
       defaultDate,
       onSaved: refreshCalendar,

@@ -38,7 +38,7 @@ const AttendanceOverview = (function () {
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     });
 
-    const sundayServices = thisMonth.filter((r) => r.service_type === "sunday_service");
+    const sundayServices = thisMonth.filter((r) => r.gathering_category?.slug === "sunday_service");
     const totalAttendance = (r) => (r.adults_count || 0) + (r.youth_count || 0) + (r.children_male_count || 0) + (r.children_female_count || 0);
     const avgSunday = sundayServices.length
       ? Math.round(sundayServices.reduce((sum, r) => sum + totalAttendance(r), 0) / sundayServices.length)

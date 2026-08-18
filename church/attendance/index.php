@@ -92,7 +92,8 @@ $breadcrumbs = [
                             <div class="card-body">
                                 <div class="row g-3">
                                     <div class="col-md-4">
-                                        <a href="<?= SITE_URL ?>/church/attendance/services" class="btn btn-outline-primary w-100 py-3">
+                                        <a href="<?= SITE_URL ?>/church/attendance/services" class="btn btn-primary w-100 py-3 position-relative">
+                                            <span class="badge bg-white text-primary position-absolute top-0 end-0 mt-1 me-1 fs-10">Primary &middot; Weekly</span>
                                             <i class="ri-calendar-2-line fs-20 d-block mb-1"></i>Sunday Services
                                         </a>
                                     </div>
@@ -106,9 +107,14 @@ $breadcrumbs = [
                                             <i class="ri-star-line fs-20 d-block mb-1"></i>Special Events
                                         </a>
                                     </div>
-                                    <div class="col-md-12">
+                                    <div class="col-md-8">
                                         <a href="<?= SITE_URL ?>/church/attendance/reports" class="btn btn-light w-100">
                                             <i class="ri-bar-chart-line me-1"></i>View Attendance Reports
+                                        </a>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <a href="<?= SITE_URL ?>/church/attendance/gathering-types" class="btn btn-light w-100">
+                                            <i class="ri-settings-3-line me-1"></i>Gathering Types
                                         </a>
                                     </div>
                                 </div>
