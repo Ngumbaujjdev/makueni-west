@@ -40,9 +40,9 @@ class GatheringTypeControllerTest extends TestCase
         $this->pastorRole = Role::create(['name' => 'Test Pastor', 'guard_name' => 'web', 'territory_level' => 'church']);
 
         foreach ([
-            'church.attendance.gatheringtypes.read',
-            'church.attendance.gatheringtypes.create',
-            'church.attendance.gatheringtypes.update',
+            'church.settings.attendancesettings.gatheringtypes.read',
+            'church.settings.attendancesettings.gatheringtypes.create',
+            'church.settings.attendancesettings.gatheringtypes.update',
         ] as $permName) {
             $permission = Permission::create(['name' => $permName, 'guard_name' => 'web', 'action' => 'create', 'territory_scope' => 'church']);
             $this->pastorRole->givePermissionTo($permission);

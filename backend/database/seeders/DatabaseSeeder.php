@@ -180,6 +180,14 @@ class DatabaseSeeder extends Seeder
             // ==========================================
             AddGatheringTypesSubmoduleSeeder::class,
             GatheringTypeStarterSeeder::class,
+
+            // ==========================================
+            // PHASE 24: Relocate Gathering Types config to Church Settings
+            // (one-time cleanup for databases that ran the first version of
+            // AddGatheringTypesSubmoduleSeeder, which nested it under
+            // Attendance instead of the church-level Settings module group)
+            // ==========================================
+            RelocateGatheringTypesToChurchSettingsSeeder::class,
         ]);
     }
 }
