@@ -63,11 +63,37 @@ const AttendanceGatheringTypes = (function () {
     allTypes = result.data || [];
     renderRows();
     renderStats(allTypes);
-    DemographicsUI.initListDataTable("gatheringTypesTable", {
+
+    DemographicsUI.renderFilterToolbar("filterToolbar", {
+      searchPlaceholder: "Search gathering types...",
+      filters: [
+        {
+          id: "categoryFilter",
+          label: "All Categories",
+          options: categories.map((c) => ({ value: c.name, label: c.name })),
+        },
+        {
+          id: "statusFilter",
+          label: "All Statuses",
+          options: [
+            { value: "Active", label: "Active" },
+            { value: "Inactive", label: "Inactive" },
+          ],
+        },
+      ],
+    });
+
+    const table = DemographicsUI.initListDataTable("gatheringTypesTable", {
       searchPlaceholder: "Search gathering types...",
       order: [[0, "asc"]],
       nonSortableColumns: [3],
+      hideDefaultSearch: true,
     });
+
+    DemographicsUI.wireFilterToolbar("filterToolbar", table, [
+      { id: "categoryFilter", columnIndex: 1, exact: true },
+      { id: "statusFilter", columnIndex: 2, exact: true },
+    ]);
   }
 
   function renderStats(types) {

@@ -42,6 +42,7 @@ $breadcrumbs = [
     <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/data-tables/responsive/2.3.0/css/responsive.bootstrap.min.css" />
 
     <script>
         const USER_TERRITORY = {
@@ -87,6 +88,7 @@ $breadcrumbs = [
                         <?php endif; ?>
                     </div>
                     <div class="card-body p-0">
+                        <div class="px-3 pt-3" id="filterToolbar"></div>
                         <div class="table-responsive">
                             <table class="table table-hover mb-0" id="gatheringTypesTable">
                                 <thead class="table-light">
@@ -188,6 +190,7 @@ $breadcrumbs = [
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/jquery.dataTables.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/data-tables/responsive/2.3.0/js/dataTables.responsive.min.js"></script>
 
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js"></script>

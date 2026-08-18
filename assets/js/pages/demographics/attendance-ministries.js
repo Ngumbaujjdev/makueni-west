@@ -10,6 +10,7 @@ const AttendanceMinistries = (function () {
   const CATEGORY_SLUG = "ministry_gathering";
   let categoryId = null;
   let allRows = [];
+  let availableTypes = [];
 
   async function init() {
     Object.assign(USER_TERRITORY, DemographicsUI.resolveUserTerritory(USER_TERRITORY));
@@ -28,6 +29,9 @@ const AttendanceMinistries = (function () {
     }
 
     categoryId = category.id;
+
+    const typesResult = await DemographicsAPIHandler.getGatheringTypes(USER_TERRITORY.id, { gathering_category_id: categoryId });
+    availableTypes = typesResult.success ? typesResult.data || [] : [];
 
     if (CAN_WRITE_ATTENDANCE) {
       document.getElementById("addEntryBtn").addEventListener("click", () => openModal(null));
@@ -51,11 +55,26 @@ const AttendanceMinistries = (function () {
     tbody.innerHTML = AttendanceFormShared.renderListRows(allRows, { onEdit: "AttendanceMinistries.editRow" });
 
     renderStats(allRows);
-    DemographicsUI.initListDataTable("ministryAttendanceTable", {
+
+    DemographicsUI.renderFilterToolbar("filterToolbar", {
+      searchPlaceholder: "Search by ministry or notes...",
+      filters: [
+        {
+          id: "ministryTypeFilter",
+          label: "All Ministries",
+          options: availableTypes.map((t) => ({ value: t.name, label: t.name })),
+        },
+      ],
+    });
+
+    const table = DemographicsUI.initListDataTable("ministryAttendanceTable", {
       searchPlaceholder: "Search ministry gatherings...",
       order: [[0, "desc"]],
       nonSortableColumns: [4],
+      hideDefaultSearch: true,
     });
+
+    DemographicsUI.wireFilterToolbar("filterToolbar", table, [{ id: "ministryTypeFilter", columnIndex: 1, exact: true }]);
   }
 
   function renderStats(rows) {

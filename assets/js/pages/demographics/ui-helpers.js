@@ -79,7 +79,10 @@ const DemographicsUI = (function () {
 
   /**
    * @param {object} opts {icon, label, value, trend, color}
-   *   color: bootstrap color name used for the avatar badge (primary/success/warning/danger/secondary)
+   *   color: bootstrap color name (primary/success/warning/danger/secondary) -
+   *   used as a solid icon background, not the washed-out `-transparent`
+   *   variant (root CLAUDE.md's no-muted-color rule explicitly covers stat
+   *   cards).
    */
   function renderStatCard({ icon, label, value, trend = null, color = "primary" }) {
     const trendHtml = trend
@@ -95,7 +98,7 @@ const DemographicsUI = (function () {
               ${trendHtml}
             </div>
             <div class="ms-2">
-              <span class="avatar avatar-md avatar-rounded bg-${color}-transparent">
+              <span class="avatar avatar-md avatar-rounded bg-${color} text-white">
                 <i class="${icon} fs-20"></i>
               </span>
             </div>
@@ -222,6 +225,8 @@ const DemographicsUI = (function () {
    *   pageLength: number (default 10)
    *   order: DataTables order array, default [[0, 'asc']]
    *   nonSortableColumns: number[] - zero-based column indexes to disable sorting on (e.g. an Actions column)
+   *   hideDefaultSearch: boolean - true when a custom renderFilterToolbar() is used instead
+   *     of DataTables' own built-in search box (avoids showing two search inputs)
    */
   function initListDataTable(tableId, options = {}) {
     if (typeof $ === "undefined" || !$.fn || !$.fn.DataTable) {
@@ -239,7 +244,14 @@ const DemographicsUI = (function () {
       pageLength = 10,
       order = [[0, "asc"]],
       nonSortableColumns = [],
+      hideDefaultSearch = false,
     } = options;
+
+    const dom = hideDefaultSearch
+      ? '<"row"<"col-sm-12"tr>>' + '<"row"<"col-sm-12 col-md-3"l><"col-sm-12 col-md-4"i><"col-sm-12 col-md-5"p>>'
+      : '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+        '<"row"<"col-sm-12"tr>>' +
+        '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>';
 
     const instance = $(`#${tableId}`).DataTable({
       responsive: true,
@@ -265,10 +277,7 @@ const DemographicsUI = (function () {
           previous: '<i class="ri-arrow-left-s-line"></i>',
         },
       },
-      dom:
-        '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
-        '<"row"<"col-sm-12"tr>>' +
-        '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+      dom,
       initComplete: function () {
         $(`#${tableId}_wrapper .dataTables_filter input`)
           .addClass("form-control form-control-sm")
@@ -287,6 +296,87 @@ const DemographicsUI = (function () {
 
     _dataTables[tableId] = instance;
     return instance;
+  }
+
+  // ==========================================================================
+  // FILTER TOOLBAR (search + dropdown filters, above a DataTable)
+  //
+  // Replaces DataTables' own bare search box with a proper toolbar (search +
+  // N dropdown filters + a clear button) - built once here, called
+  // identically from every list page instead of each hand-rolling its own
+  // filter row.
+  // ==========================================================================
+
+  /**
+   * @param {string} containerId - id of an empty container element to render into
+   * @param {object} config
+   *   searchPlaceholder: string
+   *   filters: [{ id, label (shown as the "All X" default option), options: [{value,label}] }]
+   */
+  function renderFilterToolbar(containerId, { searchPlaceholder = "Search...", filters = [] } = {}) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const selects = filters
+      .map(
+        (f) => `
+        <select class="form-select" id="${f.id}" style="max-width: 200px;">
+          <option value="">${f.label}</option>
+          ${f.options.map((o) => `<option value="${o.value}">${o.label}</option>`).join("")}
+        </select>`,
+      )
+      .join("");
+
+    container.innerHTML = `
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <div class="flex-grow-1" style="min-width: 220px;">
+          <input type="text" class="form-control" id="${containerId}Search" placeholder="${searchPlaceholder}">
+        </div>
+        ${selects}
+        <button type="button" class="btn btn-light border" id="${containerId}Clear" title="Clear filters">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>`;
+  }
+
+  /**
+   * Wires a renderFilterToolbar() container to a DataTables instance -
+   * global text search plus per-column dropdown filters.
+   * @param {string} containerId - same id passed to renderFilterToolbar()
+   * @param {object} table - the DataTables API instance (initListDataTable()'s return value)
+   * @param {object[]} filters - same array passed to renderFilterToolbar(), each with a columnIndex
+   */
+  function wireFilterToolbar(containerId, table, filters = []) {
+    if (!table) return;
+
+    const searchInput = document.getElementById(`${containerId}Search`);
+    if (searchInput) {
+      searchInput.addEventListener("input", () => table.search(searchInput.value).draw());
+    }
+
+    filters.forEach((f) => {
+      const select = document.getElementById(f.id);
+      if (!select) return;
+      select.addEventListener("change", () => {
+        // exact: true anchors the search as a regex (^value$) - needed for
+        // columns like Status where "Active" would otherwise also match
+        // "Inactive" as a plain substring.
+        const value = f.exact && select.value ? `^${select.value}$` : select.value;
+        table.column(f.columnIndex).search(value, !!f.exact, false).draw();
+      });
+    });
+
+    const clearBtn = document.getElementById(`${containerId}Clear`);
+    if (clearBtn) {
+      clearBtn.addEventListener("click", () => {
+        if (searchInput) searchInput.value = "";
+        filters.forEach((f) => {
+          const select = document.getElementById(f.id);
+          if (select) select.value = "";
+        });
+        table.search("").columns().search("").draw();
+      });
+    }
   }
 
   // ==========================================================================
@@ -355,6 +445,8 @@ const DemographicsUI = (function () {
     renderTableLoading,
     renderTableEmpty,
     initListDataTable,
+    renderFilterToolbar,
+    wireFilterToolbar,
     numberStepperHtml,
     initSteppers,
     renderSubmissionsRows,
