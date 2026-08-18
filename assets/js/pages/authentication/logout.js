@@ -37,7 +37,7 @@ async function handleLogout() {
     );
   } catch (error) {
     console.error("Logout error:", error);
-    window.location.href = "/makueni-west/logout";
+    window.location.href = "/makueni-west/authentication/logout";
   }
 }
 
@@ -93,13 +93,21 @@ async function performLogout(userName) {
       }
     );
 
-    // ✅ Redirect to index after 2.5 seconds
+    // Redirect to authentication/logout.php (not the homepage directly) -
+    // that page destroys the PHP session server-side (session_unset(),
+    // session_destroy(), cookie deletion). Redirecting straight to "/" left
+    // $_SESSION['current_role'] etc. fully intact after "logout" on any
+    // page that loads this file instead of relying on sidebar.php's own
+    // (correct) handleLogout definition - whichever script tag loads last
+    // wins, and this file loads after sidebar.php on pages that include it
+    // (profile.php, support.php, several settings pages), so it was the
+    // one actually running.
     setTimeout(() => {
-      window.location.href = "/makueni-west/";
+      window.location.href = "/makueni-west/authentication/logout";
     }, 2500);
   } catch (error) {
     console.error("Logout error:", error);
-    window.location.href = "/makueni-west/logout";
+    window.location.href = "/makueni-west/authentication/logout";
   }
 }
 
