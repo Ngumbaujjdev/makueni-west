@@ -76,7 +76,7 @@ class GatheringTypeController extends Controller
 
         $data = $validator->validated();
 
-        if (! $user->can('church.attendance.gatheringtypes.create')) {
+        if (! $user->can('church.settings.attendancesettings.gatheringtypes.create')) {
             return response()->json([
                 'success' => false,
                 'status' => 403,
@@ -145,7 +145,7 @@ class GatheringTypeController extends Controller
     {
         $user = $request->user();
 
-        if (! $user->can('church.attendance.gatheringtypes.update')) {
+        if (! $user->can('church.settings.attendancesettings.gatheringtypes.update')) {
             return response()->json([
                 'success' => false,
                 'status' => 403,

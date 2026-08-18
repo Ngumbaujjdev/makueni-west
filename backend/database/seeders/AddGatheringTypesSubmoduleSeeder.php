@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Module;
+use App\Models\ModuleGroup;
 use App\Models\Permission;
 use App\Models\Submodule;
 use Illuminate\Database\Seeder;
@@ -12,20 +13,34 @@ class AddGatheringTypesSubmoduleSeeder extends Seeder
 {
     /**
      * Adds the church-level "Gathering Types" config screen (see the
-     * gathering-types-config plan) as a new submodule under Module 28
-     * "Attendance", alongside Service/Ministry/Special Events Attendance.
-     * Grants read/create/update to the same four roles that already do
-     * Attendance entry (GrantDemographicsEntryPermissionsSeeder).
+     * gathering-types-config plan) under the existing "Settings" module
+     * group at church tier (ModuleGroupSeeder's church-settings group,
+     * already seeded but empty before this) as a new "Attendance
+     * Settings" module - not nested inside the Attendance module itself,
+     * per explicit user correction ("this was supposed to be a new church
+     * module under the settings group"). Grants read/create/update to the
+     * same four roles that already do Attendance entry
+     * (GrantDemographicsEntryPermissionsSeeder).
      *
-     * Idempotent - safe to re-run.
+     * Idempotent - safe to re-run. Superseded a first version of this
+     * seeder that placed the submodule under Module 28 (Attendance) with
+     * permission prefix church.attendance.gatheringtypes - see
+     * RelocateGatheringTypesToChurchSettingsSeeder for the one-time repair
+     * of databases that already ran that version.
      */
-    private const MODULE_ID = 28;
+    private const MODULE_GROUP_SLUG = 'church-settings';
+
+    private const MODULE_NAME = 'Attendance Settings';
+
+    private const MODULE_ICON = 'ri-settings-3-line';
+
+    private const MODULE_NUMBER = 1;
 
     private const SUBMODULE_TITLE = 'Gathering Types';
 
-    private const SUBMODULE_PATH = '/church/attendance/gathering-types.php';
+    private const SUBMODULE_PATH = '/church/settings/attendance-settings/gathering-types.php';
 
-    private const PERMISSION_PREFIX = 'church.attendance.gatheringtypes';
+    private const PERMISSION_PREFIX = 'church.settings.attendancesettings.gatheringtypes';
 
     private const ACTIONS = ['read', 'create', 'update'];
 
@@ -33,38 +48,38 @@ class AddGatheringTypesSubmoduleSeeder extends Seeder
 
     public function run(): void
     {
-        $this->command->info('➕ ADDING GATHERING TYPES SUBMODULE');
+        $this->command->info('➕ ADDING GATHERING TYPES SUBMODULE (Church Settings > Attendance Settings)');
         $this->command->info(str_repeat('=', 70));
 
-        $module = Module::find(self::MODULE_ID);
+        $group = ModuleGroup::where('slug', self::MODULE_GROUP_SLUG)->first();
 
-        if (! $module) {
-            $this->command->error('   ❌ Module '.self::MODULE_ID.' (Attendance) not found - aborting');
+        if (! $group) {
+            $this->command->error('   ❌ Module group "'.self::MODULE_GROUP_SLUG.'" not found - aborting');
 
             return;
         }
 
-        $submodule = Submodule::where('module_id', self::MODULE_ID)
+        $module = Module::firstOrCreate(
+            ['name' => self::MODULE_NAME, 'module_group_id' => $group->id],
+            [
+                'icon' => self::MODULE_ICON,
+                'number' => self::MODULE_NUMBER,
+                'description' => 'Church-level configuration for the Attendance module.',
+                'is_active' => true,
+            ]
+        );
+
+        $this->command->info('   ✅ Module ready: '.self::MODULE_NAME.' (ID: '.$module->id.')');
+
+        $submodule = Submodule::where('module_id', $module->id)
             ->where('title', self::SUBMODULE_TITLE)
             ->first();
 
         if ($submodule) {
-            // Self-healing: the very first version of this seeder stored
-            // the path without a leading slash (same bug class fixed
-            // system-wide by FixDemographicsSubmodulePathSlashesSeeder) -
-            // sidebar.php's formatPath() has a defensive fallback that
-            // masks this in the UI, but the source data should still be
-            // correct.
-            if ($submodule->path !== self::SUBMODULE_PATH) {
-                $submodule->path = self::SUBMODULE_PATH;
-                $submodule->save();
-                $this->command->info('   ✅ Corrected path (ID: '.$submodule->id.')');
-            } else {
-                $this->command->warn('   ⚠️  Submodule already exists (ID: '.$submodule->id.')');
-            }
+            $this->command->warn('   ⚠️  Submodule already exists (ID: '.$submodule->id.')');
         } else {
             $submodule = Submodule::create([
-                'module_id' => self::MODULE_ID,
+                'module_id' => $module->id,
                 'title' => self::SUBMODULE_TITLE,
                 'path' => self::SUBMODULE_PATH,
                 'description' => 'Configure this church\'s own gathering types (e.g. Kesha, Tuesday Fellowship) used in attendance entry.',
@@ -83,7 +98,7 @@ class AddGatheringTypesSubmoduleSeeder extends Seeder
                 ['name' => $permissionName],
                 [
                     'guard_name' => 'web',
-                    'module_id' => self::MODULE_ID,
+                    'module_id' => $module->id,
                     'submodule_id' => $submodule->id,
                     'sub_submodule_id' => null,
                     'action' => $action,

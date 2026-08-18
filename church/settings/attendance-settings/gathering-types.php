@@ -1,12 +1,12 @@
 <?php
-require_once __DIR__ . '/../../includes/session-manager.php';
-require_once __DIR__ . '/../../includes/auth-check.php';
-require_once __DIR__ . '/../../includes/permission-check.php';
+require_once __DIR__ . '/../../../includes/session-manager.php';
+require_once __DIR__ . '/../../../includes/auth-check.php';
+require_once __DIR__ . '/../../../includes/permission-check.php';
 
-requirePermission('church.attendance.gatheringtypes.read');
+requirePermission('church.settings.attendancesettings.gatheringtypes.read');
 
-$canWrite = hasPermission('church.attendance.gatheringtypes.create')
-    || hasPermission('church.attendance.gatheringtypes.update');
+$canWrite = hasPermission('church.settings.attendancesettings.gatheringtypes.create')
+    || hasPermission('church.settings.attendancesettings.gatheringtypes.update');
 
 $user = getAuthUser();
 $currentRole = getCurrentRole();
@@ -18,7 +18,7 @@ $pageTitle = 'Gathering Types';
 $pageIcon = 'ri-settings-3-line';
 $breadcrumbs = [
     'Home' => SITE_URL . '/church/dashboard',
-    'Attendance' => SITE_URL . '/church/attendance',
+    'Attendance Settings' => null,
     'Gathering Types' => null,
 ];
 ?>
@@ -54,17 +54,17 @@ $breadcrumbs = [
 <body>
     <script src="<?= SITE_URL ?>/assets/js/config/app.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
-    <?php include __DIR__ . '/../../includes/start-switcher.php' ?>
-    <?php include __DIR__ . '/../../includes/loader.php' ?>
+    <?php include __DIR__ . '/../../../includes/start-switcher.php' ?>
+    <?php include __DIR__ . '/../../../includes/loader.php' ?>
 
     <div class="page">
-        <?php include __DIR__ . '/../../includes/header.php' ?>
-        <?php include __DIR__ . '/../../includes/sidebar.php' ?>
+        <?php include __DIR__ . '/../../../includes/header.php' ?>
+        <?php include __DIR__ . '/../../../includes/sidebar.php' ?>
 
         <div class="main-content app-content">
             <div class="container-fluid">
 
-                <?php include __DIR__ . '/../../includes/page-header.php' ?>
+                <?php include __DIR__ . '/../../../includes/page-header.php' ?>
 
                 <div class="alert alert-info bg-info-transparent border-0 mb-3">
                     <i class="ri-information-line me-2"></i>
@@ -86,10 +86,10 @@ $breadcrumbs = [
                             <table class="table table-hover mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>Name</th>
-                                        <th>Category</th>
-                                        <th class="text-center">Status</th>
-                                        <th class="text-end">Action</th>
+                                        <th class="fw-semibold text-dark">Name</th>
+                                        <th class="fw-semibold text-dark">Category</th>
+                                        <th class="fw-semibold text-dark text-center">Status</th>
+                                        <th class="fw-semibold text-dark text-end">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="gatheringTypesTableBody">
@@ -103,7 +103,7 @@ $breadcrumbs = [
             </div>
         </div>
 
-        <?php include __DIR__ . '/../../includes/footer.php' ?>
+        <?php include __DIR__ . '/../../../includes/footer.php' ?>
     </div>
 
     <!-- Create/Edit Gathering Type Modal -->
