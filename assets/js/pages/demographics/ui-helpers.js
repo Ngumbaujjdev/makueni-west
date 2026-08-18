@@ -1,0 +1,224 @@
+/**
+ * ============================================================================
+ * UI HELPERS - DEMOGRAPHICS & ATTENDANCE
+ * ============================================================================
+ * Diocese Management System - Makueni West
+ *
+ * Small library of pure render/DOM helpers shared by every Demographics and
+ * Attendance page, so page-specific JS files stay focused on their own
+ * logic instead of each re-implementing badges/stat-cards/loading states.
+ *
+ * Design rule (root CLAUDE.md): no muted/washed-out text - captions here
+ * use `text-body fw-semibold`, never `text-muted`, deliberately deviating
+ * from that one detail of the Budget module's precedent.
+ *
+ * Dependencies: none (pure functions + DOM), Toast (assets/js/utils/toast.js)
+ * for callers, not used internally here.
+ * ============================================================================
+ */
+
+const DemographicsUI = (function () {
+  "use strict";
+
+  // ==========================================================================
+  // STATUS BADGES
+  // ==========================================================================
+
+  const STATUS_BADGES = {
+    draft: { cls: "bg-secondary", label: "Draft", icon: "ri-draft-line" },
+    submitted: { cls: "bg-primary", label: "Submitted", icon: "ri-send-plane-line" },
+    approved: { cls: "bg-success", label: "Approved", icon: "ri-checkbox-circle-line" },
+    flagged: { cls: "bg-warning text-dark", label: "Flagged", icon: "ri-flag-line" },
+    changes_requested: { cls: "bg-danger", label: "Changes Requested", icon: "ri-edit-line" },
+  };
+
+  function renderStatusBadge(status) {
+    const cfg = STATUS_BADGES[status] || { cls: "bg-secondary", label: status || "Unknown", icon: "ri-question-line" };
+    return `<span class="badge ${cfg.cls}"><i class="${cfg.icon} me-1"></i>${cfg.label}</span>`;
+  }
+
+  // ==========================================================================
+  // STAT CARDS
+  // ==========================================================================
+
+  /**
+   * @param {object} opts {icon, label, value, trend, color}
+   *   color: bootstrap color name used for the avatar badge (primary/success/warning/danger/secondary)
+   */
+  function renderStatCard({ icon, label, value, trend = null, color = "primary" }) {
+    const trendHtml = trend
+      ? `<span class="fs-12 text-body fw-semibold">${trend}</span>`
+      : "";
+    return `
+      <div class="card custom-card">
+        <div class="card-body">
+          <div class="d-flex align-items-start justify-content-between">
+            <div>
+              <span class="d-block mb-1 text-body fw-semibold">${label}</span>
+              <h3 class="fw-semibold mb-1">${value}</h3>
+              ${trendHtml}
+            </div>
+            <div class="ms-2">
+              <span class="avatar avatar-md avatar-rounded bg-${color}-transparent">
+                <i class="${icon} fs-20"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ==========================================================================
+  // BUTTON LOADING STATE
+  // ==========================================================================
+
+  function setButtonLoading(btnEl, loadingText) {
+    if (!btnEl) return;
+    btnEl.dataset.originalHtml = btnEl.innerHTML;
+    btnEl.disabled = true;
+    btnEl.innerHTML = `<i class="ri-loader-4-line ri-spin me-1"></i>${loadingText}`;
+  }
+
+  function restoreButton(btnEl) {
+    if (!btnEl) return;
+    btnEl.disabled = false;
+    if (btnEl.dataset.originalHtml) {
+      btnEl.innerHTML = btnEl.dataset.originalHtml;
+    }
+  }
+
+  // ==========================================================================
+  // TABLE LOADING / EMPTY STATES
+  // ==========================================================================
+
+  function renderTableLoading(colspan, message = "Loading...") {
+    return `
+      <tr>
+        <td colspan="${colspan}" class="text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-2 text-body fw-semibold mb-0">${message}</p>
+        </td>
+      </tr>`;
+  }
+
+  function renderTableEmpty(colspan, message = "No records found", icon = "ri-inbox-line") {
+    return `
+      <tr>
+        <td colspan="${colspan}" class="text-center py-5">
+          <i class="${icon} fs-30 text-primary mb-2 d-block"></i>
+          <p class="text-body fw-semibold mb-0">${message}</p>
+        </td>
+      </tr>`;
+  }
+
+  // ==========================================================================
+  // NUMBER STEPPER
+  //
+  // Renders a +/- stepper control around a numeric <input>, per the PWA
+  // design doc's explicit "number steppers" call-out for count fields.
+  // ==========================================================================
+
+  function numberStepperHtml(fieldId, { label, min = 0, max = 99999, value = "", required = false } = {}) {
+    return `
+      <label for="${fieldId}" class="form-label">${label}${required ? ' <span class="text-danger">*</span>' : ""}</label>
+      <div class="input-group stepper-group">
+        <button class="btn btn-outline-primary stepper-btn" type="button" data-stepper-target="${fieldId}" data-stepper-dir="-1">
+          <i class="ri-subtract-line"></i>
+        </button>
+        <input type="number" class="form-control text-center" id="${fieldId}" name="${fieldId}"
+               min="${min}" max="${max}" value="${value}" ${required ? "required" : ""}>
+        <button class="btn btn-outline-primary stepper-btn" type="button" data-stepper-target="${fieldId}" data-stepper-dir="1">
+          <i class="ri-add-line"></i>
+        </button>
+      </div>`;
+  }
+
+  /** Call once after inserting stepper HTML into the DOM to wire up +/- clicks. */
+  function initSteppers(containerEl, onChange = null) {
+    containerEl.querySelectorAll(".stepper-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const input = document.getElementById(btn.dataset.stepperTarget);
+        if (!input) return;
+        const dir = parseInt(btn.dataset.stepperDir, 10);
+        const min = input.min !== "" ? parseInt(input.min, 10) : -Infinity;
+        const max = input.max !== "" ? parseInt(input.max, 10) : Infinity;
+        const current = parseInt(input.value, 10) || 0;
+        const next = Math.min(max, Math.max(min, current + dir));
+        input.value = next;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        if (onChange) onChange(input);
+      });
+    });
+  }
+
+  // ==========================================================================
+  // DEMOGRAPHICS SUBMISSIONS TABLE
+  //
+  // Shared between church/demographics-growth/index.php's History segment
+  // and demographics-tracking.php's recent-submissions list - one render
+  // function, two call sites, per the reusable-component principle.
+  // ==========================================================================
+
+  function renderSubmissionsRows(rows, { onEdit = null } = {}) {
+    if (!rows || rows.length === 0) {
+      return renderTableEmpty(4, "No submissions yet", "ri-file-list-3-line");
+    }
+
+    return rows
+      .map((row) => {
+        const period = `${row.fiscal_month?.name || ""} ${row.fiscal_year?.year || ""}`.trim();
+        const canEdit = row.status === "draft" || row.status === "changes_requested";
+        const editBtn = canEdit && onEdit
+          ? `<button type="button" class="btn btn-sm btn-primary-light" onclick="${onEdit}(${row.id})">
+               <i class="ri-edit-line me-1"></i>Edit
+             </button>`
+          : `<span class="fs-12 text-body fw-semibold">Locked</span>`;
+
+        return `
+          <tr>
+            <td class="fw-semibold">${period}</td>
+            <td>${row.total_members ?? "-"}</td>
+            <td>${renderStatusBadge(row.status)}</td>
+            <td class="text-end">${editBtn}</td>
+          </tr>`;
+      })
+      .join("");
+  }
+
+  // ==========================================================================
+  // COMPLETENESS BAR
+  //
+  // Static shell is rendered server-side (includes/ui-helpers-templates.php
+  // renderCompletenessBar()) since it's a single fixed instance per page -
+  // this just updates it at runtime as the user fills the form.
+  // ==========================================================================
+
+  function updateCompletenessBar(containerId, filledCount, totalFields) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const pct = totalFields > 0 ? Math.round((filledCount / totalFields) * 100) : 0;
+    const bar = container.querySelector("[data-completeness-bar]");
+    const label = container.querySelector("[data-completeness-label]");
+    if (bar) bar.style.width = `${pct}%`;
+    if (label) label.textContent = `${pct}%`;
+  }
+
+  // ==========================================================================
+  // PUBLIC API
+  // ==========================================================================
+
+  return {
+    renderStatusBadge,
+    renderStatCard,
+    setButtonLoading,
+    restoreButton,
+    renderTableLoading,
+    renderTableEmpty,
+    numberStepperHtml,
+    initSteppers,
+    renderSubmissionsRows,
+    updateCompletenessBar,
+  };
+})();
