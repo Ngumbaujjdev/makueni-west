@@ -728,15 +728,30 @@ public function getUserAudits(Request $request, $userId)
      */
    private function getDefaultRole(User $user): ?array
 {
+    // No territory_id/nested `territory` object was ever included here -
+    // every page built against $currentRole['territory_id'] (the flat
+    // field, e.g. diocese/budget-management/budget-overview/create-budget.php)
+    // or $currentRole['territory']['name'] (the nested shape used after a
+    // real switchRole() call) got null/undefined immediately after a fresh
+    // login, before auth-helpers.js's background switch-role refresh had a
+    // chance to correct the PHP session - surfaced when a church-tier
+    // Demographics page correctly refused to guess a missing church id and
+    // showed "No church assigned to your account" right after login.
     $primaryAssignment = $user->getPrimaryAssignment();
 
     if ($primaryAssignment) {
         return [
             'assignment_id' => $primaryAssignment->id,
             'role_name' => $primaryAssignment->role->name,
+            'territory_id' => $primaryAssignment->territory->id,
             'territory_name' => $primaryAssignment->territory->name,
             'territory_type' => $primaryAssignment->territory->territory_type->value,  // ← ADD ->value
             'territory_scope' => $primaryAssignment->territory->territory_type->value,  // ← FIX: Use territory type, not role level
+            'territory' => [
+                'id' => $primaryAssignment->territory->id,
+                'name' => $primaryAssignment->territory->name,
+                'territory_type' => $primaryAssignment->territory->territory_type->value,
+            ],
         ];
     }
 
@@ -747,9 +762,15 @@ public function getUserAudits(Request $request, $userId)
         return [
             'assignment_id' => $firstAssignment->id,
             'role_name' => $firstAssignment->role->name,
+            'territory_id' => $firstAssignment->territory->id,
             'territory_name' => $firstAssignment->territory->name,
             'territory_type' => $firstAssignment->territory->territory_type->value,    // ← ADD ->value
             'territory_scope' => $firstAssignment->territory->territory_type->value,    // ← FIX: Use territory type, not role level
+            'territory' => [
+                'id' => $firstAssignment->territory->id,
+                'name' => $firstAssignment->territory->name,
+                'territory_type' => $firstAssignment->territory->territory_type->value,
+            ],
         ];
     }
 
