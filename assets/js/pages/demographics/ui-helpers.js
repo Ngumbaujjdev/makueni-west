@@ -397,7 +397,7 @@ const DemographicsUI = (function () {
         const period = `${row.fiscal_month?.name || ""} ${row.fiscal_year?.year || ""}`.trim();
         const canEdit = row.status === "draft" || row.status === "changes_requested";
         const editBtn = canEdit && onEdit
-          ? `<button type="button" class="btn btn-sm btn-primary-light" onclick="${onEdit}(${row.id})">
+          ? `<button type="button" class="btn btn-sm btn-primary" onclick="${onEdit}(${row.id})">
                <i class="ri-edit-line me-1"></i>Edit
              </button>`
           : `<span class="fs-12 text-body fw-semibold">Locked</span>`;

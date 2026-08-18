@@ -141,7 +141,7 @@ const AttendanceGatheringTypes = (function () {
             <td class="text-center">${statusBadge}</td>
             <td class="text-end">
               <div class="btn-group">
-                <button type="button" class="btn btn-sm btn-primary-light dropdown-toggle" data-bs-toggle="dropdown">
+                <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown">
                   <i class="ri-settings-3-line me-1"></i>Actions
                 </button>
                 <ul class="dropdown-menu">
