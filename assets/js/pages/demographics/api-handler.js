@@ -258,6 +258,78 @@
   }
 
   // ==========================================================================
+  // GATHERING CATEGORIES (global, read-only) & GATHERING TYPES (church-owned)
+  //
+  // Categories replace the old service_type enum (Sunday Service/Ministry
+  // Gathering/Special Event) - global/structural, seeded once. Types are
+  // each church's own list of specific gatherings (e.g. "Kesha") under a
+  // category, managed from church/attendance/gathering-types.php.
+  // ==========================================================================
+
+  async function getGatheringCategories() {
+    try {
+      const response = await fetch(`${API_BASE}/gathering-categories`, {
+        method: Constants.HTTP_METHODS.GET,
+        headers: getHeaders(),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
+  async function getGatheringTypes(territoryId, filters = {}) {
+    try {
+      const params = new URLSearchParams({ territory_id: territoryId, ...filters });
+      const response = await fetch(`${API_BASE}/gathering-types?${params.toString()}`, {
+        method: Constants.HTTP_METHODS.GET,
+        headers: getHeaders(),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
+  async function createGatheringType(payload) {
+    try {
+      const response = await fetch(`${API_BASE}/gathering-types`, {
+        method: Constants.HTTP_METHODS.POST,
+        headers: getHeaders(),
+        body: JSON.stringify(payload),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
+  async function updateGatheringType(id, payload) {
+    try {
+      const response = await fetch(`${API_BASE}/gathering-types/${id}`, {
+        method: Constants.HTTP_METHODS.PUT,
+        headers: getHeaders(),
+        body: JSON.stringify(payload),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
+  async function getGatheringTypeAudits(id) {
+    try {
+      const response = await fetch(`${API_BASE}/gathering-types/${id}/audits`, {
+        method: Constants.HTTP_METHODS.GET,
+        headers: getHeaders(),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
+  // ==========================================================================
   // FISCAL PERIOD HELPERS
   //
   // There is no GET /fiscal-months endpoint. Reuses the already-existing,
@@ -342,6 +414,11 @@
     getAttendance,
     createAttendance,
     updateAttendance,
+    getGatheringCategories,
+    getGatheringTypes,
+    createGatheringType,
+    updateGatheringType,
+    getGatheringTypeAudits,
     getFiscalYears,
     getFiscalMonthsForYear,
   };

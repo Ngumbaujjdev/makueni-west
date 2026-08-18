@@ -43,6 +43,15 @@ $breadcrumbs = [
     <link href="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/fullcalendar/main.min.css" rel="stylesheet" />
 
+    <!-- Sunday-highlight UX: FullCalendar's day-cell background isn't
+         reachable with Bootstrap utility classes, so this one rule is a
+         justified exception to the "reach for Bootstrap first" rule. -->
+    <style>
+        .fc-sunday-highlight {
+            background-color: rgba(44, 164, 191, 0.08);
+        }
+    </style>
+
     <script>
         const USER_TERRITORY = {
             id: <?= json_encode($userTerritoryId) ?>,
