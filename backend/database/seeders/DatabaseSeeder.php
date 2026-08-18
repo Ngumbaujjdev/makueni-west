@@ -151,6 +151,17 @@ class DatabaseSeeder extends Seeder
             // territory level now has a documented, working test login)
             // ==========================================
             SubregionalLeadershipSeeder::class,
+
+            // ==========================================
+            // PHASE 20: Grant Demographics Entry Permissions (Senior Pastor,
+            // Associate Pastor, Church Secretary, Church Administrator)
+            // ==========================================
+            GrantDemographicsEntryPermissionsSeeder::class,
+
+            // ==========================================
+            // PHASE 21: Fix Demographics Module Naming & Ordering
+            // ==========================================
+            FixDemographicsModuleNamingAndOrderingSeeder::class,
         ]);
     }
 }
