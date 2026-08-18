@@ -64,6 +64,10 @@ class AppServiceProvider extends ServiceProvider
             'status' => 'App\Models\Status',
             'status_category' => 'App\Models\StatusCategory',
 
+            // Demographics models
+            'church_demographic' => 'App\Models\ChurchDemographic',
+            'church_attendance_record' => 'App\Models\ChurchAttendanceRecord',
+
             // Support
             'support_ticket' => 'App\Models\SupportTicket',
         ]);
