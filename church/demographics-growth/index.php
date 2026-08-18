@@ -163,7 +163,6 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
     <script src="<?= SITE_URL ?>/assets/libs/apexcharts/apexcharts.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
 
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js"></script>

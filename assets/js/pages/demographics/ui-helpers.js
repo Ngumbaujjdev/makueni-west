@@ -21,6 +21,42 @@ const DemographicsUI = (function () {
   "use strict";
 
   // ==========================================================================
+  // USER TERRITORY RESOLUTION
+  //
+  // The PHP-rendered USER_TERRITORY comes from $_SESSION['current_role'],
+  // populated by authentication/ajax/sync-session.php - a fire-and-forget
+  // call from login.js that silently continues even if it fails (only a
+  // console.warn, no visible error). When that sync hasn't landed yet, the
+  // PHP session's territory_id is empty even though the *correct* data was
+  // already written to localStorage by login.js before it ever attempted
+  // the PHP sync. Rather than trust the PHP round-trip, fall back to
+  // localStorage directly instead of showing an error or waiting on
+  // auth-helpers.js's next 30s-throttled background refresh.
+  // ==========================================================================
+
+  function resolveUserTerritory(phpTerritory) {
+    if (phpTerritory && phpTerritory.id) {
+      return phpTerritory;
+    }
+
+    try {
+      const cached = JSON.parse(localStorage.getItem(Constants.STORAGE_KEYS.CURRENT_ROLE) || "null");
+      if (!cached) return phpTerritory;
+
+      const id = cached.territory_id ?? cached.territory?.id ?? null;
+      const name = cached.territory_name ?? cached.territory?.name ?? phpTerritory?.name;
+
+      if (id) {
+        return { id, name };
+      }
+    } catch (e) {
+      console.warn("Could not resolve territory from localStorage fallback", e);
+    }
+
+    return phpTerritory;
+  }
+
+  // ==========================================================================
   // STATUS BADGES
   // ==========================================================================
 
@@ -210,6 +246,7 @@ const DemographicsUI = (function () {
   // ==========================================================================
 
   return {
+    resolveUserTerritory,
     renderStatusBadge,
     renderStatCard,
     setButtonLoading,
