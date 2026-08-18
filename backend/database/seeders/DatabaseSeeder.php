@@ -162,6 +162,12 @@ class DatabaseSeeder extends Seeder
             // PHASE 21: Fix Demographics Module Naming & Ordering
             // ==========================================
             FixDemographicsModuleNamingAndOrderingSeeder::class,
+
+            // ==========================================
+            // PHASE 22: Fix Demographics Submodule Path Slashes (sidebar
+            // links were concatenating without a separator)
+            // ==========================================
+            FixDemographicsSubmodulePathSlashesSeeder::class,
         ]);
     }
 }
