@@ -1,28 +1,29 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\RoleController;
-use App\Http\Controllers\Api\PermissionController;
+use App\Http\Controllers\Api\BudgetCategoryController;
+use App\Http\Controllers\Api\BudgetController;
+use App\Http\Controllers\Api\BudgetLineController;
+use App\Http\Controllers\Api\BudgetLogController;
+use App\Http\Controllers\Api\BudgetPeriodController;
+use App\Http\Controllers\Api\BudgetTypeController;
+use App\Http\Controllers\Api\DemographicsController;
+use App\Http\Controllers\Api\FiscalYearController;
+use App\Http\Controllers\Api\GatheringCategoryController;
+use App\Http\Controllers\Api\GatheringTypeController;
 use App\Http\Controllers\Api\ModuleController;
 use App\Http\Controllers\Api\ModuleGroupController;
+use App\Http\Controllers\Api\PasswordResetController;
+use App\Http\Controllers\Api\PermissionController;
+use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\StatusController;
+use App\Http\Controllers\Api\SupportTicketController;
 use App\Http\Controllers\Api\TerritoryController;
 use App\Http\Controllers\Api\UserController;
-use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\UserTerritoryAssignmentController;
-use App\Http\Controllers\Api\SupportTicketController;
-use App\Http\Controllers\Api\BudgetTypeController;
-use App\Http\Controllers\Api\BudgetCategoryController;
-use App\Http\Controllers\Api\BudgetLineController;
-use App\Http\Controllers\Api\BudgetController;
-use App\Http\Controllers\Api\StatusController;
-use App\Http\Controllers\Api\BudgetLogController;
-use App\Http\Controllers\Api\BudgetDeductionController;
-use App\Http\Controllers\Api\FiscalYearController;
-use App\Http\Controllers\Api\BudgetPeriodController;
-use App\Http\Controllers\Api\DemographicsController;
-use App\Http\Controllers\Api\AttendanceController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -43,13 +44,13 @@ Route::prefix('auth')->group(function () {
 // PUBLIC ROUTES (No Authentication Required)
 Route::prefix('password-reset')->group(function () {
     Route::post('request', [PasswordResetController::class, 'requestPasswordReset']);                    // Request password reset via email
-   Route::post('verify-token', [PasswordResetController::class, 'verifyResetToken']);                  // Verify reset token validity
-   Route::post('reset-with-token', [PasswordResetController::class, 'resetPasswordWithToken']);        // Reset password using token
-   Route::post('request-employee-code', [PasswordResetController::class, 'requestEmployeeCodeReset']); // Request new employee code via email
+    Route::post('verify-token', [PasswordResetController::class, 'verifyResetToken']);                  // Verify reset token validity
+    Route::post('reset-with-token', [PasswordResetController::class, 'resetPasswordWithToken']);        // Reset password using token
+    Route::post('request-employee-code', [PasswordResetController::class, 'requestEmployeeCodeReset']); // Request new employee code via email
 });
 // support ticket submission (public)
 Route::post('support-tickets', [App\Http\Controllers\Api\SupportTicketController::class, 'store']);
-  Route::get('/system-admin/contact', [UserController::class, 'getSystemAdminContact']);
+Route::get('/system-admin/contact', [UserController::class, 'getSystemAdminContact']);
 
 // === PROTECTED ROUTES (Authentication Required) ===
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -72,7 +73,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('reset-user-password', [PasswordResetController::class, 'adminResetUserPassword']);     // Admin resets any user password
         Route::post('change-employee-code', [PasswordResetController::class, 'adminChangeEmployeeCode']);   // Admin changes any user employee code
     });
-
 
     // Role Management Routes
     Route::prefix('roles')->group(function () {
@@ -201,7 +201,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/{user}/reset-password', [UserController::class, 'resetPassword']); // Reset user password
     });
 
-
     // User Territorial Assignment Routes
     Route::prefix('user-assignments')->group(function () {
         // Assignment CRUD
@@ -223,27 +222,27 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/{assignment}/audits/role-changes', [UserTerritoryAssignmentController::class, 'getRoleChanges']);          // Get role change history
     });
 
-        // ✅ NEW: User Assignment History (placed outside user-assignments prefix for cleaner routing)
-        Route::get('/users/{userId}/assignment-history', [UserTerritoryAssignmentController::class, 'getUserAssignmentHistory']); // Get user's complete assignment audit history
-        // user assignement
-         // ✅ ADD THESE AUDIT ROUTES:
-        Route::get('/auth/user/{id}/audits', [AuthController::class, 'getUserAudits']);
-        Route::get('/auth/user/{id}/audits/login-history', [AuthController::class, 'getLoginHistory']);
-        Route::get('/auth/user/{id}/audits/password-changes', [AuthController::class, 'getPasswordChangeHistory']);
-        Route::get('/auth/user/{id}/audits/profile-changes', [AuthController::class, 'getProfileChangeHistory']);
-        Route::get('/auth/user/{id}/audits/status-changes', [AuthController::class, 'getStatusChangeHistory']);
-        // support tickets
-        // Protected routes (Add these inside your existing auth:sanctum middleware group)
-         Route::get('/support-tickets', [SupportTicketController::class, 'index']);
-         Route::get('/support-tickets/{id}', [SupportTicketController::class, 'show']);
-         Route::get('/support-tickets/{id}/activity-log', [SupportTicketController::class, 'activityLog']);
-         Route::get('/support-tickets/{id}/status-history', [SupportTicketController::class, 'statusHistory']);
-         // Admin routes (Add to your auth:sanctum group)
-         Route::put('/support-tickets/{id}/status', [SupportTicketController::class, 'updateStatus']);
-         Route::put('/support-tickets/{id}/assign', [SupportTicketController::class, 'assignTicket']);
-         Route::post('/support-tickets/{id}/notes', [SupportTicketController::class, 'addNotes']);
-         Route::put('/support-tickets/{id}/resolve', [SupportTicketController::class, 'resolveTicket']);
-         Route::put('/support-tickets/{id}/close', [SupportTicketController::class, 'closeTicket']);
+    // ✅ NEW: User Assignment History (placed outside user-assignments prefix for cleaner routing)
+    Route::get('/users/{userId}/assignment-history', [UserTerritoryAssignmentController::class, 'getUserAssignmentHistory']); // Get user's complete assignment audit history
+    // user assignement
+    // ✅ ADD THESE AUDIT ROUTES:
+    Route::get('/auth/user/{id}/audits', [AuthController::class, 'getUserAudits']);
+    Route::get('/auth/user/{id}/audits/login-history', [AuthController::class, 'getLoginHistory']);
+    Route::get('/auth/user/{id}/audits/password-changes', [AuthController::class, 'getPasswordChangeHistory']);
+    Route::get('/auth/user/{id}/audits/profile-changes', [AuthController::class, 'getProfileChangeHistory']);
+    Route::get('/auth/user/{id}/audits/status-changes', [AuthController::class, 'getStatusChangeHistory']);
+    // support tickets
+    // Protected routes (Add these inside your existing auth:sanctum middleware group)
+    Route::get('/support-tickets', [SupportTicketController::class, 'index']);
+    Route::get('/support-tickets/{id}', [SupportTicketController::class, 'show']);
+    Route::get('/support-tickets/{id}/activity-log', [SupportTicketController::class, 'activityLog']);
+    Route::get('/support-tickets/{id}/status-history', [SupportTicketController::class, 'statusHistory']);
+    // Admin routes (Add to your auth:sanctum group)
+    Route::put('/support-tickets/{id}/status', [SupportTicketController::class, 'updateStatus']);
+    Route::put('/support-tickets/{id}/assign', [SupportTicketController::class, 'assignTicket']);
+    Route::post('/support-tickets/{id}/notes', [SupportTicketController::class, 'addNotes']);
+    Route::put('/support-tickets/{id}/resolve', [SupportTicketController::class, 'resolveTicket']);
+    Route::put('/support-tickets/{id}/close', [SupportTicketController::class, 'closeTicket']);
 
     // Budget Management Routes (Settings)
     // Budget Types
@@ -358,6 +357,20 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/', [AttendanceController::class, 'index']);                                 // List own church's attendance records
         Route::post('/', [AttendanceController::class, 'store']);                                // Record one service/event/gathering
         Route::put('/{attendance}', [AttendanceController::class, 'update']);                    // Update a record
+    });
+
+    // Gathering Categories (global, read-only - Sunday Service/Ministry Gathering/Special Event)
+    Route::prefix('gathering-categories')->group(function () {
+        Route::get('/', [GatheringCategoryController::class, 'index']);
+    });
+
+    // Gathering Types (church-owned config - each church defines its own list, e.g. "Kesha")
+    Route::prefix('gathering-types')->group(function () {
+        Route::get('/', [GatheringTypeController::class, 'index']);
+        Route::post('/', [GatheringTypeController::class, 'store']);
+        Route::get('/{gatheringType}', [GatheringTypeController::class, 'show']);
+        Route::get('/{gatheringType}/audits', [GatheringTypeController::class, 'getAudits']);
+        Route::put('/{gatheringType}', [GatheringTypeController::class, 'update']);
     });
 
     // Budget Deductions

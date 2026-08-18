@@ -6,6 +6,8 @@ use App\Models\Church;
 use App\Models\ChurchAttendanceRecord;
 use App\Models\FiscalMonth;
 use App\Models\FiscalYear;
+use App\Models\GatheringCategory;
+use App\Models\GatheringType;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
@@ -19,9 +21,18 @@ class AttendanceControllerTest extends TestCase
     use RefreshDatabase;
 
     protected Church $myChurch;
+
     protected Church $otherChurch;
+
     protected User $pastor;
+
     protected Role $pastorRole;
+
+    protected int $sundayServiceCategoryId;
+
+    protected int $specialEventCategoryId;
+
+    protected int $ministryGatheringCategoryId;
 
     protected function setUp(): void
     {
@@ -32,6 +43,12 @@ class AttendanceControllerTest extends TestCase
 
         FiscalYear::create(['year' => 2026, 'start_date' => '2026-01-01', 'end_date' => '2026-12-31']);
         FiscalMonth::create(['number' => 8, 'name' => 'August', 'short_name' => 'Aug']);
+
+        // Categories are seeded directly in the gathering_categories
+        // migration, so they already exist once RefreshDatabase has migrated.
+        $this->sundayServiceCategoryId = GatheringCategory::where('slug', 'sunday_service')->value('id');
+        $this->specialEventCategoryId = GatheringCategory::where('slug', 'special_event')->value('id');
+        $this->ministryGatheringCategoryId = GatheringCategory::where('slug', 'ministry_gathering')->value('id');
 
         $this->pastorRole = Role::create(['name' => 'Test Pastor', 'guard_name' => 'web', 'territory_level' => 'church']);
 
@@ -69,7 +86,7 @@ class AttendanceControllerTest extends TestCase
         $response = $this->postJson('/api/attendance', [
             'territory_id' => $this->myChurch->id,
             'service_date' => '2026-08-16',
-            'service_type' => 'sunday_service',
+            'gathering_category_id' => $this->sundayServiceCategoryId,
             'adults_count' => 40,
             'youth_count' => 15,
             'children_male_count' => 8,
@@ -78,7 +95,7 @@ class AttendanceControllerTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonPath('data.territory_id', $this->myChurch->id)
-            ->assertJsonPath('data.service_type', 'sunday_service');
+            ->assertJsonPath('data.gathering_category_id', $this->sundayServiceCategoryId);
 
         $this->assertDatabaseHas('church_attendance_records', [
             'territory_id' => $this->myChurch->id,
@@ -86,18 +103,62 @@ class AttendanceControllerTest extends TestCase
         ]);
     }
 
-    public function test_special_event_requires_an_event_name(): void
+    public function test_special_event_requires_an_event_name_when_no_gathering_type_is_selected(): void
     {
         Sanctum::actingAs($this->pastor);
 
         $response = $this->postJson('/api/attendance', [
             'territory_id' => $this->myChurch->id,
             'service_date' => '2026-08-15',
-            'service_type' => 'special_event',
+            'gathering_category_id' => $this->specialEventCategoryId,
             'adults_count' => 20,
         ]);
 
         $response->assertStatus(422)->assertJsonValidationErrors('event_name');
+    }
+
+    public function test_selecting_a_configured_gathering_type_auto_fills_event_name(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $gatheringType = GatheringType::create([
+            'gathering_category_id' => $this->specialEventCategoryId,
+            'territory_id' => $this->myChurch->id,
+            'name' => 'Baptism Service',
+            'slug' => 'baptism-service',
+        ]);
+
+        $response = $this->postJson('/api/attendance', [
+            'territory_id' => $this->myChurch->id,
+            'service_date' => '2026-08-15',
+            'gathering_category_id' => $this->specialEventCategoryId,
+            'gathering_type_id' => $gatheringType->id,
+            'adults_count' => 20,
+        ]);
+
+        $response->assertStatus(201)->assertJsonPath('data.event_name', 'Baptism Service');
+    }
+
+    public function test_a_gathering_type_from_another_church_is_rejected(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $otherChurchType = GatheringType::create([
+            'gathering_category_id' => $this->specialEventCategoryId,
+            'territory_id' => $this->otherChurch->id,
+            'name' => 'Baptism Service',
+            'slug' => 'baptism-service',
+        ]);
+
+        $response = $this->postJson('/api/attendance', [
+            'territory_id' => $this->myChurch->id,
+            'service_date' => '2026-08-15',
+            'gathering_category_id' => $this->specialEventCategoryId,
+            'gathering_type_id' => $otherChurchType->id,
+            'adults_count' => 20,
+        ]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors('gathering_type_id');
     }
 
     public function test_pastor_cannot_record_attendance_for_another_church(): void
@@ -107,7 +168,7 @@ class AttendanceControllerTest extends TestCase
         $response = $this->postJson('/api/attendance', [
             'territory_id' => $this->otherChurch->id,
             'service_date' => '2026-08-16',
-            'service_type' => 'sunday_service',
+            'gathering_category_id' => $this->sundayServiceCategoryId,
             'adults_count' => 40,
         ]);
 
@@ -124,7 +185,7 @@ class AttendanceControllerTest extends TestCase
         $response = $this->postJson('/api/attendance', [
             'territory_id' => $this->myChurch->id,
             'service_date' => '2026-08-16',
-            'service_type' => 'ministry_gathering',
+            'gathering_category_id' => $this->ministryGatheringCategoryId,
             'event_name' => "Women's Fellowship Meeting",
             'adults_count' => 20,
         ]);
@@ -140,7 +201,7 @@ class AttendanceControllerTest extends TestCase
             'territory_type' => 'church', 'territory_id' => $this->myChurch->id,
             'service_date' => '2026-08-16',
             'fiscal_year_id' => FiscalYear::first()->id, 'fiscal_month_id' => FiscalMonth::first()->id,
-            'service_type' => 'sunday_service', 'adults_count' => 40,
+            'gathering_category_id' => $this->sundayServiceCategoryId, 'adults_count' => 40,
         ]);
 
         $response = $this->putJson("/api/attendance/{$record->id}", ['adults_count' => 45]);
@@ -156,7 +217,7 @@ class AttendanceControllerTest extends TestCase
             'territory_type' => 'church', 'territory_id' => $this->otherChurch->id,
             'service_date' => '2026-08-16',
             'fiscal_year_id' => FiscalYear::first()->id, 'fiscal_month_id' => FiscalMonth::first()->id,
-            'service_type' => 'sunday_service', 'adults_count' => 40,
+            'gathering_category_id' => $this->sundayServiceCategoryId, 'adults_count' => 40,
         ]);
 
         $response = $this->putJson("/api/attendance/{$record->id}", ['adults_count' => 999]);
@@ -171,10 +232,10 @@ class AttendanceControllerTest extends TestCase
         ChurchAttendanceRecord::create([
             'territory_type' => 'church', 'territory_id' => $this->myChurch->id,
             'service_date' => '2026-08-16', 'fiscal_year_id' => FiscalYear::first()->id,
-            'fiscal_month_id' => FiscalMonth::first()->id, 'service_type' => 'sunday_service',
+            'fiscal_month_id' => FiscalMonth::first()->id, 'gathering_category_id' => $this->sundayServiceCategoryId,
         ]);
 
-        $response = $this->getJson('/api/attendance?territory_id=' . $this->myChurch->id);
+        $response = $this->getJson('/api/attendance?territory_id='.$this->myChurch->id);
 
         $response->assertStatus(200);
         $this->assertCount(1, $response->json('data'));

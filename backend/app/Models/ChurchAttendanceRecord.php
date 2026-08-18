@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use OwenIt\Auditing\Contracts\Auditable;
 
 class ChurchAttendanceRecord extends Model implements Auditable
@@ -20,7 +20,8 @@ class ChurchAttendanceRecord extends Model implements Auditable
         'service_date',
         'fiscal_year_id',
         'fiscal_month_id',
-        'service_type',
+        'gathering_category_id',
+        'gathering_type_id',
         'event_name',
         'adults_count',
         'youth_count',
@@ -46,6 +47,16 @@ class ChurchAttendanceRecord extends Model implements Auditable
     public function territory(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function gatheringCategory(): BelongsTo
+    {
+        return $this->belongsTo(GatheringCategory::class);
+    }
+
+    public function gatheringType(): BelongsTo
+    {
+        return $this->belongsTo(GatheringType::class);
     }
 
     public function fiscalYear(): BelongsTo
@@ -77,14 +88,24 @@ class ChurchAttendanceRecord extends Model implements Auditable
         return $query->where('territory_id', $id);
     }
 
-    public function scopeByServiceType($query, string $type)
+    public function scopeByGatheringCategoryId($query, int $categoryId)
     {
-        return $query->where('service_type', $type);
+        return $query->where('gathering_category_id', $categoryId);
     }
 
+    public function scopeByGatheringTypeId($query, int $typeId)
+    {
+        return $query->where('gathering_type_id', $typeId);
+    }
+
+    /**
+     * Sunday-weekly rows are identified via the category's is_weekly flag,
+     * not a hardcoded string - the same lookup used by services.php's
+     * Sunday-highlight UX.
+     */
     public function scopeSundayServices($query)
     {
-        return $query->where('service_type', 'sunday_service');
+        return $query->whereHas('gatheringCategory', fn ($q) => $q->where('is_weekly', true));
     }
 
     public function scopeForPeriod($query, int $fiscalYearId, int $fiscalMonthId)

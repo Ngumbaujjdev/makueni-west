@@ -168,6 +168,18 @@ class DatabaseSeeder extends Seeder
             // links were concatenating without a separator)
             // ==========================================
             FixDemographicsSubmodulePathSlashesSeeder::class,
+
+            // ==========================================
+            // PHASE 23: Configurable Attendance Gathering Types (church-owned
+            // gathering types under the global Sunday Service/Ministry
+            // Gathering/Special Event categories, replacing the old
+            // service_type enum) - see gathering-types-config plan.
+            // Categories themselves are seeded directly in their migration,
+            // not here, so the church_attendance_records backfill migration
+            // can rely on them existing regardless of seeder order.
+            // ==========================================
+            AddGatheringTypesSubmoduleSeeder::class,
+            GatheringTypeStarterSeeder::class,
         ]);
     }
 }
