@@ -140,16 +140,29 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                                                 </div>
                                             </div>
 
-                                            <div class="row gy-3">
-                                                <div class="col-md-4"><?= renderStepper('total_members', ['label' => 'Total Members', 'required' => true]) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('male_count', ['label' => 'Male']) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('female_count', ['label' => 'Female']) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('youth_count', ['label' => "Youth (13-35)"]) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('womens_fellowship_count', ['label' => "Women's Fellowship"]) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('mens_fellowship_count', ['label' => "Men's Fellowship"]) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('sunday_school_male_count', ['label' => 'Sunday School (Male)']) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('sunday_school_female_count', ['label' => 'Sunday School (Female)']) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('seniors_count', ['label' => 'Seniors']) ?></div>
+                                            <div class="card border shadow-none mb-3">
+                                                <div class="card-body">
+                                                    <h6 class="fw-semibold mb-3"><i class="ri-team-line me-2 text-primary"></i>Overall Membership</h6>
+                                                    <div class="row gy-3">
+                                                        <div class="col-md-4"><?= renderStepper('total_members', ['label' => 'Total Members', 'required' => true]) ?></div>
+                                                        <div class="col-md-4"><?= renderStepper('male_count', ['label' => 'Male']) ?></div>
+                                                        <div class="col-md-4"><?= renderStepper('female_count', ['label' => 'Female']) ?></div>
+                                                        <div class="col-md-4"><?= renderStepper('youth_count', ['label' => "Youth (13-35)"]) ?></div>
+                                                        <div class="col-md-4"><?= renderStepper('seniors_count', ['label' => 'Seniors']) ?></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="card border shadow-none mb-0">
+                                                <div class="card-body">
+                                                    <h6 class="fw-semibold mb-3"><i class="ri-group-2-line me-2 text-primary"></i>Fellowship & Sunday School</h6>
+                                                    <div class="row gy-3">
+                                                        <div class="col-md-4"><?= renderStepper('womens_fellowship_count', ['label' => "Women's Fellowship"]) ?></div>
+                                                        <div class="col-md-4"><?= renderStepper('mens_fellowship_count', ['label' => "Men's Fellowship"]) ?></div>
+                                                        <div class="col-md-4"><?= renderStepper('sunday_school_male_count', ['label' => 'Sunday School (Male)']) ?></div>
+                                                        <div class="col-md-4"><?= renderStepper('sunday_school_female_count', ['label' => 'Sunday School (Female)']) ?></div>
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             <div id="step1Warnings" class="mt-3"></div>
@@ -252,10 +265,10 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                             <table class="table table-hover mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>Period</th>
-                                        <th>Total Members</th>
-                                        <th>Status</th>
-                                        <th class="text-end">Action</th>
+                                        <th class="fw-semibold text-dark">Period</th>
+                                        <th class="fw-semibold text-dark">Total Members</th>
+                                        <th class="fw-semibold text-dark">Status</th>
+                                        <th class="fw-semibold text-dark text-end">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="recentSubmissionsBody">

@@ -126,10 +126,10 @@ $breadcrumbs = [
                                 <table class="table table-hover mb-0">
                                     <thead class="table-light">
                                         <tr>
-                                            <th>Period</th>
-                                            <th>Total Members</th>
-                                            <th>Status</th>
-                                            <th class="text-end">Action</th>
+                                            <th class="fw-semibold text-dark">Period</th>
+                                            <th class="fw-semibold text-dark">Total Members</th>
+                                            <th class="fw-semibold text-dark">Status</th>
+                                            <th class="fw-semibold text-dark text-end">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody id="historyTableBody">

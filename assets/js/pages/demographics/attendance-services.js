@@ -182,9 +182,15 @@ const AttendanceServices = (function () {
     return weeks === 1 ? "1 week ago" : `${weeks} weeks ago`;
   }
 
+  // Cycled by position so consecutive timeline entries don't all read as
+  // the same flat blue - all solid colors, no washed-out variants.
+  const TIMELINE_COLORS = ["primary", "success", "warning", "secondary"];
+
   function renderRecentList() {
     const container = document.getElementById("recentSundaysTimeline");
     const recent = [...allRows].sort((a, b) => new Date(b.service_date) - new Date(a.service_date)).slice(0, 8);
+
+    AttendanceFormShared.registerViewableRecords(recent);
 
     if (recent.length === 0) {
       container.innerHTML = `
@@ -196,13 +202,14 @@ const AttendanceServices = (function () {
     }
 
     container.innerHTML = recent
-      .map((r) => {
+      .map((r, index) => {
         const date = new Date(r.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+        const color = TIMELINE_COLORS[index % TIMELINE_COLORS.length];
         return `
-          <li style="cursor: pointer;" onclick="AttendanceServices.editRow(${r.id})">
+          <li>
             <div class="d-flex align-items-top">
               <div class="me-3 flex-shrink-0">
-                <span class="avatar avatar-md bg-primary text-white avatar-rounded">
+                <span class="avatar avatar-md bg-${color} text-white avatar-rounded">
                   <i class="ri-calendar-check-line fs-18"></i>
                 </span>
               </div>
@@ -211,9 +218,17 @@ const AttendanceServices = (function () {
                   <h6 class="fw-semibold mb-0">${date}</h6>
                   <span class="fs-11 text-body fw-semibold">${timeAgo(r.service_date.substring(0, 10))}</span>
                 </div>
-                <p class="mb-0 fs-13 text-body fw-semibold">
-                  ${totalFor(r)} attended <i class="ri-edit-line ms-1 text-primary"></i>
-                </p>
+                <div class="d-flex align-items-center justify-content-between">
+                  <p class="mb-0 fs-13 text-body fw-semibold">${totalFor(r)} attended</p>
+                  <div>
+                    <button type="button" class="btn btn-sm btn-light border me-1" onclick="AttendanceFormShared.openViewModalById(${r.id})" title="View Details">
+                      <i class="ri-eye-line"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="AttendanceServices.editRow(${r.id})" title="Edit">
+                      <i class="ri-edit-line"></i>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </li>`;
