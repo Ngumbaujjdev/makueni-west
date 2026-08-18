@@ -15,7 +15,7 @@ Laravel 12 API for the diocese management system. See the root `../CLAUDE.md` fo
 
 **Working in this local copy** (same rules as the root `CLAUDE.md`, repeated here so this file stands alone), always in this order:
 - Before starting: `git checkout main && git pull origin main`, then `composer test` to confirm `main` itself is green — a failure here is pre-existing, not caused by the work you're about to do. **Then** `git checkout -b <prefix>/<name>`. Prefixes: `feature/<name>`, `bugfix/<name>`, `hotfix/<name>`. One branch per task. Never commit directly to `main`.
-- After finishing: run `composer test` again — all green before going further — commit with a why-focused message, `git push -u origin <branch>`, `gh pr create` with a real title/summary/test-plan.
+- After finishing: run `composer test` again — all green before going further — commit with a why-focused message (no `Co-Authored-By: Claude ...` or other AI-attribution trailer — the user does not want this on their commits), `git push -u origin <branch>`, `gh pr create` with a real title/summary/test-plan.
 - `gh pr merge --merge` — **the push → PR → merge sequence is pre-authorized**, complete it without stopping to ask once the branch is committed and verified. Only pause if something is uncommitted, unverified, or unrelated to the task.
 - Never commit `.env` or any file containing real credentials.
 
