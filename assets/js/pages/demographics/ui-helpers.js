@@ -104,6 +104,21 @@ const DemographicsUI = (function () {
       </div>`;
   }
 
+  /**
+   * Renders a full `row g-3` of stat cards into a container - the shared
+   * wrapper every attendance/gathering-types list page uses instead of
+   * each hand-rolling its own `col-xl-3` grid markup.
+   * @param {string} containerId
+   * @param {object[]} cards - array of renderStatCard() opts
+   */
+  function renderStatCardsRow(containerId, cards) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = cards
+      .map((c) => `<div class="col-xl-3 col-lg-6 col-md-6">${renderStatCard(c)}</div>`)
+      .join("");
+  }
+
   // ==========================================================================
   // BUTTON LOADING STATE
   // ==========================================================================
@@ -190,6 +205,91 @@ const DemographicsUI = (function () {
   }
 
   // ==========================================================================
+  // LIST TABLE - SEARCH/FILTER/PAGINATION (DataTables)
+  //
+  // One shared init function instead of every list page hand-rolling the
+  // jQuery DataTables setup + pagination/search styling block that
+  // assets/js/pages/budget-settings/budget-type.js originally proved out
+  // per-page. Callers just need a real <table id="..."> with a <thead>.
+  // ==========================================================================
+
+  const _dataTables = {};
+
+  /**
+   * @param {string} tableId - id of the <table> element (must already be in the DOM with rows rendered)
+   * @param {object} options
+   *   searchPlaceholder: string
+   *   pageLength: number (default 10)
+   *   order: DataTables order array, default [[0, 'asc']]
+   *   nonSortableColumns: number[] - zero-based column indexes to disable sorting on (e.g. an Actions column)
+   */
+  function initListDataTable(tableId, options = {}) {
+    if (typeof $ === "undefined" || !$.fn || !$.fn.DataTable) {
+      console.warn(`DataTables not loaded - skipping init for #${tableId}`);
+      return null;
+    }
+
+    if ($.fn.DataTable.isDataTable(`#${tableId}`)) {
+      $(`#${tableId}`).DataTable().destroy();
+      delete _dataTables[tableId];
+    }
+
+    const {
+      searchPlaceholder = "Search...",
+      pageLength = 10,
+      order = [[0, "asc"]],
+      nonSortableColumns = [],
+    } = options;
+
+    const instance = $(`#${tableId}`).DataTable({
+      responsive: true,
+      pageLength,
+      lengthMenu: [
+        [10, 25, 50, 100],
+        [10, 25, 50, 100],
+      ],
+      order,
+      columnDefs: nonSortableColumns.length ? [{ orderable: false, targets: nonSortableColumns }] : [],
+      language: {
+        search: "_INPUT_",
+        searchPlaceholder,
+        lengthMenu: "Show _MENU_ entries",
+        info: "Showing _START_ to _END_ of _TOTAL_ entries",
+        infoEmpty: "No entries available",
+        infoFiltered: "(filtered from _MAX_ total entries)",
+        zeroRecords: "No matching records found",
+        paginate: {
+          first: '<i class="ri-skip-back-mini-line"></i>',
+          last: '<i class="ri-skip-forward-mini-line"></i>',
+          next: '<i class="ri-arrow-right-s-line"></i>',
+          previous: '<i class="ri-arrow-left-s-line"></i>',
+        },
+      },
+      dom:
+        '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+        '<"row"<"col-sm-12"tr>>' +
+        '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+      initComplete: function () {
+        $(`#${tableId}_wrapper .dataTables_filter input`)
+          .addClass("form-control form-control-sm")
+          .attr("placeholder", searchPlaceholder);
+        $(`#${tableId}_wrapper .dataTables_length select`).addClass("form-select form-select-sm");
+        $(`#${tableId}_wrapper .dataTables_filter label`).prepend('<i class="ri-search-line me-2 text-primary"></i>');
+      },
+      drawCallback: function () {
+        $(`#${tableId}_wrapper .dataTables_filter input`).addClass("form-control form-control-sm");
+        $(`#${tableId}_wrapper .dataTables_length select`).addClass("form-select form-select-sm");
+        $(`#${tableId}_wrapper .paginate_button`).addClass("btn btn-sm");
+        $(`#${tableId}_wrapper .paginate_button.current`).addClass("btn-primary");
+        $(`#${tableId}_wrapper .paginate_button:not(.current)`).addClass("btn-light border");
+      },
+    });
+
+    _dataTables[tableId] = instance;
+    return instance;
+  }
+
+  // ==========================================================================
   // DEMOGRAPHICS SUBMISSIONS TABLE
   //
   // Shared between church/demographics-growth/index.php's History segment
@@ -249,10 +349,12 @@ const DemographicsUI = (function () {
     resolveUserTerritory,
     renderStatusBadge,
     renderStatCard,
+    renderStatCardsRow,
     setButtonLoading,
     restoreButton,
     renderTableLoading,
     renderTableEmpty,
+    initListDataTable,
     numberStepperHtml,
     initSteppers,
     renderSubmissionsRows,

@@ -49,6 +49,35 @@ const AttendanceMinistries = (function () {
 
     allRows = (result.data || []).sort((a, b) => new Date(b.service_date) - new Date(a.service_date));
     tbody.innerHTML = AttendanceFormShared.renderListRows(allRows, { onEdit: "AttendanceMinistries.editRow" });
+
+    renderStats(allRows);
+    DemographicsUI.initListDataTable("ministryAttendanceTable", {
+      searchPlaceholder: "Search ministry gatherings...",
+      order: [[0, "desc"]],
+      nonSortableColumns: [4],
+    });
+  }
+
+  function renderStats(rows) {
+    const now = new Date();
+    const thisMonth = rows.filter((r) => {
+      const d = new Date(r.service_date);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+    const distinctTypes = new Set(rows.map((r) => r.gathering_type_id).filter(Boolean)).size;
+    const mostRecent = rows[0];
+
+    DemographicsUI.renderStatCardsRow("statCardsRow", [
+      { icon: "ri-file-list-3-line", label: "Total Records", value: rows.length, color: "primary" },
+      { icon: "ri-calendar-check-line", label: "This Month", value: thisMonth.length, color: "success" },
+      {
+        icon: "ri-time-line",
+        label: "Most Recent",
+        value: mostRecent ? new Date(mostRecent.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "-",
+        color: "warning",
+      },
+      { icon: "ri-group-line", label: "Gathering Types Used", value: distinctTypes, color: "secondary" },
+    ]);
   }
 
   function openModal(record) {

@@ -61,6 +61,31 @@ const AttendanceGatheringTypes = (function () {
 
     allTypes = result.data || [];
     renderRows();
+    renderStats(allTypes);
+    DemographicsUI.initListDataTable("gatheringTypesTable", {
+      searchPlaceholder: "Search gathering types...",
+      order: [[0, "asc"]],
+      nonSortableColumns: [3],
+    });
+  }
+
+  function renderStats(types) {
+    const active = types.filter((t) => t.is_active).length;
+    const inactive = types.length - active;
+
+    const countsByCategory = types.reduce((acc, t) => {
+      const name = t.category?.name || "Uncategorized";
+      acc[name] = (acc[name] || 0) + 1;
+      return acc;
+    }, {});
+    const mostUsed = Object.entries(countsByCategory).sort((a, b) => b[1] - a[1])[0];
+
+    DemographicsUI.renderStatCardsRow("statCardsRow", [
+      { icon: "ri-list-check-2", label: "Total Types", value: types.length, color: "primary" },
+      { icon: "ri-checkbox-circle-line", label: "Active", value: active, color: "success" },
+      { icon: "ri-close-circle-line", label: "Inactive", value: inactive, color: "secondary" },
+      { icon: "ri-bar-chart-line", label: "Most-Used Category", value: mostUsed ? mostUsed[0] : "-", color: "warning" },
+    ]);
   }
 
   function renderRows() {
