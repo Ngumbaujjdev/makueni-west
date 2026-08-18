@@ -40,6 +40,7 @@ const DemographicsTracking = (function () {
   let currentStatus = "draft";
 
   function init() {
+    Object.assign(USER_TERRITORY, DemographicsUI.resolveUserTerritory(USER_TERRITORY));
     wireStepNav();
     wireSteppers();
     wireCompleteness();

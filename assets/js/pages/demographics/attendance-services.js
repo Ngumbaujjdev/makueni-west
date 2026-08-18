@@ -20,6 +20,8 @@ const AttendanceServices = (function () {
   let entryMode = "weekly_and_monthly";
 
   async function init() {
+    Object.assign(USER_TERRITORY, DemographicsUI.resolveUserTerritory(USER_TERRITORY));
+
     if (!USER_TERRITORY.id) {
       Toast.error("No church assigned to your account");
       return;
