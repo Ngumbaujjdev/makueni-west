@@ -102,6 +102,7 @@ These are already mapped onto the YNEX template's Bootstrap variables (`--primar
 - **Reach for a Bootstrap 5 utility class before writing custom CSS.** Only add a custom class when Bootstrap genuinely can't express it.
 - **No gradients on UI elements** (buttons, backgrounds, badges) — flat solid brand colors only.
 - **No muted/washed-out text.** Body copy and labels read as solid, confident color, not low-contrast gray-on-gray. The teal/gold/red accents should read as vivid and intentional.
+- **Stat/summary cards follow the same no-muted rule.** Solid backgrounds, full-contrast numbers and labels — even a "neutral" or "inactive" stat still reads as deliberate, not a faded/light variant standing in for "less important."
 - Match existing page structure (`includes/header.php` / `sidebar.php` / `footer.php` includes, `requirePermission()` call at the top of every protected page) rather than inventing a new page-layout pattern.
 
 ## Access Control (how it actually works — don't rebuild this)

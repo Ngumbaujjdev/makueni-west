@@ -97,6 +97,12 @@ $breadcrumbs = [
                             <div class="card-body p-0">
                                 <div class="table-responsive">
                                     <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th class="fw-semibold text-dark">Date</th>
+                                                <th class="fw-semibold text-dark text-end">Total</th>
+                                            </tr>
+                                        </thead>
                                         <tbody id="recentSundaysBody">
                                             <!-- Rows injected by attendance-services.js -->
                                         </tbody>
