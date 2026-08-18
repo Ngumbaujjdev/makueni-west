@@ -20,8 +20,14 @@ class DatabaseSeeder extends Seeder
             // ==========================================
             // PHASE 2: Users & Super Admin
             // ==========================================
+            // SampleUsersSeeder retired (see docs/ROADMAP.md -> Seeder bug
+            // fixes): its users are fully superseded by DioceseLeadershipSeeder
+            // + RegionalLeadershipSeeder, and firstOrCreate()'ing a Bishop at
+            // the same email as DioceseLeadershipSeeder - while running first
+            // in this list - was the source of the Bishop identity bug fixed
+            // in Phase 18 below. The seeder file itself is left in place for
+            // history but is no longer called.
             SuperAdminSeeder::class,
-            SampleUsersSeeder::class,
 
             // ==========================================
             // PHASE 3: Module Groups & Roles
@@ -126,6 +132,17 @@ class DatabaseSeeder extends Seeder
             // PHASE 17: Fix & Seed Real Church Leadership (pastors, associates, spouses)
             // ==========================================
             FixAndSeedRealChurchLeadershipSeeder::class,
+
+            // ==========================================
+            // PHASE 18: Fix Bishop Identity & Retire Sample Accounts
+            // ==========================================
+            FixBishopIdentityAndRetireSampleAccountsSeeder::class,
+
+            // ==========================================
+            // PHASE 19: Subregional Leadership (test account - every
+            // territory level now has a documented, working test login)
+            // ==========================================
+            SubregionalLeadershipSeeder::class,
         ]);
     }
 }
