@@ -26,6 +26,14 @@ const AttendanceFormShared = (function () {
   const OTHER_VALUE = "__other__";
   let currentConfig = null;
   let currentRecordId = null;
+  // Choices.js instance wrapping #attendanceGatheringType - built once when
+  // the modal first mounts (assets/libs/choices.js, the same searchable-
+  // dropdown library assets/js/pages/budget-management/create-budget.js
+  // already uses; "Select2" was asked for but isn't actually vendored in
+  // this codebase). allowHTML lets each option show its gathering type's
+  // icon next to its name, so a user can tell Kesha from Tuesday
+  // Fellowship at a glance in the list, not just by reading the label.
+  let gatheringTypeChoices = null;
 
   function ensureModalMounted() {
     if (document.getElementById(MODAL_ID)) return;
@@ -42,16 +50,17 @@ const AttendanceFormShared = (function () {
               <div class="mb-3">
                 <label for="attendanceServiceDate" class="form-label">Date <span class="text-danger">*</span></label>
                 <input type="date" class="form-control" id="attendanceServiceDate" required>
+                <small class="form-text text-body">The Sunday or gathering date this attendance count is for.</small>
               </div>
               <div class="mb-3" id="attendanceGatheringTypeGroup" style="display: none;">
                 <label for="attendanceGatheringType" class="form-label">Gathering <span class="text-danger">*</span></label>
-                <select class="form-select" id="attendanceGatheringType" disabled>
+                <select class="form-select" id="attendanceGatheringType">
                   <option value="">Loading gathering types...</option>
                 </select>
               </div>
               <div class="mb-3" id="attendanceEventNameGroup" style="display: none;">
                 <label for="attendanceEventName" class="form-label">Event Name <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="attendanceEventName">
+                <input type="text" class="form-control" id="attendanceEventName" placeholder="e.g. Diocese Youth Camp 2026">
               </div>
               <div class="row gy-3">
                 <div class="col-md-6">${DemographicsUI.numberStepperHtml("attendanceAdults", { label: "Adults" })}</div>
@@ -61,7 +70,7 @@ const AttendanceFormShared = (function () {
               </div>
               <div class="mt-3">
                 <label for="attendanceNotes" class="form-label">Notes</label>
-                <textarea class="form-control" id="attendanceNotes" rows="2"></textarea>
+                <textarea class="form-control" id="attendanceNotes" rows="2" placeholder="Any additional notes about this gathering..."></textarea>
               </div>
             </div>
             <div class="modal-footer">
@@ -80,7 +89,20 @@ const AttendanceFormShared = (function () {
 
     DemographicsUI.initSteppers(document.getElementById(MODAL_ID));
     document.getElementById("attendanceModalSaveBtn").addEventListener("click", handleModalSave);
-    document.getElementById("attendanceGatheringType").addEventListener("change", handleGatheringTypeChange);
+
+    const selectEl = document.getElementById("attendanceGatheringType");
+    if (typeof Choices !== "undefined") {
+      gatheringTypeChoices = new Choices(selectEl, {
+        searchEnabled: true,
+        searchPlaceholderValue: "Search gatherings...",
+        itemSelectText: "",
+        allowHTML: true,
+        placeholder: true,
+        placeholderValue: "Select a gathering",
+        shouldSort: false,
+      });
+    }
+    selectEl.addEventListener("change", handleGatheringTypeChange);
   }
 
   function handleGatheringTypeChange() {
@@ -131,9 +153,16 @@ const AttendanceFormShared = (function () {
       eventGroup.style.display = record.gathering_type_id ? "none" : record.event_name ? "" : "none";
       eventInput.value = record.event_name || "";
 
-      const select = document.getElementById("attendanceGatheringType");
-      select.disabled = true;
-      select.innerHTML = '<option value="">Loading gathering types...</option>';
+      if (gatheringTypeChoices) {
+        gatheringTypeChoices.disable();
+        gatheringTypeChoices.clearChoices();
+        gatheringTypeChoices.setChoices(
+          [{ value: "", label: "Loading gathering types...", disabled: true, selected: true }],
+          "value",
+          "label",
+          true,
+        );
+      }
 
       const modalEl = document.getElementById(MODAL_ID);
       new bootstrap.Modal(modalEl).show();
@@ -151,15 +180,39 @@ const AttendanceFormShared = (function () {
     const result = await DemographicsAPIHandler.getGatheringTypes(territoryId, { gathering_category_id: gatheringCategoryId });
 
     const types = result.success ? result.data || [] : [];
-    const options = types.map((t) => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join("");
-    const otherOption = `<option value="${OTHER_VALUE}">Other (type your own)</option>`;
-    const hint = types.length === 0
-      ? `<option value="" disabled>No gathering types configured yet - use Other, or add some in Gathering Types</option>`
-      : "";
+    const choices = types.map((t) => ({
+      value: String(t.id),
+      // allowHTML: true (set on the Choices instance) renders this as
+      // markup, not escaped text - the icon-per-gathering-type "template"
+      // so a user recognizes Kesha vs. Tuesday Fellowship at a glance.
+      label: `<i class="${escapeHtml(t.icon || "ri-calendar-event-line")} me-2"></i>${escapeHtml(t.name)}`,
+      customProperties: { plainName: t.name },
+    }));
 
-    select.innerHTML = hint + options + otherOption;
-    select.disabled = false;
-    select.value = selectedTypeId ? String(selectedTypeId) : OTHER_VALUE;
+    choices.push({ value: OTHER_VALUE, label: '<i class="ri-more-line me-2"></i>Other (type your own)' });
+
+    if (types.length === 0) {
+      choices.unshift({
+        value: "",
+        label: "No gathering types configured yet - use Other, or add some in Gathering Types",
+        disabled: true,
+      });
+    }
+
+    if (gatheringTypeChoices) {
+      gatheringTypeChoices.enable();
+      gatheringTypeChoices.clearChoices();
+      gatheringTypeChoices.setChoices(choices, "value", "label", true);
+      gatheringTypeChoices.setChoiceByValue(selectedTypeId ? String(selectedTypeId) : OTHER_VALUE);
+    } else {
+      // Choices.js failed to load (e.g. script tag missing on this page) -
+      // fall back to the plain <select> so entry still works.
+      select.innerHTML = choices
+        .map((c) => `<option value="${c.value}" ${c.disabled ? "disabled" : ""}>${c.label.replace(/<[^>]+>/g, "")}</option>`)
+        .join("");
+      select.value = selectedTypeId ? String(selectedTypeId) : OTHER_VALUE;
+    }
+
     handleGatheringTypeChange();
   }
 
