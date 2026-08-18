@@ -100,20 +100,10 @@ $breadcrumbs = [
                             <div class="card-header">
                                 <div class="card-title"><i class="ri-list-check-2 me-2 text-primary"></i>Recent Sundays</div>
                             </div>
-                            <div class="card-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-hover mb-0">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th class="fw-semibold text-dark">Date</th>
-                                                <th class="fw-semibold text-dark text-end">Total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="recentSundaysBody">
-                                            <!-- Rows injected by attendance-services.js -->
-                                        </tbody>
-                                    </table>
-                                </div>
+                            <div class="card-body">
+                                <ul class="list-unstyled profile-timeline mb-0" id="recentSundaysTimeline">
+                                    <!-- Entries injected by attendance-services.js -->
+                                </ul>
                             </div>
                         </div>
                     </div>
