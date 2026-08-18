@@ -419,6 +419,14 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
     function formatPath(path) {
         if (!path) return path;
         let cleanPath = path.replace(/\.php$/, '');
+        // Safety net: a path stored without a leading slash used to
+        // concatenate straight onto baseUrl with no separator (e.g.
+        // "/makueni-westchurch/attendance/services") - the source data is
+        // fixed (see FixDemographicsSubmodulePathSlashesSeeder), but this
+        // keeps any future same mistake from breaking the sidebar again.
+        if (!cleanPath.startsWith('/')) {
+            cleanPath = '/' + cleanPath;
+        }
         if (!cleanPath.startsWith('<?= $baseUrl ?>')) {
             cleanPath = '<?= $baseUrl ?>' + cleanPath;
         }
