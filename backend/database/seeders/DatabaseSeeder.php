@@ -50,6 +50,14 @@ class DatabaseSeeder extends Seeder
             ChurchSystemSeeder::class,
 
             // ==========================================
+            // PHASE 4.6: Module Group Backfill (must run after Phase 4 — the
+            // three SystemSeeders above never set module_group_id, which
+            // silently makes a module invisible in the sidebar regardless of
+            // permissions; see the seeder's own docblock)
+            // ==========================================
+            BackfillModuleGroupAssignmentsSeeder::class,
+
+            // ==========================================
             // PHASE 4.5: Role Permissions (must run after Phase 4's modules exist)
             // ==========================================
             DioceseRolePermissionsSeeder::class,
