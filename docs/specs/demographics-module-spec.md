@@ -1,68 +1,97 @@
 # Demographics Module Spec
 
-**Status: data model & workflow decided; API contract and acceptance criteria still to be finalized before implementation starts**, per the spec-driven process in the root `CLAUDE.md`. Superseded the earlier aggregate-fields guess with the concrete field list and workflow from `../design/demographics-mobile-app-design.md` (a mobile PWA design reference — not being built as an app yet, but its screens define real product requirements).
+**Status: backend fully built and tested (46 passing tests in `backend/tests/Feature/Demographics/`); frontend build in progress.** This spec originally described data model/workflow decisions made before implementation; it's now updated to match what was actually built, per the root `CLAUDE.md` rule that a spec and its implementation shouldn't drift apart.
 
-## Data Model (decided)
+## Data Model (as built)
 
-- Aggregate counts per church per **month** — not an individual member/congregant registry. Matches the original scope's "monitoring system" framing; a full registry is materially larger scope (dedup, PII handling) and wasn't requested.
-- **Entry only at Church level**, by the Pastor. Region, Subregion, and Diocese never create their own rows — their views are computed by summing descendant churches through `territories.parent_territory_id`.
-- Reuse the existing `fiscal_years`/`fiscal_quarters`/`fiscal_months` tables (already built for Budgets) for the period dimension — no new period system. (The design reference calls this "month" — map it onto `fiscal_months`.)
-- Follow `backend/app/Models/Budget.php`'s conventions: `territory_type` + `territory_id` fillable columns, `Auditable` + `SoftDeletes` traits, `created_by`/`updated_by`.
+- Aggregate counts per church per **month** — not an individual member/congregant registry.
+- **Entry only at Church level**, by the Pastor (and, per a later permission decision, Associate Pastor / Church Secretary / Church Administrator too — see Permission Rules below). Region, Subregion, and Diocese never create their own rows — their views are computed by summing descendant churches through `territories.parent_territory_id`, via `App\Services\DemographicsGrowthService`.
+- Uses the existing `fiscal_years`/`fiscal_months` tables (built for Budgets) for the period dimension.
+- Follows `backend/app/Models/Budget.php`'s conventions: `territory_type` + `territory_id` fillable columns, `Auditable` + `SoftDeletes` traits, `created_by`/`updated_by`.
+- Complementary weekly **Attendance** model (`ChurchAttendanceRecord`) added alongside the monthly snapshot — no approval workflow ("high-frequency, low-stakes data by design," per the controller's own docblock). A church can toggle between `weekly_and_monthly` and `monthly_only` entry mode via `Church.metadata->attendance_mode`, for churches with unreliable connectivity.
 
-### Fields (from the design reference — this is the real, concrete list, not a guess)
+### Fields (real, from `DemographicsController::store()`'s validator — `backend/app/Models/ChurchDemographic.php`)
 
-Membership counts:
-- `total_members`
-- `youth_count` (ages 13–35)
-- `womens_fellowship_count`
-- `mens_fellowship_count`
-- `sunday_school_count` (children)
-- `seniors_count`
-- gender split (male/female — the design shows a donut chart, implying `male_count`/`female_count` are tracked; confirm against `total_members` at validation time)
+```
+total_members, male_count, female_count, youth_count,
+womens_fellowship_count, mens_fellowship_count,
+sunday_school_male_count, sunday_school_female_count, seniors_count,
+new_members_count, transferred_out_count,
+baptisms_count, communion_participants_count, conversions_count
+```
 
-This month's changes:
-- `new_members_count`
-- `transferred_out_count`
+All nullable|integer|min:0 except the three ids (`territory_id`, `fiscal_year_id`, `fiscal_month_id`), which are required. `sunday_school_count` (combined) and `children_count`/`total_count` are computed Eloquent accessors on `ChurchDemographic`, not stored columns.
 
-Spiritual activities:
-- `baptisms_count`
-- `communion_participants_count`
-- `conversions_count`
+Validation: sub-counts (youth/fellowship/Sunday-school/seniors) exceeding `total_members` produce a **soft, non-blocking warning** (`buildValidationWarnings()`) returned in the response `warnings[]` array — never a hard rejection.
 
-Workflow status: `status` — `draft` → `submitted` → `approved` / `flagged` / `changes_requested` (see Workflow below). This mirrors Budget's status pattern (`Budget.php` has `status`/`status_id`, submit/approve/reject actions) — reuse that shape rather than inventing a new one.
+Workflow status: `status` — `draft` → `submitted` → `approved` / `flagged` / `changes_requested`, mirroring Budget's shape.
 
-Validation rule from the design reference: youth/fellowship/Sunday-school/senior counts should not individually exceed `total_members` — surface as inline validation, not a hard DB constraint (a pastor might legitimately have edge cases; don't block submission on it, flag it).
+### Attendance fields (`ChurchAttendanceRecord`)
 
-## Workflow (decided — not pure read-only)
+```
+territory_id, service_date, service_type (sunday_service|special_event|ministry_gathering),
+event_name (required unless sunday_service), adults_count, youth_count,
+children_male_count, children_female_count, notes
+```
 
-This corrects an earlier assumption: Region/Subregion/Diocese are read-only **for editing the raw counts**, but Subregion Overseer has a real review/approval action:
+`fiscal_year_id`/`fiscal_month_id` are derived server-side from `service_date`, not supplied by the client.
 
-1. Pastor fills the form (`draft`), submits (`submitted`).
-2. **Subregion Overseer reviews and acts**: Approve (→ `approved`, forwarded to Region), Flag (→ `flagged`, stays visible with a flag but doesn't block forwarding — per the design, flagging surfaces an anomaly like "youth up 40%" without necessarily rejecting), or Request changes (→ `changes_requested`, sent back to the Pastor with a note).
-3. Region and Diocese: **summary/analytics only, no review action** in this design — they see consolidated, approved data, not a per-submission approval queue of their own.
+## Workflow (as built)
 
-## Multi-Tenancy (new — see `../ROADMAP.md` → Multi-Tenancy for the full decision)
+1. Pastor (or Associate Pastor/Secretary/Administrator) fills the form (`draft`), submits (`submitted`).
+2. **Subregion Overseer reviews and acts**: Approve (→ `approved`), Flag (→ `flagged`, stays visible, doesn't block), or Request changes (→ `changes_requested`, sent back with a note — resets to `draft` on the pastor's next edit).
+3. Region and Diocese: summary/analytics only via `GET /demographics/summary/{territory}`, no review action of their own. Only `status='approved'` rows count toward any rollup figure.
 
-The design reference's login screen requires a "Diocese code," confirming the backend needs to become genuinely multi-diocese-capable, not single-diocese with an unused `GLOBAL` territory type. Demographics itself doesn't need special multi-tenancy logic beyond what the rest of the system needs — it's already territory-scoped by `territory_id`, and a territory always belongs to exactly one diocese via the hierarchy. **Don't block starting the Demographics build on the multi-tenancy work finishing** — just don't hardcode any single-diocese assumption (e.g., don't hardcode the `CCI-MWD` territory ID anywhere in Demographics code; existing controllers already avoid this per the audit).
+## API Contract (as built)
 
-## API Contract (not yet written)
+Base: `backend/routes/api.php`, under `auth:sanctum`.
 
-To define when implementation starts: full route list (church-level CRUD + the Subregion approve/flag/request-changes actions + region/subregion/diocese summary/trend/compare endpoints), request/response shapes, and which permission string each route requires. Follow the route-group shape already used for Budgets in `backend/routes/api.php`, including its submit/approve/reject action-endpoint pattern (`BudgetController`'s workflow methods are the direct precedent for the Subregion review actions here).
+| Method | Path | Permission |
+|---|---|---|
+| GET | `/demographics?territory_id=` | ownership (`userOwnsChurch`) |
+| POST | `/demographics` | `churchdemographicsgrowth.demographicstracking.sundayschoolenrollment.create` |
+| GET | `/demographics/{id}` | ownership |
+| PUT | `/demographics/{id}` | `churchdemographicsgrowth.demographicstracking.sundayschoolenrollment.update` |
+| POST | `/demographics/{id}/submit` | ownership + `can_be_submitted` |
+| POST | `/demographics/{id}/approve` | `subregiondemographicsreview.churchsubmissions.approve` |
+| POST | `/demographics/{id}/flag` | `subregiondemographicsreview.churchsubmissions.flag` |
+| POST | `/demographics/{id}/request-changes` | `subregiondemographicsreview.churchsubmissions.requestchanges` |
+| GET | `/demographics/summary/{territory}` | tier-dependent: Subregion → `subregiondemographicsreview.churchsubmissions.read`, Region → `regiondemographicsanalytics.summary.read`, Diocese/Global → `demographicsanalytics.demographicssummary.read` |
+| GET / PUT | `/churches/{church}/entry-mode` | ownership / `...sundayschoolenrollment.update` |
+| GET | `/attendance?territory_id=&service_type=&fiscal_year_id=&fiscal_month_id=` | ownership |
+| POST | `/attendance` | per `service_type`: `attendancemanagement.{serviceattendance\|specialeventsattendance\|ministryattendance}.create` |
+| PUT | `/attendance/{id}` | same prefix, `.update`, resolved from the record's existing `service_type` |
 
-## Permission Rules (decided in outline, refined)
+**Deliberately one reused permission string per model covers the entire row** (not split per field group) — `DemographicsController`'s own docblock explains this: the row is submitted/reviewed as one atomic unit.
 
-- `diocese.demographics.entry.create` / `...update` — Church-level role assignments only, and only for the assigning user's own church.
-- `diocese.demographics.review.approve` / `...flag` / `...request-changes` — Subregion-level role assignments only (new — not in the original outline; added per the workflow decision above).
-- `diocese.demographics.summary.read` — Region, Subregion, and Diocese-level role assignments. No write permission for Region/Diocese.
-- Exact permission-string naming and module/submodule seeder entries to be finalized against `backend/database/seeders/DioceseBudgetModuleSeeder.php` as the reference pattern when this spec is completed.
+`GET /demographics/summary/{territory}` response shape (`DemographicsGrowthService::summaryFor()`):
+```
+{ membership: { total_members, male_count, female_count, youth_count, womens_fellowship_count,
+    mens_fellowship_count, sunday_school_male_count, sunday_school_female_count, seniors_count,
+    baptisms_count, communion_participants_count, conversions_count, churches_reporting, churches_total },
+  attendance: { services_logged, average_attendance (float or null if zero records) },
+  growth: { previous_month_total_members, delta, percentage (or null if previous total is 0) } }
+```
 
-## Acceptance Criteria (not yet written)
+No `DELETE` endpoint on either model, by deliberate decision (frontend planning round, 2026-08-18) — corrections happen by editing a `draft`/`changes_requested` row, matching how Budget already works in this app.
 
-To define when implementation starts. At minimum must cover:
-- A church user can create/update demographics for their own church, in `draft` status.
-- A church user can submit (`draft → submitted`), but not approve their own submission.
-- A church user gets 403 attempting to create/update another church's demographics.
-- A subregion user can approve/flag/request-changes only for churches within their subregion; gets 403 outside it.
-- A region/diocese user gets 403 on any write or review endpoint.
-- A region/subregion/diocese user gets 200 on the summary endpoint, with correct roll-up totals (sum of descendant churches, `approved` submissions only — decide whether `flagged` counts toward rollups when this is finalized).
-- Each acceptance criterion here should map directly to a test in `backend/tests/Feature/Demographics/`.
+## Permission Rules (as built)
+
+- **Church-level entry** (create/update/submit): `Senior Pastor`, `Associate Pastor`, `Church Secretary`, `Church Administrator` — granted via `GrantDemographicsEntryPermissionsSeeder` (2026-08-18; the module/submodule permission rows existed since the original `ChurchSystemSeeder` build but were never actually assigned to any church-tier role until this seeder). Every other church-tier role retains only the generic `...overview.read` permission (landing-page visibility, no entry access).
+- **Subregion review** (approve/flag/request-changes): `Subregional Overseer` only, scoped to churches whose `parent_territory_id` matches the overseer's subregion (`userOverseesChurch()`).
+- **Region/Diocese summary read**: `Regional Overseer` (region tier), Bishop and other diocese-tier roles already hold `demographicsanalytics.demographicssummary.read` from the original module scaffolding.
+
+## Acceptance Criteria — met, verified by `backend/tests/Feature/Demographics/` (46 tests)
+
+- `ChurchDemographicModelTest.php` / `ChurchAttendanceRecordModelTest.php` — model fillable/casts/computed-attribute coverage.
+- `DemographicsControllerTest.php` / `AttendanceControllerTest.php` — own-church CRUD succeeds, cross-church CRUD 403s, submit transition, non-blocking validation warnings, entry-mode toggle.
+- `SubregionReviewTest.php` — overseer can act only within their own subregion (403 outside it), all three review-action status transitions, a church user cannot approve their own submission, an already-approved submission can't be re-reviewed.
+- `RollupSummaryTest.php` — subregion/region/diocese rollup math (real mixed-hierarchy totals, not just single-level sums), growth-delta calculation, 403 for unauthorized readers.
+
+## Frontend Gaps Discovered (2026-08-18, during frontend planning — tracked here so they aren't rediscovered)
+
+1. **No endpoint lets a Subregion Overseer list pending submissions in their subregion** — `index()`/`show()` only accept the exact church owner (`userOwnsChurch`), not the hierarchy-aware `userOverseesChurch()` that the review actions already use. Blocks the Subregion Review page until a small backend addition lands (planned as its own phase before that page is built).
+2. **No `GET /fiscal-months` endpoint** — worked around in the frontend by reusing the already-existing `GET /budget-periods?fiscal_year_id=&budget_type_id=` endpoint (finds the `slug=monthly` budget type, dedupes the embedded `fiscal_month` objects). No backend change planned for this one.
+3. **`module_group_id` was NULL on 35/39 modules system-wide** (not Demographics-specific — affected Diocese/Region/Church tiers alike) — a module with no group is invisible in the sidebar regardless of permissions held. Fixed in `BackfillModuleGroupAssignmentsSeeder` (PR #22).
+4. **No church-tier role except Global Administrator held the real Demographics/Attendance entry permissions** — the permission rows existed but were never granted to any real role. Fixed in `GrantDemographicsEntryPermissionsSeeder` (PR #24).
+5. **IA naming/ordering issues** (module names too long/redundant, two visually-adjacent "Overview" labels, Church Dashboard sorting after Demographics & Growth) — fixed in `FixDemographicsModuleNamingAndOrderingSeeder` (PR #24).
