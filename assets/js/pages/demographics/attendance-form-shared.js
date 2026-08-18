@@ -303,7 +303,7 @@ const AttendanceFormShared = (function () {
             <td>${total}</td>
             <td>${row.notes || "-"}</td>
             <td class="text-end">
-              <button type="button" class="btn btn-sm btn-primary-light" onclick="${onEdit}(${row.id})">
+              <button type="button" class="btn btn-sm btn-primary" onclick="${onEdit}(${row.id})">
                 <i class="ri-edit-line me-1"></i>Edit
               </button>
             </td>

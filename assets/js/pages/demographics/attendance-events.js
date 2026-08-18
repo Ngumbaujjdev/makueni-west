@@ -10,6 +10,7 @@ const AttendanceEvents = (function () {
   const CATEGORY_SLUG = "special_event";
   let categoryId = null;
   let allRows = [];
+  let availableTypes = [];
 
   async function init() {
     Object.assign(USER_TERRITORY, DemographicsUI.resolveUserTerritory(USER_TERRITORY));
@@ -28,6 +29,9 @@ const AttendanceEvents = (function () {
     }
 
     categoryId = category.id;
+
+    const typesResult = await DemographicsAPIHandler.getGatheringTypes(USER_TERRITORY.id, { gathering_category_id: categoryId });
+    availableTypes = typesResult.success ? typesResult.data || [] : [];
 
     if (CAN_WRITE_ATTENDANCE) {
       document.getElementById("addEntryBtn").addEventListener("click", () => openModal(null));
@@ -51,11 +55,26 @@ const AttendanceEvents = (function () {
     tbody.innerHTML = AttendanceFormShared.renderListRows(allRows, { onEdit: "AttendanceEvents.editRow" });
 
     renderStats(allRows);
-    DemographicsUI.initListDataTable("specialEventsAttendanceTable", {
+
+    DemographicsUI.renderFilterToolbar("filterToolbar", {
+      searchPlaceholder: "Search by event or notes...",
+      filters: [
+        {
+          id: "eventTypeFilter",
+          label: "All Event Types",
+          options: availableTypes.map((t) => ({ value: t.name, label: t.name })),
+        },
+      ],
+    });
+
+    const table = DemographicsUI.initListDataTable("specialEventsAttendanceTable", {
       searchPlaceholder: "Search special events...",
       order: [[0, "desc"]],
       nonSortableColumns: [4],
+      hideDefaultSearch: true,
     });
+
+    DemographicsUI.wireFilterToolbar("filterToolbar", table, [{ id: "eventTypeFilter", columnIndex: 1, exact: true }]);
   }
 
   function renderStats(rows) {
