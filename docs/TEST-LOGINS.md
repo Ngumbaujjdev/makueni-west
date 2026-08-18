@@ -12,7 +12,7 @@ curl -X POST http://127.0.0.1:8004/api/auth/login \
 
 Verified working end-to-end against the real seeded data on 2026-08-15 (MySQL `makueni_west_diocese_dev` via MAMP, backend served on port 8004).
 
-⚠️ **Known bug — read before using the Bishop login**: `SampleUsersSeeder` and `DioceseLeadershipSeeder` both create a Bishop at the same email (`bishop@makueniwestdiocese.or.ke`) with different data, and `SampleUsersSeeder` runs first in `DatabaseSeeder`. Until this is fixed (`docs/ROADMAP.md` → 2), that login resolves to **"David Mutua," PIN `2468`** — not the "Peter Kilonzo," PIN `1234` shown in the Diocese Leadership table below, which is what it *should* be after the fix.
+**Bishop identity bug fixed 2026-08-18**: `SampleUsersSeeder` and `DioceseLeadershipSeeder` used to both create a Bishop at the same email with different data, and `SampleUsersSeeder` ran first — so the login used to resolve to a placeholder ("David Mutua"). `SampleUsersSeeder` is now retired from `DatabaseSeeder`'s call list, and `FixBishopIdentityAndRetireSampleAccountsSeeder` corrects any database seeded before this fix. The Bishop login now reliably resolves to the real identity below.
 
 ## Super Admin
 
@@ -29,7 +29,7 @@ Verified working end-to-end against the real seeded data on 2026-08-15 (MySQL `m
 
 | Name | Role | Email | Employee Code | PIN |
 |---|---|---|---|---|
-| Peter Kilonzo *(see bug note above)* | Bishop | `bishop@makueniwestdiocese.or.ke` | `100001` | `1234` |
+| Peter Kilonzo | Bishop | `bishop@makueniwestdiocese.or.ke` | `100001` | `1234` |
 | Damaris Makau | Associate Pastor (Bishop Spouse) | `damaris.makau@makueniwestdiocese.or.ke` | `100002` | `1234` |
 
 Password for both: `password`.
@@ -62,12 +62,18 @@ Each is assigned `Senior Pastor` at their church (primary, `can_manage_finances 
 
 ## Subregional Overseer
 
-**Not currently seeded.** The `Subregional Overseer` role exists but no user has it — tracked in `docs/ROADMAP.md` → 2 as a gap to fill. Until then, there's no dedicated way to test subregion-level read-only access; use a Regional Overseer account and check the subregion-scoped views manually, or temporarily assign the role to a test user via `UserTerritoryAssignment` in Tinker.
+**Test/dev account — no real person named in any source document**, seeded by `SubregionalLeadershipSeeder` so every territory level has a working test login for subregion-scoped read access (e.g. the Demographics review workflow).
+
+| Name | Subregion | Email | Employee Code | PIN |
+|---|---|---|---|---|
+| Subregional Overseer | Kilungu Subregion | `subregional.overseer@makueniwestdiocese.or.ke` | `800001` | `1234` |
+
+Password: `password`.
 
 ## Unused roles (no seeded user yet)
 
-`Diocese Secretary`, `Diocese Treasurer`, `Diocese Administrator` — defined as roles, never assigned to any seeded user. Low priority (see `docs/ROADMAP.md` → 2, marked optional).
+`Diocese Secretary`, `Diocese Treasurer`, `Diocese Administrator` — defined as roles, never assigned to any seeded user. Low priority (see `docs/ROADMAP.md` → 3, marked optional).
 
-## `SampleUsersSeeder` accounts (superseded, still present until the fix lands)
+## `SampleUsersSeeder` (retired 2026-08-18)
 
-`SampleUsersSeeder` also creates 2 generic "Regional Overseer <region>" users and 5 "Pastor Sample <n>" users with **randomly generated PINs** (unrecoverable — only `password` login works for these). They're redundant with the named accounts above and scheduled for removal in `docs/ROADMAP.md` → 2. Don't rely on their PIN-based login.
+Removed from `DatabaseSeeder`'s call list — its Bishop, 2 generic "Regional Overseer <region>" users, and 5 "Pastor Sample <n>" users (all with randomly generated, unrecoverable PINs) were fully superseded by `DioceseLeadershipSeeder`, `RegionalLeadershipSeeder`, and `FixAndSeedRealChurchLeadershipSeeder`. The seeder file is kept for history but no longer runs. A fresh `migrate:fresh --seed` no longer creates any of these placeholder accounts.

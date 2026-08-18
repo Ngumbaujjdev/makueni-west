@@ -36,14 +36,15 @@ Deferred implementation work, in priority order. Nothing in this file has been b
 
 **Sequencing**: doesn't block starting Demographics (item 1) — Demographics inherits territory-scoping automatically since it's keyed off `territory_id`, and no diocese-specific assumption needs to go into it. Do the data-isolation audit as its own focused pass, ideally before onboarding any second real diocese, but it doesn't need to happen before Demographics ships.
 
-## 3. Seeder bug fixes
+## 3. Seeder bug fixes — DONE (2026-08-18)
 
-**Why**: see `AUDIT-2026-08.md` → Seeders. These make the documented test logins (`TEST-LOGINS.md`) untrustworthy until fixed.
+**Why**: see `AUDIT-2026-08.md` → Seeders. These made the documented test logins (`TEST-LOGINS.md`) untrustworthy.
 
-- Retire `SampleUsersSeeder` from `DatabaseSeeder`'s call list — its users are fully superseded by `DioceseLeadershipSeeder` + `RegionalLeadershipSeeder`, and it's the source of both the Bishop email collision and the non-deterministic PIN issue.
-- Add a `SubregionalLeadershipSeeder` (one Subregional Overseer, read-only role) so every territory level has a documented, working test login.
-- Optional: seed one user each for Diocese Secretary/Treasurer/Administrator if those roles need to be testable — currently unused by any seeded account.
-- After fixing, re-verify `TEST-LOGINS.md` against the actual seeded data (`php artisan migrate:fresh --seed` then spot-check 2–3 logins).
+- ✅ Retired `SampleUsersSeeder` from `DatabaseSeeder`'s call list — its users are fully superseded by `DioceseLeadershipSeeder` + `RegionalLeadershipSeeder` (and, for church-level pastors, `FixAndSeedRealChurchLeadershipSeeder`).
+- ✅ Added `FixBishopIdentityAndRetireSampleAccountsSeeder` — corrects any database seeded before the retirement (Bishop identity, leftover duplicate overseer accounts) so the fix applies to existing dev DBs, not just fresh ones.
+- ✅ Added `SubregionalLeadershipSeeder` (one Subregional Overseer, read-only role, test/dev account — no real person named in any source document) so every territory level has a documented, working test login.
+- ✅ Re-verified end to end: `php artisan migrate:fresh --seed` runs clean, Bishop resolves to Peter Kilonzo, no `Pastor Sample`/generic overseer placeholders are created, `composer test` 46/46 green. `TEST-LOGINS.md` updated to match.
+- Still open, optional and low priority: seed one user each for Diocese Secretary/Treasurer/Administrator if those roles ever need to be testable — currently unused by any seeded account.
 
 ## 4. Backend port → 8004
 
