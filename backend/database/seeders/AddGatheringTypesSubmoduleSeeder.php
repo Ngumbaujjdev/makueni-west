@@ -23,7 +23,7 @@ class AddGatheringTypesSubmoduleSeeder extends Seeder
 
     private const SUBMODULE_TITLE = 'Gathering Types';
 
-    private const SUBMODULE_PATH = 'church/attendance/gathering-types.php';
+    private const SUBMODULE_PATH = '/church/attendance/gathering-types.php';
 
     private const PERMISSION_PREFIX = 'church.attendance.gatheringtypes';
 
@@ -49,7 +49,19 @@ class AddGatheringTypesSubmoduleSeeder extends Seeder
             ->first();
 
         if ($submodule) {
-            $this->command->warn('   ⚠️  Submodule already exists (ID: '.$submodule->id.')');
+            // Self-healing: the very first version of this seeder stored
+            // the path without a leading slash (same bug class fixed
+            // system-wide by FixDemographicsSubmodulePathSlashesSeeder) -
+            // sidebar.php's formatPath() has a defensive fallback that
+            // masks this in the UI, but the source data should still be
+            // correct.
+            if ($submodule->path !== self::SUBMODULE_PATH) {
+                $submodule->path = self::SUBMODULE_PATH;
+                $submodule->save();
+                $this->command->info('   ✅ Corrected path (ID: '.$submodule->id.')');
+            } else {
+                $this->command->warn('   ⚠️  Submodule already exists (ID: '.$submodule->id.')');
+            }
         } else {
             $submodule = Submodule::create([
                 'module_id' => self::MODULE_ID,
