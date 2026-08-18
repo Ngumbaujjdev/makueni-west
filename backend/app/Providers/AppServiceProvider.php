@@ -2,8 +2,8 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -67,6 +67,8 @@ class AppServiceProvider extends ServiceProvider
             // Demographics models
             'church_demographic' => 'App\Models\ChurchDemographic',
             'church_attendance_record' => 'App\Models\ChurchAttendanceRecord',
+            'gathering_category' => 'App\Models\GatheringCategory',
+            'gathering_type' => 'App\Models\GatheringType',
 
             // Support
             'support_ticket' => 'App\Models\SupportTicket',

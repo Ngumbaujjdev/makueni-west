@@ -8,6 +8,7 @@ use App\Models\ChurchDemographic;
 use App\Models\Diocese;
 use App\Models\FiscalMonth;
 use App\Models\FiscalYear;
+use App\Models\GatheringCategory;
 use App\Models\Permission;
 use App\Models\Region;
 use App\Models\Role;
@@ -23,13 +24,21 @@ class RollupSummaryTest extends TestCase
     use RefreshDatabase;
 
     protected Diocese $diocese;
+
     protected Region $region;
+
     protected Subregion $subregion;
+
     protected Church $churchA; // under subregion
+
     protected Church $churchB; // under subregion
+
     protected Church $churchC; // directly under region, no subregion
+
     protected FiscalYear $fiscalYear;
+
     protected FiscalMonth $august;
+
     protected FiscalMonth $july;
 
     protected function setUp(): void
@@ -77,16 +86,20 @@ class RollupSummaryTest extends TestCase
             'status' => 'approved', 'total_members' => 140,
         ]);
 
-        // Attendance: two Sunday services for churchA in August
+        // Attendance: two Sunday services for churchA in August. Categories
+        // are seeded directly in the gathering_categories migration, so
+        // they already exist once RefreshDatabase has migrated.
+        $sundayServiceCategoryId = GatheringCategory::where('slug', 'sunday_service')->value('id');
+
         ChurchAttendanceRecord::create([
             'territory_type' => 'church', 'territory_id' => $this->churchA->id,
             'service_date' => '2026-08-02', 'fiscal_year_id' => $this->fiscalYear->id, 'fiscal_month_id' => $this->august->id,
-            'service_type' => 'sunday_service', 'adults_count' => 40, 'youth_count' => 10, 'children_male_count' => 5, 'children_female_count' => 5,
+            'gathering_category_id' => $sundayServiceCategoryId, 'adults_count' => 40, 'youth_count' => 10, 'children_male_count' => 5, 'children_female_count' => 5,
         ]);
         ChurchAttendanceRecord::create([
             'territory_type' => 'church', 'territory_id' => $this->churchA->id,
             'service_date' => '2026-08-09', 'fiscal_year_id' => $this->fiscalYear->id, 'fiscal_month_id' => $this->august->id,
-            'service_type' => 'sunday_service', 'adults_count' => 44, 'youth_count' => 12, 'children_male_count' => 4, 'children_female_count' => 6,
+            'gathering_category_id' => $sundayServiceCategoryId, 'adults_count' => 44, 'youth_count' => 12, 'children_male_count' => 4, 'children_female_count' => 6,
         ]);
         // churchB has no attendance rows at all - monthly_only mode, should not break the average
     }
@@ -152,7 +165,7 @@ class RollupSummaryTest extends TestCase
             ['name' => 'demographicsanalytics.demographicssummary.read'],
             ['guard_name' => 'web', 'action' => 'read', 'territory_scope' => 'diocese']
         );
-        if (!$role->hasPermissionTo($permission)) {
+        if (! $role->hasPermissionTo($permission)) {
             $role->givePermissionTo($permission);
         }
 

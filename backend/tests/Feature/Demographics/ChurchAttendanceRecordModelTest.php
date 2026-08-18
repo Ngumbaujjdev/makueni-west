@@ -6,6 +6,7 @@ use App\Models\Church;
 use App\Models\ChurchAttendanceRecord;
 use App\Models\FiscalMonth;
 use App\Models\FiscalYear;
+use App\Models\GatheringCategory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -14,8 +15,14 @@ class ChurchAttendanceRecordModelTest extends TestCase
     use RefreshDatabase;
 
     protected Church $church;
+
     protected FiscalYear $fiscalYear;
+
     protected FiscalMonth $fiscalMonth;
+
+    protected int $sundayServiceCategoryId;
+
+    protected int $specialEventCategoryId;
 
     protected function setUp(): void
     {
@@ -39,6 +46,12 @@ class ChurchAttendanceRecordModelTest extends TestCase
             'name' => 'August',
             'short_name' => 'Aug',
         ]);
+
+        // Categories are seeded directly in the gathering_categories
+        // migration (not a Database\Seeders class), so they already exist
+        // once RefreshDatabase has migrated the test database.
+        $this->sundayServiceCategoryId = GatheringCategory::where('slug', 'sunday_service')->value('id');
+        $this->specialEventCategoryId = GatheringCategory::where('slug', 'special_event')->value('id');
     }
 
     private function makeRecord(array $overrides = []): ChurchAttendanceRecord
@@ -49,7 +62,7 @@ class ChurchAttendanceRecordModelTest extends TestCase
             'service_date' => '2026-08-16',
             'fiscal_year_id' => $this->fiscalYear->id,
             'fiscal_month_id' => $this->fiscalMonth->id,
-            'service_type' => 'sunday_service',
+            'gathering_category_id' => $this->sundayServiceCategoryId,
             'adults_count' => 40,
             'youth_count' => 15,
             'children_male_count' => 8,
@@ -64,7 +77,7 @@ class ChurchAttendanceRecordModelTest extends TestCase
         $this->assertDatabaseHas('church_attendance_records', [
             'id' => $record->id,
             'territory_id' => $this->church->id,
-            'service_type' => 'sunday_service',
+            'gathering_category_id' => $this->sundayServiceCategoryId,
             'adults_count' => 40,
         ]);
     }
@@ -103,11 +116,11 @@ class ChurchAttendanceRecordModelTest extends TestCase
         $this->assertEquals('2026-08-16', $record->service_date->toDateString());
     }
 
-    public function test_sunday_services_scope_excludes_other_service_types(): void
+    public function test_sunday_services_scope_excludes_other_gathering_categories(): void
     {
-        $this->makeRecord(['service_type' => 'sunday_service']);
+        $this->makeRecord(['gathering_category_id' => $this->sundayServiceCategoryId]);
         $this->makeRecord([
-            'service_type' => 'special_event',
+            'gathering_category_id' => $this->specialEventCategoryId,
             'event_name' => 'Youth Kesha',
             'service_date' => '2026-08-15',
         ]);
@@ -115,7 +128,7 @@ class ChurchAttendanceRecordModelTest extends TestCase
         $results = ChurchAttendanceRecord::sundayServices()->get();
 
         $this->assertCount(1, $results);
-        $this->assertEquals('sunday_service', $results->first()->service_type);
+        $this->assertEquals($this->sundayServiceCategoryId, $results->first()->gathering_category_id);
     }
 
     public function test_for_period_scope_filters_by_fiscal_year_and_month(): void
