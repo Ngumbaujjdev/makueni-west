@@ -69,6 +69,15 @@ $breadcrumbs = [
                     <!-- Stat cards injected by attendance-index.js -->
                 </div>
 
+                <div class="mb-3" id="demographicsStatusCard">
+                    <!-- This month's Demographics submission status - injected by
+                         attendance-index.js. Attendance entry is optional per this
+                         church's Entry Mode setting below; the monthly Demographics
+                         form is not - it's what Diocese/Region rollups actually read,
+                         so its status is surfaced here even though this is the
+                         Attendance page, not buried where a pastor might not look. -->
+                </div>
+
                 <div class="row g-3">
                     <div class="col-xl-4">
                         <div class="card custom-card">
