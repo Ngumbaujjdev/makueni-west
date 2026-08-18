@@ -32,6 +32,7 @@ const AttendanceGatheringTypes = (function () {
     if (CAN_WRITE_GATHERING_TYPES) {
       document.getElementById("addGatheringTypeBtn").addEventListener("click", openCreateModal);
       document.getElementById("saveGatheringTypeBtn").addEventListener("click", saveGatheringType);
+      document.getElementById("gatheringTypeIcon").addEventListener("input", updateIconPreview);
     }
 
     await loadCategories();
@@ -146,6 +147,7 @@ const AttendanceGatheringTypes = (function () {
     document.getElementById("gatheringTypeCategory").value = categories[0]?.id || "";
     document.getElementById("gatheringTypeIcon").value = "";
     document.getElementById("gatheringTypeActive").checked = true;
+    updateIconPreview();
 
     new bootstrap.Modal(document.getElementById("gatheringTypeModal")).show();
   }
@@ -164,8 +166,17 @@ const AttendanceGatheringTypes = (function () {
     document.getElementById("gatheringTypeCategory").value = type.gathering_category_id;
     document.getElementById("gatheringTypeIcon").value = type.icon || "";
     document.getElementById("gatheringTypeActive").checked = !!type.is_active;
+    updateIconPreview();
 
     new bootstrap.Modal(document.getElementById("gatheringTypeModal")).show();
+  }
+
+  /** Live preview so a user picking a Remix Icon class name can confirm
+   * it's the icon they meant before saving, instead of finding out on
+   * the list page afterward. */
+  function updateIconPreview() {
+    const value = document.getElementById("gatheringTypeIcon").value.trim() || "ri-calendar-event-line";
+    document.getElementById("gatheringTypeIconPreview").innerHTML = `<i class="${value}"></i>`;
   }
 
   async function saveGatheringType() {

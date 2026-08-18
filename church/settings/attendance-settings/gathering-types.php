@@ -132,8 +132,11 @@ $breadcrumbs = [
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label for="gatheringTypeIcon" class="form-label">Icon <span class="fs-12 text-body">(optional, Remix Icon class)</span></label>
-                        <input type="text" class="form-control" id="gatheringTypeIcon" placeholder="e.g. ri-moon-line">
+                        <label for="gatheringTypeIcon" class="form-label">Icon <span class="fs-12 text-body">(optional, Remix Icon class - browse icons at remixicon.com)</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text" id="gatheringTypeIconPreview"><i class="ri-calendar-event-line"></i></span>
+                            <input type="text" class="form-control" id="gatheringTypeIcon" placeholder="e.g. ri-moon-line">
+                        </div>
                     </div>
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" role="switch" id="gatheringTypeActive" checked>

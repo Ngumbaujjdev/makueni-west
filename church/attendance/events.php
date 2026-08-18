@@ -42,6 +42,7 @@ $breadcrumbs = [
     <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/styles/choices.min.css" />
 
     <script>
         const USER_TERRITORY = {
@@ -129,6 +130,7 @@ $breadcrumbs = [
 
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/scripts/choices.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-form-shared.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-events.js"></script>
     <script>

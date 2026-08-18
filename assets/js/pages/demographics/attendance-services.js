@@ -44,6 +44,29 @@ const AttendanceServices = (function () {
     await loadRecords();
     renderCalendar();
     renderRecentList();
+
+    const addBtn = document.getElementById("addAttendanceBtn");
+    if (addBtn) {
+      addBtn.addEventListener("click", () => {
+        if (entryMode === "monthly_only") {
+          Toast.info("Weekly entry is off for this church - use the monthly Demographics form instead.");
+          return;
+        }
+        const dateStr = mostRecentSundayOnOrBefore(new Date());
+        const existing = allRows.find((r) => r.service_date.substring(0, 10) === dateStr);
+        openEntry(existing || null, dateStr);
+      });
+    }
+  }
+
+  /** Discoverable entry point for the "Add Attendance" button - not everyone
+   * knows to click a Sunday on the calendar, so this defaults to the most
+   * recent Sunday (today, if today is a Sunday) instead of requiring one. */
+  function mostRecentSundayOnOrBefore(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    d.setDate(d.getDate() - day);
+    return d.toISOString().substring(0, 10);
   }
 
   async function loadEntryMode() {

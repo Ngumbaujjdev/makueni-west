@@ -41,6 +41,7 @@ $breadcrumbs = [
     <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/styles/choices.min.css" />
     <link href="<?= SITE_URL ?>/assets/libs/fullcalendar/main.min.css" rel="stylesheet" />
 
     <!-- Sunday-highlight UX: FullCalendar's day-cell background isn't
@@ -81,8 +82,13 @@ $breadcrumbs = [
                 <div class="row g-3">
                     <div class="col-xl-8">
                         <div class="card custom-card">
-                            <div class="card-header">
+                            <div class="card-header d-flex justify-content-between align-items-center">
                                 <div class="card-title"><i class="ri-calendar-2-line me-2 text-primary"></i>Click a Sunday to Record Attendance</div>
+                                <?php if ($canWrite): ?>
+                                <button type="button" class="btn btn-primary btn-wave" id="addAttendanceBtn">
+                                    <i class="ri-add-line me-1"></i>Add Attendance
+                                </button>
+                                <?php endif; ?>
                             </div>
                             <div class="card-body">
                                 <div id="attendanceCalendar"></div>
@@ -138,6 +144,7 @@ $breadcrumbs = [
 
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/scripts/choices.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-form-shared.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-services.js"></script>
     <script>
