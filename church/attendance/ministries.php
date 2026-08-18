@@ -80,11 +80,11 @@ $breadcrumbs = [
                             <table class="table table-hover mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>Date</th>
-                                        <th>Ministry</th>
-                                        <th>Total Attendance</th>
-                                        <th>Notes</th>
-                                        <th class="text-end">Action</th>
+                                        <th class="fw-semibold text-dark">Date</th>
+                                        <th class="fw-semibold text-dark">Ministry</th>
+                                        <th class="fw-semibold text-dark">Total Attendance</th>
+                                        <th class="fw-semibold text-dark">Notes</th>
+                                        <th class="fw-semibold text-dark text-end">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="attendanceTableBody">

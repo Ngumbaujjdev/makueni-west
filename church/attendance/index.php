@@ -113,7 +113,7 @@ $breadcrumbs = [
                                         </a>
                                     </div>
                                     <div class="col-md-4">
-                                        <a href="<?= SITE_URL ?>/church/attendance/gathering-types" class="btn btn-light w-100">
+                                        <a href="<?= SITE_URL ?>/church/settings/attendance-settings/gathering-types" class="btn btn-light w-100">
                                             <i class="ri-settings-3-line me-1"></i>Gathering Types
                                         </a>
                                     </div>

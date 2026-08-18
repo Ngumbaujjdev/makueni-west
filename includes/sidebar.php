@@ -111,6 +111,17 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
 </aside>
 <!-- END: Sidebar -->
 
+<!-- auth-helpers.js defines window.autoRefreshAssignments/forceRefreshModules,
+     which the DOMContentLoaded listener below calls to pick up newly granted
+     modules without requiring a fresh login - most pages that include this
+     sidebar don't separately load auth-helpers.js, so it's loaded here to
+     guarantee it's always available. Safe to load twice on pages that do
+     load it themselves - no top-level const/let, plain function
+     declarations only, so redeclaring is a no-op, not a SyntaxError (unlike
+     config/constants.js's `const Constants = {...}`, a real bug fixed
+     earlier). -->
+<script src="<?= $baseUrl ?>/assets/js/utils/auth-helpers.js"></script>
+
 <script>
 /**
  * Sidebar Module Loader with Groups Support
