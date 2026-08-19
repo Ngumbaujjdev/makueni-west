@@ -85,19 +85,6 @@ const DemographicsTracking = (function () {
     select.addEventListener("change", () => loadFiscalMonths(select.value));
   }
 
-  /** A month can only be recorded once it has actually finished - reporting
-   * "this month's" totals while the month is still in progress would just
-   * be a guess, not a real count. Only relevant for the current calendar
-   * year; every month in a past year has already ended. */
-  function monthHasEnded(year, monthNumber) {
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonthNumber = now.getMonth() + 1;
-    if (year < currentYear) return true;
-    if (year > currentYear) return false;
-    return monthNumber < currentMonthNumber;
-  }
-
   async function loadFiscalMonths(fiscalYearId, selectMonthId = null) {
     const select = document.getElementById("fiscalMonth");
     select.disabled = true;
@@ -114,7 +101,7 @@ const DemographicsTracking = (function () {
 
     select.innerHTML = result.data
       .map((m) => {
-        const ended = monthHasEnded(year, m.number);
+        const ended = DemographicsUI.monthHasEnded(year, m.number);
         return `<option value="${m.id}" ${ended ? "" : 'disabled title="This month has not ended yet"'}>${m.name}${ended ? "" : " (in progress)"}</option>`;
       })
       .join("");
@@ -126,7 +113,7 @@ const DemographicsTracking = (function () {
       // Default to the most recently *ended* month, not the current
       // in-progress one - the one a pastor would actually be filling in
       // today.
-      const endedMonths = result.data.filter((m) => monthHasEnded(year, m.number));
+      const endedMonths = result.data.filter((m) => DemographicsUI.monthHasEnded(year, m.number));
       const mostRecentEnded = endedMonths.sort((a, b) => b.number - a.number)[0];
       if (mostRecentEnded) select.value = mostRecentEnded.id;
     }

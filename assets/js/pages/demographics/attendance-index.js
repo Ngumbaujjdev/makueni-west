@@ -41,16 +41,19 @@ const AttendanceOverview = (function () {
       return;
     }
 
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonthNumber = now.getMonth() + 1;
+    // The relevant period is the most recently *ended* month, not the
+    // calendar-current one - the tracking form itself won't let a
+    // still-in-progress month be selected (DemographicsUI.monthHasEnded()),
+    // so nagging about that same month here would send a pastor to a form
+    // that then refuses the exact period this banner told them to start.
+    const period = DemographicsUI.mostRecentlyEndedPeriod();
 
     const rows = result.data || [];
     const thisMonth = rows.find(
-      (r) => r.fiscal_year?.year === currentYear && r.fiscal_month?.number === currentMonthNumber,
+      (r) => r.fiscal_year?.year === period.year && r.fiscal_month?.number === period.month,
     );
 
-    const monthName = now.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+    const monthName = new Date(period.year, period.month - 1, 1).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
     const trackingUrl = `${AppConfig.FRONTEND_BASE_URL}/church/demographics-growth/demographics-tracking`;
 
     if (!thisMonth) {

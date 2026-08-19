@@ -208,6 +208,40 @@ const DemographicsUI = (function () {
   }
 
   // ==========================================================================
+  // FISCAL PERIOD - "HAS THIS MONTH ENDED"
+  //
+  // A month's real totals can't be known until it's actually over - a
+  // church can't report "August's" membership/attendance while August is
+  // still in progress. Shared here (not duplicated per page) since both
+  // the Demographics tracking form (disables in-progress months in its
+  // dropdown) and the Attendance overview page (which month's submission
+  // status to nag about) need the exact same answer - they'd otherwise
+  // disagree, e.g. the overview page prompting to "start August" while the
+  // tracking form won't actually let August be selected.
+  // ==========================================================================
+
+  function monthHasEnded(year, monthNumber) {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonthNumber = now.getMonth() + 1;
+    if (year < currentYear) return true;
+    if (year > currentYear) return false;
+    return monthNumber < currentMonthNumber;
+  }
+
+  /** The period a "this month's submission" prompt should actually refer
+   * to - the most recently *completed* month, not the calendar-current
+   * (still in progress) one. */
+  function mostRecentlyEndedPeriod() {
+    const now = new Date();
+    const currentMonthNumber = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+    return currentMonthNumber === 1
+      ? { year: currentYear - 1, month: 12 }
+      : { year: currentYear, month: currentMonthNumber - 1 };
+  }
+
+  // ==========================================================================
   // LIST TABLE - SEARCH/FILTER/PAGINATION (DataTables)
   //
   // One shared init function instead of every list page hand-rolling the
@@ -447,6 +481,8 @@ const DemographicsUI = (function () {
     initListDataTable,
     renderFilterToolbar,
     wireFilterToolbar,
+    monthHasEnded,
+    mostRecentlyEndedPeriod,
     numberStepperHtml,
     initSteppers,
     renderSubmissionsRows,
