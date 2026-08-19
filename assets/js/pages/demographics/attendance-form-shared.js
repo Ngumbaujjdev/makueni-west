@@ -326,57 +326,56 @@ const AttendanceFormShared = (function () {
     if (record) openViewModal(record);
   }
 
+  const CATEGORY_COLORS = {
+    sunday_service: "primary",
+    ministry_gathering: "success",
+    special_event: "warning",
+  };
+
   function openViewModal(record) {
     ensureViewModalMounted();
 
     const date = new Date(record.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
     const total = (record.adults_count || 0) + (record.youth_count || 0) + (record.children_male_count || 0) + (record.children_female_count || 0);
     const gathering = record.gathering_type?.name || record.event_name || record.gathering_category?.name || "-";
+    const gatheringIcon = record.gathering_type?.icon || record.gathering_category?.icon || "ri-calendar-event-line";
+    const gatheringColor = CATEGORY_COLORS[record.gathering_category?.slug] || "secondary";
     const recorded = record.created_at ? new Date(record.created_at).toLocaleString() : "-";
     const updated = record.updated_at ? new Date(record.updated_at).toLocaleString() : "-";
+    const D = DemographicsUI.renderDetailField;
 
     document.getElementById("attendanceViewBody").innerHTML = `
       <div class="row g-3">
         <div class="col-md-6">
-          <span class="d-block mb-1 text-body fw-semibold">Date</span>
-          <p class="mb-0 fw-semibold">${date}</p>
+          ${D({ icon: "ri-calendar-line", label: "Date", value: date, color: "primary" })}
         </div>
         <div class="col-md-6">
-          <span class="d-block mb-1 text-body fw-semibold">Gathering</span>
-          <p class="mb-0 fw-semibold">${escapeHtml(gathering)}</p>
+          ${D({ icon: gatheringIcon, label: "Gathering", value: escapeHtml(gathering), color: gatheringColor, pill: true })}
         </div>
         <div class="col-6 col-md-3">
-          <span class="d-block mb-1 text-body fw-semibold">Adults</span>
-          <p class="mb-0 fw-semibold">${record.adults_count ?? 0}</p>
+          ${D({ icon: "ri-user-line", label: "Adults", value: record.adults_count ?? 0, color: "primary", pill: true })}
         </div>
         <div class="col-6 col-md-3">
-          <span class="d-block mb-1 text-body fw-semibold">Youth</span>
-          <p class="mb-0 fw-semibold">${record.youth_count ?? 0}</p>
+          ${D({ icon: "ri-user-star-line", label: "Youth", value: record.youth_count ?? 0, color: "success", pill: true })}
         </div>
         <div class="col-6 col-md-3">
-          <span class="d-block mb-1 text-body fw-semibold">Children (M)</span>
-          <p class="mb-0 fw-semibold">${record.children_male_count ?? 0}</p>
+          ${D({ icon: "ri-men-line", label: "Children (M)", value: record.children_male_count ?? 0, color: "info", pill: true })}
         </div>
         <div class="col-6 col-md-3">
-          <span class="d-block mb-1 text-body fw-semibold">Children (F)</span>
-          <p class="mb-0 fw-semibold">${record.children_female_count ?? 0}</p>
+          ${D({ icon: "ri-women-line", label: "Children (F)", value: record.children_female_count ?? 0, color: "secondary", pill: true })}
         </div>
         <div class="col-12">
-          <span class="d-block mb-1 text-body fw-semibold">Total Attendance</span>
-          <h4 class="fw-semibold mb-0">${total}</h4>
+          ${D({ icon: "ri-group-line", label: "Total Attendance", value: total, color: "primary", size: "lg" })}
         </div>
         ${record.notes ? `
         <div class="col-12">
-          <span class="d-block mb-1 text-body fw-semibold">Notes</span>
-          <p class="mb-0">${escapeHtml(record.notes)}</p>
+          ${D({ icon: "ri-file-text-line", label: "Notes", value: escapeHtml(record.notes), color: "secondary" })}
         </div>` : ""}
         <div class="col-md-6">
-          <span class="d-block mb-1 text-body fw-semibold">Recorded</span>
-          <p class="mb-0 fs-13 text-body fw-semibold">${recorded}</p>
+          ${D({ icon: "ri-time-line", label: "Recorded", value: `<span class="fs-13">${recorded}</span>`, color: "secondary" })}
         </div>
         <div class="col-md-6">
-          <span class="d-block mb-1 text-body fw-semibold">Last Updated</span>
-          <p class="mb-0 fs-13 text-body fw-semibold">${updated}</p>
+          ${D({ icon: "ri-history-line", label: "Last Updated", value: `<span class="fs-13">${updated}</span>`, color: "secondary" })}
         </div>
       </div>`;
 

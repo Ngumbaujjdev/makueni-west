@@ -123,6 +123,38 @@ const DemographicsUI = (function () {
   }
 
   // ==========================================================================
+  // DETAIL FIELDS (read-only view modals/panels)
+  // ==========================================================================
+
+  /**
+   * A single labeled field for read-only detail views (modals, summary
+   * panels) - icon-in-circle + label, value rendered either as plain text
+   * or a solid color pill, so detail views aren't a wall of identical
+   * black-on-white text (root CLAUDE.md design rule).
+   * @param {object} opts {icon, label, value, color, pill, size}
+   *   color: bootstrap color name, drives both the icon circle and (if pill) the badge
+   *   pill: true renders value as a `badge bg-${color}` pill; false renders plain fw-semibold text
+   *   size: "lg" bumps the value to h4 for hero fields (e.g. Total Attendance)
+   */
+  function renderDetailField({ icon, label, value, color = "primary", pill = false, size = null }) {
+    const valueHtml = pill
+      ? `<span class="badge bg-${color} fs-13">${value}</span>`
+      : size === "lg"
+        ? `<h4 class="fw-semibold mb-0">${value}</h4>`
+        : `<p class="mb-0 fw-semibold">${value}</p>`;
+    return `
+      <div class="d-flex align-items-start gap-2">
+        <span class="avatar avatar-sm avatar-rounded bg-${color} text-white flex-shrink-0">
+          <i class="${icon} fs-14"></i>
+        </span>
+        <div>
+          <span class="d-block mb-1 text-body fw-semibold fs-12">${label}</span>
+          ${valueHtml}
+        </div>
+      </div>`;
+  }
+
+  // ==========================================================================
   // BUTTON LOADING STATE
   // ==========================================================================
 
@@ -474,6 +506,7 @@ const DemographicsUI = (function () {
     renderStatusBadge,
     renderStatCard,
     renderStatCardsRow,
+    renderDetailField,
     setButtonLoading,
     restoreButton,
     renderTableLoading,
