@@ -454,15 +454,22 @@ const DemographicsUI = (function () {
   // function, two call sites, per the reusable-component principle.
   // ==========================================================================
 
-  function renderSubmissionsRows(rows, { onEdit = null } = {}) {
+  function renderSubmissionsRows(rows, { onEdit = null, onView = null } = {}) {
     if (!rows || rows.length === 0) {
       return renderTableEmpty(4, "No submissions yet", "ri-file-list-3-line");
     }
+
+    registerViewableSubmissions(rows);
 
     return rows
       .map((row) => {
         const period = `${row.fiscal_month?.name || ""} ${row.fiscal_year?.year || ""}`.trim();
         const canEdit = row.status === "draft" || row.status === "changes_requested";
+        const viewBtn = onView
+          ? `<button type="button" class="btn btn-sm btn-light border me-1" onclick="${onView}(${row.id})" title="View Details">
+               <i class="ri-eye-line"></i>
+             </button>`
+          : "";
         const editBtn = canEdit && onEdit
           ? `<button type="button" class="btn btn-sm btn-primary" onclick="${onEdit}(${row.id})">
                <i class="ri-edit-line me-1"></i>Edit
@@ -474,10 +481,126 @@ const DemographicsUI = (function () {
             <td class="fw-semibold">${period}</td>
             <td>${row.total_members ?? "-"}</td>
             <td>${renderStatusBadge(row.status)}</td>
-            <td class="text-end">${editBtn}</td>
+            <td class="text-end">${viewBtn}${editBtn}</td>
           </tr>`;
       })
       .join("");
+  }
+
+  // ==========================================================================
+  // DEMOGRAPHICS SUBMISSION - VIEW DETAILS MODAL
+  //
+  // Read-only detail view for a single ChurchDemographic submission, shared
+  // between the same two call sites as renderSubmissionsRows() above. Uses
+  // renderDetailField() throughout per root CLAUDE.md's icon+pill rule for
+  // detail views - the list endpoint already returns every field needed
+  // (index()/show() both load the full model), so no extra API call.
+  // ==========================================================================
+
+  const SUBMISSION_FIELD_META = {
+    male_count: { label: "Male", icon: "ri-user-line", color: "primary" },
+    female_count: { label: "Female", icon: "ri-women-line", color: "secondary" },
+    youth_count: { label: "Youth (13-35)", icon: "ri-user-star-line", color: "success" },
+    seniors_count: { label: "Seniors (60+)", icon: "ri-user-heart-line", color: "warning" },
+    womens_fellowship_count: { label: "Women's Fellowship", icon: "ri-group-line", color: "secondary" },
+    mens_fellowship_count: { label: "Men's Fellowship", icon: "ri-group-2-line", color: "info" },
+    sunday_school_male_count: { label: "Sunday School (M)", icon: "ri-men-line", color: "primary" },
+    sunday_school_female_count: { label: "Sunday School (F)", icon: "ri-women-line", color: "secondary" },
+    new_members_count: { label: "New Members", icon: "ri-user-add-line", color: "success" },
+    transferred_out_count: { label: "Transferred Out", icon: "ri-user-unfollow-line", color: "danger" },
+    baptisms_count: { label: "Baptisms", icon: "ri-drop-line", color: "primary" },
+    communion_participants_count: { label: "Communion Participants", icon: "ri-cup-line", color: "warning" },
+    conversions_count: { label: "New Conversions", icon: "ri-heart-line", color: "success" },
+  };
+
+  const SUBMISSION_VIEW_MODAL_ID = "demographicsSubmissionViewModal";
+  let viewableSubmissions = {};
+
+  function registerViewableSubmissions(rows) {
+    viewableSubmissions = Object.fromEntries((rows || []).map((r) => [r.id, r]));
+  }
+
+  function ensureSubmissionViewModalMounted() {
+    if (document.getElementById(SUBMISSION_VIEW_MODAL_ID)) return;
+
+    const modalHtml = `
+      <div class="modal fade" id="${SUBMISSION_VIEW_MODAL_ID}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title"><i class="ri-eye-line me-2"></i>Demographics Submission</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="demographicsSubmissionViewBody"></div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    const container = document.createElement("div");
+    container.innerHTML = modalHtml;
+    document.body.appendChild(container.firstElementChild);
+  }
+
+  function openSubmissionViewModalById(id) {
+    const record = viewableSubmissions[id];
+    if (record) openSubmissionViewModal(record);
+  }
+
+  function openSubmissionViewModal(record) {
+    ensureSubmissionViewModalMounted();
+
+    const period = `${record.fiscal_month?.name || ""} ${record.fiscal_year?.year || ""}`.trim();
+    const submitted = record.submitted_at ? new Date(record.submitted_at).toLocaleString() : "Not submitted yet";
+    const reviewed = record.reviewed_at ? new Date(record.reviewed_at).toLocaleString() : "-";
+    const reviewerName = record.reviewer ? `${record.reviewer.firstname || ""} ${record.reviewer.lastname || ""}`.trim() : "-";
+
+    const breakdownFields = [
+      "male_count", "female_count", "youth_count", "seniors_count",
+      "womens_fellowship_count", "mens_fellowship_count",
+      "sunday_school_male_count", "sunday_school_female_count",
+      "new_members_count", "transferred_out_count",
+      "baptisms_count", "communion_participants_count", "conversions_count",
+    ];
+
+    const breakdownHtml = breakdownFields
+      .map((f) => {
+        const meta = SUBMISSION_FIELD_META[f];
+        return `<div class="col-6 col-md-3">${renderDetailField({ ...meta, value: record[f] ?? 0, pill: true })}</div>`;
+      })
+      .join("");
+
+    document.getElementById("demographicsSubmissionViewBody").innerHTML = `
+      <div class="row g-3">
+        <div class="col-md-6">
+          ${renderDetailField({ icon: "ri-calendar-line", label: "Period", value: period || "-", color: "primary" })}
+        </div>
+        <div class="col-md-6">
+          <span class="d-block mb-1 text-body fw-semibold fs-12">Status</span>
+          ${renderStatusBadge(record.status)}
+        </div>
+        <div class="col-12">
+          ${renderDetailField({ icon: "ri-team-line", label: "Total Members", value: record.total_members ?? 0, color: "primary", size: "lg" })}
+        </div>
+        ${breakdownHtml}
+        ${record.review_notes ? `
+        <div class="col-12">
+          ${renderDetailField({ icon: "ri-file-text-line", label: "Reviewer Notes", value: record.review_notes, color: "danger" })}
+        </div>` : ""}
+        <div class="col-md-4">
+          ${renderDetailField({ icon: "ri-send-plane-line", label: "Submitted", value: `<span class="fs-13">${submitted}</span>`, color: "secondary" })}
+        </div>
+        <div class="col-md-4">
+          ${renderDetailField({ icon: "ri-shield-check-line", label: "Reviewed By", value: reviewerName, color: "secondary" })}
+        </div>
+        <div class="col-md-4">
+          ${renderDetailField({ icon: "ri-history-line", label: "Reviewed At", value: `<span class="fs-13">${reviewed}</span>`, color: "secondary" })}
+        </div>
+      </div>`;
+
+    new bootstrap.Modal(document.getElementById(SUBMISSION_VIEW_MODAL_ID)).show();
   }
 
   // ==========================================================================
@@ -520,6 +643,9 @@ const DemographicsUI = (function () {
     numberStepperHtml,
     initSteppers,
     renderSubmissionsRows,
+    registerViewableSubmissions,
+    openSubmissionViewModal,
+    openSubmissionViewModalById,
     updateCompletenessBar,
   };
 })();

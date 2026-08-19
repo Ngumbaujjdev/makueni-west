@@ -387,7 +387,10 @@ const DemographicsTracking = (function () {
       })
       .slice(0, 6);
 
-    tbody.innerHTML = DemographicsUI.renderSubmissionsRows(rows, { onEdit: "DemographicsTracking.loadForEdit" });
+    tbody.innerHTML = DemographicsUI.renderSubmissionsRows(rows, {
+      onEdit: "DemographicsTracking.loadForEdit",
+      onView: "DemographicsUI.openSubmissionViewModalById",
+    });
   }
 
   async function loadForEdit(id) {

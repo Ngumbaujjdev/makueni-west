@@ -188,6 +188,7 @@ const DemographicsOverview = (function () {
     const tbody = document.getElementById("historyTableBody");
     tbody.innerHTML = DemographicsUI.renderSubmissionsRows(rows, {
       onEdit: "DemographicsOverview.goToEdit",
+      onView: "DemographicsUI.openSubmissionViewModalById",
     });
   }
 
