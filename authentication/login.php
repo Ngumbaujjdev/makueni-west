@@ -21,17 +21,17 @@
         type="image/x-icon" />
 
     <!-- Main Theme Js -->
-    <script src="<?= SITE_URL ?>/assets/js/authentication-main.js"></script>
+    <script src="<?= asset_url('/assets/js/authentication-main.js') ?>"></script>
 
     <!-- Bootstrap Css -->
     <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css"
         rel="stylesheet" />
 
     <!-- Style Css -->
-    <link href="<?= SITE_URL ?>/assets/css/styles.min.css" rel="stylesheet" />
+    <link href="<?= asset_url('/assets/css/styles.min.css') ?>" rel="stylesheet" />
 
     <!-- Icons Css -->
-    <link href="<?= SITE_URL ?>/assets/css/icons.min.css" rel="stylesheet" />
+    <link href="<?= asset_url('/assets/css/icons.min.css') ?>" rel="stylesheet" />
 
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/swiper/swiper-bundle.min.css" />
 </head>
@@ -230,24 +230,24 @@
     <script src="<?= SITE_URL ?>/assets/libs/swiper/swiper-bundle.min.js"></script>
 
     <!-- Internal Sing-Up JS -->
-    <script src="<?= SITE_URL ?>/assets/js/authentication.js"></script>
+    <script src="<?= asset_url('/assets/js/authentication.js') ?>"></script>
 
     <!-- Show Password JS -->
-    <script src="<?= SITE_URL ?>/assets/js/show-password.js"></script>
+    <script src="<?= asset_url('/assets/js/show-password.js') ?>"></script>
     <!-- Toast JS -->
-    <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
+    <script src="<?= asset_url('/assets/js/Toasts.js') ?>"></script>
     <!-- Load Bootstrap first (if not already loaded) -->
     <script src="assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
 
     <!-- Load config files -->
-    <script src="<?= SITE_URL ?>/assets/js/config/app.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
+    <script src="<?= asset_url('/assets/js/config/app.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/config/constants.js') ?>"></script>
 
     <!-- Load utilities -->
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= asset_url('/assets/js/utils/toast.js') ?>"></script>
 
     <!-- Load login handler -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/login.js"></script>
+    <script src="<?= asset_url('/assets/js/pages/authentication/login.js') ?>"></script>
 
 </body>
 

@@ -22,17 +22,17 @@
         type="image/x-icon" />
 
     <!-- Main Theme Js -->
-    <script src="<?= SITE_URL ?>/assets/js/authentication-main.js"></script>
+    <script src="<?= asset_url('/assets/js/authentication-main.js') ?>"></script>
 
     <!-- Bootstrap Css -->
     <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css"
         rel="stylesheet" />
 
     <!-- Style Css -->
-    <link href="<?= SITE_URL ?>/assets/css/styles.min.css" rel="stylesheet" />
+    <link href="<?= asset_url('/assets/css/styles.min.css') ?>" rel="stylesheet" />
 
     <!-- Icons Css -->
-    <link href="<?= SITE_URL ?>/assets/css/icons.min.css" rel="stylesheet" />
+    <link href="<?= asset_url('/assets/css/icons.min.css') ?>" rel="stylesheet" />
 </head>
 
 <body>
@@ -541,8 +541,8 @@
         </div>
     </div>
 
-    <script src="<?= SITE_URL ?>/assets/js/config/app.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
+    <script src="<?= asset_url('/assets/js/config/app.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/config/constants.js') ?>"></script>
     <script>
     // Show available territorial roles if any
     const territorialRoles = JSON.parse(localStorage.getItem(Constants.STORAGE_KEYS.TERRITORIAL_ROLES) || '[]');
@@ -583,7 +583,7 @@
     <script src="<?= SITE_URL ?>/assets/libs/particles.js/particles.js"></script>
 
     <!-- Error JS -->
-    <script src="<?= SITE_URL ?>/assets/js/error.js"></script>
+    <script src="<?= asset_url('/assets/js/error.js') ?>"></script>
 </body>
 
 </html>
