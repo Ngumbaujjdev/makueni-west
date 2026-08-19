@@ -206,7 +206,7 @@ const DemographicsUI = (function () {
   // design doc's explicit "number steppers" call-out for count fields.
   // ==========================================================================
 
-  function numberStepperHtml(fieldId, { label, min = 0, max = 99999, value = "", required = false } = {}) {
+  function numberStepperHtml(fieldId, { label, min = 0, max = 99999, value = "", required = false, hint = null } = {}) {
     return `
       <label for="${fieldId}" class="form-label">${label}${required ? ' <span class="text-danger">*</span>' : ""}</label>
       <div class="input-group stepper-group">
@@ -218,7 +218,8 @@ const DemographicsUI = (function () {
         <button class="btn btn-outline-primary stepper-btn" type="button" data-stepper-target="${fieldId}" data-stepper-dir="1">
           <i class="ri-add-line"></i>
         </button>
-      </div>`;
+      </div>
+      ${hint ? `<div class="form-text">${hint}</div>` : ""}`;
   }
 
   /** Call once after inserting stepper HTML into the DOM to wire up +/- clicks. */
