@@ -19,10 +19,15 @@ class DemographicsControllerTest extends TestCase
     use RefreshDatabase;
 
     protected Church $myChurch;
+
     protected Church $otherChurch;
+
     protected FiscalYear $fiscalYear;
+
     protected FiscalMonth $fiscalMonth;
+
     protected User $pastor;
+
     protected Role $pastorRole;
 
     protected function setUp(): void
@@ -183,9 +188,27 @@ class DemographicsControllerTest extends TestCase
         $updateResponse->assertStatus(200)->assertJsonPath('data.total_members', 120);
 
         $submitResponse = $this->postJson("/api/demographics/{$demographic->id}/submit");
-        $submitResponse->assertStatus(200)->assertJsonPath('data.status', 'submitted');
+        $submitResponse->assertStatus(200)->assertJsonPath('data.status', 'approved');
 
-        $this->assertDatabaseHas('church_demographics', ['id' => $demographic->id, 'status' => 'submitted']);
+        $this->assertDatabaseHas('church_demographics', ['id' => $demographic->id, 'status' => 'approved']);
+    }
+
+    public function test_submitting_auto_approves_so_it_counts_toward_rollups_immediately(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $demographic = ChurchDemographic::create([
+            'territory_type' => 'church', 'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id, 'fiscal_month_id' => $this->fiscalMonth->id,
+            'status' => 'draft', 'total_members' => 100,
+        ]);
+
+        $this->postJson("/api/demographics/{$demographic->id}/submit")->assertStatus(200);
+
+        $demographic->refresh();
+        $this->assertFalse($demographic->is_editable, 'An approved submission should be locked, same as before');
+        $this->assertNotNull($demographic->submitted_at);
+        $this->assertNull($demographic->reviewed_by, 'No human reviewer acted on it - it was auto-approved');
     }
 
     public function test_pastor_cannot_update_another_churchs_submission(): void
