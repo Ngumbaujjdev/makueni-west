@@ -1,6 +1,6 @@
 # Demographics Module Spec
 
-**Status: backend fully built and tested (46 passing tests in `backend/tests/Feature/Demographics/`); frontend build in progress.** This spec originally described data model/workflow decisions made before implementation; it's now updated to match what was actually built, per the root `CLAUDE.md` rule that a spec and its implementation shouldn't drift apart.
+**Status: backend fully built and tested (56 passing tests in `backend/tests/Feature/Demographics/`); frontend build in progress.** This spec originally described data model/workflow decisions made before implementation; it's now updated to match what was actually built, per the root `CLAUDE.md` rule that a spec and its implementation shouldn't drift apart.
 
 ## Data Model (as built)
 
@@ -24,7 +24,7 @@ All nullable|integer|min:0 except the three ids (`territory_id`, `fiscal_year_id
 
 Validation: sub-counts (youth/fellowship/Sunday-school/seniors) exceeding `total_members` produce a **soft, non-blocking warning** (`buildValidationWarnings()`) returned in the response `warnings[]` array — never a hard rejection.
 
-Workflow status: `status` — `draft` → `submitted` → `approved` / `flagged` / `changes_requested`, mirroring Budget's shape.
+Workflow status: `status` — `draft` → `approved` on submit (see "Workflow" below for why this skips `submitted` as of 2026-08-19; `flagged`/`changes_requested` remain reachable only via the still-dormant review endpoints).
 
 ### Attendance fields (`ChurchAttendanceRecord`)
 
@@ -38,9 +38,10 @@ children_male_count, children_female_count, notes
 
 ## Workflow (as built)
 
-1. Pastor (or Associate Pastor/Secretary/Administrator) fills the form (`draft`), submits (`submitted`).
-2. **Subregion Overseer reviews and acts**: Approve (→ `approved`), Flag (→ `flagged`, stays visible, doesn't block), or Request changes (→ `changes_requested`, sent back with a note — resets to `draft` on the pastor's next edit).
-3. Region and Diocese: summary/analytics only via `GET /demographics/summary/{territory}`, no review action of their own. Only `status='approved'` rows count toward any rollup figure.
+1. Pastor (or Associate Pastor/Secretary/Administrator) fills the form (`draft`), submits — **auto-approved immediately (`status` → `approved`), no manual review step** (changed 2026-08-19, product decision — see below).
+2. Region and Diocese: summary/analytics only via `GET /demographics/summary/{territory}`, no review action of their own. Only `status='approved'` rows count toward any rollup figure.
+
+**Why submit auto-approves rather than landing in `submitted`:** the original design (Pastor submits → Subregion Overseer approves/flags/requests changes) was never actually reachable end-to-end — Frontend Gap #1 below meant no page could ever list a Subregion Overseer's pending submissions, so a real `submitted` row would sit stuck forever with nobody able to act on it, and `DemographicsGrowthService`'s rollups only count `status='approved'` rows, so nothing was reaching Region/Diocese analytics either. Rather than build the missing Subregion Review page just to unblock this, the product decision (2026-08-19) was to drop the manual gate entirely for now: submitting **is** the final action. `POST /demographics/{id}/approve`, `/flag`, and `/request-changes` remain in the code, permissioned and tested (`SubregionReviewTest.php`), so a real review step can be reintroduced later without a schema change — they just have no submission left in `submitted` status to act on today.
 
 ## API Contract (as built)
 
@@ -81,7 +82,7 @@ No `DELETE` endpoint on either model, by deliberate decision (frontend planning 
 - **Subregion review** (approve/flag/request-changes): `Subregional Overseer` only, scoped to churches whose `parent_territory_id` matches the overseer's subregion (`userOverseesChurch()`).
 - **Region/Diocese summary read**: `Regional Overseer` (region tier), Bishop and other diocese-tier roles already hold `demographicsanalytics.demographicssummary.read` from the original module scaffolding.
 
-## Acceptance Criteria — met, verified by `backend/tests/Feature/Demographics/` (46 tests)
+## Acceptance Criteria — met, verified by `backend/tests/Feature/Demographics/` (56 tests)
 
 - `ChurchDemographicModelTest.php` / `ChurchAttendanceRecordModelTest.php` — model fillable/casts/computed-attribute coverage.
 - `DemographicsControllerTest.php` / `AttendanceControllerTest.php` — own-church CRUD succeeds, cross-church CRUD 403s, submit transition, non-blocking validation warnings, entry-mode toggle.

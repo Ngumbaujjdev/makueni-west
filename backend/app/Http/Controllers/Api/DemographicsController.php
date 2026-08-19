@@ -14,9 +14,7 @@ use Illuminate\Support\Facades\Validator;
 
 class DemographicsController extends Controller
 {
-    public function __construct(private DemographicsGrowthService $growthService)
-    {
-    }
+    public function __construct(private DemographicsGrowthService $growthService) {}
 
     /**
      * Church-level create/update permission - matches the permission tree
@@ -29,6 +27,7 @@ class DemographicsController extends Controller
      * the row itself is one atomic submission.
      */
     private const WRITE_PERMISSION_CREATE = 'churchdemographicsgrowth.demographicstracking.sundayschoolenrollment.create';
+
     private const WRITE_PERMISSION_UPDATE = 'churchdemographicsgrowth.demographicstracking.sundayschoolenrollment.update';
 
     /**
@@ -39,7 +38,7 @@ class DemographicsController extends Controller
         $user = $request->user();
         $territoryId = (int) $request->query('territory_id');
 
-        if (!$territoryId || !$this->userOwnsChurch($user, $territoryId)) {
+        if (! $territoryId || ! $this->userOwnsChurch($user, $territoryId)) {
             return response()->json([
                 'success' => false,
                 'status' => 403,
@@ -64,7 +63,7 @@ class DemographicsController extends Controller
 
     public function show(Request $request, ChurchDemographic $demographic)
     {
-        if (!$this->userOwnsChurch($request->user(), $demographic->territory_id)) {
+        if (! $this->userOwnsChurch($request->user(), $demographic->territory_id)) {
             return response()->json([
                 'success' => false,
                 'status' => 403,
@@ -89,7 +88,7 @@ class DemographicsController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->can(self::WRITE_PERMISSION_CREATE)) {
+        if (! $user->can(self::WRITE_PERMISSION_CREATE)) {
             return response()->json([
                 'success' => false,
                 'status' => 403,
@@ -128,7 +127,7 @@ class DemographicsController extends Controller
 
         $data = $validator->validated();
 
-        if (!$this->userOwnsChurch($user, (int) $data['territory_id'])) {
+        if (! $this->userOwnsChurch($user, (int) $data['territory_id'])) {
             return response()->json([
                 'success' => false,
                 'status' => 403,
@@ -168,7 +167,7 @@ class DemographicsController extends Controller
                 'warnings' => $this->buildValidationWarnings($demographic),
             ], 201);
         } catch (\Exception $e) {
-            Log::error('Failed to create church demographics: ' . $e->getMessage());
+            Log::error('Failed to create church demographics: '.$e->getMessage());
 
             return response()->json([
                 'success' => false,
@@ -186,7 +185,7 @@ class DemographicsController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->can(self::WRITE_PERMISSION_UPDATE)) {
+        if (! $user->can(self::WRITE_PERMISSION_UPDATE)) {
             return response()->json([
                 'success' => false,
                 'status' => 403,
@@ -194,7 +193,7 @@ class DemographicsController extends Controller
             ], 403);
         }
 
-        if (!$this->userOwnsChurch($user, $demographic->territory_id)) {
+        if (! $this->userOwnsChurch($user, $demographic->territory_id)) {
             return response()->json([
                 'success' => false,
                 'status' => 403,
@@ -202,7 +201,7 @@ class DemographicsController extends Controller
             ], 403);
         }
 
-        if (!$demographic->is_editable) {
+        if (! $demographic->is_editable) {
             return response()->json([
                 'success' => false,
                 'status' => 422,
@@ -288,13 +287,22 @@ class DemographicsController extends Controller
     }
 
     /**
-     * Submit a draft (or a changes_requested submission) for Subregion review.
+     * Submit a draft (or a changes_requested submission). Auto-approved on
+     * submit rather than landing in a 'submitted' holding state - there is
+     * no Subregion Review page built yet (index()/show() don't support the
+     * hierarchy-aware overseer lookup it would need, see the module spec's
+     * "Known Gaps"), so a real submission would otherwise sit stuck forever
+     * with nobody able to act on it, and DemographicsGrowthService's
+     * rollups only ever count status='approved' rows - meaning no
+     * submission was reaching analytics either. The approve/flag/
+     * request-changes endpoints and permissions stay in place unused, so a
+     * real review step can be turned back on later without a schema change.
      */
     public function submit(Request $request, ChurchDemographic $demographic)
     {
         $user = $request->user();
 
-        if (!$this->userOwnsChurch($user, $demographic->territory_id)) {
+        if (! $this->userOwnsChurch($user, $demographic->territory_id)) {
             return response()->json([
                 'success' => false,
                 'status' => 403,
@@ -302,7 +310,7 @@ class DemographicsController extends Controller
             ], 403);
         }
 
-        if (!$demographic->can_be_submitted) {
+        if (! $demographic->can_be_submitted) {
             return response()->json([
                 'success' => false,
                 'status' => 422,
@@ -311,7 +319,7 @@ class DemographicsController extends Controller
         }
 
         $demographic->update([
-            'status' => 'submitted',
+            'status' => 'approved',
             'submitted_at' => now(),
             'updated_by' => $user->id,
         ]);
@@ -319,7 +327,7 @@ class DemographicsController extends Controller
         return response()->json([
             'success' => true,
             'status' => 200,
-            'message' => 'Demographics submitted for approval',
+            'message' => 'Demographics submitted successfully',
             'data' => $demographic,
         ]);
     }
@@ -378,7 +386,7 @@ class DemographicsController extends Controller
     ) {
         $user = $request->user();
 
-        if (!$user->can($permission)) {
+        if (! $user->can($permission)) {
             return response()->json([
                 'success' => false,
                 'status' => 403,
@@ -386,7 +394,7 @@ class DemographicsController extends Controller
             ], 403);
         }
 
-        if (!$this->userOverseesChurch($user, $demographic->territory_id)) {
+        if (! $this->userOverseesChurch($user, $demographic->territory_id)) {
             return response()->json([
                 'success' => false,
                 'status' => 403,
@@ -446,7 +454,7 @@ class DemographicsController extends Controller
 
         $church = Church::find($territoryId);
 
-        if (!$church || !$church->isUnderSubregion()) {
+        if (! $church || ! $church->isUnderSubregion()) {
             return false;
         }
 
@@ -460,7 +468,7 @@ class DemographicsController extends Controller
      */
     public function getEntryMode(Request $request, Church $church)
     {
-        if (!$this->userOwnsChurch($request->user(), $church->id)) {
+        if (! $this->userOwnsChurch($request->user(), $church->id)) {
             return response()->json([
                 'success' => false,
                 'status' => 403,
@@ -486,7 +494,7 @@ class DemographicsController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->can(self::WRITE_PERMISSION_UPDATE)) {
+        if (! $user->can(self::WRITE_PERMISSION_UPDATE)) {
             return response()->json([
                 'success' => false,
                 'status' => 403,
@@ -494,7 +502,7 @@ class DemographicsController extends Controller
             ], 403);
         }
 
-        if (!$this->userOwnsChurch($user, $church->id)) {
+        if (! $this->userOwnsChurch($user, $church->id)) {
             return response()->json([
                 'success' => false,
                 'status' => 403,
@@ -580,7 +588,7 @@ class DemographicsController extends Controller
             default => null,
         };
 
-        if (!$permission || !$user->can($permission)) {
+        if (! $permission || ! $user->can($permission)) {
             return response()->json([
                 'success' => false,
                 'status' => 403,
@@ -588,7 +596,7 @@ class DemographicsController extends Controller
             ], 403);
         }
 
-        if (!$this->userOverseesTerritory($user, $territory)) {
+        if (! $this->userOverseesTerritory($user, $territory)) {
             return response()->json([
                 'success' => false,
                 'status' => 403,
