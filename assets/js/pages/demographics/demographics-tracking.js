@@ -305,30 +305,45 @@ const DemographicsTracking = (function () {
       return;
     }
 
-    Toast.confirm(
-      "Submit this month's demographics? You won't be able to edit it afterwards.",
-      doSubmit,
-      null,
-      { type: "primary", confirmText: "Yes, Submit" },
-    );
-  }
-
-  async function doSubmit() {
+    // Save first (rather than inside doSubmit, after confirming) so any
+    // warnings - including the Total Members anomaly check - are computed
+    // and shown on screen before the final confirm. Once submitted the
+    // record is immediately approved and locked, so this is the last
+    // chance to catch a typo (e.g. 6000 instead of 622) before it's final.
     const btn = document.getElementById("submitBtn");
-    DemographicsUI.setButtonLoading(btn, "Submitting...");
+    DemographicsUI.setButtonLoading(btn, "Checking...");
 
     const payload = collectFormData();
     const saveResult = currentRecordId
       ? await DemographicsAPIHandler.updateDemographic(currentRecordId, payload)
       : await DemographicsAPIHandler.createDemographic(payload);
 
+    DemographicsUI.restoreButton(btn);
+
     if (!saveResult.success) {
-      DemographicsUI.restoreButton(btn);
       Toast.error(saveResult.message || "Failed to save before submitting");
       return;
     }
 
     currentRecordId = saveResult.data.id;
+    renderWarnings(saveResult.warnings);
+
+    const hasWarnings = saveResult.warnings && saveResult.warnings.length > 0;
+    const confirmMessage = hasWarnings
+      ? "There are warnings above - please review them, then confirm you still want to submit. You won't be able to edit it afterwards."
+      : "Submit this month's demographics? You won't be able to edit it afterwards.";
+
+    Toast.confirm(
+      confirmMessage,
+      doSubmit,
+      null,
+      { type: hasWarnings ? "warning" : "primary", confirmText: "Yes, Submit" },
+    );
+  }
+
+  async function doSubmit() {
+    const btn = document.getElementById("submitBtn");
+    DemographicsUI.setButtonLoading(btn, "Submitting...");
 
     const submitResult = await DemographicsAPIHandler.submitDemographic(currentRecordId);
     DemographicsUI.restoreButton(btn);

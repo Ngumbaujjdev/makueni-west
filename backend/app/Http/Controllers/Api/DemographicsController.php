@@ -283,6 +283,29 @@ class DemographicsController extends Controller
             $warnings[] = "Sunday school count ({$demographic->sunday_school_count}) exceeds total members ({$total}).";
         }
 
+        // Anomaly check: flag a Total Members entry that's wildly different
+        // from this church's own history, e.g. a typo (60 instead of 622) or
+        // a fat-fingered extra digit (6000 instead of 622). Compares against
+        // the average of this church's own prior *approved* submissions
+        // only (a real, confirmed baseline) - soft warning only, same as
+        // every other check here, never blocks create/update/submit.
+        $priorTotals = ChurchDemographic::where('territory_type', 'church')
+            ->where('territory_id', $demographic->territory_id)
+            ->where('status', 'approved')
+            ->where('id', '!=', $demographic->id)
+            ->pluck('total_members');
+
+        if ($priorTotals->isNotEmpty() && $total !== null && $total > 0) {
+            $average = (int) round($priorTotals->avg());
+            $deviation = abs($total - $average) / max($average, 1);
+
+            if ($deviation > 0.3) {
+                $direction = $total > $average ? 'unusually high' : 'unusually low';
+                $monthWord = $priorTotals->count() === 1 ? 'month' : 'months';
+                $warnings[] = "Total Members ({$total}) looks {$direction} compared to this church's typical submission (average: {$average}, from {$priorTotals->count()} prior approved {$monthWord}). Please double-check before submitting.";
+            }
+        }
+
         return $warnings;
     }
 

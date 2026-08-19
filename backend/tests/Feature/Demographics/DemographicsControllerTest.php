@@ -174,6 +174,53 @@ class DemographicsControllerTest extends TestCase
         $this->assertStringContainsString('Youth count', $response->json('warnings.0'));
     }
 
+    public function test_total_members_far_from_this_churchs_average_produces_a_soft_warning(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $priorMonth = FiscalMonth::create(['number' => 7, 'name' => 'July', 'short_name' => 'Jul']);
+        ChurchDemographic::create([
+            'territory_type' => 'church', 'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id, 'fiscal_month_id' => $priorMonth->id,
+            'status' => 'approved', 'total_members' => 622,
+        ]);
+
+        $response = $this->postJson('/api/demographics', [
+            'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'fiscal_month_id' => $this->fiscalMonth->id,
+            'total_members' => 6000,
+        ]);
+
+        $response->assertStatus(201);
+        $warnings = $response->json('warnings');
+        $this->assertNotEmpty($warnings);
+        $this->assertStringContainsString('unusually high', collect($warnings)->implode(' '));
+        $this->assertStringContainsString('average: 622', collect($warnings)->implode(' '));
+    }
+
+    public function test_total_members_close_to_this_churchs_average_produces_no_warning(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $priorMonth = FiscalMonth::create(['number' => 7, 'name' => 'July', 'short_name' => 'Jul']);
+        ChurchDemographic::create([
+            'territory_type' => 'church', 'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id, 'fiscal_month_id' => $priorMonth->id,
+            'status' => 'approved', 'total_members' => 622,
+        ]);
+
+        $response = $this->postJson('/api/demographics', [
+            'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'fiscal_month_id' => $this->fiscalMonth->id,
+            'total_members' => 640,
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertEmpty($response->json('warnings'));
+    }
+
     public function test_pastor_can_update_and_submit_their_own_draft(): void
     {
         Sanctum::actingAs($this->pastor);
