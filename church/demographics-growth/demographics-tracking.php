@@ -195,7 +195,7 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                                         <div class="tab-pane" id="step3-review" role="tabpanel">
                                             <div class="alert alert-success mb-4">
                                                 <i class="ri-checkbox-circle-line me-2"></i>
-                                                Review everything below before submitting for review.
+                                                Review everything below before submitting.
                                             </div>
 
                                             <div id="reviewWarnings"></div>
@@ -232,7 +232,7 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                                             <i class="ri-save-line me-1"></i>Save Draft
                                         </button>
                                         <button type="button" class="btn btn-primary" id="submitBtn">
-                                            <i class="ri-send-plane-line me-1"></i>Submit for Review
+                                            <i class="ri-send-plane-line me-1"></i>Submit
                                         </button>
                                     </div>
                                 </div>

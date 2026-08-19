@@ -306,7 +306,7 @@ const DemographicsTracking = (function () {
     }
 
     Toast.confirm(
-      "Submit this month's demographics for review? You won't be able to edit it until a reviewer responds.",
+      "Submit this month's demographics? You won't be able to edit it afterwards.",
       doSubmit,
       null,
       { type: "primary", confirmText: "Yes, Submit" },
@@ -341,7 +341,7 @@ const DemographicsTracking = (function () {
     currentStatus = submitResult.data.status;
     updateDraftStatusLabel();
     applyEditLock();
-    Toast.success("Submitted for review");
+    Toast.success("Submitted successfully");
     loadRecentSubmissions();
   }
 
