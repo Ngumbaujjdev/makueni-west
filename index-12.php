@@ -24,17 +24,17 @@
     </script>
 
     <!-- Main Theme Js -->
-    <script src="<?= SITE_URL ?>/assets/js/main.js"></script>
+    <script src="<?= asset_url('/assets/js/main.js') ?>"></script>
 
     <!-- Bootstrap Css -->
     <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css"
         rel="stylesheet" />
 
     <!-- Style Css -->
-    <link href="<?= SITE_URL ?>/assets/css/styles.min.css" rel="stylesheet" />
+    <link href="<?= asset_url('/assets/css/styles.min.css') ?>" rel="stylesheet" />
 
     <!-- Icons Css -->
-    <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />
+    <link href="<?= asset_url('/assets/css/icons.css') ?>" rel="stylesheet" />
 
     <!-- Node Waves Css -->
     <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
@@ -3305,17 +3305,17 @@
     <script src="<?= SITE_URL ?>/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
 
     <!-- Defaultmenu JS -->
-    <script src="<?= SITE_URL ?>/assets/js/defaultmenu.min.js"></script>
+    <script src="<?= asset_url('/assets/js/defaultmenu.min.js') ?>"></script>
 
     <!-- Node Waves JS-->
     <script src="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.js"></script>
 
     <!-- Sticky JS -->
-    <script src="<?= SITE_URL ?>/assets/js/sticky.js"></script>
+    <script src="<?= asset_url('/assets/js/sticky.js') ?>"></script>
 
     <!-- Simplebar JS -->
     <script src="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/simplebar.js"></script>
+    <script src="<?= asset_url('/assets/js/simplebar.js') ?>"></script>
 
     <!-- Color Picker JS -->
     <script src="<?= SITE_URL ?>/assets/libs/%40simonwep/pickr/pickr.es5.min.js"></script>
@@ -3333,13 +3333,13 @@
     <script src="<?= SITE_URL ?>/assets/libs/chart.js/chart.min.js"></script>
 
     <!-- CRM-Dashboard -->
-    <script src="<?= SITE_URL ?>/assets/js/crm-dashboard.js"></script>
+    <script src="<?= asset_url('/assets/js/crm-dashboard.js') ?>"></script>
 
     <!-- Custom JS -->
-    <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
+    <script src="<?= asset_url('/assets/js/custom.js') ?>"></script>
 
     <!-- Custom-Switcher JS -->
-    <script src="<?= SITE_URL ?>/assets/js/custom-switcher.min.js"></script>
+    <script src="<?= asset_url('/assets/js/custom-switcher.min.js') ?>"></script>
 </body>
 
 <!-- Mirrored from spruko.com/demo/blazor/ynex/ynex/dist/html/index.html by HTTrack Website Copier/3.x [XR&CO'2014], Fri, 05 Jan 2024 16:06:11 GMT -->

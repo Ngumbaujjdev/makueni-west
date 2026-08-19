@@ -42,10 +42,10 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
 
     <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico" type="image/x-icon" />
 
-    <script src="<?= SITE_URL ?>/assets/js/main.js"></script>
+    <script src="<?= asset_url('/assets/js/main.js') ?>"></script>
     <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="<?= SITE_URL ?>/assets/css/styles.min.css" rel="stylesheet" />
-    <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />
+    <link href="<?= asset_url('/assets/css/styles.min.css') ?>" rel="stylesheet" />
+    <link href="<?= asset_url('/assets/css/icons.css') ?>" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
 
@@ -72,8 +72,8 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
 </head>
 
 <body>
-    <script src="<?= SITE_URL ?>/assets/js/config/app.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
+    <script src="<?= asset_url('/assets/js/config/app.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/config/constants.js') ?>"></script>
     <?php include __DIR__ . '/../../includes/start-switcher.php' ?>
     <?php include __DIR__ . '/../../includes/loader.php' ?>
 
@@ -140,16 +140,29 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                                                 </div>
                                             </div>
 
-                                            <div class="row gy-3">
-                                                <div class="col-md-4"><?= renderStepper('total_members', ['label' => 'Total Members', 'required' => true]) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('male_count', ['label' => 'Male']) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('female_count', ['label' => 'Female']) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('youth_count', ['label' => "Youth (13-35)"]) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('womens_fellowship_count', ['label' => "Women's Fellowship"]) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('mens_fellowship_count', ['label' => "Men's Fellowship"]) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('sunday_school_male_count', ['label' => 'Sunday School (Male)']) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('sunday_school_female_count', ['label' => 'Sunday School (Female)']) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('seniors_count', ['label' => 'Seniors']) ?></div>
+                                            <div class="card border shadow-none mb-3">
+                                                <div class="card-body">
+                                                    <h6 class="fw-semibold mb-3"><i class="ri-team-line me-2 text-primary"></i>Overall Membership</h6>
+                                                    <div class="row gy-3">
+                                                        <div class="col-md-4"><?= renderStepper('total_members', ['label' => 'Total Members', 'required' => true, 'hint' => 'Everyone currently on this church\'s membership roll']) ?></div>
+                                                        <div class="col-md-4"><?= renderStepper('male_count', ['label' => 'Male', 'hint' => 'Gender breakdown of the total above']) ?></div>
+                                                        <div class="col-md-4"><?= renderStepper('female_count', ['label' => 'Female', 'hint' => 'Gender breakdown of the total above']) ?></div>
+                                                        <div class="col-md-4"><?= renderStepper('youth_count', ['label' => "Youth (13-35)", 'hint' => 'Members aged 13 to 35']) ?></div>
+                                                        <div class="col-md-4"><?= renderStepper('seniors_count', ['label' => 'Seniors', 'hint' => 'Members aged 60 and above']) ?></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="card border shadow-none mb-0">
+                                                <div class="card-body">
+                                                    <h6 class="fw-semibold mb-3"><i class="ri-group-2-line me-2 text-primary"></i>Fellowship & Sunday School</h6>
+                                                    <div class="row gy-3">
+                                                        <div class="col-md-4"><?= renderStepper('womens_fellowship_count', ['label' => "Women's Fellowship", 'hint' => 'Active members attending this fellowship group']) ?></div>
+                                                        <div class="col-md-4"><?= renderStepper('mens_fellowship_count', ['label' => "Men's Fellowship", 'hint' => 'Active members attending this fellowship group']) ?></div>
+                                                        <div class="col-md-4"><?= renderStepper('sunday_school_male_count', ['label' => 'Sunday School (Male)', 'hint' => 'Children enrolled in Sunday school, by gender']) ?></div>
+                                                        <div class="col-md-4"><?= renderStepper('sunday_school_female_count', ['label' => 'Sunday School (Female)', 'hint' => 'Children enrolled in Sunday school, by gender']) ?></div>
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             <div id="step1Warnings" class="mt-3"></div>
@@ -170,15 +183,15 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
 
                                             <h6 class="fw-semibold mb-3">This Month's Changes</h6>
                                             <div class="row gy-3 mb-4">
-                                                <div class="col-md-6"><?= renderStepper('new_members_count', ['label' => 'New Members']) ?></div>
-                                                <div class="col-md-6"><?= renderStepper('transferred_out_count', ['label' => 'Transferred Out']) ?></div>
+                                                <div class="col-md-6"><?= renderStepper('new_members_count', ['label' => 'New Members', 'hint' => 'People who joined this church this month']) ?></div>
+                                                <div class="col-md-6"><?= renderStepper('transferred_out_count', ['label' => 'Transferred Out', 'hint' => 'Members who left for another church this month']) ?></div>
                                             </div>
 
                                             <h6 class="fw-semibold mb-3">Spiritual Activities</h6>
                                             <div class="row gy-3">
-                                                <div class="col-md-4"><?= renderStepper('baptisms_count', ['label' => 'Baptisms']) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('communion_participants_count', ['label' => 'Communion Participants']) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('conversions_count', ['label' => 'New Conversions']) ?></div>
+                                                <div class="col-md-4"><?= renderStepper('baptisms_count', ['label' => 'Baptisms', 'hint' => 'Baptisms performed this month']) ?></div>
+                                                <div class="col-md-4"><?= renderStepper('communion_participants_count', ['label' => 'Communion Participants', 'hint' => 'People who took communion this month']) ?></div>
+                                                <div class="col-md-4"><?= renderStepper('conversions_count', ['label' => 'New Conversions', 'hint' => 'New professions of faith this month']) ?></div>
                                             </div>
 
                                             <div class="mt-4 pt-3 border-top d-flex justify-content-between">
@@ -252,10 +265,10 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                             <table class="table table-hover mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>Period</th>
-                                        <th>Total Members</th>
-                                        <th>Status</th>
-                                        <th class="text-end">Action</th>
+                                        <th class="fw-semibold text-dark">Period</th>
+                                        <th class="fw-semibold text-dark">Total Members</th>
+                                        <th class="fw-semibold text-dark">Status</th>
+                                        <th class="fw-semibold text-dark text-end">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="recentSubmissionsBody">
@@ -279,18 +292,18 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
 
     <script src="<?= SITE_URL ?>/assets/libs/@popperjs/core/umd/popper.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/defaultmenu.min.js"></script>
+    <script src="<?= asset_url('/assets/js/defaultmenu.min.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/sticky.js"></script>
+    <script src="<?= asset_url('/assets/js/sticky.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/simplebar.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/custom-switcher.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= asset_url('/assets/js/simplebar.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/custom-switcher.min.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/custom.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/utils/toast.js') ?>"></script>
 
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/demographics-tracking.js"></script>
+    <script src="<?= asset_url('/assets/js/pages/demographics/api-handler.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/pages/demographics/ui-helpers.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/pages/demographics/demographics-tracking.js') ?>"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => window.DemographicsTracking.init());
     </script>

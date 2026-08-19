@@ -13,6 +13,23 @@ if (!defined('SITE_URL')) {
     define('SITE_URL', '/makueni-west');
 }
 
+// Cache-busting for static assets — appends the file's last-modified time as
+// a `?v=` query string so a plain browser refresh always picks up the latest
+// JS/CSS instead of silently serving a stale disk-cached copy (Apache here
+// sends no Cache-Control header, so browsers fall back to their own
+// heuristic caching, which can hide edits across a plain refresh). Use this
+// for every <script src>/<link href> under assets/ instead of a bare
+// SITE_URL concatenation.
+if (!function_exists('asset_url')) {
+    function asset_url(string $relativePath): string
+    {
+        $relativePath = ltrim($relativePath, '/');
+        $fullPath = dirname(__DIR__) . '/' . $relativePath;
+        $version = file_exists($fullPath) ? filemtime($fullPath) : time();
+        return SITE_URL . '/' . $relativePath . '?v=' . $version;
+    }
+}
+
 // Backend API base URL — PHP-side mirror of assets/js/config/app.js's
 // AppConfig.API_BASE_URL. The handful of PHP files that call the backend
 // directly (not via the frontend JS) should use this instead of hardcoding

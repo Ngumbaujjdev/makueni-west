@@ -30,16 +30,16 @@ $currentRole = getCurrentRole();
     <script src="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/scripts/choices.min.js"></script>
 
     <!-- Main Theme Js -->
-    <script src="<?= SITE_URL ?>/assets/js/main.js"></script>
+    <script src="<?= asset_url('/assets/js/main.js') ?>"></script>
 
     <!-- Bootstrap Css -->
     <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
 
     <!-- Style Css -->
-    <link href="<?= SITE_URL ?>/assets/css/styles.min.css" rel="stylesheet" />
+    <link href="<?= asset_url('/assets/css/styles.min.css') ?>" rel="stylesheet" />
 
     <!-- Icons Css -->
-    <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />
+    <link href="<?= asset_url('/assets/css/icons.css') ?>" rel="stylesheet" />
 
     <!-- Node Waves Css -->
     <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
@@ -53,8 +53,8 @@ $currentRole = getCurrentRole();
 
 <body>
     <!-- App config (must load before any page script that uses AppConfig) -->
-    <script src="<?= SITE_URL ?>/assets/js/config/app.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
+    <script src="<?= asset_url('/assets/js/config/app.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/config/constants.js') ?>"></script>
     <!-- Start Switcher -->
     <?php include '../../../includes/start-switcher.php' ?>
 
@@ -302,33 +302,33 @@ $currentRole = getCurrentRole();
     <script src="<?= SITE_URL ?>/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
 
     <!-- Defaultmenu JS -->
-    <script src="<?= SITE_URL ?>/assets/js/defaultmenu.min.js"></script>
+    <script src="<?= asset_url('/assets/js/defaultmenu.min.js') ?>"></script>
 
     <!-- Node Waves JS -->
     <script src="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.js"></script>
 
     <!-- Sticky JS -->
-    <script src="<?= SITE_URL ?>/assets/js/sticky.js"></script>
+    <script src="<?= asset_url('/assets/js/sticky.js') ?>"></script>
 
     <!-- Simplebar JS -->
     <script src="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/simplebar.js"></script>
+    <script src="<?= asset_url('/assets/js/simplebar.js') ?>"></script>
 
     <!-- Custom-Switcher JS -->
-    <script src="<?= SITE_URL ?>/assets/js/custom-switcher.min.js"></script>
+    <script src="<?= asset_url('/assets/js/custom-switcher.min.js') ?>"></script>
 
     <!-- Custom JS -->
-    <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
+    <script src="<?= asset_url('/assets/js/custom.js') ?>"></script>
 
     <!-- Toast JS -->
-    <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= asset_url('/assets/js/Toasts.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/utils/toast.js') ?>"></script>
 
     <!-- Constants -->
-    <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
+    <script src="<?= asset_url('/assets/js/config/constants.js') ?>"></script>
 
     <!-- Budget API Handler -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/budget-management/api-handler.js"></script>
+    <script src="<?= asset_url('/assets/js/pages/budget-management/api-handler.js') ?>"></script>
 
     <!-- Define Base URL for JavaScript -->
     <script>
@@ -336,7 +336,7 @@ $currentRole = getCurrentRole();
     </script>
 
     <!-- Budget List JS V2 - NEW FILE -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/budget-management/budget-list-v2.js"></script>
+    <script src="<?= asset_url('/assets/js/pages/budget-management/budget-list-v2.js') ?>"></script>
 
     <!-- Initialize -->
     <script>

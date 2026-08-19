@@ -78,10 +78,19 @@ const AttendanceServices = (function () {
     const banner = document.getElementById("entryModeBanner");
     banner.innerHTML =
       entryMode === "monthly_only"
-        ? `<div class="alert alert-info mb-3">
-             <i class="ri-information-line me-2"></i>
-             Weekly entry is off for this church - Sunday attendance isn't required, only the monthly Demographics form.
-             <a href="${AppConfig.FRONTEND_BASE_URL}/church/attendance" class="alert-link">Change this in Attendance settings</a>.
+        ? `<div class="alert alert-info bg-info-transparent border-0 mb-3">
+             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+               <div>
+                 <i class="ri-information-line me-2"></i>
+                 Weekly entry is off for this church - Sunday attendance isn't required here. Record the monthly totals instead.
+               </div>
+               <div class="d-flex gap-2 flex-shrink-0">
+                 <a href="${AppConfig.FRONTEND_BASE_URL}/church/demographics-growth/demographics-tracking" class="btn btn-primary btn-sm">
+                   <i class="ri-file-list-3-line me-1"></i>Go to Monthly Form
+                 </a>
+                 <a href="${AppConfig.FRONTEND_BASE_URL}/church/attendance" class="btn btn-light btn-sm border">Change This</a>
+               </div>
+             </div>
            </div>`
         : "";
   }
@@ -161,23 +170,68 @@ const AttendanceServices = (function () {
     });
   }
 
+  /** "3 days ago" / "2 weeks ago" style caption for the timeline - a plain
+   * date is enough on the calendar, but a timeline reads better with a
+   * sense of recency. */
+  function timeAgo(dateStr) {
+    const days = Math.floor((new Date() - new Date(dateStr + "T00:00:00")) / 86400000);
+    if (days <= 0) return "Today";
+    if (days === 1) return "Yesterday";
+    if (days < 7) return `${days} days ago`;
+    const weeks = Math.floor(days / 7);
+    return weeks === 1 ? "1 week ago" : `${weeks} weeks ago`;
+  }
+
+  // Cycled by position so consecutive timeline entries don't all read as
+  // the same flat blue - all solid colors, no washed-out variants.
+  const TIMELINE_COLORS = ["primary", "success", "warning", "secondary"];
+
   function renderRecentList() {
-    const tbody = document.getElementById("recentSundaysBody");
+    const container = document.getElementById("recentSundaysTimeline");
     const recent = [...allRows].sort((a, b) => new Date(b.service_date) - new Date(a.service_date)).slice(0, 8);
 
+    AttendanceFormShared.registerViewableRecords(recent);
+
     if (recent.length === 0) {
-      tbody.innerHTML = DemographicsUI.renderTableEmpty(2, "No Sundays recorded yet", "ri-calendar-2-line");
+      container.innerHTML = `
+        <li class="text-center py-4">
+          <i class="ri-calendar-2-line fs-30 text-primary mb-2 d-block"></i>
+          <p class="text-body fw-semibold mb-0">No Sundays recorded yet</p>
+        </li>`;
       return;
     }
 
-    tbody.innerHTML = recent
-      .map((r) => {
-        const date = new Date(r.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    container.innerHTML = recent
+      .map((r, index) => {
+        const date = new Date(r.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+        const color = TIMELINE_COLORS[index % TIMELINE_COLORS.length];
         return `
-          <tr style="cursor: pointer;" onclick="AttendanceServices.editRow(${r.id})">
-            <td class="fw-semibold">${date}</td>
-            <td class="text-end">${totalFor(r)} <i class="ri-edit-line ms-1 text-primary"></i></td>
-          </tr>`;
+          <li>
+            <div class="d-flex align-items-top">
+              <div class="me-3 flex-shrink-0">
+                <span class="avatar avatar-md bg-${color} text-white avatar-rounded">
+                  <i class="ri-calendar-check-line fs-18"></i>
+                </span>
+              </div>
+              <div class="flex-fill">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                  <h6 class="fw-semibold mb-0">${date}</h6>
+                  <span class="fs-11 text-body fw-semibold">${timeAgo(r.service_date.substring(0, 10))}</span>
+                </div>
+                <div class="d-flex align-items-center justify-content-between">
+                  <p class="mb-0 fs-13 text-body fw-semibold">${totalFor(r)} attended</p>
+                  <div>
+                    <button type="button" class="btn btn-sm btn-light border me-1" onclick="AttendanceFormShared.openViewModalById(${r.id})" title="View Details">
+                      <i class="ri-eye-line"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="AttendanceServices.editRow(${r.id})" title="Edit">
+                      <i class="ri-edit-line"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </li>`;
       })
       .join("");
   }

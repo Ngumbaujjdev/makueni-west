@@ -35,10 +35,10 @@ $breadcrumbs = [
 
     <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico" type="image/x-icon" />
 
-    <script src="<?= SITE_URL ?>/assets/js/main.js"></script>
+    <script src="<?= asset_url('/assets/js/main.js') ?>"></script>
     <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="<?= SITE_URL ?>/assets/css/styles.min.css" rel="stylesheet" />
-    <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />
+    <link href="<?= asset_url('/assets/css/styles.min.css') ?>" rel="stylesheet" />
+    <link href="<?= asset_url('/assets/css/icons.css') ?>" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css" />
@@ -54,8 +54,8 @@ $breadcrumbs = [
 </head>
 
 <body>
-    <script src="<?= SITE_URL ?>/assets/js/config/app.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
+    <script src="<?= asset_url('/assets/js/config/app.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/config/constants.js') ?>"></script>
     <?php include __DIR__ . '/../../../includes/start-switcher.php' ?>
     <?php include __DIR__ . '/../../../includes/loader.php' ?>
 
@@ -177,14 +177,14 @@ $breadcrumbs = [
 
     <script src="<?= SITE_URL ?>/assets/libs/@popperjs/core/umd/popper.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/defaultmenu.min.js"></script>
+    <script src="<?= asset_url('/assets/js/defaultmenu.min.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/sticky.js"></script>
+    <script src="<?= asset_url('/assets/js/sticky.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/simplebar.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/custom-switcher.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= asset_url('/assets/js/simplebar.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/custom-switcher.min.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/custom.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/utils/toast.js') ?>"></script>
 
     <!-- jQuery + DataTables (search/filter/pagination) -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
@@ -192,9 +192,9 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/data-tables/responsive/2.3.0/js/dataTables.responsive.min.js"></script>
 
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-gathering-types.js"></script>
+    <script src="<?= asset_url('/assets/js/pages/demographics/api-handler.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/pages/demographics/ui-helpers.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/pages/demographics/attendance-gathering-types.js') ?>"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => window.AttendanceGatheringTypes.init());
     </script>

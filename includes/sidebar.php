@@ -120,7 +120,7 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
      declarations only, so redeclaring is a no-op, not a SyntaxError (unlike
      config/constants.js's `const Constants = {...}`, a real bug fixed
      earlier). -->
-<script src="<?= $baseUrl ?>/assets/js/utils/auth-helpers.js"></script>
+<script src="<?= asset_url('/assets/js/utils/auth-helpers.js') ?>"></script>
 
 <script>
 /**

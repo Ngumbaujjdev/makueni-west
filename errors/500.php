@@ -22,23 +22,23 @@
         type="image/x-icon" />
 
     <!-- Main Theme Js -->
-    <script src="<?= SITE_URL ?>/assets/js/authentication-main.js"></script>
+    <script src="<?= asset_url('/assets/js/authentication-main.js') ?>"></script>
 
     <!-- Bootstrap Css -->
     <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css"
         rel="stylesheet" />
 
     <!-- Style Css -->
-    <link href="<?= SITE_URL ?>/assets/css/styles.min.css" rel="stylesheet" />
+    <link href="<?= asset_url('/assets/css/styles.min.css') ?>" rel="stylesheet" />
 
     <!-- Icons Css -->
-    <link href="<?= SITE_URL ?>/assets/css/icons.min.css" rel="stylesheet" />
+    <link href="<?= asset_url('/assets/css/icons.min.css') ?>" rel="stylesheet" />
 </head>
 
 <body>
     <!-- App config (must load before any page script that uses AppConfig) -->
-    <script src="<?= SITE_URL ?>/assets/js/config/app.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
+    <script src="<?= asset_url('/assets/js/config/app.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/config/constants.js') ?>"></script>
     <!-- Start Switcher -->
     <div class="offcanvas offcanvas-end" tabindex="-1" id="switcher-canvas" aria-labelledby="offcanvasRightLabel">
         <div class="offcanvas-header border-bottom">
@@ -558,7 +558,7 @@
     <script src="<?= SITE_URL ?>/assets/libs/particles.js/particles.js"></script>
 
     <!-- Error JS -->
-    <script src="<?= SITE_URL ?>/assets/js/error.js"></script>
+    <script src="<?= asset_url('/assets/js/error.js') ?>"></script>
 </body>
 
 </html>
