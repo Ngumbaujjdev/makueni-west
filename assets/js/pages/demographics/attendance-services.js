@@ -44,6 +44,7 @@ const AttendanceServices = (function () {
     await loadRecords();
     renderCalendar();
     renderRecentList();
+    renderStats(allRows);
 
     const addBtn = document.getElementById("addAttendanceBtn");
     if (addBtn) {
@@ -104,6 +105,28 @@ const AttendanceServices = (function () {
     return (row.adults_count || 0) + (row.youth_count || 0) + (row.children_male_count || 0) + (row.children_female_count || 0);
   }
 
+  function renderStats(rows) {
+    const now = new Date();
+    const thisMonth = rows.filter((r) => {
+      const d = new Date(r.service_date);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+    const avgAttendance = rows.length ? Math.round(rows.reduce((sum, r) => sum + totalFor(r), 0) / rows.length) : 0;
+    const mostRecent = [...rows].sort((a, b) => new Date(b.service_date) - new Date(a.service_date))[0];
+
+    DemographicsUI.renderStatCardsRow("statCardsRow", [
+      { icon: "ri-calendar-check-line", label: "Sundays Recorded", value: rows.length, color: "primary" },
+      { icon: "ri-group-line", label: "Avg. Attendance", value: avgAttendance, color: "success" },
+      { icon: "ri-calendar-event-line", label: "This Month", value: thisMonth.length, color: "warning" },
+      {
+        icon: "ri-time-line",
+        label: "Last Recorded",
+        value: mostRecent ? new Date(mostRecent.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "-",
+        color: "secondary",
+      },
+    ]);
+  }
+
   function buildEventSource() {
     return allRows.map((r) => ({
       id: String(r.id),
@@ -157,6 +180,7 @@ const AttendanceServices = (function () {
     calendar.removeAllEventSources();
     calendar.addEventSource(buildEventSource());
     renderRecentList();
+    renderStats(allRows);
   }
 
   function openEntry(record, defaultDate) {

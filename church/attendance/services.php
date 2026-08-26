@@ -77,6 +77,10 @@ $breadcrumbs = [
 
                 <?php include __DIR__ . '/../../includes/page-header.php' ?>
 
+                <div class="row g-3 mb-3" id="statCardsRow">
+                    <!-- Stat cards injected by attendance-services.js -->
+                </div>
+
                 <div id="entryModeBanner"></div>
 
                 <div class="row g-3">
