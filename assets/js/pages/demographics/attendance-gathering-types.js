@@ -140,6 +140,9 @@ const AttendanceGatheringTypes = (function () {
             <td><span class="badge bg-primary-transparent">${escapeHtml(t.category?.name || "-")}</span></td>
             <td class="text-center">${statusBadge}</td>
             <td class="text-end">
+              <button type="button" class="btn btn-sm btn-light border me-1" onclick="AttendanceGatheringTypes.openViewModal(${t.id})" title="View Details">
+                <i class="ri-eye-line"></i>
+              </button>
               <div class="btn-group">
                 <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown">
                   <i class="ri-settings-3-line me-1"></i>Actions
@@ -263,6 +266,50 @@ const AttendanceGatheringTypes = (function () {
     loadList();
   }
 
+  const CATEGORY_COLORS = {
+    sunday_service: "primary",
+    ministry_gathering: "success",
+    special_event: "warning",
+  };
+
+  function openViewModal(id) {
+    const type = allTypes.find((t) => t.id === id);
+    if (!type) return;
+
+    const icon = type.icon || type.category?.icon || "ri-calendar-event-line";
+    const categoryColor = CATEGORY_COLORS[type.category?.slug] || "secondary";
+    const created = type.created_at ? new Date(type.created_at).toLocaleString() : "-";
+    const updated = type.updated_at ? new Date(type.updated_at).toLocaleString() : "-";
+    const D = DemographicsUI.renderDetailField;
+
+    document.getElementById("gatheringTypeViewBody").innerHTML = `
+      <div class="row g-3">
+        <div class="col-12">
+          ${D({ icon, label: "Name", value: escapeHtml(type.name), color: categoryColor, size: "lg" })}
+        </div>
+        <div class="col-md-6">
+          ${D({ icon: type.category?.icon || "ri-price-tag-3-line", label: "Category", value: escapeHtml(type.category?.name || "-"), color: categoryColor, pill: true })}
+        </div>
+        <div class="col-md-6">
+          ${D({
+            icon: type.is_active ? "ri-checkbox-circle-line" : "ri-close-circle-line",
+            label: "Status",
+            value: type.is_active ? "Active" : "Inactive",
+            color: type.is_active ? "success" : "secondary",
+            pill: true,
+          })}
+        </div>
+        <div class="col-md-6">
+          ${D({ icon: "ri-time-line", label: "Created", value: `<span class="fs-13">${created}</span>`, color: "secondary" })}
+        </div>
+        <div class="col-md-6">
+          ${D({ icon: "ri-history-line", label: "Last Updated", value: `<span class="fs-13">${updated}</span>`, color: "secondary" })}
+        </div>
+      </div>`;
+
+    new bootstrap.Modal(document.getElementById("gatheringTypeViewModal")).show();
+  }
+
   async function openAuditModal(id) {
     const body = document.getElementById("gatheringTypeAuditBody");
     body.innerHTML = DemographicsUI.renderTableLoading
@@ -307,7 +354,7 @@ const AttendanceGatheringTypes = (function () {
       .replace(/'/g, "&#039;");
   }
 
-  return { init, openEditModal, toggleActive, openAuditModal };
+  return { init, openEditModal, toggleActive, openAuditModal, openViewModal };
 })();
 
 window.AttendanceGatheringTypes = AttendanceGatheringTypes;
