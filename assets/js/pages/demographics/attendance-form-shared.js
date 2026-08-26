@@ -338,46 +338,25 @@ const AttendanceFormShared = (function () {
     const date = new Date(record.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
     const total = (record.adults_count || 0) + (record.youth_count || 0) + (record.children_male_count || 0) + (record.children_female_count || 0);
     const gathering = record.gathering_type?.name || record.event_name || record.gathering_category?.name || "-";
-    const gatheringIcon = record.gathering_type?.icon || record.gathering_category?.icon || "ri-calendar-event-line";
     const gatheringColor = CATEGORY_COLORS[record.gathering_category?.slug] || "secondary";
     const recorded = record.created_at ? new Date(record.created_at).toLocaleString() : "-";
     const updated = record.updated_at ? new Date(record.updated_at).toLocaleString() : "-";
-    const D = DemographicsUI.renderDetailField;
 
-    document.getElementById("attendanceViewBody").innerHTML = `
-      <div class="row g-3">
-        <div class="col-md-6">
-          ${D({ icon: "ri-calendar-line", label: "Date", value: date, color: "primary" })}
-        </div>
-        <div class="col-md-6">
-          ${D({ icon: gatheringIcon, label: "Gathering", value: escapeHtml(gathering), color: gatheringColor, pill: true })}
-        </div>
-        <div class="col-6 col-md-3">
-          ${D({ icon: "ri-user-line", label: "Adults", value: record.adults_count ?? 0, color: "primary", pill: true })}
-        </div>
-        <div class="col-6 col-md-3">
-          ${D({ icon: "ri-user-star-line", label: "Youth", value: record.youth_count ?? 0, color: "success", pill: true })}
-        </div>
-        <div class="col-6 col-md-3">
-          ${D({ icon: "ri-men-line", label: "Children (M)", value: record.children_male_count ?? 0, color: "info", pill: true })}
-        </div>
-        <div class="col-6 col-md-3">
-          ${D({ icon: "ri-women-line", label: "Children (F)", value: record.children_female_count ?? 0, color: "secondary", pill: true })}
-        </div>
-        <div class="col-12">
-          ${D({ icon: "ri-group-line", label: "Total Attendance", value: total, color: "primary", size: "lg" })}
-        </div>
-        ${record.notes ? `
-        <div class="col-12">
-          ${D({ icon: "ri-file-text-line", label: "Notes", value: escapeHtml(record.notes), color: "secondary" })}
-        </div>` : ""}
-        <div class="col-md-6">
-          ${D({ icon: "ri-time-line", label: "Recorded", value: `<span class="fs-13">${recorded}</span>`, color: "secondary" })}
-        </div>
-        <div class="col-md-6">
-          ${D({ icon: "ri-history-line", label: "Last Updated", value: `<span class="fs-13">${updated}</span>`, color: "secondary" })}
-        </div>
-      </div>`;
+    const rows = [
+      { label: "Date", value: date },
+      { label: "Gathering", value: escapeHtml(gathering), badge: true, color: gatheringColor },
+      { label: "Adults", value: record.adults_count ?? 0 },
+      { label: "Youth", value: record.youth_count ?? 0 },
+      { label: "Children (Male)", value: record.children_male_count ?? 0 },
+      { label: "Children (Female)", value: record.children_female_count ?? 0 },
+      { label: "Total Attendance", value: `<strong class="fs-16">${total}</strong>` },
+    ];
+
+    if (record.notes) rows.push({ label: "Notes", value: escapeHtml(record.notes) });
+
+    rows.push({ label: "Recorded", value: recorded }, { label: "Last Updated", value: updated });
+
+    document.getElementById("attendanceViewBody").innerHTML = DemographicsUI.renderDetailTable(rows);
 
     new bootstrap.Modal(document.getElementById(VIEW_MODAL_ID)).show();
   }

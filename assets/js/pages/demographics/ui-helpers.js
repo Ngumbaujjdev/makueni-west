@@ -123,35 +123,33 @@ const DemographicsUI = (function () {
   }
 
   // ==========================================================================
-  // DETAIL FIELDS (read-only view modals/panels)
+  // DETAIL TABLE (read-only view modals/panels)
   // ==========================================================================
 
   /**
-   * A single labeled field for read-only detail views (modals, summary
-   * panels) - icon-in-circle + label, value rendered either as plain text
-   * or a solid color pill, so detail views aren't a wall of identical
-   * black-on-white text (root CLAUDE.md design rule).
-   * @param {object} opts {icon, label, value, color, pill, size}
-   *   color: bootstrap color name, drives both the icon circle and (if pill) the badge
-   *   pill: true renders value as a `badge bg-${color}` pill; false renders plain fw-semibold text
-   *   size: "lg" bumps the value to h4 for hero fields (e.g. Total Attendance)
+   * A plain two-column label/value table for read-only detail views -
+   * replaces an earlier icon-avatar + pill treatment (one per field) that
+   * turned out to read as too visually busy once a modal had more than a
+   * few fields. Plain text by default; pass `badge: true` on a row only
+   * for a genuinely categorical value (status, category) - not every
+   * field, just the ones that actually are a tag/label rather than free
+   * text or a number.
+   * @param {object[]} rows - [{label, value, badge, color}]
+   *   color: bootstrap color name, used only when badge is true
    */
-  function renderDetailField({ icon, label, value, color = "primary", pill = false, size = null }) {
-    const valueHtml = pill
-      ? `<span class="badge bg-${color} fs-13">${value}</span>`
-      : size === "lg"
-        ? `<h4 class="fw-semibold mb-0">${value}</h4>`
-        : `<p class="mb-0 fw-semibold">${value}</p>`;
+  function renderDetailTable(rows) {
     return `
-      <div class="d-flex align-items-start gap-2">
-        <span class="avatar avatar-sm avatar-rounded bg-${color} text-white flex-shrink-0">
-          <i class="${icon} fs-14"></i>
-        </span>
-        <div>
-          <span class="d-block mb-1 text-body fw-semibold fs-12">${label}</span>
-          ${valueHtml}
-        </div>
-      </div>`;
+      <table class="table table-sm mb-0">
+        <tbody>
+          ${rows
+            .map(({ label, value, badge = false, color = "secondary" }) => `
+            <tr>
+              <td class="text-body fw-semibold" style="width: 40%;">${label}</td>
+              <td class="fw-semibold">${badge ? `<span class="badge bg-${color}">${value}</span>` : value}</td>
+            </tr>`)
+            .join("")}
+        </tbody>
+      </table>`;
   }
 
   // ==========================================================================
@@ -491,26 +489,26 @@ const DemographicsUI = (function () {
   // DEMOGRAPHICS SUBMISSION - VIEW DETAILS MODAL
   //
   // Read-only detail view for a single ChurchDemographic submission, shared
-  // between the same two call sites as renderSubmissionsRows() above. Uses
-  // renderDetailField() throughout per root CLAUDE.md's icon+pill rule for
-  // detail views - the list endpoint already returns every field needed
-  // (index()/show() both load the full model), so no extra API call.
+  // between the same two call sites as renderSubmissionsRows() above. Built
+  // as a plain renderDetailTable() row list - the list endpoint already
+  // returns every field needed (index()/show() both load the full model),
+  // so no extra API call.
   // ==========================================================================
 
-  const SUBMISSION_FIELD_META = {
-    male_count: { label: "Male", icon: "ri-user-line", color: "primary" },
-    female_count: { label: "Female", icon: "ri-women-line", color: "secondary" },
-    youth_count: { label: "Youth (13-35)", icon: "ri-user-star-line", color: "success" },
-    seniors_count: { label: "Seniors (60+)", icon: "ri-user-heart-line", color: "warning" },
-    womens_fellowship_count: { label: "Women's Fellowship", icon: "ri-group-line", color: "secondary" },
-    mens_fellowship_count: { label: "Men's Fellowship", icon: "ri-group-2-line", color: "info" },
-    sunday_school_male_count: { label: "Sunday School (M)", icon: "ri-men-line", color: "primary" },
-    sunday_school_female_count: { label: "Sunday School (F)", icon: "ri-women-line", color: "secondary" },
-    new_members_count: { label: "New Members", icon: "ri-user-add-line", color: "success" },
-    transferred_out_count: { label: "Transferred Out", icon: "ri-user-unfollow-line", color: "danger" },
-    baptisms_count: { label: "Baptisms", icon: "ri-drop-line", color: "primary" },
-    communion_participants_count: { label: "Communion Participants", icon: "ri-cup-line", color: "warning" },
-    conversions_count: { label: "New Conversions", icon: "ri-heart-line", color: "success" },
+  const SUBMISSION_FIELD_LABELS = {
+    male_count: "Male",
+    female_count: "Female",
+    youth_count: "Youth (13-35)",
+    seniors_count: "Seniors (60+)",
+    womens_fellowship_count: "Women's Fellowship",
+    mens_fellowship_count: "Men's Fellowship",
+    sunday_school_male_count: "Sunday School (M)",
+    sunday_school_female_count: "Sunday School (F)",
+    new_members_count: "New Members",
+    transferred_out_count: "Transferred Out",
+    baptisms_count: "Baptisms",
+    communion_participants_count: "Communion Participants",
+    conversions_count: "New Conversions",
   };
 
   const SUBMISSION_VIEW_MODAL_ID = "demographicsSubmissionViewModal";
@@ -565,40 +563,24 @@ const DemographicsUI = (function () {
       "baptisms_count", "communion_participants_count", "conversions_count",
     ];
 
-    const breakdownHtml = breakdownFields
-      .map((f) => {
-        const meta = SUBMISSION_FIELD_META[f];
-        return `<div class="col-6 col-md-3">${renderDetailField({ ...meta, value: record[f] ?? 0, pill: true })}</div>`;
-      })
-      .join("");
+    const rows = [
+      { label: "Period", value: period || "-" },
+      { label: "Status", value: renderStatusBadge(record.status), badge: false },
+      { label: "Total Members", value: `<strong class="fs-16">${record.total_members ?? 0}</strong>` },
+      ...breakdownFields.map((f) => ({ label: SUBMISSION_FIELD_LABELS[f], value: record[f] ?? 0 })),
+    ];
 
-    document.getElementById("demographicsSubmissionViewBody").innerHTML = `
-      <div class="row g-3">
-        <div class="col-md-6">
-          ${renderDetailField({ icon: "ri-calendar-line", label: "Period", value: period || "-", color: "primary" })}
-        </div>
-        <div class="col-md-6">
-          <span class="d-block mb-1 text-body fw-semibold fs-12">Status</span>
-          ${renderStatusBadge(record.status)}
-        </div>
-        <div class="col-12">
-          ${renderDetailField({ icon: "ri-team-line", label: "Total Members", value: record.total_members ?? 0, color: "primary", size: "lg" })}
-        </div>
-        ${breakdownHtml}
-        ${record.review_notes ? `
-        <div class="col-12">
-          ${renderDetailField({ icon: "ri-file-text-line", label: "Reviewer Notes", value: record.review_notes, color: "danger" })}
-        </div>` : ""}
-        <div class="col-md-4">
-          ${renderDetailField({ icon: "ri-send-plane-line", label: "Submitted", value: `<span class="fs-13">${submitted}</span>`, color: "secondary" })}
-        </div>
-        <div class="col-md-4">
-          ${renderDetailField({ icon: "ri-shield-check-line", label: "Reviewed By", value: reviewerName, color: "secondary" })}
-        </div>
-        <div class="col-md-4">
-          ${renderDetailField({ icon: "ri-history-line", label: "Reviewed At", value: `<span class="fs-13">${reviewed}</span>`, color: "secondary" })}
-        </div>
-      </div>`;
+    if (record.review_notes) {
+      rows.push({ label: "Reviewer Notes", value: escapeHtml(record.review_notes) });
+    }
+
+    rows.push(
+      { label: "Submitted", value: submitted },
+      { label: "Reviewed By", value: reviewerName },
+      { label: "Reviewed At", value: reviewed },
+    );
+
+    document.getElementById("demographicsSubmissionViewBody").innerHTML = renderDetailTable(rows);
 
     new bootstrap.Modal(document.getElementById(SUBMISSION_VIEW_MODAL_ID)).show();
   }
@@ -621,6 +603,17 @@ const DemographicsUI = (function () {
     if (label) label.textContent = `${pct}%`;
   }
 
+  function escapeHtml(unsafe) {
+    if (unsafe === null || unsafe === undefined) return "";
+    return unsafe
+      .toString()
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
   // ==========================================================================
   // PUBLIC API
   // ==========================================================================
@@ -630,7 +623,7 @@ const DemographicsUI = (function () {
     renderStatusBadge,
     renderStatCard,
     renderStatCardsRow,
-    renderDetailField,
+    renderDetailTable,
     setButtonLoading,
     restoreButton,
     renderTableLoading,
