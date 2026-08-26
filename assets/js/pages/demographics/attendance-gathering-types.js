@@ -140,6 +140,9 @@ const AttendanceGatheringTypes = (function () {
             <td><span class="badge bg-primary-transparent">${escapeHtml(t.category?.name || "-")}</span></td>
             <td class="text-center">${statusBadge}</td>
             <td class="text-end">
+              <button type="button" class="btn btn-sm btn-light border me-1" onclick="AttendanceGatheringTypes.openViewModal(${t.id})" title="View Details">
+                <i class="ri-eye-line"></i>
+              </button>
               <div class="btn-group">
                 <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown">
                   <i class="ri-settings-3-line me-1"></i>Actions
@@ -263,6 +266,31 @@ const AttendanceGatheringTypes = (function () {
     loadList();
   }
 
+  const CATEGORY_COLORS = {
+    sunday_service: "primary",
+    ministry_gathering: "success",
+    special_event: "warning",
+  };
+
+  function openViewModal(id) {
+    const type = allTypes.find((t) => t.id === id);
+    if (!type) return;
+
+    const categoryColor = CATEGORY_COLORS[type.category?.slug] || "secondary";
+    const created = type.created_at ? new Date(type.created_at).toLocaleString() : "-";
+    const updated = type.updated_at ? new Date(type.updated_at).toLocaleString() : "-";
+
+    document.getElementById("gatheringTypeViewBody").innerHTML = DemographicsUI.renderDetailTable([
+      { label: "Name", value: escapeHtml(type.name) },
+      { label: "Category", value: escapeHtml(type.category?.name || "-"), badge: true, color: categoryColor },
+      { label: "Status", value: type.is_active ? "Active" : "Inactive", badge: true, color: type.is_active ? "success" : "secondary" },
+      { label: "Created", value: created },
+      { label: "Last Updated", value: updated },
+    ]);
+
+    new bootstrap.Modal(document.getElementById("gatheringTypeViewModal")).show();
+  }
+
   async function openAuditModal(id) {
     const body = document.getElementById("gatheringTypeAuditBody");
     body.innerHTML = DemographicsUI.renderTableLoading
@@ -307,7 +335,7 @@ const AttendanceGatheringTypes = (function () {
       .replace(/'/g, "&#039;");
   }
 
-  return { init, openEditModal, toggleActive, openAuditModal };
+  return { init, openEditModal, toggleActive, openAuditModal, openViewModal };
 })();
 
 window.AttendanceGatheringTypes = AttendanceGatheringTypes;

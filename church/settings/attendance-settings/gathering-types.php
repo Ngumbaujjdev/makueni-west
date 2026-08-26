@@ -155,6 +155,24 @@ $breadcrumbs = [
         </div>
     </div>
 
+    <!-- View Details Modal -->
+    <div class="modal fade" id="gatheringTypeViewModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-semibold"><i class="ri-eye-line me-2"></i>Gathering Type Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="gatheringTypeViewBody">
+                    <!-- Populated by JS -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Activity Log Modal -->
     <div class="modal fade" id="gatheringTypeAuditModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-scrollable">

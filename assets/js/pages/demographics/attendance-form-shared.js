@@ -282,6 +282,61 @@ const AttendanceFormShared = (function () {
   }
 
   // ==========================================================================
+  // CALENDAR VIEW (List/Calendar toggle - ministries.php / events.php)
+  //
+  // Sunday Service keeps its own dedicated FullCalendar setup in
+  // attendance-services.js (Sunday-only dateClick, one record per date) -
+  // this shared version is deliberately looser: any day is clickable, and
+  // multiple gatherings can legitimately land on the same date (e.g. two
+  // different ministry meetings on the same Saturday), so dateClick always
+  // opens a blank entry rather than trying to guess a single "existing"
+  // record for that day.
+  // ==========================================================================
+
+  function totalFor(row) {
+    return (row.adults_count || 0) + (row.youth_count || 0) + (row.children_male_count || 0) + (row.children_female_count || 0);
+  }
+
+  function buildEventSource(rows, titleFn) {
+    const title = titleFn || ((r) => `${totalFor(r)} attended`);
+    return rows.map((r) => ({
+      id: String(r.id),
+      title: title(r),
+      start: r.service_date.substring(0, 10),
+      allDay: true,
+      backgroundColor: "#2CA4BF",
+      borderColor: "#2CA4BF",
+      extendedProps: { record: r },
+    }));
+  }
+
+  /**
+   * @param {string} containerId
+   * @param {object[]} rows
+   * @param {object} opts {titleFn(row), onDateClick(dateStr), onEventClick(record)}
+   * @returns the FullCalendar instance, so the caller can refresh it later via refreshCalendarEvents()
+   */
+  function renderCalendar(containerId, rows, { titleFn, onDateClick, onEventClick } = {}) {
+    const el = document.getElementById(containerId);
+    const calendar = new FullCalendar.Calendar(el, {
+      initialView: "dayGridMonth",
+      headerToolbar: { left: "prev,next today", center: "title", right: "" },
+      height: "auto",
+      events: buildEventSource(rows, titleFn),
+      dateClick: onDateClick ? (info) => onDateClick(info.dateStr) : undefined,
+      eventClick: onEventClick ? (info) => onEventClick(info.event.extendedProps.record) : undefined,
+    });
+    calendar.render();
+    return calendar;
+  }
+
+  /** Swaps a rendered calendar's events for a fresh rows array (after a save/reload) without tearing down and rebuilding the whole FullCalendar instance. */
+  function refreshCalendarEvents(calendar, rows, titleFn) {
+    calendar.removeAllEventSources();
+    calendar.addEventSource(buildEventSource(rows, titleFn));
+  }
+
+  // ==========================================================================
   // LIST TABLE (ministries.php / events.php)
   // ==========================================================================
 
@@ -323,7 +378,7 @@ const AttendanceFormShared = (function () {
       .replace(/'/g, "&#039;");
   }
 
-  return { openEntryModal, renderListRows };
+  return { openEntryModal, renderListRows, renderCalendar, refreshCalendarEvents, totalFor };
 })();
 
 window.AttendanceFormShared = AttendanceFormShared;

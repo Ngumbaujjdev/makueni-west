@@ -44,6 +44,7 @@ $breadcrumbs = [
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css" />
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/styles/choices.min.css" />
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/data-tables/responsive/2.3.0/css/responsive.bootstrap.min.css" />
+    <link href="<?= SITE_URL ?>/assets/libs/fullcalendar/main.min.css" rel="stylesheet" />
 
     <script>
         const USER_TERRITORY = {
@@ -74,15 +75,25 @@ $breadcrumbs = [
                 </div>
 
                 <div class="card custom-card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <div class="card-title"><i class="ri-star-line me-2 text-primary"></i>Special Events</div>
-                        <?php if ($canWrite): ?>
-                        <button type="button" class="btn btn-primary btn-wave" id="addEntryBtn">
-                            <i class="ri-add-line me-1"></i>Add Entry
-                        </button>
-                        <?php endif; ?>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="btn-group" role="group" aria-label="View toggle">
+                                <button type="button" class="btn btn-sm btn-primary" id="viewListBtn">
+                                    <i class="ri-list-check-2 me-1"></i>List
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="viewCalendarBtn">
+                                    <i class="ri-calendar-2-line me-1"></i>Calendar
+                                </button>
+                            </div>
+                            <?php if ($canWrite): ?>
+                            <button type="button" class="btn btn-primary btn-wave" id="addEntryBtn">
+                                <i class="ri-add-line me-1"></i>Add Entry
+                            </button>
+                            <?php endif; ?>
+                        </div>
                     </div>
-                    <div class="card-body p-0">
+                    <div class="card-body p-0" id="listViewBody">
                         <div class="px-3 pt-3" id="filterToolbar"></div>
                         <div class="table-responsive">
                             <table class="table table-hover mb-0" id="specialEventsAttendanceTable">
@@ -100,6 +111,9 @@ $breadcrumbs = [
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                    <div class="card-body" id="calendarViewBody" style="display: none;">
+                        <div id="attendanceCalendar"></div>
                     </div>
                 </div>
 
@@ -124,6 +138,7 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/js/custom-switcher.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/fullcalendar/main.min.js"></script>
 
     <!-- jQuery + DataTables (search/filter/pagination) -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>

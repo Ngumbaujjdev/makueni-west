@@ -11,6 +11,7 @@ const AttendanceMinistries = (function () {
   let categoryId = null;
   let allRows = [];
   let availableTypes = [];
+  let calendar = null;
 
   async function init() {
     Object.assign(USER_TERRITORY, DemographicsUI.resolveUserTerritory(USER_TERRITORY));
@@ -37,7 +38,41 @@ const AttendanceMinistries = (function () {
       document.getElementById("addEntryBtn").addEventListener("click", () => openModal(null));
     }
 
+    wireViewToggle();
     loadList();
+  }
+
+  // ==========================================================================
+  // LIST / CALENDAR TOGGLE
+  // ==========================================================================
+
+  function wireViewToggle() {
+    document.getElementById("viewListBtn").addEventListener("click", () => switchView("list"));
+    document.getElementById("viewCalendarBtn").addEventListener("click", () => switchView("calendar"));
+  }
+
+  function switchView(view) {
+    const listBtn = document.getElementById("viewListBtn");
+    const calendarBtn = document.getElementById("viewCalendarBtn");
+    const listBody = document.getElementById("listViewBody");
+    const calendarBody = document.getElementById("calendarViewBody");
+
+    listBtn.classList.toggle("btn-primary", view === "list");
+    listBtn.classList.toggle("btn-outline-primary", view !== "list");
+    calendarBtn.classList.toggle("btn-primary", view === "calendar");
+    calendarBtn.classList.toggle("btn-outline-primary", view !== "calendar");
+    listBody.style.display = view === "list" ? "" : "none";
+    calendarBody.style.display = view === "calendar" ? "" : "none";
+
+    // Built lazily on first switch, not on page load - FullCalendar sizes
+    // itself wrong if initialized inside a display:none container.
+    if (view === "calendar" && !calendar) {
+      calendar = AttendanceFormShared.renderCalendar("attendanceCalendar", allRows, {
+        titleFn: (r) => `${r.gathering_type?.name || r.event_name || "Gathering"} - ${AttendanceFormShared.totalFor(r)}`,
+        onDateClick: CAN_WRITE_ATTENDANCE ? (dateStr) => openModal(null, dateStr) : undefined,
+        onEventClick: CAN_WRITE_ATTENDANCE ? (record) => openModal(record) : undefined,
+      });
+    }
   }
 
   async function loadList() {
@@ -53,6 +88,10 @@ const AttendanceMinistries = (function () {
 
     allRows = (result.data || []).sort((a, b) => new Date(b.service_date) - new Date(a.service_date));
     tbody.innerHTML = AttendanceFormShared.renderListRows(allRows, { onEdit: "AttendanceMinistries.editRow" });
+
+    if (calendar) {
+      AttendanceFormShared.refreshCalendarEvents(calendar, allRows, (r) => `${r.gathering_type?.name || r.event_name || "Gathering"} - ${AttendanceFormShared.totalFor(r)}`);
+    }
 
     renderStats(allRows);
 
@@ -99,12 +138,13 @@ const AttendanceMinistries = (function () {
     ]);
   }
 
-  function openModal(record) {
+  function openModal(record, defaultDate) {
     AttendanceFormShared.openEntryModal({
       gatheringCategoryId: categoryId,
       isWeekly: false,
       territoryId: USER_TERRITORY.id,
       record,
+      defaultDate,
       onSaved: loadList,
     });
   }
