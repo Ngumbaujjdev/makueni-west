@@ -20,6 +20,80 @@ const AttendanceOverview = (function () {
     }
     loadStats();
     loadEntryMode();
+    loadDemographicsStatus();
+  }
+
+  /**
+   * The monthly Demographics form is mandatory regardless of this church's
+   * Attendance entry-mode setting - it's what Diocese/Region rollups
+   * actually read, unlike Sunday attendance which is optional. Surfaced
+   * here, on the Attendance landing page, so a pastor who only ever opens
+   * Attendance still sees whether the real required submission is done.
+   */
+  async function loadDemographicsStatus() {
+    const card = document.getElementById("demographicsStatusCard");
+    if (!card) return;
+
+    const result = await DemographicsAPIHandler.getDemographics(USER_TERRITORY.id);
+
+    if (!result.success) {
+      card.innerHTML = "";
+      return;
+    }
+
+    // The relevant period is the most recently *ended* month, not the
+    // calendar-current one - the tracking form itself won't let a
+    // still-in-progress month be selected (DemographicsUI.monthHasEnded()),
+    // so nagging about that same month here would send a pastor to a form
+    // that then refuses the exact period this banner told them to start.
+    const period = DemographicsUI.mostRecentlyEndedPeriod();
+
+    const rows = result.data || [];
+    const thisMonth = rows.find(
+      (r) => r.fiscal_year?.year === period.year && r.fiscal_month?.number === period.month,
+    );
+
+    const monthName = new Date(period.year, period.month - 1, 1).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+    const trackingUrl = `${AppConfig.FRONTEND_BASE_URL}/church/demographics-growth/demographics-tracking`;
+
+    if (!thisMonth) {
+      card.innerHTML = `
+        <div class="alert alert-danger bg-danger-transparent border-0 mb-0">
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div>
+              <i class="ri-error-warning-line me-2"></i>
+              <strong>${monthName}'s Demographics submission hasn't been started yet</strong> - this is the monthly report Diocese/Region rely on.
+            </div>
+            <a href="${trackingUrl}" class="btn btn-danger btn-sm flex-shrink-0">
+              <i class="ri-add-line me-1"></i>Start Now
+            </a>
+          </div>
+        </div>`;
+      return;
+    }
+
+    if (thisMonth.status === "draft" || thisMonth.status === "changes_requested") {
+      const label = thisMonth.status === "changes_requested" ? "needs changes" : "still a draft";
+      card.innerHTML = `
+        <div class="alert alert-warning bg-warning-transparent border-0 mb-0">
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div>
+              <i class="ri-draft-line me-2"></i>
+              <strong>${monthName}'s Demographics submission ${label}.</strong>
+            </div>
+            <a href="${trackingUrl}?id=${thisMonth.id}" class="btn btn-warning btn-sm flex-shrink-0">
+              <i class="ri-edit-line me-1"></i>Finish It
+            </a>
+          </div>
+        </div>`;
+      return;
+    }
+
+    card.innerHTML = `
+      <div class="alert alert-success bg-success-transparent border-0 mb-0">
+        <i class="ri-checkbox-circle-line me-2"></i>
+        <strong>${monthName}'s Demographics submission is in</strong> - status: ${DemographicsUI.renderStatusBadge(thisMonth.status)}
+      </div>`;
   }
 
   async function loadStats() {

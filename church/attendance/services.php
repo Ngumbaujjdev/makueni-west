@@ -35,10 +35,10 @@ $breadcrumbs = [
 
     <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico" type="image/x-icon" />
 
-    <script src="<?= SITE_URL ?>/assets/js/main.js"></script>
+    <script src="<?= asset_url('/assets/js/main.js') ?>"></script>
     <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="<?= SITE_URL ?>/assets/css/styles.min.css" rel="stylesheet" />
-    <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />
+    <link href="<?= asset_url('/assets/css/styles.min.css') ?>" rel="stylesheet" />
+    <link href="<?= asset_url('/assets/css/icons.css') ?>" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/styles/choices.min.css" />
@@ -63,8 +63,8 @@ $breadcrumbs = [
 </head>
 
 <body>
-    <script src="<?= SITE_URL ?>/assets/js/config/app.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
+    <script src="<?= asset_url('/assets/js/config/app.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/config/constants.js') ?>"></script>
     <?php include __DIR__ . '/../../includes/start-switcher.php' ?>
     <?php include __DIR__ . '/../../includes/loader.php' ?>
 
@@ -76,6 +76,10 @@ $breadcrumbs = [
             <div class="container-fluid">
 
                 <?php include __DIR__ . '/../../includes/page-header.php' ?>
+
+                <div class="row g-3 mb-3" id="statCardsRow">
+                    <!-- Stat cards injected by attendance-services.js -->
+                </div>
 
                 <div id="entryModeBanner"></div>
 
@@ -100,20 +104,10 @@ $breadcrumbs = [
                             <div class="card-header">
                                 <div class="card-title"><i class="ri-list-check-2 me-2 text-primary"></i>Recent Sundays</div>
                             </div>
-                            <div class="card-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-hover mb-0">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th class="fw-semibold text-dark">Date</th>
-                                                <th class="fw-semibold text-dark text-end">Total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="recentSundaysBody">
-                                            <!-- Rows injected by attendance-services.js -->
-                                        </tbody>
-                                    </table>
-                                </div>
+                            <div class="card-body">
+                                <ul class="list-unstyled profile-timeline mb-0" id="recentSundaysTimeline">
+                                    <!-- Entries injected by attendance-services.js -->
+                                </ul>
                             </div>
                         </div>
                     </div>
@@ -132,21 +126,21 @@ $breadcrumbs = [
 
     <script src="<?= SITE_URL ?>/assets/libs/@popperjs/core/umd/popper.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/defaultmenu.min.js"></script>
+    <script src="<?= asset_url('/assets/js/defaultmenu.min.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/sticky.js"></script>
+    <script src="<?= asset_url('/assets/js/sticky.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/simplebar.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/custom-switcher.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= asset_url('/assets/js/simplebar.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/custom-switcher.min.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/custom.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/utils/toast.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/libs/fullcalendar/main.min.js"></script>
 
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js"></script>
+    <script src="<?= asset_url('/assets/js/pages/demographics/api-handler.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/pages/demographics/ui-helpers.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/scripts/choices.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-form-shared.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-services.js"></script>
+    <script src="<?= asset_url('/assets/js/pages/demographics/attendance-form-shared.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/pages/demographics/attendance-services.js') ?>"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => window.AttendanceServices.init());
     </script>

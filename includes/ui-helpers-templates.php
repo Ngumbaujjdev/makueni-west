@@ -17,9 +17,11 @@ function renderStepper(string $fieldId, array $opts = []): string
     $min = $opts['min'] ?? 0;
     $max = $opts['max'] ?? 99999;
     $required = !empty($opts['required']);
+    $hint = $opts['hint'] ?? null;
 
     $requiredMark = $required ? ' <span class="text-danger">*</span>' : '';
     $requiredAttr = $required ? 'required' : '';
+    $hintHtml = $hint ? "<div class=\"form-text\">{$hint}</div>" : '';
 
     return <<<HTML
     <label for="{$fieldId}" class="form-label">{$label}{$requiredMark}</label>
@@ -33,6 +35,7 @@ function renderStepper(string $fieldId, array $opts = []): string
             <i class="ri-add-line"></i>
         </button>
     </div>
+    {$hintHtml}
     HTML;
 }
 

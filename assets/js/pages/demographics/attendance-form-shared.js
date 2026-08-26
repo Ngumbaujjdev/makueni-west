@@ -282,10 +282,92 @@ const AttendanceFormShared = (function () {
   }
 
   // ==========================================================================
+  // VIEW DETAILS (read-only) - separate from Edit, same record shape as the
+  // entry modal but nothing editable. Shared across every list that uses
+  // renderListRows() plus the Sunday timeline.
+  // ==========================================================================
+
+  const VIEW_MODAL_ID = "attendanceViewModal";
+  let viewableRecords = {};
+
+  function ensureViewModalMounted() {
+    if (document.getElementById(VIEW_MODAL_ID)) return;
+
+    const modalHtml = `
+      <div class="modal fade" id="${VIEW_MODAL_ID}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title"><i class="ri-eye-line me-2"></i>Attendance Details</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="attendanceViewBody"></div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    const container = document.createElement("div");
+    container.innerHTML = modalHtml;
+    document.body.appendChild(container.firstElementChild);
+  }
+
+  /** Registers rows so view/edit buttons in rendered HTML can look them up
+   * by id via a plain onclick="" string (renderListRows()/timeline HTML is
+   * built as a string, not real DOM event bindings). */
+  function registerViewableRecords(rows) {
+    viewableRecords = Object.fromEntries((rows || []).map((r) => [r.id, r]));
+  }
+
+  function openViewModalById(id) {
+    const record = viewableRecords[id];
+    if (record) openViewModal(record);
+  }
+
+  const CATEGORY_COLORS = {
+    sunday_service: "primary",
+    ministry_gathering: "success",
+    special_event: "warning",
+  };
+
+  function openViewModal(record) {
+    ensureViewModalMounted();
+
+    const date = new Date(record.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+    const total = (record.adults_count || 0) + (record.youth_count || 0) + (record.children_male_count || 0) + (record.children_female_count || 0);
+    const gathering = record.gathering_type?.name || record.event_name || record.gathering_category?.name || "-";
+    const gatheringColor = CATEGORY_COLORS[record.gathering_category?.slug] || "secondary";
+    const recorded = record.created_at ? new Date(record.created_at).toLocaleString() : "-";
+    const updated = record.updated_at ? new Date(record.updated_at).toLocaleString() : "-";
+
+    const rows = [
+      { label: "Date", value: date },
+      { label: "Gathering", value: escapeHtml(gathering), badge: true, color: gatheringColor },
+      { label: "Adults", value: record.adults_count ?? 0 },
+      { label: "Youth", value: record.youth_count ?? 0 },
+      { label: "Children (Male)", value: record.children_male_count ?? 0 },
+      { label: "Children (Female)", value: record.children_female_count ?? 0 },
+      { label: "Total Attendance", value: `<strong class="fs-16">${total}</strong>` },
+    ];
+
+    if (record.notes) rows.push({ label: "Notes", value: escapeHtml(record.notes) });
+
+    rows.push({ label: "Recorded", value: recorded }, { label: "Last Updated", value: updated });
+
+    document.getElementById("attendanceViewBody").innerHTML = DemographicsUI.renderDetailTable(rows);
+
+    new bootstrap.Modal(document.getElementById(VIEW_MODAL_ID)).show();
+  }
+
+  // ==========================================================================
   // LIST TABLE (ministries.php / events.php)
   // ==========================================================================
 
   function renderListRows(rows, { onEdit } = {}) {
+    registerViewableRecords(rows);
+
     if (!rows || rows.length === 0) {
       return DemographicsUI.renderTableEmpty(5, "No records yet", "ri-calendar-line");
     }
@@ -303,6 +385,9 @@ const AttendanceFormShared = (function () {
             <td>${total}</td>
             <td>${row.notes || "-"}</td>
             <td class="text-end">
+              <button type="button" class="btn btn-sm btn-light border me-1" onclick="AttendanceFormShared.openViewModalById(${row.id})" title="View Details">
+                <i class="ri-eye-line"></i>
+              </button>
               <button type="button" class="btn btn-sm btn-primary" onclick="${onEdit}(${row.id})">
                 <i class="ri-edit-line me-1"></i>Edit
               </button>
@@ -323,7 +408,7 @@ const AttendanceFormShared = (function () {
       .replace(/'/g, "&#039;");
   }
 
-  return { openEntryModal, renderListRows };
+  return { openEntryModal, renderListRows, openViewModal, openViewModalById, registerViewableRecords };
 })();
 
 window.AttendanceFormShared = AttendanceFormShared;

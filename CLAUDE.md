@@ -103,6 +103,7 @@ These are already mapped onto the YNEX template's Bootstrap variables (`--primar
 - **No gradients on UI elements** (buttons, backgrounds, badges) — flat solid brand colors only.
 - **No muted/washed-out text.** Body copy and labels read as solid, confident color, not low-contrast gray-on-gray. The teal/gold/red accents should read as vivid and intentional.
 - **Stat/summary cards follow the same no-muted rule.** Solid backgrounds, full-contrast numbers and labels — even a "neutral" or "inactive" stat still reads as deliberate, not a faded/light variant standing in for "less important."
+- **Read-only detail views (modals, summary panels) are a plain two-column label/value table.** An earlier version of this rule called for an icon avatar + colored pill on every field — tried in the browser and found too visually busy once a modal had more than a handful of fields, so that pattern is retired. Use `DemographicsUI.renderDetailTable()` (`assets/js/pages/demographics/ui-helpers.js`): a `<table>` of label/value rows, plain text by default. Reserve a colored `badge` for a row only when the value is genuinely categorical (status, category) — not every field, and never an icon avatar per row.
 - Match existing page structure (`includes/header.php` / `sidebar.php` / `footer.php` includes, `requirePermission()` call at the top of every protected page) rather than inventing a new page-layout pattern.
 
 ## Access Control (how it actually works — don't rebuild this)

@@ -38,6 +38,7 @@ const DemographicsTracking = (function () {
 
   let currentRecordId = null;
   let currentStatus = "draft";
+  let fiscalYearsById = {};
 
   function init() {
     Object.assign(USER_TERRITORY, DemographicsUI.resolveUserTerritory(USER_TERRITORY));
@@ -67,6 +68,8 @@ const DemographicsTracking = (function () {
     }
 
     const years = result.data;
+    fiscalYearsById = Object.fromEntries(years.map((y) => [y.id, y.year]));
+
     select.innerHTML = years
       .sort((a, b) => b.year - a.year)
       .map((y) => `<option value="${y.id}">${y.year}</option>`)
@@ -94,15 +97,25 @@ const DemographicsTracking = (function () {
       return;
     }
 
-    select.innerHTML = result.data.map((m) => `<option value="${m.id}">${m.name}</option>`).join("");
+    const year = fiscalYearsById[fiscalYearId];
+
+    select.innerHTML = result.data
+      .map((m) => {
+        const ended = DemographicsUI.monthHasEnded(year, m.number);
+        return `<option value="${m.id}" ${ended ? "" : 'disabled title="This month has not ended yet"'}>${m.name}${ended ? "" : " (in progress)"}</option>`;
+      })
+      .join("");
     select.disabled = false;
 
     if (selectMonthId) {
       select.value = selectMonthId;
     } else {
-      const currentMonthNumber = new Date().getMonth() + 1;
-      const currentMonth = result.data.find((m) => m.number === currentMonthNumber);
-      if (currentMonth) select.value = currentMonth.id;
+      // Default to the most recently *ended* month, not the current
+      // in-progress one - the one a pastor would actually be filling in
+      // today.
+      const endedMonths = result.data.filter((m) => DemographicsUI.monthHasEnded(year, m.number));
+      const mostRecentEnded = endedMonths.sort((a, b) => b.number - a.number)[0];
+      if (mostRecentEnded) select.value = mostRecentEnded.id;
     }
   }
 
@@ -374,7 +387,10 @@ const DemographicsTracking = (function () {
       })
       .slice(0, 6);
 
-    tbody.innerHTML = DemographicsUI.renderSubmissionsRows(rows, { onEdit: "DemographicsTracking.loadForEdit" });
+    tbody.innerHTML = DemographicsUI.renderSubmissionsRows(rows, {
+      onEdit: "DemographicsTracking.loadForEdit",
+      onView: "DemographicsUI.openSubmissionViewModalById",
+    });
   }
 
   async function loadForEdit(id) {

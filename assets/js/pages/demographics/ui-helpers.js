@@ -123,6 +123,36 @@ const DemographicsUI = (function () {
   }
 
   // ==========================================================================
+  // DETAIL TABLE (read-only view modals/panels)
+  // ==========================================================================
+
+  /**
+   * A plain two-column label/value table for read-only detail views -
+   * replaces an earlier icon-avatar + pill treatment (one per field) that
+   * turned out to read as too visually busy once a modal had more than a
+   * few fields. Plain text by default; pass `badge: true` on a row only
+   * for a genuinely categorical value (status, category) - not every
+   * field, just the ones that actually are a tag/label rather than free
+   * text or a number.
+   * @param {object[]} rows - [{label, value, badge, color}]
+   *   color: bootstrap color name, used only when badge is true
+   */
+  function renderDetailTable(rows) {
+    return `
+      <table class="table table-sm mb-0">
+        <tbody>
+          ${rows
+            .map(({ label, value, badge = false, color = "secondary" }) => `
+            <tr>
+              <td class="text-body fw-semibold" style="width: 40%;">${label}</td>
+              <td class="fw-semibold">${badge ? `<span class="badge bg-${color}">${value}</span>` : value}</td>
+            </tr>`)
+            .join("")}
+        </tbody>
+      </table>`;
+  }
+
+  // ==========================================================================
   // BUTTON LOADING STATE
   // ==========================================================================
 
@@ -174,7 +204,7 @@ const DemographicsUI = (function () {
   // design doc's explicit "number steppers" call-out for count fields.
   // ==========================================================================
 
-  function numberStepperHtml(fieldId, { label, min = 0, max = 99999, value = "", required = false } = {}) {
+  function numberStepperHtml(fieldId, { label, min = 0, max = 99999, value = "", required = false, hint = null } = {}) {
     return `
       <label for="${fieldId}" class="form-label">${label}${required ? ' <span class="text-danger">*</span>' : ""}</label>
       <div class="input-group stepper-group">
@@ -186,7 +216,8 @@ const DemographicsUI = (function () {
         <button class="btn btn-outline-primary stepper-btn" type="button" data-stepper-target="${fieldId}" data-stepper-dir="1">
           <i class="ri-add-line"></i>
         </button>
-      </div>`;
+      </div>
+      ${hint ? `<div class="form-text">${hint}</div>` : ""}`;
   }
 
   /** Call once after inserting stepper HTML into the DOM to wire up +/- clicks. */
@@ -205,6 +236,40 @@ const DemographicsUI = (function () {
         if (onChange) onChange(input);
       });
     });
+  }
+
+  // ==========================================================================
+  // FISCAL PERIOD - "HAS THIS MONTH ENDED"
+  //
+  // A month's real totals can't be known until it's actually over - a
+  // church can't report "August's" membership/attendance while August is
+  // still in progress. Shared here (not duplicated per page) since both
+  // the Demographics tracking form (disables in-progress months in its
+  // dropdown) and the Attendance overview page (which month's submission
+  // status to nag about) need the exact same answer - they'd otherwise
+  // disagree, e.g. the overview page prompting to "start August" while the
+  // tracking form won't actually let August be selected.
+  // ==========================================================================
+
+  function monthHasEnded(year, monthNumber) {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonthNumber = now.getMonth() + 1;
+    if (year < currentYear) return true;
+    if (year > currentYear) return false;
+    return monthNumber < currentMonthNumber;
+  }
+
+  /** The period a "this month's submission" prompt should actually refer
+   * to - the most recently *completed* month, not the calendar-current
+   * (still in progress) one. */
+  function mostRecentlyEndedPeriod() {
+    const now = new Date();
+    const currentMonthNumber = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+    return currentMonthNumber === 1
+      ? { year: currentYear - 1, month: 12 }
+      : { year: currentYear, month: currentMonthNumber - 1 };
   }
 
   // ==========================================================================
@@ -387,15 +452,22 @@ const DemographicsUI = (function () {
   // function, two call sites, per the reusable-component principle.
   // ==========================================================================
 
-  function renderSubmissionsRows(rows, { onEdit = null } = {}) {
+  function renderSubmissionsRows(rows, { onEdit = null, onView = null } = {}) {
     if (!rows || rows.length === 0) {
       return renderTableEmpty(4, "No submissions yet", "ri-file-list-3-line");
     }
+
+    registerViewableSubmissions(rows);
 
     return rows
       .map((row) => {
         const period = `${row.fiscal_month?.name || ""} ${row.fiscal_year?.year || ""}`.trim();
         const canEdit = row.status === "draft" || row.status === "changes_requested";
+        const viewBtn = onView
+          ? `<button type="button" class="btn btn-sm btn-light border me-1" onclick="${onView}(${row.id})" title="View Details">
+               <i class="ri-eye-line"></i>
+             </button>`
+          : "";
         const editBtn = canEdit && onEdit
           ? `<button type="button" class="btn btn-sm btn-primary" onclick="${onEdit}(${row.id})">
                <i class="ri-edit-line me-1"></i>Edit
@@ -407,10 +479,110 @@ const DemographicsUI = (function () {
             <td class="fw-semibold">${period}</td>
             <td>${row.total_members ?? "-"}</td>
             <td>${renderStatusBadge(row.status)}</td>
-            <td class="text-end">${editBtn}</td>
+            <td class="text-end">${viewBtn}${editBtn}</td>
           </tr>`;
       })
       .join("");
+  }
+
+  // ==========================================================================
+  // DEMOGRAPHICS SUBMISSION - VIEW DETAILS MODAL
+  //
+  // Read-only detail view for a single ChurchDemographic submission, shared
+  // between the same two call sites as renderSubmissionsRows() above. Built
+  // as a plain renderDetailTable() row list - the list endpoint already
+  // returns every field needed (index()/show() both load the full model),
+  // so no extra API call.
+  // ==========================================================================
+
+  const SUBMISSION_FIELD_LABELS = {
+    male_count: "Male",
+    female_count: "Female",
+    youth_count: "Youth (13-35)",
+    seniors_count: "Seniors (60+)",
+    womens_fellowship_count: "Women's Fellowship",
+    mens_fellowship_count: "Men's Fellowship",
+    sunday_school_male_count: "Sunday School (M)",
+    sunday_school_female_count: "Sunday School (F)",
+    new_members_count: "New Members",
+    transferred_out_count: "Transferred Out",
+    baptisms_count: "Baptisms",
+    communion_participants_count: "Communion Participants",
+    conversions_count: "New Conversions",
+  };
+
+  const SUBMISSION_VIEW_MODAL_ID = "demographicsSubmissionViewModal";
+  let viewableSubmissions = {};
+
+  function registerViewableSubmissions(rows) {
+    viewableSubmissions = Object.fromEntries((rows || []).map((r) => [r.id, r]));
+  }
+
+  function ensureSubmissionViewModalMounted() {
+    if (document.getElementById(SUBMISSION_VIEW_MODAL_ID)) return;
+
+    const modalHtml = `
+      <div class="modal fade" id="${SUBMISSION_VIEW_MODAL_ID}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title"><i class="ri-eye-line me-2"></i>Demographics Submission</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="demographicsSubmissionViewBody"></div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    const container = document.createElement("div");
+    container.innerHTML = modalHtml;
+    document.body.appendChild(container.firstElementChild);
+  }
+
+  function openSubmissionViewModalById(id) {
+    const record = viewableSubmissions[id];
+    if (record) openSubmissionViewModal(record);
+  }
+
+  function openSubmissionViewModal(record) {
+    ensureSubmissionViewModalMounted();
+
+    const period = `${record.fiscal_month?.name || ""} ${record.fiscal_year?.year || ""}`.trim();
+    const submitted = record.submitted_at ? new Date(record.submitted_at).toLocaleString() : "Not submitted yet";
+    const reviewed = record.reviewed_at ? new Date(record.reviewed_at).toLocaleString() : "-";
+    const reviewerName = record.reviewer ? `${record.reviewer.firstname || ""} ${record.reviewer.lastname || ""}`.trim() : "-";
+
+    const breakdownFields = [
+      "male_count", "female_count", "youth_count", "seniors_count",
+      "womens_fellowship_count", "mens_fellowship_count",
+      "sunday_school_male_count", "sunday_school_female_count",
+      "new_members_count", "transferred_out_count",
+      "baptisms_count", "communion_participants_count", "conversions_count",
+    ];
+
+    const rows = [
+      { label: "Period", value: period || "-" },
+      { label: "Status", value: renderStatusBadge(record.status), badge: false },
+      { label: "Total Members", value: `<strong class="fs-16">${record.total_members ?? 0}</strong>` },
+      ...breakdownFields.map((f) => ({ label: SUBMISSION_FIELD_LABELS[f], value: record[f] ?? 0 })),
+    ];
+
+    if (record.review_notes) {
+      rows.push({ label: "Reviewer Notes", value: escapeHtml(record.review_notes) });
+    }
+
+    rows.push(
+      { label: "Submitted", value: submitted },
+      { label: "Reviewed By", value: reviewerName },
+      { label: "Reviewed At", value: reviewed },
+    );
+
+    document.getElementById("demographicsSubmissionViewBody").innerHTML = renderDetailTable(rows);
+
+    new bootstrap.Modal(document.getElementById(SUBMISSION_VIEW_MODAL_ID)).show();
   }
 
   // ==========================================================================
@@ -431,6 +603,17 @@ const DemographicsUI = (function () {
     if (label) label.textContent = `${pct}%`;
   }
 
+  function escapeHtml(unsafe) {
+    if (unsafe === null || unsafe === undefined) return "";
+    return unsafe
+      .toString()
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
   // ==========================================================================
   // PUBLIC API
   // ==========================================================================
@@ -440,6 +623,7 @@ const DemographicsUI = (function () {
     renderStatusBadge,
     renderStatCard,
     renderStatCardsRow,
+    renderDetailTable,
     setButtonLoading,
     restoreButton,
     renderTableLoading,
@@ -447,9 +631,14 @@ const DemographicsUI = (function () {
     initListDataTable,
     renderFilterToolbar,
     wireFilterToolbar,
+    monthHasEnded,
+    mostRecentlyEndedPeriod,
     numberStepperHtml,
     initSteppers,
     renderSubmissionsRows,
+    registerViewableSubmissions,
+    openSubmissionViewModal,
+    openSubmissionViewModalById,
     updateCompletenessBar,
   };
 })();

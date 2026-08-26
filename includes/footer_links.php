@@ -6,26 +6,26 @@
   <!-- Bootstrap JS -->
   <script src="<?= SITE_URL ?>/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
   <!-- Defaultmenu JS -->
-  <script src="<?= SITE_URL ?>/assets/js/defaultmenu.min.js"></script>
+  <script src="<?= asset_url('/assets/js/defaultmenu.min.js') ?>"></script>
   <!-- Node Waves JS-->
   <script src="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.js"></script>
   <!-- Sticky JS -->
-  <script src="<?= SITE_URL ?>/assets/js/sticky.js"></script>
+  <script src="<?= asset_url('/assets/js/sticky.js') ?>"></script>
   <!-- Simplebar JS -->
   <script src="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.js"></script>
-  <script src="<?= SITE_URL ?>/assets/js/simplebar.js"></script>
+  <script src="<?= asset_url('/assets/js/simplebar.js') ?>"></script>
 
   <!-- Color Picker JS -->
   <script src="<?= SITE_URL ?>/assets/libs/%40simonwep/pickr/pickr.es5.min.js"></script>
   <!-- Custom-Switcher JS -->
-  <script src="<?= SITE_URL ?>/assets/js/custom-switcher.min.js"></script>
+  <script src="<?= asset_url('/assets/js/custom-switcher.min.js') ?>"></script>
 
   <!-- Custom JS -->
-  <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
+  <script src="<?= asset_url('/assets/js/custom.js') ?>"></script>
   <!-- Used In Zoomable TIme Series Chart -->
-  <script src="<?= SITE_URL ?>/assets/js/dataseries.js"></script>
+  <script src="<?= asset_url('/assets/js/dataseries.js') ?>"></script>
   <!---Used In Annotations Chart-->
-  <script src="<?= SITE_URL ?>/assets/js/apexcharts-stock-prices.js"></script>
+  <script src="<?= asset_url('/assets/js/apexcharts-stock-prices.js') ?>"></script>
   <!-- Datatables Cdn -->
   <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/jquery.dataTables.min.js">
   </script>
@@ -46,6 +46,6 @@
   <script src="<?= SITE_URL ?>/assets/cloudflare/ajax/libs/jszip/3.10.1/jszip.min.js">
   </script>
   <!-- Internal Datatables JS -->
-  <script src="<?= SITE_URL ?>/assets/js/datatables.js"></script>
+  <script src="<?= asset_url('/assets/js/datatables.js') ?>"></script>
   <!-- Toastr JS -->
   <script src="https://cdn.jsdelivr.net/npm/toastr@2.1.4"></script>

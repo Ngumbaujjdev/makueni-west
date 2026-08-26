@@ -21,17 +21,17 @@
         type="image/x-icon" />
 
     <!-- Main Theme Js -->
-    <script src="<?= SITE_URL ?>/assets/js/authentication-main.js"></script>
+    <script src="<?= asset_url('/assets/js/authentication-main.js') ?>"></script>
 
     <!-- Bootstrap Css -->
     <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css"
         rel="stylesheet" />
 
     <!-- Style Css -->
-    <link href="<?= SITE_URL ?>/assets/css/styles.min.css" rel="stylesheet" />
+    <link href="<?= asset_url('/assets/css/styles.min.css') ?>" rel="stylesheet" />
 
     <!-- Icons Css -->
-    <link href="<?= SITE_URL ?>/assets/css/icons.min.css" rel="stylesheet" />
+    <link href="<?= asset_url('/assets/css/icons.min.css') ?>" rel="stylesheet" />
 
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/swiper/swiper-bundle.min.css" />
     <!-- Quill Editor -->
@@ -45,8 +45,8 @@
 
 <body class="bg-white">
     <!-- App config (must load before any page script that uses AppConfig) -->
-    <script src="<?= SITE_URL ?>/assets/js/config/app.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
+    <script src="<?= asset_url('/assets/js/config/app.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/config/constants.js') ?>"></script>
     <!-- Start Switcher -->
     <?php include "../includes/start-switcher.php" ?>
     <!-- End Switcher -->
@@ -264,12 +264,12 @@
     <script src="<?= SITE_URL ?>/assets/libs/swiper/swiper-bundle.min.js"></script>
 
     <!-- Internal Sing-Up JS -->
-    <script src="<?= SITE_URL ?>/assets/js/authentication.js"></script>
+    <script src="<?= asset_url('/assets/js/authentication.js') ?>"></script>
 
     <!-- Show Password JS -->
-    <script src="<?= SITE_URL ?>/assets/js/show-password.js"></script>
+    <script src="<?= asset_url('/assets/js/show-password.js') ?>"></script>
     <!-- Toast JS -->
-    <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
+    <script src="<?= asset_url('/assets/js/Toasts.js') ?>"></script>
     <!-- Load Bootstrap first (if not already loaded) -->
     <script src="assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
     <!-- Quill Editor JS -->
@@ -283,12 +283,12 @@
     </script>
     <script src="https://unpkg.com/filepond@^4/dist/filepond.js"></script>
     <!-- toasts -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js"></script>"></script>
-    <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
-    <!-- <script src="<?= SITE_URL ?>/assets/js/pages/profile/profile.js"></script> -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/support/support.js"></script>
+    <script src="<?= asset_url('/assets/js/pages/authentication/logout.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/utils/auth-helpers.js') ?>"></script>"></script>
+    <script src="<?= asset_url('/assets/js/Toasts.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/utils/toast.js') ?>"></script>
+    <!-- <script src="<?= asset_url('/assets/js/pages/profile/profile.js') ?>"></script> -->
+    <script src="<?= asset_url('/assets/js/pages/support/support.js') ?>"></script>
 
     <!-- Load login handler -->
 

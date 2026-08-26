@@ -36,17 +36,17 @@ $currentRole = getCurrentRole();
     </script>
 
     <!-- Main Theme Js -->
-    <script src="<?= SITE_URL ?>/assets/js/main.js"></script>
+    <script src="<?= asset_url('/assets/js/main.js') ?>"></script>
 
     <!-- Bootstrap Css -->
     <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css"
         rel="stylesheet" />
 
     <!-- Style Css -->
-    <link href="<?= SITE_URL ?>/assets/css/styles.min.css" rel="stylesheet" />
+    <link href="<?= asset_url('/assets/css/styles.min.css') ?>" rel="stylesheet" />
 
     <!-- Icons Css -->
-    <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />
+    <link href="<?= asset_url('/assets/css/icons.css') ?>" rel="stylesheet" />
 
     <!-- Node Waves Css -->
     <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
@@ -68,8 +68,8 @@ $currentRole = getCurrentRole();
 
 <body>
     <!-- App config (must load before any page script that uses AppConfig) -->
-    <script src="<?= SITE_URL ?>/assets/js/config/app.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
+    <script src="<?= asset_url('/assets/js/config/app.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/config/constants.js') ?>"></script>
     <!-- Start Switcher -->
     <?php  include "includes/start-switcher.php" ?>
     <!-- End Switcher -->
@@ -1051,38 +1051,38 @@ $currentRole = getCurrentRole();
     <script src="<?= SITE_URL ?>/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
 
     <!-- Defaultmenu JS -->
-    <script src="<?= SITE_URL ?>/assets/js/defaultmenu.min.js"></script>
+    <script src="<?= asset_url('/assets/js/defaultmenu.min.js') ?>"></script>
 
     <!-- Node Waves JS-->
     <script src="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.js"></script>
 
     <!-- Sticky JS -->
-    <script src="<?= SITE_URL ?>/assets/js/sticky.js"></script>
+    <script src="<?= asset_url('/assets/js/sticky.js') ?>"></script>
 
     <!-- Simplebar JS -->
     <script src="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/simplebar.js"></script>
+    <script src="<?= asset_url('/assets/js/simplebar.js') ?>"></script>
 
     <!-- Color Picker JS -->
     <script src="<?= SITE_URL ?>/assets/libs/%40simonwep/pickr/pickr.es5.min.js"></script>
 
     <!-- Custom-Switcher JS -->
-    <script src="<?= SITE_URL ?>/assets/js/custom-switcher.min.js"></script>
+    <script src="<?= asset_url('/assets/js/custom-switcher.min.js') ?>"></script>
 
     <!-- Gallery JS -->
     <script src="<?= SITE_URL ?>/assets/libs/glightbox/js/glightbox.min.js"></script>
 
     <!-- Internal Profile JS -->
-    <script src="<?= SITE_URL ?>/assets/js/profile.js"></script>
+    <script src="<?= asset_url('/assets/js/profile.js') ?>"></script>
 
     <!-- Custom JS -->
-    <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
+    <script src="<?= asset_url('/assets/js/custom.js') ?>"></script>
     <!-- toasts -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js"></script>"></script>
-    <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/profile/profile.js"></script>
+    <script src="<?= asset_url('/assets/js/pages/authentication/logout.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/utils/auth-helpers.js') ?>"></script>"></script>
+    <script src="<?= asset_url('/assets/js/Toasts.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/utils/toast.js') ?>"></script>
+    <script src="<?= asset_url('/assets/js/pages/profile/profile.js') ?>"></script>
 </body>
 
 </html>
