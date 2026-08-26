@@ -123,6 +123,43 @@ const DemographicsUI = (function () {
   }
 
   // ==========================================================================
+  // DETAIL TABLE (read-only view modals/panels)
+  // ==========================================================================
+
+  /**
+   * A plain two-column label/value table for read-only detail views. A row
+   * only gets a colored badge when the value is genuinely categorical
+   * (status, category) - not every field, and never an icon avatar per row.
+   * @param {object[]} rows - [{label, value, badge, color}]
+   *   color: bootstrap color name, used only when badge is true
+   */
+  function renderDetailTable(rows) {
+    return `
+      <table class="table table-sm mb-0">
+        <tbody>
+          ${rows
+            .map(({ label, value, badge = false, color = "secondary" }) => `
+            <tr>
+              <td class="text-body fw-semibold" style="width: 40%;">${label}</td>
+              <td class="fw-semibold">${badge ? `<span class="badge bg-${color}">${value}</span>` : value}</td>
+            </tr>`)
+            .join("")}
+        </tbody>
+      </table>`;
+  }
+
+  function escapeHtml(unsafe) {
+    if (unsafe === null || unsafe === undefined) return "";
+    return unsafe
+      .toString()
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // ==========================================================================
   // BUTTON LOADING STATE
   // ==========================================================================
 
@@ -440,6 +477,7 @@ const DemographicsUI = (function () {
     renderStatusBadge,
     renderStatCard,
     renderStatCardsRow,
+    renderDetailTable,
     setButtonLoading,
     restoreButton,
     renderTableLoading,

@@ -276,36 +276,17 @@ const AttendanceGatheringTypes = (function () {
     const type = allTypes.find((t) => t.id === id);
     if (!type) return;
 
-    const icon = type.icon || type.category?.icon || "ri-calendar-event-line";
     const categoryColor = CATEGORY_COLORS[type.category?.slug] || "secondary";
     const created = type.created_at ? new Date(type.created_at).toLocaleString() : "-";
     const updated = type.updated_at ? new Date(type.updated_at).toLocaleString() : "-";
-    const D = DemographicsUI.renderDetailField;
 
-    document.getElementById("gatheringTypeViewBody").innerHTML = `
-      <div class="row g-3">
-        <div class="col-12">
-          ${D({ icon, label: "Name", value: escapeHtml(type.name), color: categoryColor, size: "lg" })}
-        </div>
-        <div class="col-md-6">
-          ${D({ icon: type.category?.icon || "ri-price-tag-3-line", label: "Category", value: escapeHtml(type.category?.name || "-"), color: categoryColor, pill: true })}
-        </div>
-        <div class="col-md-6">
-          ${D({
-            icon: type.is_active ? "ri-checkbox-circle-line" : "ri-close-circle-line",
-            label: "Status",
-            value: type.is_active ? "Active" : "Inactive",
-            color: type.is_active ? "success" : "secondary",
-            pill: true,
-          })}
-        </div>
-        <div class="col-md-6">
-          ${D({ icon: "ri-time-line", label: "Created", value: `<span class="fs-13">${created}</span>`, color: "secondary" })}
-        </div>
-        <div class="col-md-6">
-          ${D({ icon: "ri-history-line", label: "Last Updated", value: `<span class="fs-13">${updated}</span>`, color: "secondary" })}
-        </div>
-      </div>`;
+    document.getElementById("gatheringTypeViewBody").innerHTML = DemographicsUI.renderDetailTable([
+      { label: "Name", value: escapeHtml(type.name) },
+      { label: "Category", value: escapeHtml(type.category?.name || "-"), badge: true, color: categoryColor },
+      { label: "Status", value: type.is_active ? "Active" : "Inactive", badge: true, color: type.is_active ? "success" : "secondary" },
+      { label: "Created", value: created },
+      { label: "Last Updated", value: updated },
+    ]);
 
     new bootstrap.Modal(document.getElementById("gatheringTypeViewModal")).show();
   }
