@@ -115,10 +115,24 @@
         container.style.right = '0';
 
         // Push page content down to make room for the bar, on top of
-        // whatever clearance it already reserves for the fixed header.
+        // whatever clearance it already reserves for the fixed header -
+        // NOT recomputed from headerRect.bottom, because how a page
+        // clears the header varies by its data-vertical-style: some rely
+        // on .main-content's own padding-block-start (e.g. the default
+        // "overlay" is what most diocese pages use), others add a
+        // separate margin-block-start on top of that (church pages using
+        // data-vertical-style="overlay" get an extra 60px margin - using
+        // headerRect.bottom here double-counted that, stacking an extra
+        // header's worth of empty space above the page content). Capture
+        // whatever the page's own CSS already set once, then only add the
+        // bar's own height to it.
         if (mainContent) {
+            if (mainContent.dataset.baseTopOffset === undefined) {
+                mainContent.dataset.baseTopOffset = getComputedStyle(mainContent).paddingBlockStart;
+            }
+            const baseOffset = parseFloat(mainContent.dataset.baseTopOffset) || 0;
             const barHeight = container.getBoundingClientRect().height;
-            mainContent.style.paddingBlockStart = (headerRect.bottom + barHeight) + 'px';
+            mainContent.style.paddingBlockStart = (baseOffset + barHeight) + 'px';
         }
     }
 
