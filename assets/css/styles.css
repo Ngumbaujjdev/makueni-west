@@ -28453,12 +28453,32 @@ a:hover {
    data-menu-styles. #dynamic-modules-container gives this enough
    specificity to beat those attribute-scoped rules without needing
    !important on every property. */
-#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__label1 a {
-    color: var(--diocese-black, #0D0D0D) !important;
+/* Desktop only - the mobile accordion (<992px) sits on the sidebar's own
+   transparent/dark navy background, not white like the desktop flyout,
+   so it needs the opposite treatment (see the <992px rule further down):
+   this dark-text override applied unscoped used to make mobile submodule
+   text dark-on-dark-navy - nearly invisible. */
+@media (min-width: 992px) {
+    #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__label1 a {
+        color: var(--diocese-black, #0D0D0D) !important;
+    }
+
+    #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item {
+        color: var(--diocese-black, #0D0D0D) !important;
+    }
+
+    #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__angle {
+        color: var(--diocese-black, #0D0D0D) !important;
+    }
 }
 
-#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item {
-    color: var(--diocese-black, #0D0D0D) !important;
+/* Mobile inline accordion counterpart to the desktop-only block above -
+   light text for the dark navy background it actually sits on. */
+@media (max-width: 991.98px) {
+    #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item,
+    #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__angle {
+        color: rgba(255, 255, 255, 0.85) !important;
+    }
 }
 
 #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item:hover {
@@ -28472,13 +28492,6 @@ a:hover {
 #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item.active {
     color: #fff !important;
     background-color: #2CA4BF !important;
-}
-
-/* .side-menu__angle (the has-sub chevron) sets its own color directly
-   from --menu-prime-color rather than inheriting - needs its own override
-   for the same reason as the text above. */
-#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__angle {
-    color: var(--diocese-black, #0D0D0D) !important;
 }
 
 /* A has-sub row that's itself the active one sits on the solid teal fill
