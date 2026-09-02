@@ -228,9 +228,6 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
             // Setup click handlers
             setupClickHandlers();
 
-            // Auto-expand first module
-            setTimeout(() => autoExpandFirstModule(), 100);
-
             // Highlight active page
             highlightActivePage();
 
@@ -268,7 +265,6 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
         }
 
         let html = '';
-        let firstModuleRendered = false;
 
         // Loop through each group
         moduleGroups.forEach((group, groupIndex) => {
@@ -290,17 +286,16 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
             modulesArray.forEach((module, moduleIndex) => {
                 const hasSubmodules = module.submodules && module.submodules.length > 0;
                 const iconClass = getIconClass(module.icon);
-                const isFirst = !firstModuleRendered;
 
                 if (hasSubmodules) {
                     html += `
-                    <li class="slide has-sub ${isFirst ? 'open' : ''}" data-module-id="${module.id}">
+                    <li class="slide has-sub" data-module-id="${module.id}">
                         <a href="javascript:void(0);" class="side-menu__item" data-toggle-submenu>
                             <i class="${iconClass} side-menu__icon"></i>
                             <span class="side-menu__label">${escapeHtml(module.name)}</span>
                             <i class="fe fe-chevron-right side-menu__angle"></i>
                         </a>
-                        <ul class="slide-menu child1" style="${isFirst ? 'display: block;' : 'display: none;'}">
+                        <ul class="slide-menu child1">
                             <li class="slide side-menu__label1">
                                 <a href="javascript:void(0)">${escapeHtml(module.name)}</a>
                             </li>`;
@@ -311,8 +306,6 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
                     html += `
                         </ul>
                     </li>`;
-
-                    if (isFirst) firstModuleRendered = true;
                 } else {
                     html += `
                     <li class="slide">
@@ -445,10 +438,93 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
     }
 
     /**
+     * Position a flyout panel flush against the sidebar's actual right edge.
+     * Computed at open-time (not hardcoded) so it stays correct if the
+     * sidebar's own collapse toggle changes its width.
+     */
+    function positionFlyout(panel) {
+        const sidebarEl = document.getElementById('sidebar');
+        if (!sidebarEl) return;
+        const rect = sidebarEl.getBoundingClientRect();
+        panel.style.left = rect.right + 'px';
+        panel.style.top = rect.top + 'px';
+        panel.style.height = (window.innerHeight - rect.top) + 'px';
+    }
+
+    function closeAllFlyouts() {
+        document.querySelectorAll('#dynamic-modules-container > li[data-module-id] > .slide-menu')
+            .forEach(panel => panel.classList.remove('flyout-active'));
+    }
+
+    function openModuleFlyout(trigger) {
+        const panel = trigger.nextElementSibling;
+        if (!panel || !panel.classList.contains('slide-menu')) return;
+        if (panel.classList.contains('flyout-active')) return;
+
+        closeAllFlyouts();
+        positionFlyout(panel);
+        panel.classList.add('flyout-active');
+    }
+
+    /**
      * Setup click handlers
      */
     function setupClickHandlers() {
-        document.querySelectorAll('[data-toggle-submenu]').forEach(toggle => {
+        let flyoutCloseTimer = null;
+        const cancelFlyoutClose = () => clearTimeout(flyoutCloseTimer);
+        const scheduleFlyoutClose = () => {
+            clearTimeout(flyoutCloseTimer);
+            flyoutCloseTimer = setTimeout(closeAllFlyouts, 250);
+        };
+
+        // Module-level triggers open a flyout panel beside the sidebar
+        // (only the top-level triggers - nested submodule triggers are
+        // handled separately below).
+        document.querySelectorAll('#dynamic-modules-container > li[data-module-id] > [data-toggle-submenu]')
+            .forEach(trigger => {
+                trigger.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    openModuleFlyout(trigger);
+                });
+                trigger.addEventListener('mouseenter', function() {
+                    cancelFlyoutClose();
+                    openModuleFlyout(trigger);
+                });
+            });
+
+        // Sidebar and open flyout panels are visually contiguous - keep the
+        // panel open while the pointer is over either, close shortly after
+        // it leaves both (so moving sidebar -> panel doesn't flicker-close).
+        const sidebarEl = document.getElementById('sidebar');
+        if (sidebarEl) {
+            sidebarEl.addEventListener('mouseleave', scheduleFlyoutClose);
+            sidebarEl.addEventListener('mouseenter', cancelFlyoutClose);
+        }
+        document.querySelectorAll('#dynamic-modules-container > li[data-module-id] > .slide-menu')
+            .forEach(panel => {
+                panel.addEventListener('mouseleave', scheduleFlyoutClose);
+                panel.addEventListener('mouseenter', cancelFlyoutClose);
+            });
+
+        // Click outside the sidebar/flyout closes whatever's open
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.app-sidebar') && !e.target.closest('.slide-menu.child1')) {
+                closeAllFlyouts();
+            }
+        });
+
+        // Reposition the open panel on resize (position is computed, not CSS-fixed)
+        window.addEventListener('resize', function() {
+            const activePanel = document.querySelector(
+                '#dynamic-modules-container > li[data-module-id] > .slide-menu.flyout-active'
+            );
+            if (activePanel) positionFlyout(activePanel);
+        });
+
+        // Sub-submodule rows inside an already-open flyout keep the
+        // original inline expand/collapse accordion (unrelated to the
+        // flyout open/close mechanic above).
+        document.querySelectorAll('.slide-menu .slide.has-sub > [data-toggle-submenu]').forEach(toggle => {
             toggle.addEventListener('click', function(e) {
                 e.preventDefault();
                 const parentLi = this.closest('.slide');
@@ -459,19 +535,8 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
                 submenu.style.display = parentLi.classList.contains('open') ? 'block' : 'none';
             });
         });
-        console.log('✅ Click handlers setup');
-    }
 
-    /**
-     * Auto-expand first module
-     */
-    function autoExpandFirstModule() {
-        const firstModule = document.querySelector('[data-module-id]');
-        if (firstModule && !firstModule.classList.contains('open')) {
-            firstModule.classList.add('open');
-            const slideMenu = firstModule.querySelector('.slide-menu');
-            if (slideMenu) slideMenu.style.display = 'block';
-        }
+        console.log('✅ Click handlers setup');
     }
 
     /**
@@ -488,16 +553,33 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
                     const normalizedHref = href.replace(/\.php$/, '');
                     const normalizedCurrent = currentPath.replace(/\.php$/, '');
 
-                    if (normalizedCurrent.includes(normalizedHref) || normalizedHref.includes(
-                            normalizedCurrent)) {
+                    // One-directional only: matching the other way too
+                    // (href contains current) falsely matches every
+                    // sibling submodule at once when the current path is a
+                    // short prefix shared by all of them (e.g. a module's
+                    // own bare landing page).
+                    if (normalizedCurrent.includes(normalizedHref)) {
                         link.classList.add('active');
 
+                        // Expand any nested (child2+) sub-submodule accordion
+                        // ancestor inline, same as before - but stop at the
+                        // top-level flyout panel (.child1) rather than
+                        // forcing it open on page load.
                         let parent = link.closest('.slide-menu');
-                        while (parent) {
+                        while (parent && !parent.classList.contains('child1')) {
                             parent.style.display = 'block';
                             const parentSlide = parent.closest('.slide');
                             if (parentSlide) parentSlide.classList.add('open');
                             parent = parent.parentElement.closest('.slide-menu');
+                        }
+
+                        // Mark the owning top-level module as "current" so
+                        // its icon/label reads as active without forcing
+                        // the flyout open.
+                        const moduleLi = link.closest('li[data-module-id]');
+                        if (moduleLi) {
+                            const moduleTrigger = moduleLi.querySelector(':scope > .side-menu__item');
+                            if (moduleTrigger) moduleTrigger.classList.add('active');
                         }
                     }
                 }
@@ -636,5 +718,52 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
 
 .side-menu__angle {
     transition: transform 0.3s ease;
+}
+
+/* Flyout submenu panel - sits beside the sidebar, positioned via JS
+   against the sidebar's actual width (see positionFlyout()), so it's
+   fixed here but not given a hardcoded left/width-dependent offset. */
+#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 {
+    display: none;
+    position: fixed;
+    width: 14rem;
+    background-color: var(--custom-white, #fff);
+    border-inline-end: 1px solid var(--default-border, #e9edf4);
+    box-shadow: 0.25rem 0 0.75rem rgba(13, 13, 13, 0.08);
+    overflow-y: auto;
+    z-index: 1030;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+#dynamic-modules-container > li[data-module-id] > .slide-menu.child1.flyout-active {
+    display: block;
+}
+
+/* styles.css's ".app-sidebar .slide.side-menu__label1 { display: none; }"
+   (unscoped, specificity 0,3,0) otherwise wins over a plain class
+   selector here - match its specificity to override it. */
+.app-sidebar .slide.side-menu__label1 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--diocese-black, #0D0D0D);
+    padding: 0.9rem 1rem !important;
+    border-block-end: 1px solid var(--default-border, #e9edf4);
+    display: block !important;
+}
+
+.side-menu__label1 a {
+    color: inherit;
+    pointer-events: none;
+}
+
+/* Tighter, denser row spacing to match a cleaner list feel */
+.side-menu__item {
+    padding-block: 0.55rem;
+}
+
+.slide__category {
+    padding-block: 0.4rem;
 }
 </style>
