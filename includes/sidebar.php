@@ -460,7 +460,14 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
 
         panel.style.left = rect.right + 'px';
         panel.style.top = top + 'px';
-        panel.style.height = (window.innerHeight - top) + 'px';
+        // Auto-size to content instead of forcing full remaining viewport
+        // height - a short submodule list should read as a compact,
+        // proportioned card, not stretch into a mostly-empty tall box.
+        // max-height (with a small bottom margin) still caps it so a long
+        // list scrolls within the available space instead of overflowing
+        // past the viewport.
+        panel.style.height = 'auto';
+        panel.style.maxHeight = (window.innerHeight - top - 12) + 'px';
     }
 
     function closeAllFlyouts() {
@@ -737,17 +744,18 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
 /* Flyout submenu panel - sits beside the sidebar, positioned via JS
    against the sidebar's actual width (see positionFlyout()), so it's
    fixed here but not given a hardcoded left/width-dependent offset.
-   Rounded outer corners + a stronger shadow (no border line, which would
-   look odd against a rounded edge) so it reads as a floating card rather
-   than a flush, attached panel. */
+   Auto-sized to its content (max-height set in positionFlyout(), not a
+   forced full-viewport height), so all four corners are rounded rather
+   than just the outer two - it no longer reliably touches the viewport's
+   bottom edge. Shadow all around (not just inline-end) so it reads as a
+   floating card rather than a flush, attached panel. */
 #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 {
     display: none;
     position: fixed;
     width: 14rem;
     background-color: var(--custom-white, #fff);
-    border-start-end-radius: 0.5rem;
-    border-end-end-radius: 0.5rem;
-    box-shadow: 0.375rem 0 1rem rgba(13, 13, 13, 0.12);
+    border-radius: 0.5rem;
+    box-shadow: 0 0.25rem 1rem rgba(13, 13, 13, 0.15);
     overflow-y: auto;
     z-index: 1030;
     padding: 0;
