@@ -238,20 +238,24 @@ $baseUrl = '/makueni-west';
 
 #secondary-nav-bar .nav-tabs {
     border-block-end: 0;
+    gap: 0.25rem;
 }
 
+/* Active tab reads as a solid background pill, not an underline - matches
+   the same "whole background, not a border" treatment as the sidebar's
+   active-state pill. */
 #secondary-nav-bar .nav-link {
     color: var(--diocese-black, #0D0D0D);
     font-weight: 500;
-    padding-block: 0.65rem;
+    padding: 0.5rem 1rem;
+    margin-block: 0.5rem;
     border: 0;
-    border-block-end: 2px solid transparent;
+    border-radius: 0.375rem;
 }
 
 #secondary-nav-bar .nav-link.active {
-    color: #2CA4BF;
+    color: #fff;
     font-weight: 600;
-    border-block-end-color: #2CA4BF;
-    background: transparent;
+    background-color: #2CA4BF;
 }
 </style>
