@@ -28432,6 +28432,18 @@ a:hover {
     pointer-events: none;
 }
 
+/* On the mobile inline accordion, the module name here just repeats the
+   trigger row the user already tapped to open it - useful context in the
+   desktop flyout (spatially detached from its trigger), redundant right
+   below it in a mobile drawer. Same breakpoint toggleInlineAccordion()
+   itself switches on in sidebar.php. Placed after the unconditional rule
+   above so it wins the cascade tie at matching specificity. */
+@media (max-width: 991.98px) {
+    .app-sidebar .slide.side-menu__label1 {
+        display: none !important;
+    }
+}
+
 /* The flyout is a light/white panel, but its content still inherits
    text colors meant for the sidebar's own dark theme (this file's own
    --menu-prime-color, and white-on-hover/active rules scoped to
@@ -28449,10 +28461,17 @@ a:hover {
     color: var(--diocese-black, #0D0D0D) !important;
 }
 
-#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item:hover,
-#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item.active {
+#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item:hover {
     color: #2CA4BF !important;
     background-color: rgba(44, 164, 191, 0.14) !important;
+}
+
+/* Active submodule/sub-submodule: a fully solid fill (not a tint), same
+   treatment as the secondary tab bar's active pill, so "this is where you
+   are" reads unambiguously rather than as a faint highlight. */
+#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item.active {
+    color: #fff !important;
+    background-color: #2CA4BF !important;
 }
 
 /* .side-menu__angle (the has-sub chevron) sets its own color directly
@@ -28460,6 +28479,13 @@ a:hover {
    for the same reason as the text above. */
 #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__angle {
     color: var(--diocese-black, #0D0D0D) !important;
+}
+
+/* A has-sub row that's itself the active one sits on the solid teal fill
+   above - its chevron needs to flip to white too, or it'd be
+   near-invisible dark-on-teal. */
+#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item.active .side-menu__angle {
+    color: #fff !important;
 }
 
 /* Tighter, denser row spacing to match a cleaner list feel */
