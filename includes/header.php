@@ -196,3 +196,62 @@ $baseUrl = '/makueni-west';
     <!-- End::main-header-container -->
 </header>
 <!-- /app-header -->
+
+<!-- Secondary nav (sub-tab bar) - populated client-side by secondary-nav.js
+     from the same cached module tree the sidebar reads (mwd_current_modules).
+     No new API calls; shows the active module's submodules as tabs. -->
+<div id="secondary-nav-bar"></div>
+
+<script>
+    // Shared base URL for secondary-nav.js (a static file, so it can't use
+    // PHP interpolation directly the way sidebar.php's inline script does).
+    window.mwdBaseUrl = '<?= $baseUrl ?>';
+</script>
+<script src="<?= $baseUrl ?>/assets/js/utils/secondary-nav.js"></script>
+
+<style>
+/* Spacing tightening pass - reduces the template's generous default
+   padding to read as a denser, cleaner layout. Scoped to shared/reused
+   chrome classes only, applied here since header.php is included on
+   every page. */
+.card.custom-card {
+    margin-block-end: 1rem;
+}
+
+.card.custom-card .card-header {
+    padding: 0.85rem 1rem;
+}
+
+.card.custom-card .card-body {
+    padding: 1rem;
+}
+
+.page-header-breadcrumb {
+    margin-block: 1rem !important;
+}
+
+#secondary-nav-bar:not(:empty) {
+    background-color: var(--custom-white, #fff);
+    border-block-end: 1px solid var(--default-border, #e9edf4);
+    padding-inline: 1rem;
+}
+
+#secondary-nav-bar .nav-tabs {
+    border-block-end: 0;
+}
+
+#secondary-nav-bar .nav-link {
+    color: var(--diocese-black, #0D0D0D);
+    font-weight: 500;
+    padding-block: 0.65rem;
+    border: 0;
+    border-block-end: 2px solid transparent;
+}
+
+#secondary-nav-bar .nav-link.active {
+    color: #2CA4BF;
+    font-weight: 600;
+    border-block-end-color: #2CA4BF;
+    background: transparent;
+}
+</style>
