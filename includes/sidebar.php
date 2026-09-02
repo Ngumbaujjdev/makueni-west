@@ -440,15 +440,27 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
     /**
      * Position a flyout panel flush against the sidebar's actual right edge.
      * Computed at open-time (not hardcoded) so it stays correct if the
-     * sidebar's own collapse toggle changes its width.
+     * sidebar's own collapse toggle changes its width. Also starts below
+     * the fixed header, and below the secondary tab bar too when it's
+     * shown - otherwise the flyout (which renders on top, z-index-wise)
+     * visually hides whichever of them shares that space.
      */
     function positionFlyout(panel) {
         const sidebarEl = document.getElementById('sidebar');
         if (!sidebarEl) return;
         const rect = sidebarEl.getBoundingClientRect();
+
+        let top = rect.top;
+        const headerEl = document.querySelector('.app-header');
+        if (headerEl) top = Math.max(top, headerEl.getBoundingClientRect().bottom);
+        const secondaryNav = document.getElementById('secondary-nav-bar');
+        if (secondaryNav && getComputedStyle(secondaryNav).display !== 'none') {
+            top = Math.max(top, secondaryNav.getBoundingClientRect().bottom);
+        }
+
         panel.style.left = rect.right + 'px';
-        panel.style.top = rect.top + 'px';
-        panel.style.height = (window.innerHeight - rect.top) + 'px';
+        panel.style.top = top + 'px';
+        panel.style.height = (window.innerHeight - top) + 'px';
     }
 
     function closeAllFlyouts() {
@@ -638,9 +650,11 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
 </script>
 
 <style>
-/* Sidebar Active State */
+/* Sidebar Active State - solid background pill, not just a tinted/underlined
+   link, so the current item reads clearly at a glance. */
 .side-menu__item.active {
-    background-color: rgba(44, 164, 191, 0.1);
+    background-color: rgba(44, 164, 191, 0.18);
+    border-radius: 0.375rem;
     color: #2CA4BF !important;
     font-weight: 600;
 }
@@ -722,14 +736,18 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
 
 /* Flyout submenu panel - sits beside the sidebar, positioned via JS
    against the sidebar's actual width (see positionFlyout()), so it's
-   fixed here but not given a hardcoded left/width-dependent offset. */
+   fixed here but not given a hardcoded left/width-dependent offset.
+   Rounded outer corners + a stronger shadow (no border line, which would
+   look odd against a rounded edge) so it reads as a floating card rather
+   than a flush, attached panel. */
 #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 {
     display: none;
     position: fixed;
     width: 14rem;
     background-color: var(--custom-white, #fff);
-    border-inline-end: 1px solid var(--default-border, #e9edf4);
-    box-shadow: 0.25rem 0 0.75rem rgba(13, 13, 13, 0.08);
+    border-start-end-radius: 0.5rem;
+    border-end-end-radius: 0.5rem;
+    box-shadow: 0.375rem 0 1rem rgba(13, 13, 13, 0.12);
     overflow-y: auto;
     z-index: 1030;
     padding: 0;
