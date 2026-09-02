@@ -28408,7 +28408,10 @@ a:hover {
         display: none;
         position: static;
         width: 100%;
-        background-color: transparent;
+        /* A semi-transparent dark overlay, not fully transparent - reads
+           as a distinct "recessed" grouping for the expanded items rather
+           than blending completely into the rest of the sidebar. */
+        background-color: rgba(0, 0, 0, 0.15);
         box-shadow: none;
         border-radius: 0;
         padding-inline-start: 1rem;
