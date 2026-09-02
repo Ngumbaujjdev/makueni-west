@@ -26044,4 +26044,225 @@ a.link-underline-dark {
   text-underline-offset: 0.25em;
   backface-visibility: hidden;
 }
+
+/* ==========================================================================
+   Sidebar flyout nav + secondary tab bar (Cura-style redesign)
+   Originally added as inline <style> blocks in includes/sidebar.php and
+   includes/header.php - moved here since those two are the files actually
+   loaded on every page (styles.min.css, not styles.css, is what pages
+   link), and inline <style> in PHP partials isn't the right home for real
+   stylesheet rules even when it happens to work.
+   ========================================================================== */
+
+/* Sidebar Active State - solid background pill, not just a tinted/underlined
+   link, so the current item reads clearly at a glance. */
+.side-menu__item.active {
+    background-color: rgba(44, 164, 191, 0.18);
+    border-radius: 0.375rem;
+    color: #2CA4BF !important;
+    font-weight: 600;
+}
+
+/* Top-level module rows: the generic ".side-menu__item:hover" rule further
+   down (and styles.css's own [data-menu-styles="dark"] variant of it) only
+   goes to 5% white - barely visible against the dark rail. Solid teal tint
+   (lighter than the active pill above) for a hover state that actually
+   reads. #dynamic-modules-container scoping + !important needed to beat
+   that dark-mode rule's specificity, same as the flyout's own text-color
+   overrides. */
+#dynamic-modules-container > li[data-module-id] > .side-menu__item:hover {
+    background-color: rgba(44, 164, 191, 0.12) !important;
+    border-radius: 0.375rem;
+}
+
+.side-menu__item.active .side-menu__icon {
+    color: #2CA4BF !important;
+}
+
+/* Hover effects - Main modules (Account section items - Profile/Support/
+   Logout - fall through to this; module rows use the stronger override
+   above) */
+.side-menu__item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Hover effects - Submodules (lighter blue) */
+.side-menu__item.submodule-item:hover {
+    background-color: rgba(44, 164, 191, 0.15);
+    color: #2CA4BF;
+}
+
+/* Hover effects - Sub-submodules (brighter blue) */
+.side-menu__item.sub-submodule-item:hover {
+    background-color: rgba(44, 164, 191, 0.25);
+    color: #1a7a8f;
+}
+
+/* Flyout submenu panel - desktop only (>=992px, matching the rest of the
+   app's own breakpoint). Below that, JS uses toggleInlineAccordion()
+   instead of openModuleFlyout(), so .flyout-active is never added and
+   this whole block is irrelevant there - scoped to the same breakpoint
+   so a plain CSS reload/resize can't leave a stray fixed-position panel
+   on a narrow screen either.
+
+   Positioned via JS against the sidebar's actual width and the hovered
+   trigger's own row (see positionFlyout() in sidebar.php), so it's fixed
+   here but not given a hardcoded left/top/width-dependent offset.
+   Auto-sized to its content (max-height set in positionFlyout(), not a
+   forced full-viewport height), so all four corners are rounded rather
+   than just the outer two - it no longer reliably touches the viewport's
+   bottom edge. Shadow all around (not just inline-end) so it reads as a
+   floating card rather than a flush, attached panel. */
+@media (min-width: 992px) {
+    #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 {
+        display: none;
+        position: fixed;
+        width: 14rem;
+        background-color: var(--custom-white, #fff);
+        border-radius: 0.5rem;
+        box-shadow: 0 0.25rem 1rem rgba(13, 13, 13, 0.15);
+        overflow-y: auto;
+        z-index: 1030;
+        padding: 0;
+        margin: 0;
+        list-style: none;
+    }
+
+    #dynamic-modules-container > li[data-module-id] > .slide-menu.child1.flyout-active {
+        display: block;
+    }
+}
+
+/* Below 992px: no flyout - child1 behaves like a normal inline accordion
+   panel (the same mechanic child2/child3 already use via the existing
+   ".slide.open > .slide-menu { display: block !important }" rule),
+   toggled by click via toggleInlineAccordion() in sidebar.php, not hover -
+   appropriate for a touch/narrow-screen drawer rather than a
+   hover-positioned floating panel. */
+@media (max-width: 991.98px) {
+    #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 {
+        display: none;
+        position: static;
+        width: 100%;
+        background-color: transparent;
+        box-shadow: none;
+        border-radius: 0;
+        padding-inline-start: 1rem;
+    }
+}
+
+/* This file's own ".app-sidebar .slide.side-menu__label1 { display: none; }"
+   (unscoped, specificity 0,3,0) otherwise wins over a plain class
+   selector here - match its specificity to override it. */
+.app-sidebar .slide.side-menu__label1 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--diocese-black, #0D0D0D);
+    padding: 0.9rem 1rem !important;
+    border-block-end: 1px solid var(--default-border, #e9edf4);
+    display: block !important;
+}
+
+.side-menu__label1 a {
+    color: inherit;
+    pointer-events: none;
+}
+
+/* The flyout is a light/white panel, but its content still inherits
+   text colors meant for the sidebar's own dark theme (this file's own
+   --menu-prime-color, and white-on-hover/active rules scoped to
+   [data-menu-styles="dark"]) - on a white background those read as
+   pale gray or, on hover, literally white-on-white. Force solid,
+   readable colors inside the flyout regardless of the sidebar's own
+   data-menu-styles. #dynamic-modules-container gives this enough
+   specificity to beat those attribute-scoped rules without needing
+   !important on every property. */
+#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__label1 a {
+    color: var(--diocese-black, #0D0D0D) !important;
+}
+
+#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item {
+    color: var(--diocese-black, #0D0D0D) !important;
+}
+
+#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item:hover,
+#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item.active {
+    color: #2CA4BF !important;
+    background-color: rgba(44, 164, 191, 0.14) !important;
+}
+
+/* .side-menu__angle (the has-sub chevron) sets its own color directly
+   from --menu-prime-color rather than inheriting - needs its own override
+   for the same reason as the text above. */
+#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__angle {
+    color: var(--diocese-black, #0D0D0D) !important;
+}
+
+/* Tighter, denser row spacing to match a cleaner list feel */
+.side-menu__item {
+    padding-block: 0.55rem;
+}
+
+.slide__category {
+    padding-block: 0.4rem;
+}
+
+/* Spacing tightening pass - reduces the template's generous default
+   padding to read as a denser, cleaner layout. */
+.card.custom-card {
+    margin-block-end: 1rem;
+}
+
+.card.custom-card .card-header {
+    padding: 0.85rem 1rem;
+}
+
+.card.custom-card .card-body {
+    padding: 1rem;
+}
+
+.page-header-breadcrumb {
+    margin-block: 1rem !important;
+}
+
+#secondary-nav-bar:not(:empty) {
+    background-color: var(--custom-white, #fff);
+    border-block-end: 1px solid var(--default-border, #e9edf4);
+    padding-inline: 1rem;
+}
+
+/* nowrap + horizontal scroll instead of Bootstrap's default flex-wrap:
+   on a narrow screen, tabs that don't fit used to wrap onto extra rows,
+   which balloons this bar's measured height - and secondary-nav.js reads
+   that height to push page content down, so a wrapped bar was blowing up
+   .main-content's top padding to match. A single scrollable row keeps the
+   bar's height constant regardless of tab count or screen width. */
+#secondary-nav-bar .nav-tabs {
+    border-block-end: 0;
+    gap: 0.25rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+
+/* Active tab reads as a solid background pill, not an underline - matches
+   the same "whole background, not a border" treatment as the sidebar's
+   active-state pill. */
+#secondary-nav-bar .nav-link {
+    color: var(--diocese-black, #0D0D0D);
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    margin-block: 0.5rem;
+    border: 0;
+    border-radius: 0.375rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+#secondary-nav-bar .nav-link.active {
+    color: #fff;
+    font-weight: 600;
+    background-color: #2CA4BF;
+}
 /*# sourceMappingURL=styles.min.css.map */

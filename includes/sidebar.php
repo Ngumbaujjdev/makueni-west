@@ -437,29 +437,39 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
         return cleanPath;
     }
 
+    // Flyout is a desktop-only pattern (hover doesn't exist on touch, and
+    // the fixed-position math below is built around the desktop sidebar).
+    // Below this, the same 992px breakpoint the rest of the app already
+    // uses for its own layout switches (see styles.css's
+    // "@media (min-width: 992px)" blocks), modules fall back to the
+    // original inline click-to-expand accordion instead.
+    function isDesktopFlyout() {
+        return window.matchMedia('(min-width: 992px)').matches;
+    }
+
     /**
-     * Position a flyout panel flush against the sidebar's actual right edge.
-     * Computed at open-time (not hardcoded) so it stays correct if the
-     * sidebar's own collapse toggle changes its width. Also starts below
-     * the fixed header, and below the secondary tab bar too when it's
-     * shown - otherwise the flyout (which renders on top, z-index-wise)
-     * visually hides whichever of them shares that space.
+     * Position a flyout panel flush against the sidebar's actual right edge,
+     * vertically aligned with the hovered/clicked trigger's own row rather
+     * than always pinned to the top - clamped so it never renders above the
+     * header/tab bar, and never runs past the bottom of the viewport for a
+     * trigger low in a long sidebar. Computed at open-time (not hardcoded)
+     * so it stays correct if the sidebar's own collapse toggle changes its
+     * width.
      */
-    function positionFlyout(panel) {
+    function positionFlyout(panel, trigger) {
         const sidebarEl = document.getElementById('sidebar');
         if (!sidebarEl) return;
-        const rect = sidebarEl.getBoundingClientRect();
+        const sidebarRect = sidebarEl.getBoundingClientRect();
 
-        let top = rect.top;
+        let minTop = sidebarRect.top;
         const headerEl = document.querySelector('.app-header');
-        if (headerEl) top = Math.max(top, headerEl.getBoundingClientRect().bottom);
+        if (headerEl) minTop = Math.max(minTop, headerEl.getBoundingClientRect().bottom);
         const secondaryNav = document.getElementById('secondary-nav-bar');
         if (secondaryNav && getComputedStyle(secondaryNav).display !== 'none') {
-            top = Math.max(top, secondaryNav.getBoundingClientRect().bottom);
+            minTop = Math.max(minTop, secondaryNav.getBoundingClientRect().bottom);
         }
 
-        panel.style.left = rect.right + 'px';
-        panel.style.top = top + 'px';
+        panel.style.left = sidebarRect.right + 'px';
         // Auto-size to content instead of forcing full remaining viewport
         // height - a short submodule list should read as a compact,
         // proportioned card, not stretch into a mostly-empty tall box.
@@ -467,7 +477,17 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
         // list scrolls within the available space instead of overflowing
         // past the viewport.
         panel.style.height = 'auto';
-        panel.style.maxHeight = (window.innerHeight - top - 12) + 'px';
+        panel.style.maxHeight = (window.innerHeight - minTop - 12) + 'px';
+
+        const triggerRect = trigger ? trigger.getBoundingClientRect() : { top: minTop };
+        let top = Math.max(minTop, triggerRect.top);
+        // Panel is already visible (display set by the caller) by this
+        // point, so its real rendered height is available to clamp against.
+        const panelHeight = panel.getBoundingClientRect().height;
+        const maxTop = Math.max(minTop, window.innerHeight - panelHeight - 12);
+        top = Math.min(top, maxTop);
+
+        panel.style.top = top + 'px';
     }
 
     function closeAllFlyouts() {
@@ -481,8 +501,23 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
         if (panel.classList.contains('flyout-active')) return;
 
         closeAllFlyouts();
-        positionFlyout(panel);
+        // Make it visible first so positionFlyout() can read its real
+        // rendered height to clamp against.
         panel.classList.add('flyout-active');
+        positionFlyout(panel, trigger);
+    }
+
+    /**
+     * Same accordion toggle child2/child3 rows already use - reused here
+     * for module-level (child1) triggers on narrow screens, where the
+     * flyout is replaced by a plain inline expand/collapse.
+     */
+    function toggleInlineAccordion(trigger) {
+        const parentLi = trigger.closest('.slide');
+        const submenu = parentLi.querySelector('.slide-menu');
+        if (!submenu) return;
+        parentLi.classList.toggle('open');
+        submenu.style.display = parentLi.classList.contains('open') ? 'block' : 'none';
     }
 
     /**
@@ -496,16 +531,22 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
             flyoutCloseTimer = setTimeout(closeAllFlyouts, 250);
         };
 
-        // Module-level triggers open a flyout panel beside the sidebar
-        // (only the top-level triggers - nested submodule triggers are
-        // handled separately below).
+        // Module-level triggers open a flyout panel beside the sidebar on
+        // desktop, or expand inline (like the original accordion) below
+        // the 992px breakpoint (only the top-level triggers - nested
+        // submodule triggers are handled separately below).
         document.querySelectorAll('#dynamic-modules-container > li[data-module-id] > [data-toggle-submenu]')
             .forEach(trigger => {
                 trigger.addEventListener('click', function(e) {
                     e.preventDefault();
-                    openModuleFlyout(trigger);
+                    if (isDesktopFlyout()) {
+                        openModuleFlyout(trigger);
+                    } else {
+                        toggleInlineAccordion(trigger);
+                    }
                 });
                 trigger.addEventListener('mouseenter', function() {
+                    if (!isDesktopFlyout()) return; // no hover-open on touch/narrow screens
                     cancelFlyoutClose();
                     openModuleFlyout(trigger);
                 });
@@ -537,7 +578,15 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
             const activePanel = document.querySelector(
                 '#dynamic-modules-container > li[data-module-id] > .slide-menu.flyout-active'
             );
-            if (activePanel) positionFlyout(activePanel);
+            if (!activePanel) return;
+            if (!isDesktopFlyout()) {
+                // Crossed below the breakpoint with a flyout open - drop
+                // out of flyout mode entirely rather than leaving a
+                // fixed-position panel stranded.
+                closeAllFlyouts();
+                return;
+            }
+            positionFlyout(activePanel, activePanel.previousElementSibling);
         });
 
         // Sub-submodule rows inside an already-open flyout keep the
@@ -656,170 +705,4 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
 })();
 </script>
 
-<style>
-/* Sidebar Active State - solid background pill, not just a tinted/underlined
-   link, so the current item reads clearly at a glance. */
-.side-menu__item.active {
-    background-color: rgba(44, 164, 191, 0.18);
-    border-radius: 0.375rem;
-    color: #2CA4BF !important;
-    font-weight: 600;
-}
 
-.side-menu__item.active .side-menu__icon {
-    color: #2CA4BF !important;
-}
-
-/* Open state */
-.slide.open>.slide-menu {
-    display: block !important;
-}
-
-/* Smooth transitions */
-.slide-menu {
-    transition: all 0.3s ease;
-}
-
-/* Loading animation */
-.fa-spin {
-    animation: fa-spin 1s linear infinite;
-}
-
-@keyframes fa-spin {
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* Error states */
-.text-warning .side-menu__icon,
-.text-warning .side-menu__label {
-    color: #ffc107 !important;
-}
-
-.text-danger .side-menu__icon,
-.text-danger .side-menu__label {
-    color: #dc3545 !important;
-}
-
-/* Icon styling */
-.side-menu__icon {
-    width: 20px;
-    text-align: center;
-    margin-right: 10px;
-}
-
-/* Hover effects - Main modules */
-.side-menu__item:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-}
-
-/* Hover effects - Submodules (lighter blue) */
-.side-menu__item.submodule-item:hover {
-    background-color: rgba(44, 164, 191, 0.15);
-    color: #2CA4BF;
-}
-
-/* Hover effects - Sub-submodules (brighter blue) */
-.side-menu__item.sub-submodule-item:hover {
-    background-color: rgba(44, 164, 191, 0.25);
-    color: #1a7a8f;
-}
-
-
-/* Chevron rotation */
-.slide.open>.side-menu__item>.side-menu__angle {
-    transform: rotate(90deg);
-    transition: transform 0.3s ease;
-}
-
-.side-menu__angle {
-    transition: transform 0.3s ease;
-}
-
-/* Flyout submenu panel - sits beside the sidebar, positioned via JS
-   against the sidebar's actual width (see positionFlyout()), so it's
-   fixed here but not given a hardcoded left/width-dependent offset.
-   Auto-sized to its content (max-height set in positionFlyout(), not a
-   forced full-viewport height), so all four corners are rounded rather
-   than just the outer two - it no longer reliably touches the viewport's
-   bottom edge. Shadow all around (not just inline-end) so it reads as a
-   floating card rather than a flush, attached panel. */
-#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 {
-    display: none;
-    position: fixed;
-    width: 14rem;
-    background-color: var(--custom-white, #fff);
-    border-radius: 0.5rem;
-    box-shadow: 0 0.25rem 1rem rgba(13, 13, 13, 0.15);
-    overflow-y: auto;
-    z-index: 1030;
-    padding: 0;
-    margin: 0;
-    list-style: none;
-}
-
-#dynamic-modules-container > li[data-module-id] > .slide-menu.child1.flyout-active {
-    display: block;
-}
-
-/* styles.css's ".app-sidebar .slide.side-menu__label1 { display: none; }"
-   (unscoped, specificity 0,3,0) otherwise wins over a plain class
-   selector here - match its specificity to override it. */
-.app-sidebar .slide.side-menu__label1 {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--diocese-black, #0D0D0D);
-    padding: 0.9rem 1rem !important;
-    border-block-end: 1px solid var(--default-border, #e9edf4);
-    display: block !important;
-}
-
-.side-menu__label1 a {
-    color: inherit;
-    pointer-events: none;
-}
-
-/* The flyout is a light/white panel, but its content still inherits
-   text colors meant for the sidebar's own dark theme (styles.css's
-   --menu-prime-color, and white-on-hover/active rules scoped to
-   [data-menu-styles="dark"]) - on a white background those read as
-   pale gray or, on hover, literally white-on-white. Force solid,
-   readable colors inside the flyout regardless of the sidebar's own
-   data-menu-styles. #dynamic-modules-container gives this enough
-   specificity to beat those attribute-scoped rules without needing
-   !important on every property. */
-#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__label1 a {
-    color: var(--diocese-black, #0D0D0D) !important;
-}
-
-#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item {
-    color: var(--diocese-black, #0D0D0D) !important;
-}
-
-#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item:hover,
-#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item.active {
-    color: #2CA4BF !important;
-    background-color: rgba(44, 164, 191, 0.14) !important;
-}
-
-/* .side-menu__angle (the has-sub chevron) sets its own color directly
-   from --menu-prime-color rather than inheriting - needs its own override
-   for the same reason as the text above. */
-#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__angle {
-    color: var(--diocese-black, #0D0D0D) !important;
-}
-
-/* Tighter, denser row spacing to match a cleaner list feel */
-.side-menu__item {
-    padding-block: 0.55rem;
-}
-
-.slide__category {
-    padding-block: 0.4rem;
-}
-</style>
