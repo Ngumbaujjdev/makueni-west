@@ -784,6 +784,36 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
     pointer-events: none;
 }
 
+/* The flyout is a light/white panel, but its content still inherits
+   text colors meant for the sidebar's own dark theme (styles.css's
+   --menu-prime-color, and white-on-hover/active rules scoped to
+   [data-menu-styles="dark"]) - on a white background those read as
+   pale gray or, on hover, literally white-on-white. Force solid,
+   readable colors inside the flyout regardless of the sidebar's own
+   data-menu-styles. #dynamic-modules-container gives this enough
+   specificity to beat those attribute-scoped rules without needing
+   !important on every property. */
+#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__label1 a {
+    color: var(--diocese-black, #0D0D0D) !important;
+}
+
+#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item {
+    color: var(--diocese-black, #0D0D0D) !important;
+}
+
+#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item:hover,
+#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item.active {
+    color: #2CA4BF !important;
+    background-color: rgba(44, 164, 191, 0.14) !important;
+}
+
+/* .side-menu__angle (the has-sub chevron) sets its own color directly
+   from --menu-prime-color rather than inheriting - needs its own override
+   for the same reason as the text above. */
+#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__angle {
+    color: var(--diocese-black, #0D0D0D) !important;
+}
+
 /* Tighter, denser row spacing to match a cleaner list feel */
 .side-menu__item {
     padding-block: 0.55rem;
