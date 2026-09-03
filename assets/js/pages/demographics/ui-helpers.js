@@ -305,12 +305,18 @@ const DemographicsUI = (function () {
     container.innerHTML = `
       <div class="d-flex flex-wrap gap-2">
         ${items
-          .map(
-            (it) => `
-          <span class="badge rounded-pill bg-${it.color || "primary"}-transparent text-${it.color || "primary"}">
+          .map((it) => {
+            const color = it.color || "primary";
+            // Gold (secondary/warning in this app's brand palette) is too
+            // light for white text to read clearly - matches the same
+            // text-dark convention the breakdown table's status badges
+            // already use for those two colors.
+            const textCls = color === "warning" || color === "secondary" ? "text-dark" : "text-white";
+            return `
+          <span class="badge rounded-pill bg-${color} ${textCls}">
             ${it.label}${it.value !== undefined && it.value !== null ? ` · ${it.value}` : ""}
-          </span>`,
-          )
+          </span>`;
+          })
           .join("")}
       </div>`;
   }

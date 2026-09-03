@@ -40,6 +40,15 @@ $breadcrumbs = [
     <link href="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css" />
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/data-tables/responsive/2.3.0/css/responsive.bootstrap.min.css" />
+    <link href="<?= SITE_URL ?>/assets/libs/fullcalendar/main.min.css" rel="stylesheet" />
+
+    <!-- Sunday-highlight tint isn't reachable with Bootstrap utility classes,
+         same justified inline-style exception church/attendance/services.php uses. -->
+    <style>
+        .fc-sunday-highlight {
+            background-color: rgba(44, 164, 191, 0.08);
+        }
+    </style>
 
     <script>
         const USER_TERRITORY = {
@@ -176,33 +185,11 @@ $breadcrumbs = [
                         </div>
 
                         <div class="card custom-card">
-                            <div class="card-header justify-content-between flex-wrap">
-                                <div class="card-title"><i class="ri-file-list-3-line me-2 text-primary"></i>Sunday Records</div>
-                                <div class="dropdown" id="sundaySortDropdown">
-                                    <a href="javascript:void(0);" class="btn btn-primary btn-sm btn-wave" data-bs-toggle="dropdown" aria-expanded="false">
-                                        Sort By<i class="ri-arrow-down-s-line align-middle ms-1 d-inline-block"></i>
-                                    </a>
-                                    <ul class="dropdown-menu dropdown-menu-end" role="menu">
-                                        <li><a class="dropdown-item" href="javascript:void(0);" data-sort="date-desc">Newest First</a></li>
-                                        <li><a class="dropdown-item" href="javascript:void(0);" data-sort="date-asc">Oldest First</a></li>
-                                        <li><a class="dropdown-item" href="javascript:void(0);" data-sort="total-desc">Highest Attendance</a></li>
-                                    </ul>
-                                </div>
+                            <div class="card-header">
+                                <div class="card-title"><i class="ri-calendar-2-line me-2 text-primary"></i>Sunday Calendar</div>
                             </div>
-                            <div class="card-body p-0">
-                                <div class="px-3 pt-3" id="sundayFilterToolbar"></div>
-                                <div class="table-responsive">
-                                    <table class="table table-hover mb-0" id="sundayRecordsTable">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th class="fw-semibold text-dark">Date</th>
-                                                <th class="fw-semibold text-dark">Total Attendance</th>
-                                                <th class="fw-semibold text-dark">Notes</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="sundayRecordsTableBody"></tbody>
-                                    </table>
-                                </div>
+                            <div class="card-body">
+                                <div id="sundayCalendar"></div>
                             </div>
                         </div>
                     </div>
@@ -261,6 +248,7 @@ $breadcrumbs = [
                                                 <th class="fw-semibold text-dark">Gathering Type</th>
                                                 <th class="fw-semibold text-dark text-end">Times Held</th>
                                                 <th class="fw-semibold text-dark text-end">Total Attendance</th>
+                                                <th class="fw-semibold text-dark text-end">Average Attendance</th>
                                                 <th class="fw-semibold text-dark text-end">Status</th>
                                             </tr>
                                         </thead>
@@ -346,6 +334,7 @@ $breadcrumbs = [
                                                 <th class="fw-semibold text-dark">Event Type</th>
                                                 <th class="fw-semibold text-dark text-end">Times Held</th>
                                                 <th class="fw-semibold text-dark text-end">Total Attendance</th>
+                                                <th class="fw-semibold text-dark text-end">Average Attendance</th>
                                                 <th class="fw-semibold text-dark text-end">Status</th>
                                             </tr>
                                         </thead>
@@ -396,6 +385,19 @@ $breadcrumbs = [
         <?php include __DIR__ . '/../../includes/footer.php' ?>
     </div>
 
+    <!-- Read-only Sunday detail modal - Reports never creates/edits records, just shows what's already there -->
+    <div class="modal fade" id="sundayDetailModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-semibold"><i class="ri-calendar-check-line me-2"></i>Sunday Attendance</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="sundayDetailModalBody"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="scrollToTop">
         <span class="arrow"><i class="ri-arrow-up-s-fill fs-20"></i></span>
     </div>
@@ -412,6 +414,7 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
     <script src="<?= SITE_URL ?>/assets/libs/apexcharts/apexcharts.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/fullcalendar/main.min.js"></script>
 
     <!-- jQuery + DataTables (search/filter/pagination) -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>

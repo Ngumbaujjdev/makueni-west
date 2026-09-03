@@ -302,13 +302,16 @@ const AttendanceReports = (function () {
   /** "Total / Best / Latest" legend row for a time-series chart (Sunday trend, Ministry comparison). */
   function chartLegendItems(categories, data, colors = ["primary", "warning", "success"]) {
     if (!data || data.length === 0) return [];
-    const total = data.reduce((a, b) => a + b, 0);
-    const maxIdx = data.indexOf(Math.max(...data));
     const nonZero = data.map((v, i) => ({ v, i })).filter((x) => x.v > 0);
+    // Average, not a sum across periods - the same recurring group
+    // attending 4 times isn't "4x the people," it's the same people 4
+    // times, so a "Total" pill here would read as a headcount it isn't.
+    const average = nonZero.length ? Math.round(nonZero.reduce((a, x) => a + x.v, 0) / nonZero.length) : 0;
+    const maxIdx = data.indexOf(Math.max(...data));
     const latest = nonZero.length ? nonZero[nonZero.length - 1] : null;
 
     return [
-      { label: "Total", value: total, color: colors[0] },
+      { label: "Average", value: average, color: colors[0] },
       { label: "Best", value: `${categories[maxIdx]} (${data[maxIdx]})`, color: colors[1] },
       latest ? { label: "Latest", value: `${categories[latest.i]} (${latest.v})`, color: colors[2] } : null,
     ].filter(Boolean);
@@ -405,7 +408,81 @@ const AttendanceReports = (function () {
 
     const rows = recordsForTab("sunday");
     DemographicsUI.renderTimeline("sundayRecentList", buildRecentItems(rows, "sunday"));
-    renderRecordsTable("sunday", rows, false);
+    renderSundayCalendar(rows);
+  }
+
+  /**
+   * Read-only FullCalendar month view - the same library/Sunday-tint
+   * pattern already proven on church/attendance/services.php's entry
+   * calendar, minus the entry-form wiring (this page never creates
+   * records, only shows what's already there). Clicking a recorded
+   * Sunday opens a plain detail modal; clicking a blank date does
+   * nothing, since there's nothing to show or create here.
+   */
+  function renderSundayCalendar(rows) {
+    const el = document.getElementById("sundayCalendar");
+    if (!el || typeof FullCalendar === "undefined") return;
+
+    const events = rows.map((r) => ({
+      id: String(r.id),
+      title: `${totalFor(r)} attended`,
+      start: r.service_date.substring(0, 10),
+      allDay: true,
+      backgroundColor: BRAND_PRIMARY_SOLID,
+      borderColor: BRAND_PRIMARY_SOLID,
+      extendedProps: { record: r },
+    }));
+
+    charts.sundayCalendar = new FullCalendar.Calendar(el, {
+      initialView: "dayGridMonth",
+      headerToolbar: { left: "prev,next today", center: "title", right: "" },
+      height: "auto",
+      events,
+      dayCellClassNames: (arg) => (arg.date.getDay() === 0 ? ["fc-sunday-highlight"] : []),
+      eventClick: (info) => openSundayDetailModal(info.event.extendedProps.record),
+    });
+    charts.sundayCalendar.render();
+  }
+
+  /** Plain label/value table in a modal - this app's established "simple table, not icon+pill" convention for a read-only detail view. */
+  function openSundayDetailModal(record) {
+    const modalEl = document.getElementById("sundayDetailModal");
+    const bodyEl = document.getElementById("sundayDetailModalBody");
+    if (!modalEl || !bodyEl || typeof window.bootstrap === "undefined") return;
+
+    const date = new Date(record.service_date).toLocaleDateString("en-GB", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+    const rows = [
+      ["Date", date],
+      ["Adults", record.adults_count || 0],
+      ["Youth", record.youth_count || 0],
+      ["Children (Male)", record.children_male_count || 0],
+      ["Children (Female)", record.children_female_count || 0],
+      ["Total Attendance", totalFor(record)],
+      ["Notes", record.notes || "-"],
+    ];
+
+    bodyEl.innerHTML = `
+      <table class="table table-sm mb-0">
+        <tbody>
+          ${rows
+            .map(
+              ([label, value]) => `
+            <tr>
+              <td class="fw-semibold text-body" style="width: 45%;">${label}</td>
+              <td class="fw-semibold">${escapeHtml(String(value))}</td>
+            </tr>`,
+            )
+            .join("")}
+        </tbody>
+      </table>`;
+
+    window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
   }
 
   function renderBreakdownTab(tab, data) {
@@ -482,7 +559,7 @@ const AttendanceReports = (function () {
     const tbody = document.getElementById(`${prefix}BreakdownTableBody`);
 
     if (!breakdown || breakdown.length === 0) {
-      tbody.innerHTML = DemographicsUI.renderTableEmpty(5, "No gathering types configured yet", "ri-list-check-2");
+      tbody.innerHTML = DemographicsUI.renderTableEmpty(6, "No gathering types configured yet", "ri-list-check-2");
       return;
     }
 
@@ -505,6 +582,7 @@ const AttendanceReports = (function () {
           </td>
           <td class="text-end">${b.times_held}</td>
           <td class="text-end fw-semibold">${b.total_attendance}</td>
+          <td class="text-end">${b.average_attendance}</td>
           <td class="text-end"><span class="badge rounded-pill ${badge.cls}">${badge.label}</span></td>
         </tr>`;
       })
