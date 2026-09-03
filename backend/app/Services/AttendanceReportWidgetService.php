@@ -110,7 +110,8 @@ class AttendanceReportWidgetService
     private function combinedStats(Collection $records): array
     {
         $total = $records->sum(fn ($r) => $this->totalFor($r));
-        $avg = $records->count() ? round($total / $records->count(), 1) : 0;
+        $avg = $records->count() ? round($total / $records->count()) : 0;
+        $peak = $records->map(fn ($r) => $this->totalFor($r))->max() ?? 0;
         $spark = $this->sparkline($records);
 
         $byCategory = $records->groupBy('gathering_category_id')
@@ -122,7 +123,12 @@ class AttendanceReportWidgetService
 
         return [
             ['label' => 'Total Gatherings Recorded', 'value' => $records->count(), 'icon' => 'ri-calendar-check-line', 'color' => 'primary', 'sparkline' => $spark],
-            ['label' => 'Total Attendance', 'value' => $total, 'icon' => 'ri-group-line', 'color' => 'success', 'sparkline' => $spark],
+            // A sum across weeks of the same recurring congregation isn't a
+            // headcount (110 people at 4 Sundays isn't "440 people") - Peak
+            // Attendance (a single real gathering's highest headcount) and
+            // Overall Average (the typical size) are the two figures that
+            // actually mean something here.
+            ['label' => 'Peak Attendance', 'value' => $peak, 'icon' => 'ri-group-line', 'color' => 'success', 'sparkline' => $spark],
             ['label' => 'Overall Average', 'value' => $avg, 'icon' => 'ri-bar-chart-line', 'color' => 'warning', 'sparkline' => $spark],
             ['label' => 'Most Active Category', 'value' => $mostActiveCategory ? "{$mostActiveCategory['name']} ({$mostActiveCategory['total']})" : '-', 'icon' => 'ri-fire-line', 'color' => 'danger', 'sparkline' => $spark],
         ];
@@ -132,7 +138,7 @@ class AttendanceReportWidgetService
     {
         $byDate = $records->unique('service_date');
         $total = $byDate->sum(fn ($r) => $this->totalFor($r));
-        $avg = $byDate->count() ? round($total / $byDate->count(), 1) : 0;
+        $avg = $byDate->count() ? round($total / $byDate->count()) : 0;
         $spark = $this->sparkline($records);
 
         $highest = $byDate->sortByDesc(fn ($r) => $this->totalFor($r))->first();
@@ -243,7 +249,7 @@ class AttendanceReportWidgetService
             ->map(fn (Collection $group) => $group->sum(fn ($r) => $this->totalFor($r)));
 
         $bestMonthNum = $byMonth->sortDesc()->keys()->first();
-        $weeklyAvg = round($byDate->sum(fn ($r) => $this->totalFor($r)) / $byDate->count(), 1);
+        $weeklyAvg = round($byDate->sum(fn ($r) => $this->totalFor($r)) / $byDate->count());
 
         $months = $byMonth->keys()->sort()->values();
         $lastMonthNum = $months->last();
@@ -286,7 +292,7 @@ class AttendanceReportWidgetService
                 'icon' => $type->icon,
                 'times_held' => $typeRecords->count(),
                 'total_attendance' => $total,
-                'average_attendance' => $typeRecords->count() ? round($total / $typeRecords->count(), 1) : 0,
+                'average_attendance' => $typeRecords->count() ? round($total / $typeRecords->count()) : 0,
                 'last_held' => $lastDate?->format('j M Y'),
                 'status' => $this->breakdownStatus($typeRecords->count(), $lastDate),
             ];
@@ -304,15 +310,19 @@ class AttendanceReportWidgetService
 
     private function breakdownStats(Collection $records, array $breakdown): array
     {
-        $total = $records->sum(fn ($r) => $this->totalFor($r));
         $held = collect($breakdown)->filter(fn ($b) => $b['times_held'] > 0);
         $mostActive = $held->sortByDesc('times_held')->first();
         $spark = $this->sparkline($records);
 
+        // Average per gathering, not a sum across occurrences - the same
+        // ~110-person congregation showing up 4 times isn't "440 people."
+        $recordsCount = $records->count();
+        $avgPerGathering = $recordsCount ? round($records->sum(fn ($r) => $this->totalFor($r)) / $recordsCount) : 0;
+
         return [
             ['label' => 'Gathering Types Held', 'value' => $held->count().' of '.count($breakdown), 'icon' => 'ri-list-check-2', 'color' => 'primary', 'sparkline' => $spark],
-            ['label' => 'Total Gatherings Recorded', 'value' => $records->count(), 'icon' => 'ri-calendar-check-line', 'color' => 'secondary', 'sparkline' => $spark],
-            ['label' => 'Total Attendance', 'value' => $total, 'icon' => 'ri-group-line', 'color' => 'success', 'sparkline' => $spark],
+            ['label' => 'Total Gatherings Recorded', 'value' => $recordsCount, 'icon' => 'ri-calendar-check-line', 'color' => 'secondary', 'sparkline' => $spark],
+            ['label' => 'Average Attendance', 'value' => $avgPerGathering, 'icon' => 'ri-group-line', 'color' => 'success', 'sparkline' => $spark],
             ['label' => 'Most Active Type', 'value' => $mostActive ? $mostActive['name'].' ('.$mostActive['times_held'].'x)' : '-', 'icon' => 'ri-trophy-line', 'color' => 'warning', 'sparkline' => $spark],
         ];
     }

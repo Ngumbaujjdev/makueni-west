@@ -123,14 +123,14 @@ class AttendanceReportWidgetServiceTest extends TestCase
         $stats = $response->json('data.stats');
         $this->assertEquals('Sundays Recorded', $stats[0]['label']);
         $this->assertEquals(3, $stats[0]['value']);
-        $this->assertEquals(46.7, $stats[2]['value']); // Average Attendance = 140/3
+        $this->assertEquals(47, $stats[2]['value']); // Average Attendance = round(140/3)
         $this->assertStringContainsString('70 on 16 Aug', $stats[3]['value']); // Highest Attended Sunday
 
         $this->assertStringContainsString("2 Sundays weren't recorded this month", $response->json('data.insights.0'));
 
         $statColumns = collect($response->json('data.stat_columns'))->keyBy('label');
         $this->assertEquals('Aug (140)', $statColumns['Best Month']['value']);
-        $this->assertEquals('46.7', $statColumns['Weekly Average']['value']);
+        $this->assertEquals('47', $statColumns['Weekly Average']['value']);
         $this->assertEquals('-', $statColumns['This Month vs. Last']['value']); // only one month in scope
     }
 
@@ -231,7 +231,8 @@ class AttendanceReportWidgetServiceTest extends TestCase
 
         $stats = $response->json('data.stats');
         $this->assertEquals('2 of 3', $stats[0]['value']); // Gathering Types Held
-        $this->assertEquals(84, $stats[2]['value']); // Total Attendance = 32 + 52
+        $this->assertEquals('Average Attendance', $stats[2]['label']);
+        $this->assertEquals(28, $stats[2]['value']); // Average per gathering = round((32 + 52) / 3)
         $this->assertStringContainsString('Tuesday Fellowship (2x)', $stats[3]['value']); // Most Active Type
 
         $this->assertEquals(
@@ -299,7 +300,10 @@ class AttendanceReportWidgetServiceTest extends TestCase
         $response->assertStatus(200);
         $stats = $response->json('data.stats');
         $this->assertEquals(2, $stats[0]['value']); // Total Gatherings Recorded
-        $this->assertEquals(56, $stats[1]['value']); // Total Attendance = 30 + 26
+        $this->assertEquals('Peak Attendance', $stats[1]['label']);
+        $this->assertEquals(30, $stats[1]['value']); // max(30, 26) - a real single gathering's headcount, not a sum
+        $this->assertEquals('Overall Average', $stats[2]['label']);
+        $this->assertEquals(28, $stats[2]['value']); // round((30 + 26) / 2)
         $this->assertEquals('Most Active Category', $stats[3]['label']);
         $this->assertStringContainsString('Sunday Service (30)', $stats[3]['value']); // 30 > Ministry Gathering's 26
         $this->assertArrayNotHasKey('breakdown', $response->json('data'));
