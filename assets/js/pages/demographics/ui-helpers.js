@@ -217,7 +217,7 @@ const DemographicsUI = (function () {
     const hex = brandHex(color);
 
     const options = {
-      chart: { type: type === "area" ? "area" : "bar", height: 300, toolbar: { show: false } },
+      chart: { type: type === "area" ? "area" : "bar", height: 300, toolbar: { show: false }, foreColor: "#333335" },
       series,
       xaxis: { categories },
       colors: [hex],
@@ -279,7 +279,10 @@ const DemographicsUI = (function () {
    * Recent-activity list card body - modeled directly on index-1.html's
    * "Recent Orders" list (icon avatar + primary/secondary text + a
    * right-aligned value), a different shape from both the stat cards and
-   * the big DataTable below it.
+   * the big DataTable below it. The value renders as a pill badge, not
+   * plain colored text, so it reads as part of the same
+   * badge/pill visual language as the rest of the page rather than a
+   * separately-styled "timeline."
    * @param {string} containerId
    * @param {object[]} items - [{icon, color, primary, secondary, value}]
    */
@@ -306,7 +309,7 @@ const DemographicsUI = (function () {
                 <p class="fw-semibold mb-0">${it.primary}</p>
                 <p class="fs-12 text-body mb-0">${it.secondary}</p>
               </div>
-              <span class="fw-semibold text-success">${it.value}</span>
+              <span class="badge rounded-pill bg-${it.color || "primary"}-transparent text-${it.color || "primary"}">${it.value}</span>
             </div>
           </li>`,
           )
@@ -314,22 +317,52 @@ const DemographicsUI = (function () {
       </ul>`;
   }
 
+  /**
+   * Small pill-badge legend/key row - reused for the radial gauge's
+   * Recorded/Missed key and the Ministry donut's per-type key (replacing
+   * ApexCharts' own native legend so we control the pill styling).
+   * @param {string} containerId
+   * @param {object[]} items - [{label, value, color}]
+   */
+  function renderPillLegend(containerId, items) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (!items || items.length === 0) {
+      container.innerHTML = "";
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="d-flex flex-wrap gap-2">
+        ${items
+          .map(
+            (it) => `
+          <span class="badge rounded-pill bg-${it.color || "primary"}-transparent text-${it.color || "primary"}">
+            ${it.label}${it.value !== undefined && it.value !== null ? ` · ${it.value}` : ""}
+          </span>`,
+          )
+          .join("")}
+      </div>`;
+  }
+
   /** Single-value gauge (ApexCharts radialBar) - used for the Sunday Coverage stat. */
   function renderRadialGauge(containerId, { label, percentage, color = "primary" } = {}) {
     const el = document.getElementById(containerId);
     if (!el || typeof ApexCharts === "undefined") return null;
+    const hex = brandHex(color);
 
     const chart = new ApexCharts(el, {
-      chart: { type: "radialBar", height: 220 },
+      chart: { type: "radialBar", height: 220, foreColor: "#333335" },
       series: [Math.min(100, Math.max(0, percentage))],
       labels: [label],
-      colors: [brandHex(color)],
+      colors: [hex],
       plotOptions: {
         radialBar: {
           hollow: { size: "60%" },
           dataLabels: {
-            value: { fontSize: "22px", fontWeight: 600, formatter: (v) => `${v}%` },
-            name: { fontSize: "13px", offsetY: 6 },
+            value: { fontSize: "22px", fontWeight: 600, color: hex, formatter: (v) => `${v}%` },
+            name: { fontSize: "13px", offsetY: 6, color: "#333335" },
           },
         },
       },
@@ -343,18 +376,20 @@ const DemographicsUI = (function () {
    * proven on Demographics' gender-split chart, reused here instead of a
    * new one-off config. Genuinely needs distinct colors per slice
    * (categorical), the one chart type exempt from the single-color default.
+   * Native legend is off by default - callers render their own key via
+   * renderPillLegend() instead, for pill-styled consistency.
    */
-  function renderDonutChart(containerId, { labels, series, colors = null } = {}) {
+  function renderDonutChart(containerId, { labels, series, colors = null, showLegend = false } = {}) {
     const el = document.getElementById(containerId);
     if (!el || typeof ApexCharts === "undefined") return null;
     const palette = colors || [BRAND_COLORS.primary, BRAND_COLORS.secondary, BRAND_COLORS.success, BRAND_COLORS.danger];
 
     const chart = new ApexCharts(el, {
-      chart: { type: "donut", height: 260 },
+      chart: { type: "donut", height: 260, foreColor: "#333335" },
       series,
       labels,
       colors: palette,
-      legend: { position: "bottom" },
+      legend: { show: showLegend, position: "bottom" },
       dataLabels: { enabled: false },
     });
     chart.render();
@@ -372,7 +407,7 @@ const DemographicsUI = (function () {
     const hex = brandHex(color);
 
     const chart = new ApexCharts(el, {
-      chart: { height: 320, type: "line", toolbar: { show: false } },
+      chart: { height: 320, type: "line", toolbar: { show: false }, foreColor: "#333335" },
       series: [
         { name: barLabel, type: "column", data: barData },
         { name: lineLabel, type: "line", data: lineData },
@@ -769,6 +804,7 @@ const DemographicsUI = (function () {
     renderTrendChart,
     renderChartLegendRow,
     renderRecentList,
+    renderPillLegend,
     renderRadialGauge,
     renderDonutChart,
     renderComboChart,

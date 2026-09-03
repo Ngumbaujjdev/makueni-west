@@ -75,13 +75,34 @@ $breadcrumbs = [
                             <span class="d-block fs-12 text-body" id="reportClockDate">-</span>
                         </div>
                     </div>
-                    <div class="d-flex flex-wrap gap-2 align-items-center">
-                        <select class="form-select form-select-sm" id="reportFiscalYear" style="min-width: 100px;">
-                            <option value="">Loading years...</option>
-                        </select>
-                        <select class="form-select form-select-sm" id="reportFiscalMonth" style="min-width: 140px;">
-                            <option value="">All months</option>
-                        </select>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" id="periodPickerBtn"
+                            data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            <i class="ri-calendar-2-line me-1"></i><span id="periodPickerLabel">-</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end p-3" id="periodPickerMenu" style="min-width: 300px;">
+                            <div class="mb-2 fw-semibold fs-12 text-body text-uppercase">Quick Select</div>
+                            <div class="d-flex flex-wrap gap-1 mb-3">
+                                <button type="button" class="btn btn-light btn-sm" data-quick="this_month">This Month</button>
+                                <button type="button" class="btn btn-light btn-sm" data-quick="last_month">Last Month</button>
+                                <button type="button" class="btn btn-light btn-sm" data-quick="this_year">This Year</button>
+                                <button type="button" class="btn btn-light btn-sm" data-quick="last_year">Last Year</button>
+                                <button type="button" class="btn btn-light btn-sm" data-quick="all_time">All Time</button>
+                            </div>
+                            <div class="mb-2 fw-semibold fs-12 text-body text-uppercase">Custom</div>
+                            <div class="d-flex gap-2 mb-3">
+                                <select class="form-select form-select-sm" id="reportFiscalYear">
+                                    <option value="">Loading years...</option>
+                                </select>
+                                <select class="form-select form-select-sm" id="reportFiscalMonth">
+                                    <option value="">All months</option>
+                                </select>
+                            </div>
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="button" class="btn btn-light btn-sm" id="periodClearBtn">Clear</button>
+                                <button type="button" class="btn btn-primary btn-sm" id="periodApplyBtn">Apply</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -125,6 +146,7 @@ $breadcrumbs = [
                                     </div>
                                     <div class="card-body">
                                         <div id="sundayCoverageGauge"></div>
+                                        <div class="d-flex justify-content-center" id="sundayCoverageLegend"></div>
                                     </div>
                                 </div>
                             </div>
@@ -153,8 +175,18 @@ $breadcrumbs = [
                         </div>
 
                         <div class="card custom-card">
-                            <div class="card-header">
+                            <div class="card-header justify-content-between flex-wrap">
                                 <div class="card-title"><i class="ri-file-list-3-line me-2 text-primary"></i>Sunday Records</div>
+                                <div class="dropdown" id="sundaySortDropdown">
+                                    <a href="javascript:void(0);" class="btn btn-primary btn-sm btn-wave" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Sort By<i class="ri-arrow-down-s-line align-middle ms-1 d-inline-block"></i>
+                                    </a>
+                                    <ul class="dropdown-menu dropdown-menu-end" role="menu">
+                                        <li><a class="dropdown-item" href="javascript:void(0);" data-sort="date-desc">Newest First</a></li>
+                                        <li><a class="dropdown-item" href="javascript:void(0);" data-sort="date-asc">Oldest First</a></li>
+                                        <li><a class="dropdown-item" href="javascript:void(0);" data-sort="total-desc">Highest Attendance</a></li>
+                                    </ul>
+                                </div>
                             </div>
                             <div class="card-body p-0">
                                 <div class="px-3 pt-3" id="sundayFilterToolbar"></div>
@@ -188,6 +220,7 @@ $breadcrumbs = [
                                     </div>
                                     <div class="card-body">
                                         <div id="ministryDonutChart"></div>
+                                        <div class="d-flex justify-content-center" id="ministryDonutLegend"></div>
                                     </div>
                                 </div>
                             </div>
@@ -237,8 +270,18 @@ $breadcrumbs = [
                         </div>
 
                         <div class="card custom-card">
-                            <div class="card-header">
+                            <div class="card-header justify-content-between flex-wrap">
                                 <div class="card-title"><i class="ri-file-list-3-line me-2 text-primary"></i>Ministry Records</div>
+                                <div class="dropdown" id="ministrySortDropdown">
+                                    <a href="javascript:void(0);" class="btn btn-primary btn-sm btn-wave" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Sort By<i class="ri-arrow-down-s-line align-middle ms-1 d-inline-block"></i>
+                                    </a>
+                                    <ul class="dropdown-menu dropdown-menu-end" role="menu">
+                                        <li><a class="dropdown-item" href="javascript:void(0);" data-sort="date-desc">Newest First</a></li>
+                                        <li><a class="dropdown-item" href="javascript:void(0);" data-sort="date-asc">Oldest First</a></li>
+                                        <li><a class="dropdown-item" href="javascript:void(0);" data-sort="total-desc">Highest Attendance</a></li>
+                                    </ul>
+                                </div>
                             </div>
                             <div class="card-body p-0">
                                 <div class="px-3 pt-3" id="ministryFilterToolbar"></div>
@@ -312,8 +355,18 @@ $breadcrumbs = [
                         </div>
 
                         <div class="card custom-card">
-                            <div class="card-header">
+                            <div class="card-header justify-content-between flex-wrap">
                                 <div class="card-title"><i class="ri-file-list-3-line me-2 text-primary"></i>Event Records</div>
+                                <div class="dropdown" id="eventsSortDropdown">
+                                    <a href="javascript:void(0);" class="btn btn-primary btn-sm btn-wave" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Sort By<i class="ri-arrow-down-s-line align-middle ms-1 d-inline-block"></i>
+                                    </a>
+                                    <ul class="dropdown-menu dropdown-menu-end" role="menu">
+                                        <li><a class="dropdown-item" href="javascript:void(0);" data-sort="date-desc">Newest First</a></li>
+                                        <li><a class="dropdown-item" href="javascript:void(0);" data-sort="date-asc">Oldest First</a></li>
+                                        <li><a class="dropdown-item" href="javascript:void(0);" data-sort="total-desc">Highest Attendance</a></li>
+                                    </ul>
+                                </div>
                             </div>
                             <div class="card-body p-0">
                                 <div class="px-3 pt-3" id="eventsFilterToolbar"></div>

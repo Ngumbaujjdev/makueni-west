@@ -112,19 +112,21 @@ const AttendanceReports = (function () {
     }
 
     const years = result.data.sort((a, b) => b.year - a.year);
-    select.innerHTML = years.map((y) => `<option value="${y.id}">${y.year}</option>`).join("");
+    select.innerHTML = years.map((y) => `<option value="${y.id}" data-year="${y.year}">${y.year}</option>`).join("");
 
     const currentYear = new Date().getFullYear();
     const defaultYear = years.find((y) => y.year === currentYear) || years[0];
     select.value = defaultYear.id;
     select.addEventListener("change", () => onYearChange(select.value));
 
+    wirePeriodPicker();
     await onYearChange(defaultYear.id);
   }
 
   async function onYearChange(fiscalYearId) {
     await loadFiscalMonths(fiscalYearId);
     await loadPeriodData();
+    updatePeriodPickerLabel();
   }
 
   async function loadFiscalMonths(fiscalYearId) {
@@ -133,9 +135,13 @@ const AttendanceReports = (function () {
     const months = result.success ? result.data || [] : [];
 
     select.innerHTML =
-      '<option value="">All months</option>' + months.map((m) => `<option value="${m.id}">${m.name || m.short_name}</option>`).join("");
+      '<option value="">All months</option>' +
+      months.map((m) => `<option value="${m.id}" data-number="${m.number}">${m.name || m.short_name}</option>`).join("");
     select.value = "";
-    select.onchange = () => loadPeriodData();
+    select.onchange = () => {
+      loadPeriodData();
+      updatePeriodPickerLabel();
+    };
   }
 
   function currentFilters() {
@@ -144,6 +150,87 @@ const AttendanceReports = (function () {
     const filters = { fiscal_year_id: fiscalYearId };
     if (fiscalMonthId) filters.fiscal_month_id = fiscalMonthId;
     return filters;
+  }
+
+  // ==========================================================================
+  // POPOVER PERIOD PICKER (Quick Select + Custom Year/Month, Bootstrap dropdown)
+  // ==========================================================================
+
+  function wirePeriodPicker() {
+    const menu = document.getElementById("periodPickerMenu");
+    if (!menu || menu.dataset.wired) return;
+    menu.dataset.wired = "true";
+
+    menu.querySelectorAll("[data-quick]").forEach((btn) => {
+      btn.addEventListener("click", () => applyQuickSelect(btn.dataset.quick));
+    });
+
+    document.getElementById("periodApplyBtn")?.addEventListener("click", async () => {
+      await loadPeriodData();
+      updatePeriodPickerLabel();
+      closePeriodPicker();
+    });
+
+    document.getElementById("periodClearBtn")?.addEventListener("click", async () => {
+      document.getElementById("reportFiscalMonth").value = "";
+      await loadPeriodData();
+      updatePeriodPickerLabel();
+      closePeriodPicker();
+    });
+  }
+
+  function closePeriodPicker() {
+    const toggle = document.getElementById("periodPickerBtn");
+    const instance = toggle && window.bootstrap ? window.bootstrap.Dropdown.getOrCreateInstance(toggle) : null;
+    if (instance) instance.hide();
+  }
+
+  async function applyQuickSelect(key) {
+    const now = new Date();
+    let targetYear = now.getFullYear();
+    let targetMonth = now.getMonth() + 1; // 1-12
+    let clearMonth = false;
+
+    if (key === "last_month") {
+      targetMonth -= 1;
+      if (targetMonth < 1) {
+        targetMonth = 12;
+        targetYear -= 1;
+      }
+    } else if (key === "this_year") {
+      clearMonth = true;
+    } else if (key === "last_year") {
+      targetYear -= 1;
+      clearMonth = true;
+    } else if (key === "all_time") {
+      const yearSelect = document.getElementById("reportFiscalYear");
+      const oldest = [...yearSelect.options].sort((a, b) => Number(a.dataset.year) - Number(b.dataset.year))[0];
+      if (oldest) targetYear = Number(oldest.dataset.year);
+      clearMonth = true;
+    }
+    // "this_month" falls through with the defaults set above.
+
+    const yearSelect = document.getElementById("reportFiscalYear");
+    const yearOption = [...yearSelect.options].find((o) => Number(o.dataset.year) === targetYear);
+    if (!yearOption) return;
+
+    yearSelect.value = yearOption.value;
+    await loadFiscalMonths(yearOption.value);
+
+    if (!clearMonth) {
+      const monthSelect = document.getElementById("reportFiscalMonth");
+      const monthOption = [...monthSelect.options].find((o) => Number(o.dataset.number) === targetMonth);
+      if (monthOption) monthSelect.value = monthOption.value;
+    }
+
+    await loadPeriodData();
+    updatePeriodPickerLabel();
+    closePeriodPicker();
+  }
+
+  function updatePeriodPickerLabel() {
+    const el = document.getElementById("periodPickerLabel");
+    if (el) el.textContent = periodLabel();
   }
 
   // ==========================================================================
@@ -286,6 +373,11 @@ const AttendanceReports = (function () {
       color: "primary",
     });
 
+    DemographicsUI.renderPillLegend("sundayCoverageLegend", [
+      { label: "Recorded", value: data.coverage.recorded, color: "primary" },
+      { label: "Missed", value: Math.max(0, data.coverage.elapsed - data.coverage.recorded), color: "secondary" },
+    ]);
+
     DemographicsUI.renderChartLegendRow("sundayChartLegend", chartLegendItems(data.chart.categories, data.chart.series[0].data));
 
     charts.sundayTrendChart = DemographicsUI.renderTrendChart("sundayTrendChart", {
@@ -316,6 +408,11 @@ const AttendanceReports = (function () {
             series: held.map((b) => b.total_attendance),
           })
         : null;
+
+      DemographicsUI.renderPillLegend(
+        "ministryDonutLegend",
+        held.map((b, i) => ({ label: b.name, value: b.total_attendance, color: ["primary", "secondary", "success", "danger"][i % 4] })),
+      );
 
       DemographicsUI.renderChartLegendRow(
         "ministryChartLegend",
@@ -386,7 +483,7 @@ const AttendanceReports = (function () {
           <td class="fw-semibold text-body">${i + 1}</td>
           <td>
             <div class="d-flex align-items-center gap-2" title="${escapeHtml(lastHeldTitle)}">
-              <span class="avatar avatar-sm avatar-rounded bg-${avatarColor}">
+              <span class="avatar avatar-md avatar-rounded bg-${avatarColor}">
                 <i class="${b.icon || "ri-calendar-event-line"} text-white"></i>
               </span>
               <span class="fw-semibold">${escapeHtml(b.name)}</span>
@@ -394,7 +491,7 @@ const AttendanceReports = (function () {
           </td>
           <td class="text-end">${b.times_held}</td>
           <td class="text-end fw-semibold">${b.total_attendance}</td>
-          <td class="text-end"><span class="badge ${badge.cls}">${badge.label}</span></td>
+          <td class="text-end"><span class="badge rounded-pill ${badge.cls}">${badge.label}</span></td>
         </tr>`;
       })
       .join("");
@@ -417,14 +514,14 @@ const AttendanceReports = (function () {
           const date = new Date(r.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
           const icon = r.gathering_type?.icon || "ri-calendar-event-line";
           const middleCell = showGatheringColumn
-            ? `<td>${escapeHtml(r.gathering_type?.name || r.event_name || "-")}</td>`
+            ? `<td><span class="badge rounded-pill bg-primary-transparent text-primary">${escapeHtml(r.gathering_type?.name || r.event_name || "-")}</span></td>`
             : "";
 
           return `
             <tr>
               <td class="fw-semibold">
                 <div class="d-flex align-items-center gap-2">
-                  <span class="avatar avatar-sm avatar-rounded bg-primary-transparent"><i class="${icon} text-primary"></i></span>
+                  <span class="avatar avatar-md avatar-rounded bg-primary-transparent"><i class="${icon} text-primary"></i></span>
                   ${date}
                 </div>
               </td>
@@ -446,6 +543,30 @@ const AttendanceReports = (function () {
     const table = $(`#${tableId}`).DataTable();
     DemographicsUI.renderFilterToolbar(`${prefix}FilterToolbar`, { searchPlaceholder: "Search records..." });
     DemographicsUI.wireFilterToolbar(`${prefix}FilterToolbar`, table, []);
+    wireSortByDropdown(prefix, tableId, showGatheringColumn ? 2 : 1);
+  }
+
+  /**
+   * index-8.html's Bills Summary "Sort By" dropdown pattern, wired to the
+   * table's own DataTables order() API. Listeners are attached once
+   * (dataset.wired guard) but always look up the *current* DataTables
+   * instance by id at click time, since renderRecordsTable() destroys and
+   * recreates the instance on every filter/period change - closing over a
+   * table reference captured at wire-time would go stale after that.
+   */
+  function wireSortByDropdown(prefix, tableId, totalColumnIndex) {
+    const container = document.getElementById(`${prefix}SortDropdown`);
+    if (!container || container.dataset.wired) return;
+    container.dataset.wired = "true";
+
+    container.querySelectorAll("[data-sort]").forEach((item) => {
+      item.addEventListener("click", () => {
+        const table = $(`#${tableId}`).DataTable();
+        if (item.dataset.sort === "date-asc") table.order([0, "asc"]).draw();
+        else if (item.dataset.sort === "total-desc") table.order([totalColumnIndex, "desc"]).draw();
+        else table.order([0, "desc"]).draw();
+      });
+    });
   }
 
   // ==========================================================================
