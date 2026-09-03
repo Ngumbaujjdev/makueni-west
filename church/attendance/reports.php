@@ -147,6 +147,7 @@ $breadcrumbs = [
                                     <div class="card-body">
                                         <div id="sundayCoverageGauge"></div>
                                         <div class="d-flex justify-content-center" id="sundayCoverageLegend"></div>
+                                        <p class="fs-12 text-body text-center mt-2 mb-0" id="sundayCoverageCaption"></p>
                                     </div>
                                 </div>
                             </div>

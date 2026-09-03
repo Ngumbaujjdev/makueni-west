@@ -276,17 +276,14 @@ const DemographicsUI = (function () {
   }
 
   /**
-   * Recent-activity list card body - modeled directly on index-1.html's
-   * "Recent Orders" list (icon avatar + primary/secondary text + a
-   * right-aligned value), a different shape from both the stat cards and
-   * the big DataTable below it. The value renders as a pill badge, not
-   * plain colored text, so it reads as part of the same
-   * badge/pill visual language as the rest of the page rather than a
-   * separately-styled "timeline."
+   * Recent-activity timeline - the exact `timeline-widget`/
+   * `timeline-widget-list` classes already defined in styles.css
+   * (index-8.html's "Upcoming Events" widget), not new CSS: a day-number +
+   * weekday date column connected to a title + time/badge subtitle.
    * @param {string} containerId
-   * @param {object[]} items - [{icon, color, primary, secondary, value}]
+   * @param {object[]} items - [{day, weekday, title, time, badgeLabel, badgeColor}]
    */
-  function renderRecentList(containerId, items) {
+  function renderTimeline(containerId, items) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -296,20 +293,22 @@ const DemographicsUI = (function () {
     }
 
     container.innerHTML = `
-      <ul class="list-unstyled mb-0">
+      <ul class="list-unstyled timeline-widget mb-0 my-3">
         ${items
           .map(
             (it) => `
-          <li class="mb-3">
-            <div class="d-flex align-items-center">
-              <span class="avatar avatar-md bg-${it.color || "primary"}-transparent">
-                <i class="${it.icon || "ri-calendar-event-line"} text-${it.color || "primary"}"></i>
-              </span>
-              <div class="flex-fill ms-2">
-                <p class="fw-semibold mb-0">${it.primary}</p>
-                <p class="fs-12 text-body mb-0">${it.secondary}</p>
+          <li class="timeline-widget-list">
+            <div class="d-flex align-items-top">
+              <div class="me-5 text-center">
+                <span class="d-block fs-20 fw-semibold text-primary">${it.day}</span>
+                <span class="d-block fs-12 text-body">${it.weekday}</span>
               </div>
-              <span class="badge rounded-pill bg-${it.color || "primary"}-transparent text-${it.color || "primary"}">${it.value}</span>
+              <div class="flex-fill">
+                <p class="mb-1 timeline-widget-content">${it.title}</p>
+                <p class="mb-0 fs-12 lh-1 text-body">
+                  ${it.time || ""}<span class="badge bg-${it.badgeColor || "primary"}-transparent ms-2">${it.badgeLabel}</span>
+                </p>
+              </div>
             </div>
           </li>`,
           )
@@ -346,31 +345,6 @@ const DemographicsUI = (function () {
       </div>`;
   }
 
-  /** Single-value gauge (ApexCharts radialBar) - used for the Sunday Coverage stat. */
-  function renderRadialGauge(containerId, { label, percentage, color = "primary" } = {}) {
-    const el = document.getElementById(containerId);
-    if (!el || typeof ApexCharts === "undefined") return null;
-    const hex = brandHex(color);
-
-    const chart = new ApexCharts(el, {
-      chart: { type: "radialBar", height: 220, foreColor: "#333335" },
-      series: [Math.min(100, Math.max(0, percentage))],
-      labels: [label],
-      colors: [hex],
-      plotOptions: {
-        radialBar: {
-          hollow: { size: "60%" },
-          dataLabels: {
-            value: { fontSize: "22px", fontWeight: 600, color: hex, formatter: (v) => `${v}%` },
-            name: { fontSize: "13px", offsetY: 6, color: "#333335" },
-          },
-        },
-      },
-    });
-    chart.render();
-    return chart;
-  }
-
   /**
    * Category-share donut - wraps the same ApexCharts donut config already
    * proven on Demographics' gender-split chart, reused here instead of a
@@ -378,20 +352,52 @@ const DemographicsUI = (function () {
    * (categorical), the one chart type exempt from the single-color default.
    * Native legend is off by default - callers render their own key via
    * renderPillLegend() instead, for pill-styled consistency.
+   *
+   * `centerTotal` turns on ApexCharts' native donut-total label - the
+   * index-8.html "Jobs Summary" pattern (a big centered "Total N" instead
+   * of a bare ring), used for the Sunday Coverage widget's
+   * Recorded/Missed donut.
+   * @param {object} opts {labels, series, colors, showLegend, centerTotal: {label, value}}
    */
-  function renderDonutChart(containerId, { labels, series, colors = null, showLegend = false } = {}) {
+  function renderDonutChart(containerId, { labels, series, colors = null, showLegend = false, centerTotal = null } = {}) {
     const el = document.getElementById(containerId);
     if (!el || typeof ApexCharts === "undefined") return null;
     const palette = colors || [BRAND_COLORS.primary, BRAND_COLORS.secondary, BRAND_COLORS.success, BRAND_COLORS.danger];
 
-    const chart = new ApexCharts(el, {
+    const options = {
       chart: { type: "donut", height: 260, foreColor: "#333335" },
       series,
       labels,
       colors: palette,
       legend: { show: showLegend, position: "bottom" },
       dataLabels: { enabled: false },
-    });
+    };
+
+    if (centerTotal) {
+      options.plotOptions = {
+        pie: {
+          donut: {
+            size: "70%",
+            labels: {
+              show: true,
+              name: { show: true, fontSize: "13px", color: "#333335" },
+              value: { show: true, fontSize: "18px", color: "#333335" },
+              total: {
+                show: true,
+                showAlways: true,
+                label: centerTotal.label,
+                fontSize: "20px",
+                fontWeight: 600,
+                color: "#333335",
+                formatter: () => centerTotal.value,
+              },
+            },
+          },
+        },
+      };
+    }
+
+    const chart = new ApexCharts(el, options);
     chart.render();
     return chart;
   }
@@ -803,9 +809,8 @@ const DemographicsUI = (function () {
     renderWidgetCardsRow,
     renderTrendChart,
     renderChartLegendRow,
-    renderRecentList,
+    renderTimeline,
     renderPillLegend,
-    renderRadialGauge,
     renderDonutChart,
     renderComboChart,
     renderInsightCallout,

@@ -36,6 +36,10 @@ const AttendanceReports = (function () {
 
   const TAB_CATEGORY_SLUG = { sunday: "sunday_service", ministry: "ministry_gathering", events: "special_event" };
 
+  // Same-hue solid + faded pair (index-8.html's Jobs Summary donut pattern) - one brand color, not a forced second color.
+  const BRAND_PRIMARY_SOLID = "#2CA4BF";
+  const BRAND_PRIMARY_FADED = "rgba(44, 164, 191, 0.4)";
+
   async function init() {
     Object.assign(USER_TERRITORY, DemographicsUI.resolveUserTerritory(USER_TERRITORY));
 
@@ -326,24 +330,26 @@ const AttendanceReports = (function () {
     ];
   }
 
-  /** Last 5 records for a tab's "Recent" list card, newest first. */
+  /** Last 5 records for a tab's timeline card (renderTimeline), newest first. */
   function buildRecentItems(rows, tab) {
     return [...rows]
       .sort((a, b) => new Date(b.service_date) - new Date(a.service_date))
       .slice(0, 5)
       .map((r) => {
-        const date = new Date(r.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+        const d = new Date(r.service_date);
+        const day = d.toLocaleDateString("en-GB", { day: "numeric" });
+        const weekday = d.toLocaleDateString("en-GB", { weekday: "short" });
 
         if (tab === "sunday") {
-          return { icon: "ri-calendar-check-line", color: "primary", primary: date, secondary: "Sunday Service", value: totalFor(r) };
+          return { day, weekday, title: "Sunday Service", badgeLabel: `${totalFor(r)} attendees`, badgeColor: "primary" };
         }
 
         return {
-          icon: r.gathering_type?.icon || "ri-calendar-event-line",
-          color: tab === "ministry" ? "success" : "secondary",
-          primary: r.gathering_type?.name || r.event_name || "-",
-          secondary: date,
-          value: totalFor(r),
+          day,
+          weekday,
+          title: r.gathering_type?.name || r.event_name || "-",
+          badgeLabel: `${totalFor(r)} attendees`,
+          badgeColor: tab === "ministry" ? "success" : "secondary",
         };
       });
   }
@@ -367,16 +373,23 @@ const AttendanceReports = (function () {
     DemographicsUI.renderWidgetCardsRow("sundayCardsRow", data.stats.map(statToCardOpts));
     DemographicsUI.renderInsightCallout("sundayInsights", data.insights);
 
-    charts.sundayCoverageGauge = DemographicsUI.renderRadialGauge("sundayCoverageGauge", {
-      label: "Coverage",
-      percentage: data.coverage.percentage,
-      color: "primary",
+    const missed = Math.max(0, data.coverage.elapsed - data.coverage.recorded);
+    charts.sundayCoverageGauge = DemographicsUI.renderDonutChart("sundayCoverageGauge", {
+      labels: ["Recorded", "Missed"],
+      series: [data.coverage.recorded, missed],
+      colors: [BRAND_PRIMARY_SOLID, BRAND_PRIMARY_FADED],
+      centerTotal: { label: "Total", value: data.coverage.elapsed },
     });
 
     DemographicsUI.renderPillLegend("sundayCoverageLegend", [
       { label: "Recorded", value: data.coverage.recorded, color: "primary" },
-      { label: "Missed", value: Math.max(0, data.coverage.elapsed - data.coverage.recorded), color: "secondary" },
+      { label: "Missed", value: missed, color: "secondary" },
     ]);
+
+    const coverageCaptionEl = document.getElementById("sundayCoverageCaption");
+    if (coverageCaptionEl) {
+      coverageCaptionEl.textContent = `${data.coverage.recorded} of ${data.coverage.elapsed} expected Sundays have been recorded this period (${data.coverage.percentage}%).`;
+    }
 
     DemographicsUI.renderChartLegendRow("sundayChartLegend", chartLegendItems(data.chart.categories, data.chart.series[0].data));
 
@@ -390,7 +403,7 @@ const AttendanceReports = (function () {
     DemographicsUI.renderStatColumns("sundayStatColumns", data.stat_columns);
 
     const rows = recordsForTab("sunday");
-    DemographicsUI.renderRecentList("sundayRecentList", buildRecentItems(rows, "sunday"));
+    DemographicsUI.renderTimeline("sundayRecentList", buildRecentItems(rows, "sunday"));
     renderRecordsTable("sunday", rows, false);
   }
 
@@ -443,7 +456,7 @@ const AttendanceReports = (function () {
     renderBreakdownTable(containerPrefix, data.breakdown);
 
     const rows = recordsForTab(tab);
-    DemographicsUI.renderRecentList(`${containerPrefix}RecentList`, buildRecentItems(rows, tab));
+    DemographicsUI.renderTimeline(`${containerPrefix}RecentList`, buildRecentItems(rows, tab));
     renderRecordsTable(containerPrefix, rows, true);
   }
 
