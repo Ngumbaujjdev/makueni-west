@@ -123,6 +123,219 @@ const DemographicsUI = (function () {
   }
 
   // ==========================================================================
+  // WIDGET DASHBOARD COMPONENTS (Attendance Reports tabbed dashboard)
+  //
+  // Bigger, richer cards + a small chart-type library modeled on
+  // church/dashboard/index.php's card markup and the chart patterns
+  // surveyed across the template's other demo dashboards (index-6/index-9)
+  // - additive alongside renderStatCard/renderStatCardsRow above, which
+  // stay untouched for the pages already using them. Alpha/opacity
+  // convention followed throughout (confirmed consistent across the
+  // template): 0.05 for gridlines, 0.1 for card tints, 0.2-0.3 for chart
+  // fills, 1.0 for solid strokes/bars. Charts default to a single brand
+  // color rather than forcing a two-color scheme - only the donut
+  // (genuinely categorical slices) needs more than one.
+  // ==========================================================================
+
+  const BRAND_COLORS = {
+    primary: "#2CA4BF",
+    secondary: "#F2BE22",
+    warning: "#F2BE22",
+    danger: "#F23535",
+    success: "#26bf94",
+  };
+
+  function brandHex(color) {
+    return BRAND_COLORS[color] || color;
+  }
+
+  function hexToRgba(hex, alpha) {
+    const clean = (hex || "").replace("#", "");
+    const bigint = parseInt(clean, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  /**
+   * @param {object} opts {icon, label, value, trend, color, sparklineId}
+   *   sparklineId: id of an empty <div> slot for renderSparkline() to fill
+   *   after this card's HTML is in the DOM - renderWidgetCardsRow() wires
+   *   this automatically when a card carries a `sparkline` array.
+   */
+  function renderWidgetCard({ icon, label, value, trend = null, color = "primary", sparklineId = null }) {
+    const trendHtml = trend ? `<span class="fs-12 fw-semibold d-block mt-1">${trend}</span>` : "";
+    const sparklineHtml = sparklineId ? `<div class="ms-auto" id="${sparklineId}" style="min-width: 90px;"></div>` : "";
+
+    return `
+      <div class="card custom-card">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3">
+            <span class="rounded p-3 bg-${color}-transparent flex-shrink-0">
+              <i class="${icon} fs-20 text-${color}"></i>
+            </span>
+            <div class="flex-grow-1">
+              <span class="d-block mb-1 text-body fw-semibold">${label}</span>
+              <span class="fs-20 fw-semibold lh-1 d-block">${value}</span>
+              ${trendHtml}
+            </div>
+            ${sparklineHtml}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  /**
+   * Bigger 2-up grid (matches church/dashboard/index.php's wider card
+   * footprint) instead of renderStatCardsRow's 4-up compact grid. Cards
+   * carrying a non-empty `sparkline` array get their mini trend chart
+   * rendered automatically once the row's HTML is in the DOM.
+   * @param {string} containerId
+   * @param {object[]} cards - renderWidgetCard() opts, each optionally with a `sparkline: number[]`
+   */
+  function renderWidgetCardsRow(containerId, cards) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const withIds = cards.map((c, i) => ({
+      ...c,
+      sparklineId: c.sparkline && c.sparkline.length ? `${containerId}Spark${i}` : null,
+    }));
+
+    container.innerHTML = withIds
+      .map((c) => `<div class="col-xl-6 col-lg-6 col-md-6 col-sm-6">${renderWidgetCard(c)}</div>`)
+      .join("");
+
+    withIds.forEach((c) => {
+      if (c.sparklineId) renderSparkline(c.sparklineId, c.sparkline, brandHex(c.color));
+    });
+  }
+
+  /** Tiny axis-less ApexCharts line, used as the embedded mini-chart on a widget card. */
+  function renderSparkline(containerId, data, color = BRAND_COLORS.primary) {
+    const el = document.getElementById(containerId);
+    if (!el || typeof ApexCharts === "undefined" || !data || data.length === 0) return null;
+
+    const chart = new ApexCharts(el, {
+      chart: { type: "line", height: 40, sparkline: { enabled: true } },
+      series: [{ data }],
+      stroke: { width: 2, curve: "smooth" },
+      colors: [brandHex(color)],
+      tooltip: { enabled: false },
+    });
+    chart.render();
+    return chart;
+  }
+
+  /**
+   * General trend chart wrapper - area or column, single series or a
+   * handful, one brand color by default (not a forced two-color scheme).
+   * @param {object} opts {categories, series, type: 'area'|'column', color}
+   */
+  function renderTrendChart(containerId, { categories, series, type = "area", color = "primary" } = {}) {
+    const el = document.getElementById(containerId);
+    if (!el || typeof ApexCharts === "undefined") return null;
+    const hex = brandHex(color);
+
+    const options = {
+      chart: { type: type === "area" ? "area" : "bar", height: 300, toolbar: { show: false } },
+      series,
+      xaxis: { categories },
+      colors: [hex],
+      dataLabels: { enabled: false },
+      grid: { borderColor: hexToRgba(hex, 0.05) },
+      legend: { show: series.length > 1, position: "bottom" },
+    };
+
+    if (type === "area") {
+      options.stroke = { curve: "smooth", width: 2 };
+      options.fill = { type: "solid", opacity: 0.25 };
+    } else {
+      options.plotOptions = { bar: { columnWidth: "45%", borderRadius: 6 } };
+    }
+
+    const chart = new ApexCharts(el, options);
+    chart.render();
+    return chart;
+  }
+
+  /** Single-value gauge (ApexCharts radialBar) - used for the Sunday Coverage stat. */
+  function renderRadialGauge(containerId, { label, percentage, color = "primary" } = {}) {
+    const el = document.getElementById(containerId);
+    if (!el || typeof ApexCharts === "undefined") return null;
+
+    const chart = new ApexCharts(el, {
+      chart: { type: "radialBar", height: 220 },
+      series: [Math.min(100, Math.max(0, percentage))],
+      labels: [label],
+      colors: [brandHex(color)],
+      plotOptions: {
+        radialBar: {
+          hollow: { size: "60%" },
+          dataLabels: {
+            value: { fontSize: "22px", fontWeight: 600, formatter: (v) => `${v}%` },
+            name: { fontSize: "13px", offsetY: 6 },
+          },
+        },
+      },
+    });
+    chart.render();
+    return chart;
+  }
+
+  /**
+   * Category-share donut - wraps the same ApexCharts donut config already
+   * proven on Demographics' gender-split chart, reused here instead of a
+   * new one-off config. Genuinely needs distinct colors per slice
+   * (categorical), the one chart type exempt from the single-color default.
+   */
+  function renderDonutChart(containerId, { labels, series, colors = null } = {}) {
+    const el = document.getElementById(containerId);
+    if (!el || typeof ApexCharts === "undefined") return null;
+    const palette = colors || [BRAND_COLORS.primary, BRAND_COLORS.secondary, BRAND_COLORS.success, BRAND_COLORS.danger];
+
+    const chart = new ApexCharts(el, {
+      chart: { type: "donut", height: 260 },
+      series,
+      labels,
+      colors: palette,
+      legend: { position: "bottom" },
+      dataLabels: { enabled: false },
+    });
+    chart.render();
+    return chart;
+  }
+
+  /**
+   * Mixed bar+line combo (e.g. Times Held vs. Average Attendance per
+   * gathering type) - both series share one brand color, differentiated by
+   * shape (solid bars vs. a line+markers) rather than by a second color.
+   */
+  function renderComboChart(containerId, { categories, barData, lineData, barLabel = "Times Held", lineLabel = "Average Attendance", color = "primary" } = {}) {
+    const el = document.getElementById(containerId);
+    if (!el || typeof ApexCharts === "undefined") return null;
+    const hex = brandHex(color);
+
+    const chart = new ApexCharts(el, {
+      chart: { height: 320, type: "line", toolbar: { show: false } },
+      series: [
+        { name: barLabel, type: "column", data: barData },
+        { name: lineLabel, type: "line", data: lineData },
+      ],
+      stroke: { width: [0, 3], curve: "smooth" },
+      colors: [hex, hex],
+      plotOptions: { bar: { columnWidth: "45%", borderRadius: 6 } },
+      xaxis: { categories },
+      dataLabels: { enabled: false },
+      legend: { position: "bottom" },
+      grid: { borderColor: hexToRgba(hex, 0.05) },
+    });
+    chart.render();
+    return chart;
+  }
+
+  // ==========================================================================
   // BUTTON LOADING STATE
   // ==========================================================================
 
@@ -440,6 +653,13 @@ const DemographicsUI = (function () {
     renderStatusBadge,
     renderStatCard,
     renderStatCardsRow,
+    renderWidgetCard,
+    renderWidgetCardsRow,
+    renderSparkline,
+    renderTrendChart,
+    renderRadialGauge,
+    renderDonutChart,
+    renderComboChart,
     setButtonLoading,
     restoreButton,
     renderTableLoading,

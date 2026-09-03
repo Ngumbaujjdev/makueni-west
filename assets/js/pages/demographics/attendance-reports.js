@@ -4,35 +4,37 @@
  * ============================================================================
  * Diocese Management System - Makueni West
  *
- * One page, two views of the same fiscal-year dataset (Dashboard / Table),
- * toggled the same way church/demographics-growth/index.php toggles
- * Overview/History - a single GET /attendance?fiscal_year_id= fetch per
- * year change feeds both views plus the category filter, no extra
- * round-trips per toggle/filter change.
+ * Tabbed widget-dashboard: one tab per gathering category (Sunday Service /
+ * Ministry Gatherings / Special Events - the same 3 categories that already
+ * back services.php/ministries.php/events.php), plus a cross-tab summary
+ * strip combining all 3. Stat cards, coverage math, trend/breakdown data all
+ * come from the server (GET /attendance-reports/widgets -
+ * AttendanceReportWidgetService) - the frontend only fetches raw records
+ * (GET /attendance) for the per-tab records tables.
  *
- * The Gathering Type Breakdown table is the actual point of this page -
- * it's the direct answer to "how much Kesha attendance this year, and
- * when did we not have any," the original problem that motivated building
- * configurable gathering types in the first place.
+ * Each tab's charts/sparklines are only ever built while its pane is
+ * visible - ApexCharts mis-sizes itself inside a display:none container,
+ * the same issue already solved for FullCalendar in the Ministry/Events
+ * calendar toggle work. Tabs are rendered lazily on first `shown.bs.tab`;
+ * a filter (year/month) change destroys everything and re-renders only the
+ * currently active tab, leaving the others to lazy-render again next time
+ * they're shown.
  *
  * Dependencies: DemographicsAPIHandler, DemographicsUI, Toast, ApexCharts,
- * jQuery + DataTables
+ * jQuery + DataTables, Bootstrap tabs
  * ============================================================================
  */
 
 const AttendanceReports = (function () {
   "use strict";
 
-  let categories = [];
-  let categoryById = {};
-  let gatheringTypes = [];
-  let allRows = [];
-  let chart = null;
-  let pendingSeries = null;
-  let currentView = "dashboard";
+  let categoryBySlug = {};
+  let allRecords = [];
+  let widgetsByTab = { sunday: null, ministry: null, events: null };
+  const renderedTabs = new Set();
+  const charts = {};
 
-  const CATEGORY_COLORS = ["#2CA4BF", "#26bf94", "#F2BE22"];
-  const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const TAB_CATEGORY_SLUG = { sunday: "sunday_service", ministry: "ministry_gathering", events: "special_event" };
 
   async function init() {
     Object.assign(USER_TERRITORY, DemographicsUI.resolveUserTerritory(USER_TERRITORY));
@@ -42,50 +44,34 @@ const AttendanceReports = (function () {
       return;
     }
 
-    wireViewToggle();
-
     const categoriesResult = await DemographicsAPIHandler.getGatheringCategories();
-    categories = categoriesResult.success ? categoriesResult.data || [] : [];
-    categoryById = Object.fromEntries(categories.map((c) => [c.id, c]));
+    (categoriesResult.success ? categoriesResult.data || [] : []).forEach((c) => {
+      categoryBySlug[c.slug] = c;
+    });
 
-    const typesResult = await DemographicsAPIHandler.getGatheringTypes(USER_TERRITORY.id, { include_inactive: "true" });
-    gatheringTypes = typesResult.success ? typesResult.data || [] : [];
-
-    renderCategoryFilter();
+    wireTabs();
     await loadFiscalYears();
   }
 
   // ==========================================================================
-  // VIEW TOGGLE
+  // TABS
   // ==========================================================================
 
-  function wireViewToggle() {
-    document.getElementById("viewDashboardBtn").addEventListener("click", () => switchView("dashboard"));
-    document.getElementById("viewTableBtn").addEventListener("click", () => switchView("table"));
+  function wireTabs() {
+    ["sunday", "ministry", "events"].forEach((tab) => {
+      document.getElementById(`tab-${tab}-btn`).addEventListener("shown.bs.tab", () => {
+        if (!renderedTabs.has(tab)) renderTab(tab);
+      });
+    });
   }
 
-  function switchView(view) {
-    currentView = view;
-    const dashBtn = document.getElementById("viewDashboardBtn");
-    const tableBtn = document.getElementById("viewTableBtn");
-
-    dashBtn.classList.toggle("btn-primary", view === "dashboard");
-    dashBtn.classList.toggle("btn-outline-primary", view !== "dashboard");
-    tableBtn.classList.toggle("btn-primary", view === "table");
-    tableBtn.classList.toggle("btn-outline-primary", view !== "table");
-    document.getElementById("dashboardView").style.display = view === "dashboard" ? "" : "none";
-    document.getElementById("tableView").style.display = view === "table" ? "" : "none";
-
-    // ApexCharts sizes itself wrong if built/updated while its container is
-    // display:none - only ever touch the chart while Dashboard is visible.
-    if (view === "dashboard" && pendingSeries) {
-      applySeriesToChart(pendingSeries);
-      pendingSeries = null;
-    }
+  function activeTab() {
+    const active = document.querySelector("#reportTabs .nav-link.active");
+    return active ? active.id.replace("tab-", "").replace("-btn", "") : "sunday";
   }
 
   // ==========================================================================
-  // FISCAL PERIOD + CATEGORY FILTER
+  // FISCAL PERIOD FILTERS
   // ==========================================================================
 
   async function loadFiscalYears() {
@@ -103,34 +89,75 @@ const AttendanceReports = (function () {
     const currentYear = new Date().getFullYear();
     const defaultYear = years.find((y) => y.year === currentYear) || years[0];
     select.value = defaultYear.id;
-    select.addEventListener("change", () => loadYearData(select.value));
+    select.addEventListener("change", () => onYearChange(select.value));
 
-    await loadYearData(defaultYear.id);
+    await onYearChange(defaultYear.id);
   }
 
-  function renderCategoryFilter() {
-    const select = document.getElementById("reportCategoryFilter");
-    select.innerHTML = '<option value="">All Categories</option>' + categories.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
-    select.addEventListener("change", () => applyFilterAndRender());
+  async function onYearChange(fiscalYearId) {
+    await loadFiscalMonths(fiscalYearId);
+    await loadPeriodData();
   }
 
-  async function loadYearData(fiscalYearId) {
-    const result = await DemographicsAPIHandler.getAttendance(USER_TERRITORY.id, { fiscal_year_id: fiscalYearId });
-    allRows = result.success ? result.data || [] : [];
-    applyFilterAndRender();
+  async function loadFiscalMonths(fiscalYearId) {
+    const select = document.getElementById("reportFiscalMonth");
+    const result = await DemographicsAPIHandler.getFiscalMonthsForYear(fiscalYearId);
+    const months = result.success ? result.data || [] : [];
+
+    select.innerHTML =
+      '<option value="">All months</option>' + months.map((m) => `<option value="${m.id}">${m.name || m.short_name}</option>`).join("");
+    select.value = "";
+    select.onchange = () => loadPeriodData();
   }
 
-  function currentFilteredRows() {
-    const categoryId = document.getElementById("reportCategoryFilter").value;
-    return categoryId ? allRows.filter((r) => String(r.gathering_category_id) === categoryId) : allRows;
+  function currentFilters() {
+    const fiscalYearId = document.getElementById("reportFiscalYear").value;
+    const fiscalMonthId = document.getElementById("reportFiscalMonth").value;
+    const filters = { fiscal_year_id: fiscalYearId };
+    if (fiscalMonthId) filters.fiscal_month_id = fiscalMonthId;
+    return filters;
   }
 
-  function applyFilterAndRender() {
-    const rows = currentFilteredRows();
-    renderStats(rows);
-    renderTrendChart(rows);
-    renderBreakdownTable(rows);
-    renderTable(rows);
+  // ==========================================================================
+  // DATA LOADING (one records fetch + 4 widget fetches per filter change)
+  // ==========================================================================
+
+  async function loadPeriodData() {
+    const filters = currentFilters();
+    if (!filters.fiscal_year_id) return;
+
+    destroyAllCharts();
+    renderedTabs.clear();
+
+    const [recordsResult, summaryResult, sundayResult, ministryResult, eventsResult] = await Promise.all([
+      DemographicsAPIHandler.getAttendance(USER_TERRITORY.id, filters),
+      DemographicsAPIHandler.getAttendanceReportWidgets(USER_TERRITORY.id, filters),
+      fetchTabWidgets("sunday", filters),
+      fetchTabWidgets("ministry", filters),
+      fetchTabWidgets("events", filters),
+    ]);
+
+    allRecords = recordsResult.success ? recordsResult.data || [] : [];
+    widgetsByTab = { sunday: sundayResult, ministry: ministryResult, events: eventsResult };
+
+    renderSummaryCards(summaryResult.success ? summaryResult.data : null);
+    renderTab(activeTab());
+  }
+
+  async function fetchTabWidgets(tab, filters) {
+    const category = categoryBySlug[TAB_CATEGORY_SLUG[tab]];
+    if (!category) return null;
+    const result = await DemographicsAPIHandler.getAttendanceReportWidgets(USER_TERRITORY.id, {
+      ...filters,
+      gathering_category_id: category.id,
+    });
+    return result.success ? result.data : null;
+  }
+
+  function recordsForTab(tab) {
+    const category = categoryBySlug[TAB_CATEGORY_SLUG[tab]];
+    if (!category) return [];
+    return allRecords.filter((r) => r.gathering_category_id === category.id);
   }
 
   function totalFor(row) {
@@ -138,137 +165,139 @@ const AttendanceReports = (function () {
   }
 
   // ==========================================================================
-  // STAT CARDS
+  // CROSS-TAB SUMMARY STRIP
   // ==========================================================================
 
-  function renderStats(rows) {
-    const totalAttendance = rows.reduce((sum, r) => sum + totalFor(r), 0);
-    const avg = rows.length ? Math.round(totalAttendance / rows.length) : 0;
-    const most = [...rows].sort((a, b) => totalFor(b) - totalFor(a))[0];
+  function renderSummaryCards(data) {
+    if (!data) {
+      document.getElementById("summaryCardsRow").innerHTML = "";
+      return;
+    }
+    DemographicsUI.renderWidgetCardsRow(
+      "summaryCardsRow",
+      data.stats.map((s) => ({ ...statToCardOpts(s) })),
+    );
+  }
 
-    DemographicsUI.renderStatCardsRow("statCardsRow", [
-      { icon: "ri-calendar-check-line", label: "Gatherings Recorded", value: rows.length, color: "primary" },
-      { icon: "ri-group-line", label: "Total Attendance", value: totalAttendance, color: "success" },
-      { icon: "ri-bar-chart-line", label: "Average Attendance", value: avg, color: "warning" },
-      {
-        icon: "ri-trophy-line",
-        label: "Most Attended",
-        value: most ? `${totalFor(most)} on ${new Date(most.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : "-",
+  function statToCardOpts(s) {
+    return { icon: s.icon, label: s.label, value: s.value, color: s.color, sparkline: s.sparkline };
+  }
+
+  // ==========================================================================
+  // TAB RENDERING (lazy - only while the pane is visible)
+  // ==========================================================================
+
+  function renderTab(tab) {
+    const data = widgetsByTab[tab];
+    if (!data) return;
+
+    renderedTabs.add(tab);
+
+    if (tab === "sunday") renderSundayTab(data);
+    else if (tab === "ministry") renderBreakdownTab("ministry", data);
+    else renderBreakdownTab("events", data);
+  }
+
+  function renderSundayTab(data) {
+    DemographicsUI.renderWidgetCardsRow("sundayCardsRow", data.stats.map(statToCardOpts));
+
+    charts.sundayCoverageGauge = DemographicsUI.renderRadialGauge("sundayCoverageGauge", {
+      label: "Coverage",
+      percentage: data.coverage.percentage,
+      color: "primary",
+    });
+
+    charts.sundayTrendChart = DemographicsUI.renderTrendChart("sundayTrendChart", {
+      categories: data.chart.categories,
+      series: data.chart.series,
+      type: "area",
+      color: "primary",
+    });
+
+    const rows = recordsForTab("sunday");
+    renderRecordsTable("sunday", rows, false);
+  }
+
+  function renderBreakdownTab(tab, data) {
+    const containerPrefix = tab === "ministry" ? "ministry" : "events";
+    DemographicsUI.renderWidgetCardsRow(`${containerPrefix}CardsRow`, data.stats.map(statToCardOpts));
+
+    const held = data.breakdown.filter((b) => b.times_held > 0);
+
+    if (tab === "ministry") {
+      charts.ministryDonutChart = held.length
+        ? DemographicsUI.renderDonutChart("ministryDonutChart", {
+            labels: held.map((b) => b.name),
+            series: held.map((b) => b.total_attendance),
+          })
+        : null;
+
+      charts.ministryComparisonChart = DemographicsUI.renderTrendChart("ministryComparisonChart", {
+        categories: data.breakdown.map((b) => b.name),
+        series: [{ name: "Total Attendance", data: data.breakdown.map((b) => b.total_attendance) }],
+        type: "column",
+        color: "success",
+      });
+    } else {
+      charts.eventsComboChart = DemographicsUI.renderComboChart("eventsComboChart", {
+        categories: data.breakdown.map((b) => b.name),
+        barData: data.breakdown.map((b) => b.times_held),
+        lineData: data.breakdown.map((b) => b.average_attendance),
         color: "secondary",
-      },
-    ]);
-  }
-
-  // ==========================================================================
-  // MONTHLY TREND CHART
-  // ==========================================================================
-
-  function computeSeries(rows) {
-    const categoryId = document.getElementById("reportCategoryFilter").value;
-
-    if (categoryId) {
-      const totals = new Array(12).fill(0);
-      rows.forEach((r) => {
-        totals[new Date(r.service_date).getMonth()] += totalFor(r);
       });
-      return [{ name: categoryById[categoryId]?.name || "Attendance", data: totals }];
     }
 
-    return categories.map((c) => {
-      const totals = new Array(12).fill(0);
-      rows.filter((r) => r.gathering_category_id === c.id).forEach((r) => {
-        totals[new Date(r.service_date).getMonth()] += totalFor(r);
-      });
-      return { name: c.name, data: totals };
-    });
+    renderBreakdownTable(containerPrefix, data.breakdown);
+
+    const rows = recordsForTab(tab);
+    renderRecordsTable(containerPrefix, rows, true);
   }
 
-  function renderTrendChart(rows) {
-    const series = computeSeries(rows);
+  function renderBreakdownTable(prefix, breakdown) {
+    const tbody = document.getElementById(`${prefix}BreakdownTableBody`);
 
-    if (currentView !== "dashboard") {
-      pendingSeries = series;
+    if (!breakdown || breakdown.length === 0) {
+      tbody.innerHTML = DemographicsUI.renderTableEmpty(5, "No gathering types configured yet", "ri-list-check-2");
       return;
     }
 
-    applySeriesToChart(series);
-  }
-
-  function applySeriesToChart(series) {
-    if (chart) {
-      chart.updateOptions({ series });
-      return;
-    }
-
-    chart = new ApexCharts(document.getElementById("attendanceTrendChart"), {
-      chart: { type: "bar", height: 320, stacked: true, toolbar: { show: false } },
-      series,
-      xaxis: { categories: MONTH_NAMES },
-      colors: CATEGORY_COLORS,
-      legend: { position: "bottom" },
-      dataLabels: { enabled: false },
-    });
-    chart.render();
-  }
-
-  // ==========================================================================
-  // GATHERING TYPE BREAKDOWN
-  // ==========================================================================
-
-  function renderBreakdownTable(rows) {
-    const tbody = document.getElementById("breakdownTableBody");
-    const categoryId = document.getElementById("reportCategoryFilter").value;
-    const types = categoryId ? gatheringTypes.filter((t) => String(t.gathering_category_id) === categoryId) : gatheringTypes;
-
-    if (types.length === 0) {
-      tbody.innerHTML = DemographicsUI.renderTableEmpty(6, "No gathering types configured yet", "ri-list-check-2");
-      return;
-    }
-
-    tbody.innerHTML = types
-      .map((t) => {
-        const typeRows = rows.filter((r) => r.gathering_type_id === t.id);
-        const total = typeRows.reduce((sum, r) => sum + totalFor(r), 0);
-        const avg = typeRows.length ? Math.round(total / typeRows.length) : 0;
-        const last = [...typeRows].sort((a, b) => new Date(b.service_date) - new Date(a.service_date))[0];
-        const icon = t.icon || t.category?.icon || "ri-calendar-event-line";
-
-        return `
-          <tr>
-            <td class="fw-semibold"><i class="${icon} me-2 text-primary"></i>${escapeHtml(t.name)}</td>
-            <td><span class="badge bg-primary-transparent">${escapeHtml(t.category?.name || "-")}</span></td>
-            <td>${typeRows.length ? typeRows.length : '<span class="badge bg-secondary">Not held this year</span>'}</td>
-            <td>${total}</td>
-            <td>${avg}</td>
-            <td>${last ? new Date(last.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "-"}</td>
-          </tr>`;
-      })
+    tbody.innerHTML = breakdown
+      .map(
+        (b) => `
+        <tr>
+          <td class="fw-semibold"><i class="${b.icon || "ri-calendar-event-line"} me-2 text-primary"></i>${escapeHtml(b.name)}</td>
+          <td>${b.times_held ? b.times_held : '<span class="badge bg-secondary">Not held this year</span>'}</td>
+          <td>${b.total_attendance}</td>
+          <td>${b.average_attendance}</td>
+          <td>${b.last_held ? escapeHtml(b.last_held) : "-"}</td>
+        </tr>`,
+      )
       .join("");
   }
 
   // ==========================================================================
-  // TABLE VIEW
+  // RECORDS TABLE (per tab)
   // ==========================================================================
 
-  function renderTable(rows) {
-    const tbody = document.getElementById("reportTableBody");
+  function renderRecordsTable(prefix, rows, showGatheringColumn) {
+    const tbody = document.getElementById(`${prefix}RecordsTableBody`);
+    const colspan = showGatheringColumn ? 4 : 3;
 
     if (rows.length === 0) {
-      tbody.innerHTML = DemographicsUI.renderTableEmpty(5, "No records for this period", "ri-calendar-line");
+      tbody.innerHTML = DemographicsUI.renderTableEmpty(colspan, "No records for this period", "ri-calendar-line");
     } else {
       tbody.innerHTML = [...rows]
         .sort((a, b) => new Date(b.service_date) - new Date(a.service_date))
         .map((r) => {
           const date = new Date(r.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-          const catName = r.gathering_category?.name || categoryById[r.gathering_category_id]?.name || "-";
-          const label = r.gathering_type?.name || r.event_name || catName;
-          const icon = r.gathering_type?.icon || r.gathering_category?.icon || "ri-calendar-event-line";
+          const middleCell = showGatheringColumn
+            ? `<td><i class="${r.gathering_type?.icon || "ri-calendar-event-line"} me-1 text-primary"></i>${escapeHtml(r.gathering_type?.name || r.event_name || "-")}</td>`
+            : "";
 
           return `
             <tr>
               <td class="fw-semibold">${date}</td>
-              <td><span class="badge bg-secondary-transparent">${escapeHtml(catName)}</span></td>
-              <td><i class="${icon} me-1 text-primary"></i>${escapeHtml(label)}</td>
+              ${middleCell}
               <td>${totalFor(r)}</td>
               <td>${escapeHtml(r.notes || "-")}</td>
             </tr>`;
@@ -276,20 +305,27 @@ const AttendanceReports = (function () {
         .join("");
     }
 
-    DemographicsUI.initListDataTable("attendanceReportTable", {
+    const tableId = `${prefix}RecordsTable`;
+    DemographicsUI.initListDataTable(tableId, {
       searchPlaceholder: "Search records...",
       order: [[0, "desc"]],
-      nonSortableColumns: [],
       hideDefaultSearch: true,
     });
 
-    // Category scoping is handled by the shared "Gathering" filter above the
-    // view toggle (it drives the stat cards/chart too) - this toolbar is
-    // just a search box over the already-scoped rows, not a second,
-    // independent category filter that would only affect this one table.
-    const table = $("#attendanceReportTable").DataTable();
-    DemographicsUI.renderFilterToolbar("filterToolbar", { searchPlaceholder: "Search records..." });
-    DemographicsUI.wireFilterToolbar("filterToolbar", table, []);
+    const table = $(`#${tableId}`).DataTable();
+    DemographicsUI.renderFilterToolbar(`${prefix}FilterToolbar`, { searchPlaceholder: "Search records..." });
+    DemographicsUI.wireFilterToolbar(`${prefix}FilterToolbar`, table, []);
+  }
+
+  // ==========================================================================
+  // HELPERS
+  // ==========================================================================
+
+  function destroyAllCharts() {
+    Object.keys(charts).forEach((key) => {
+      if (charts[key] && typeof charts[key].destroy === "function") charts[key].destroy();
+      delete charts[key];
+    });
   }
 
   function escapeHtml(unsafe) {

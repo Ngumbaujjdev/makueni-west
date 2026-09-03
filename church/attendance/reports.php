@@ -64,99 +64,230 @@ $breadcrumbs = [
 
                 <?php include __DIR__ . '/../../includes/page-header.php' ?>
 
-                <!-- Filters + view toggle -->
+                <!-- Year/Month filters -->
                 <div class="card custom-card mb-3">
                     <div class="card-body">
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-                            <div class="btn-group" role="group" aria-label="View toggle">
-                                <button type="button" class="btn btn-primary" id="viewDashboardBtn">
-                                    <i class="ri-dashboard-line me-1"></i>Dashboard
-                                </button>
-                                <button type="button" class="btn btn-outline-primary" id="viewTableBtn">
-                                    <i class="ri-table-line me-1"></i>Table
-                                </button>
-                            </div>
+                            <div class="fw-semibold text-body"><i class="ri-filter-3-line me-1 text-primary"></i>Period</div>
                             <div class="d-flex flex-wrap gap-2 align-items-center">
                                 <label for="reportFiscalYear" class="form-label mb-0 fw-semibold">Year</label>
                                 <select class="form-select" id="reportFiscalYear" style="min-width: 120px;">
                                     <option value="">Loading years...</option>
                                 </select>
-                                <label for="reportCategoryFilter" class="form-label mb-0 fw-semibold">Gathering</label>
-                                <select class="form-select" id="reportCategoryFilter" style="min-width: 180px;">
-                                    <option value="">All Categories</option>
+                                <label for="reportFiscalMonth" class="form-label mb-0 fw-semibold">Month</label>
+                                <select class="form-select" id="reportFiscalMonth" style="min-width: 160px;">
+                                    <option value="">All months</option>
                                 </select>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- DASHBOARD view -->
-                <div id="dashboardView">
-                    <div class="row g-3 mb-3" id="statCardsRow">
-                        <!-- Stat cards injected by attendance-reports.js -->
-                    </div>
-
-                    <div class="card custom-card mb-3">
-                        <div class="card-header">
-                            <div class="card-title"><i class="ri-line-chart-line me-2 text-primary"></i>Monthly Attendance Trend</div>
-                        </div>
-                        <div class="card-body">
-                            <div id="attendanceTrendChart"></div>
-                        </div>
-                    </div>
-
-                    <div class="card custom-card">
-                        <div class="card-header">
-                            <div class="card-title"><i class="ri-list-check-2 me-2 text-primary"></i>Gathering Type Breakdown</div>
-                        </div>
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-hover mb-0">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th class="fw-semibold text-dark">Name</th>
-                                            <th class="fw-semibold text-dark">Category</th>
-                                            <th class="fw-semibold text-dark">Times Held</th>
-                                            <th class="fw-semibold text-dark">Total Attendance</th>
-                                            <th class="fw-semibold text-dark">Average Attendance</th>
-                                            <th class="fw-semibold text-dark">Last Held</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="breakdownTableBody">
-                                        <!-- Rows injected by attendance-reports.js -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+                <!-- Cross-tab summary strip -->
+                <div class="row g-3 mb-3" id="summaryCardsRow">
+                    <!-- Combined-category summary cards injected by attendance-reports.js -->
                 </div>
 
-                <!-- TABLE view -->
-                <div id="tableView" style="display: none;">
-                    <div class="card custom-card">
-                        <div class="card-header">
-                            <div class="card-title"><i class="ri-file-list-3-line me-2 text-primary"></i>All Records</div>
+                <!-- Tab bar -->
+                <ul class="nav nav-tabs mb-3" id="reportTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="tab-sunday-btn" data-bs-toggle="tab" data-bs-target="#tab-sunday" type="button" role="tab">
+                            <i class="ri-sun-line me-1"></i>Sunday Service
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-ministry-btn" data-bs-toggle="tab" data-bs-target="#tab-ministry" type="button" role="tab">
+                            <i class="ri-group-2-line me-1"></i>Ministry Gatherings
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-events-btn" data-bs-toggle="tab" data-bs-target="#tab-events" type="button" role="tab">
+                            <i class="ri-calendar-event-line me-1"></i>Special Events
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+
+                    <!-- TAB 1: Sunday Service -->
+                    <div class="tab-pane fade show active" id="tab-sunday" role="tabpanel">
+                        <div class="row g-3 mb-3" id="sundayCardsRow"></div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-xl-4">
+                                <div class="card custom-card h-100">
+                                    <div class="card-header">
+                                        <div class="card-title"><i class="ri-pie-chart-line me-2 text-primary"></i>Coverage</div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="sundayCoverageGauge"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-8">
+                                <div class="card custom-card h-100">
+                                    <div class="card-header">
+                                        <div class="card-title"><i class="ri-line-chart-line me-2 text-primary"></i>Attendance Trend</div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="sundayTrendChart"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-body p-0">
-                            <div class="px-3 pt-3" id="filterToolbar"></div>
-                            <div class="table-responsive">
-                                <table class="table table-hover mb-0" id="attendanceReportTable">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th class="fw-semibold text-dark">Date</th>
-                                            <th class="fw-semibold text-dark">Category</th>
-                                            <th class="fw-semibold text-dark">Gathering</th>
-                                            <th class="fw-semibold text-dark">Total Attendance</th>
-                                            <th class="fw-semibold text-dark">Notes</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="reportTableBody">
-                                        <!-- Rows injected by attendance-reports.js -->
-                                    </tbody>
-                                </table>
+
+                        <div class="card custom-card">
+                            <div class="card-header">
+                                <div class="card-title"><i class="ri-file-list-3-line me-2 text-primary"></i>Sunday Records</div>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="px-3 pt-3" id="sundayFilterToolbar"></div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0" id="sundayRecordsTable">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th class="fw-semibold text-dark">Date</th>
+                                                <th class="fw-semibold text-dark">Total Attendance</th>
+                                                <th class="fw-semibold text-dark">Notes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="sundayRecordsTableBody"></tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- TAB 2: Ministry Gatherings -->
+                    <div class="tab-pane fade" id="tab-ministry" role="tabpanel">
+                        <div class="row g-3 mb-3" id="ministryCardsRow"></div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-xl-5">
+                                <div class="card custom-card h-100">
+                                    <div class="card-header">
+                                        <div class="card-title"><i class="ri-donut-chart-line me-2 text-primary"></i>Attendance Share by Type</div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="ministryDonutChart"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-7">
+                                <div class="card custom-card h-100">
+                                    <div class="card-header">
+                                        <div class="card-title"><i class="ri-bar-chart-grouped-line me-2 text-primary"></i>Total Attendance by Type</div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="ministryComparisonChart"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card custom-card mb-3">
+                            <div class="card-header">
+                                <div class="card-title"><i class="ri-list-check-2 me-2 text-primary"></i>Gathering Type Breakdown</div>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th class="fw-semibold text-dark">Name</th>
+                                                <th class="fw-semibold text-dark">Times Held</th>
+                                                <th class="fw-semibold text-dark">Total Attendance</th>
+                                                <th class="fw-semibold text-dark">Average Attendance</th>
+                                                <th class="fw-semibold text-dark">Last Held</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="ministryBreakdownTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card custom-card">
+                            <div class="card-header">
+                                <div class="card-title"><i class="ri-file-list-3-line me-2 text-primary"></i>Ministry Records</div>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="px-3 pt-3" id="ministryFilterToolbar"></div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0" id="ministryRecordsTable">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th class="fw-semibold text-dark">Date</th>
+                                                <th class="fw-semibold text-dark">Gathering Type</th>
+                                                <th class="fw-semibold text-dark">Total Attendance</th>
+                                                <th class="fw-semibold text-dark">Notes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="ministryRecordsTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: Special Events -->
+                    <div class="tab-pane fade" id="tab-events" role="tabpanel">
+                        <div class="row g-3 mb-3" id="eventsCardsRow"></div>
+
+                        <div class="card custom-card mb-3">
+                            <div class="card-header">
+                                <div class="card-title"><i class="ri-bar-chart-grouped-line me-2 text-primary"></i>Times Held vs. Average Attendance</div>
+                            </div>
+                            <div class="card-body">
+                                <div id="eventsComboChart"></div>
+                            </div>
+                        </div>
+
+                        <div class="card custom-card mb-3">
+                            <div class="card-header">
+                                <div class="card-title"><i class="ri-list-check-2 me-2 text-primary"></i>Event Type Breakdown</div>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th class="fw-semibold text-dark">Name</th>
+                                                <th class="fw-semibold text-dark">Times Held</th>
+                                                <th class="fw-semibold text-dark">Total Attendance</th>
+                                                <th class="fw-semibold text-dark">Average Attendance</th>
+                                                <th class="fw-semibold text-dark">Last Held</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="eventsBreakdownTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card custom-card">
+                            <div class="card-header">
+                                <div class="card-title"><i class="ri-file-list-3-line me-2 text-primary"></i>Event Records</div>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="px-3 pt-3" id="eventsFilterToolbar"></div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0" id="eventsRecordsTable">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th class="fw-semibold text-dark">Date</th>
+                                                <th class="fw-semibold text-dark">Event</th>
+                                                <th class="fw-semibold text-dark">Total Attendance</th>
+                                                <th class="fw-semibold text-dark">Notes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="eventsRecordsTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
             </div>
