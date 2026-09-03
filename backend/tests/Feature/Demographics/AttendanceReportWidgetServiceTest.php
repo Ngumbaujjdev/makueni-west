@@ -125,6 +125,42 @@ class AttendanceReportWidgetServiceTest extends TestCase
         $this->assertEquals(3, $stats[0]['value']);
         $this->assertEquals(46.7, $stats[2]['value']); // Average Attendance = 140/3
         $this->assertStringContainsString('70 on 16 Aug', $stats[3]['value']); // Highest Attended Sunday
+
+        $this->assertStringContainsString("2 Sundays weren't recorded this month", $response->json('data.insights.0'));
+
+        $statColumns = collect($response->json('data.stat_columns'))->keyBy('label');
+        $this->assertEquals('Aug (140)', $statColumns['Best Month']['value']);
+        $this->assertEquals('46.7', $statColumns['Weekly Average']['value']);
+        $this->assertEquals('-', $statColumns['This Month vs. Last']['value']); // only one month in scope
+    }
+
+    public function test_sunday_trend_insight_compares_latest_month_to_the_years_average(): void
+    {
+        $march = FiscalMonth::create(['number' => 3, 'name' => 'March', 'short_name' => 'Mar']);
+
+        // March: low attendance (avg 20). August: much higher (avg 70) - latest recorded month is August.
+        ChurchAttendanceRecord::create([
+            'territory_type' => 'church', 'territory_id' => $this->myChurch->id,
+            'service_date' => '2026-03-01', 'fiscal_year_id' => $this->fiscalYear->id, 'fiscal_month_id' => $march->id,
+            'gathering_category_id' => $this->sundayServiceCategoryId,
+            'adults_count' => 15, 'youth_count' => 3, 'children_male_count' => 1, 'children_female_count' => 1,
+            'created_by' => $this->pastor->id, 'updated_by' => $this->pastor->id,
+        ]);
+        $this->createSundayRecord('2026-08-02', 40, 15, 8, 7); // total 70
+
+        Sanctum::actingAs($this->pastor);
+
+        $response = $this->getJson('/api/attendance-reports/widgets?'.http_build_query([
+            'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'gathering_category_id' => $this->sundayServiceCategoryId,
+        ]));
+
+        $response->assertStatus(200);
+        $insights = $response->json('data.insights');
+        $this->assertCount(2, $insights); // coverage sentence + trend sentence
+        $this->assertStringContainsString('Attendance in Aug is', $insights[1]);
+        $this->assertStringContainsString('above your usual for this year', $insights[1]);
     }
 
     public function test_ministry_gathering_breakdown_includes_zero_record_types(): void
@@ -185,10 +221,55 @@ class AttendanceReportWidgetServiceTest extends TestCase
         $this->assertEquals(0, $breakdown['Crusade']['total_attendance']);
         $this->assertNull($breakdown['Crusade']['last_held']);
 
+        $this->assertEquals('on_track', $breakdown['Kesha']['status']); // last held 23 days before "today"
+        $this->assertEquals('on_track', $breakdown['Tuesday Fellowship']['status']);
+        $this->assertEquals('never_held', $breakdown['Crusade']['status']);
+
+        // Ranked by total attendance descending, like a "Top Selling Products" list.
+        $ranked = collect($response->json('data.breakdown'))->pluck('name')->all();
+        $this->assertEquals(['Tuesday Fellowship', 'Kesha', 'Crusade'], $ranked);
+
         $stats = $response->json('data.stats');
         $this->assertEquals('2 of 3', $stats[0]['value']); // Gathering Types Held
         $this->assertEquals(84, $stats[2]['value']); // Total Attendance = 32 + 52
         $this->assertStringContainsString('Tuesday Fellowship (2x)', $stats[3]['value']); // Most Active Type
+
+        $this->assertEquals(
+            ['1 gathering type not held this period: Crusade.'],
+            $response->json('data.insights'),
+        );
+    }
+
+    public function test_breakdown_status_flags_a_type_inactive_after_60_days(): void
+    {
+        $may = FiscalMonth::create(['number' => 5, 'name' => 'May', 'short_name' => 'May']);
+
+        $kesha = GatheringType::create([
+            'gathering_category_id' => $this->ministryGatheringCategoryId,
+            'territory_id' => $this->myChurch->id,
+            'name' => 'Kesha', 'slug' => 'kesha',
+        ]);
+
+        // "today" is frozen at 2026-09-02 - 2026-05-20 is 105 days earlier, well past the 60-day threshold.
+        ChurchAttendanceRecord::create([
+            'territory_type' => 'church', 'territory_id' => $this->myChurch->id,
+            'service_date' => '2026-05-20', 'fiscal_year_id' => $this->fiscalYear->id, 'fiscal_month_id' => $may->id,
+            'gathering_category_id' => $this->ministryGatheringCategoryId, 'gathering_type_id' => $kesha->id, 'event_name' => 'Kesha',
+            'adults_count' => 20, 'youth_count' => 5, 'children_male_count' => 4, 'children_female_count' => 3,
+            'created_by' => $this->pastor->id, 'updated_by' => $this->pastor->id,
+        ]);
+
+        Sanctum::actingAs($this->pastor);
+
+        $response = $this->getJson('/api/attendance-reports/widgets?'.http_build_query([
+            'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'gathering_category_id' => $this->ministryGatheringCategoryId,
+        ]));
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.breakdown.0.status', 'inactive')
+            ->assertJsonPath('data.insights.0', "1 gathering type haven't met in over 60 days: Kesha.");
     }
 
     public function test_combined_summary_sums_across_all_categories(): void
@@ -219,8 +300,11 @@ class AttendanceReportWidgetServiceTest extends TestCase
         $stats = $response->json('data.stats');
         $this->assertEquals(2, $stats[0]['value']); // Total Gatherings Recorded
         $this->assertEquals(56, $stats[1]['value']); // Total Attendance = 30 + 26
+        $this->assertEquals('Most Active Category', $stats[3]['label']);
+        $this->assertStringContainsString('Sunday Service (30)', $stats[3]['value']); // 30 > Ministry Gathering's 26
         $this->assertArrayNotHasKey('breakdown', $response->json('data'));
         $this->assertArrayNotHasKey('coverage', $response->json('data'));
+        $this->assertArrayNotHasKey('insights', $response->json('data'));
     }
 
     public function test_pastor_cannot_view_widgets_for_another_church(): void
