@@ -121,14 +121,14 @@ const AttendanceReports = (function () {
     const currentYear = new Date().getFullYear();
     const defaultYear = years.find((y) => y.year === currentYear) || years[0];
     select.value = defaultYear.id;
-    select.addEventListener("change", () => onYearChange(select.value));
+    // Only stages the pick and refreshes the Month select's options -
+    // doesn't fetch new data. Only Apply / Quick Select / Clear actually
+    // reload (see wirePeriodPicker()) - matches ifms's own split where
+    // picking a custom date only takes effect once Apply is clicked.
+    select.addEventListener("change", () => loadFiscalMonths(select.value));
 
     wirePeriodPicker();
-    await onYearChange(defaultYear.id);
-  }
-
-  async function onYearChange(fiscalYearId) {
-    await loadFiscalMonths(fiscalYearId);
+    await loadFiscalMonths(defaultYear.id);
     await loadPeriodData();
     updatePeriodPickerLabel();
   }
@@ -142,10 +142,7 @@ const AttendanceReports = (function () {
       '<option value="">All months</option>' +
       months.map((m) => `<option value="${m.id}" data-number="${m.number}">${m.name || m.short_name}</option>`).join("");
     select.value = "";
-    select.onchange = () => {
-      loadPeriodData();
-      updatePeriodPickerLabel();
-    };
+    // Staging only, same reasoning as the Year select above.
   }
 
   function currentFilters() {
@@ -391,7 +388,7 @@ const AttendanceReports = (function () {
       coverageCaptionEl.textContent = `${data.coverage.recorded} of ${data.coverage.elapsed} expected Sundays have been recorded this period (${data.coverage.percentage}%).`;
     }
 
-    DemographicsUI.renderChartLegendRow("sundayChartLegend", chartLegendItems(data.chart.categories, data.chart.series[0].data));
+    DemographicsUI.renderPillLegend("sundayChartLegend", chartLegendItems(data.chart.categories, data.chart.series[0].data));
 
     charts.sundayTrendChart = DemographicsUI.renderTrendChart("sundayTrendChart", {
       categories: data.chart.categories,
@@ -400,7 +397,11 @@ const AttendanceReports = (function () {
       color: "primary",
     });
 
-    DemographicsUI.renderStatColumns("sundayStatColumns", data.stat_columns);
+    const statColumnColors = ["primary", "warning", "success"];
+    DemographicsUI.renderPillLegend(
+      "sundayStatColumns",
+      (data.stat_columns || []).map((c, i) => ({ ...c, color: statColumnColors[i % statColumnColors.length] })),
+    );
 
     const rows = recordsForTab("sunday");
     DemographicsUI.renderTimeline("sundayRecentList", buildRecentItems(rows, "sunday"));
@@ -427,7 +428,7 @@ const AttendanceReports = (function () {
         held.map((b, i) => ({ label: b.name, value: b.total_attendance, color: ["primary", "secondary", "success", "danger"][i % 4] })),
       );
 
-      DemographicsUI.renderChartLegendRow(
+      DemographicsUI.renderPillLegend(
         "ministryChartLegend",
         chartLegendItems(
           data.breakdown.map((b) => b.name),
@@ -443,7 +444,7 @@ const AttendanceReports = (function () {
         color: "success",
       });
     } else {
-      DemographicsUI.renderChartLegendRow("eventsChartLegend", eventsLegendItems(data.breakdown));
+      DemographicsUI.renderPillLegend("eventsChartLegend", eventsLegendItems(data.breakdown));
 
       charts.eventsComboChart = DemographicsUI.renderComboChart("eventsComboChart", {
         categories: data.breakdown.map((b) => b.name),

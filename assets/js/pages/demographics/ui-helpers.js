@@ -193,7 +193,8 @@ const DemographicsUI = (function () {
   }
 
   /**
-   * 2-up grid, same proportions as index-1.html's own stat-card row.
+   * 4-up grid on wide screens (collapsing to 2-up/1-up on smaller
+   * breakpoints), so all 4 stat cards sit in one row.
    * @param {string} containerId
    * @param {object[]} cards - renderWidgetCard() opts
    */
@@ -202,7 +203,7 @@ const DemographicsUI = (function () {
     if (!container) return;
 
     container.innerHTML = cards
-      .map((c) => `<div class="col-lg-6 col-sm-6 col-md-6 col-xl-6">${renderWidgetCard(c)}</div>`)
+      .map((c) => `<div class="col-xl-3 col-lg-6 col-md-6">${renderWidgetCard(c)}</div>`)
       .join("");
   }
 
@@ -242,37 +243,6 @@ const DemographicsUI = (function () {
     const chart = new ApexCharts(el, options);
     chart.render();
     return chart;
-  }
-
-  /**
-   * Small static legend row above a chart (colored dot + label + value) -
-   * plain HTML, no chart library involved, mirrors index-1.html's Earnings
-   * chart summary row ("First Half $51.94k +0.9% · Top Gross · Second Half").
-   * @param {string} containerId
-   * @param {object[]} items - [{label, value, color}]
-   */
-  function renderChartLegendRow(containerId, items) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    if (!items || items.length === 0) {
-      container.innerHTML = "";
-      return;
-    }
-
-    container.innerHTML = `
-      <div class="d-flex flex-wrap gap-4 mb-2">
-        ${items
-          .map(
-            (it) => `
-          <div class="d-flex align-items-center gap-2">
-            <span class="rounded-circle bg-${it.color || "primary"}" style="width: 8px; height: 8px; display: inline-block;"></span>
-            <span class="fs-12 text-body">${it.label}</span>
-            <span class="fw-semibold">${it.value}</span>
-          </div>`,
-          )
-          .join("")}
-      </div>`;
   }
 
   /**
@@ -454,36 +424,6 @@ const DemographicsUI = (function () {
             ${sentences.map((s) => `<div class="fw-semibold">${s}</div>`).join("")}
           </div>
         </div>
-      </div>`;
-  }
-
-  /**
-   * Compact inline stat-columns strip - for a tab with no "types" to rank
-   * (e.g. Sunday Service), the same quick-facts role a ranked table plays
-   * elsewhere, without inventing rows to rank.
-   * @param {string} containerId
-   * @param {object[]} columns - [{label, value}]
-   */
-  function renderStatColumns(containerId, columns) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    if (!columns || columns.length === 0) {
-      container.innerHTML = "";
-      return;
-    }
-
-    container.innerHTML = `
-      <div class="d-flex flex-wrap gap-4">
-        ${columns
-          .map(
-            (c) => `
-          <div>
-            <span class="d-block text-body fw-semibold fs-12 text-uppercase">${c.label}</span>
-            <span class="fs-16 fw-semibold">${c.value}</span>
-          </div>`,
-          )
-          .join("")}
       </div>`;
   }
 
@@ -808,13 +748,11 @@ const DemographicsUI = (function () {
     renderWidgetCard,
     renderWidgetCardsRow,
     renderTrendChart,
-    renderChartLegendRow,
     renderTimeline,
     renderPillLegend,
     renderDonutChart,
     renderComboChart,
     renderInsightCallout,
-    renderStatColumns,
     setButtonLoading,
     restoreButton,
     renderTableLoading,
