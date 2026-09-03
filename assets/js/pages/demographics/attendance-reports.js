@@ -59,21 +59,26 @@ const AttendanceReports = (function () {
   // ==========================================================================
 
   function wireClock() {
-    const el = document.getElementById("reportClock");
-    if (!el) return;
+    const timeEl = document.getElementById("reportClockTime");
+    const dateEl = document.getElementById("reportClockDate");
+    if (!timeEl || !dateEl) return;
+
     const tick = () => {
-      el.textContent = new Date().toLocaleTimeString();
+      const now = new Date();
+      timeEl.textContent = now.toLocaleTimeString();
+      dateEl.textContent = `${now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })} · ${periodLabel()}`;
     };
     tick();
     setInterval(tick, 1000);
   }
 
-  function updatePeriodSummary() {
+  function periodLabel() {
     const yearSelect = document.getElementById("reportFiscalYear");
     const monthSelect = document.getElementById("reportFiscalMonth");
+    if (!yearSelect || !yearSelect.options.length || !yearSelect.value) return "-";
     const yearLabel = yearSelect.options[yearSelect.selectedIndex]?.text || "-";
     const monthLabel = monthSelect.value ? monthSelect.options[monthSelect.selectedIndex]?.text : "Jan - Dec";
-    document.getElementById("reportPeriodSummary").textContent = `Selected Period: FY ${yearLabel} · ${monthLabel}`;
+    return `FY ${yearLabel} · ${monthLabel}`;
   }
 
   // ==========================================================================
@@ -149,7 +154,6 @@ const AttendanceReports = (function () {
     const filters = currentFilters();
     if (!filters.fiscal_year_id) return;
 
-    updatePeriodSummary();
     destroyAllCharts();
     renderedTabs.clear();
 
@@ -204,7 +208,57 @@ const AttendanceReports = (function () {
   }
 
   function statToCardOpts(s) {
-    return { icon: s.icon, label: s.label, value: s.value, color: s.color, sparkline: s.sparkline };
+    return { icon: s.icon, label: s.label, value: s.value, color: s.color };
+  }
+
+  /** "Total / Best / Latest" legend row for a time-series chart (Sunday trend, Ministry comparison). */
+  function chartLegendItems(categories, data, colors = ["primary", "warning", "success"]) {
+    if (!data || data.length === 0) return [];
+    const total = data.reduce((a, b) => a + b, 0);
+    const maxIdx = data.indexOf(Math.max(...data));
+    const nonZero = data.map((v, i) => ({ v, i })).filter((x) => x.v > 0);
+    const latest = nonZero.length ? nonZero[nonZero.length - 1] : null;
+
+    return [
+      { label: "Total", value: total, color: colors[0] },
+      { label: "Best", value: `${categories[maxIdx]} (${data[maxIdx]})`, color: colors[1] },
+      latest ? { label: "Latest", value: `${categories[latest.i]} (${latest.v})`, color: colors[2] } : null,
+    ].filter(Boolean);
+  }
+
+  /** Legend row for the Special Events combo chart - doesn't fit the time-series shape, so a bespoke summary. */
+  function eventsLegendItems(breakdown) {
+    if (!breakdown || breakdown.length === 0) return [];
+    const mostHeld = [...breakdown].sort((a, b) => b.times_held - a.times_held)[0];
+    const highestAvg = [...breakdown].sort((a, b) => b.average_attendance - a.average_attendance)[0];
+
+    return [
+      { label: "Types Tracked", value: breakdown.length, color: "primary" },
+      { label: "Most Held", value: `${mostHeld.name} (${mostHeld.times_held}x)`, color: "warning" },
+      { label: "Highest Avg", value: `${highestAvg.name} (${highestAvg.average_attendance})`, color: "success" },
+    ];
+  }
+
+  /** Last 5 records for a tab's "Recent" list card, newest first. */
+  function buildRecentItems(rows, tab) {
+    return [...rows]
+      .sort((a, b) => new Date(b.service_date) - new Date(a.service_date))
+      .slice(0, 5)
+      .map((r) => {
+        const date = new Date(r.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+
+        if (tab === "sunday") {
+          return { icon: "ri-calendar-check-line", color: "primary", primary: date, secondary: "Sunday Service", value: totalFor(r) };
+        }
+
+        return {
+          icon: r.gathering_type?.icon || "ri-calendar-event-line",
+          color: tab === "ministry" ? "success" : "secondary",
+          primary: r.gathering_type?.name || r.event_name || "-",
+          secondary: date,
+          value: totalFor(r),
+        };
+      });
   }
 
   // ==========================================================================
@@ -232,6 +286,8 @@ const AttendanceReports = (function () {
       color: "primary",
     });
 
+    DemographicsUI.renderChartLegendRow("sundayChartLegend", chartLegendItems(data.chart.categories, data.chart.series[0].data));
+
     charts.sundayTrendChart = DemographicsUI.renderTrendChart("sundayTrendChart", {
       categories: data.chart.categories,
       series: data.chart.series,
@@ -242,6 +298,7 @@ const AttendanceReports = (function () {
     DemographicsUI.renderStatColumns("sundayStatColumns", data.stat_columns);
 
     const rows = recordsForTab("sunday");
+    DemographicsUI.renderRecentList("sundayRecentList", buildRecentItems(rows, "sunday"));
     renderRecordsTable("sunday", rows, false);
   }
 
@@ -260,6 +317,15 @@ const AttendanceReports = (function () {
           })
         : null;
 
+      DemographicsUI.renderChartLegendRow(
+        "ministryChartLegend",
+        chartLegendItems(
+          data.breakdown.map((b) => b.name),
+          data.breakdown.map((b) => b.total_attendance),
+          ["success", "warning", "primary"],
+        ),
+      );
+
       charts.ministryComparisonChart = DemographicsUI.renderTrendChart("ministryComparisonChart", {
         categories: data.breakdown.map((b) => b.name),
         series: [{ name: "Total Attendance", data: data.breakdown.map((b) => b.total_attendance) }],
@@ -267,6 +333,8 @@ const AttendanceReports = (function () {
         color: "success",
       });
     } else {
+      DemographicsUI.renderChartLegendRow("eventsChartLegend", eventsLegendItems(data.breakdown));
+
       charts.eventsComboChart = DemographicsUI.renderComboChart("eventsComboChart", {
         categories: data.breakdown.map((b) => b.name),
         barData: data.breakdown.map((b) => b.times_held),
@@ -278,6 +346,7 @@ const AttendanceReports = (function () {
     renderBreakdownTable(containerPrefix, data.breakdown);
 
     const rows = recordsForTab(tab);
+    DemographicsUI.renderRecentList(`${containerPrefix}RecentList`, buildRecentItems(rows, tab));
     renderRecordsTable(containerPrefix, rows, true);
   }
 
@@ -346,13 +415,19 @@ const AttendanceReports = (function () {
         .sort((a, b) => new Date(b.service_date) - new Date(a.service_date))
         .map((r) => {
           const date = new Date(r.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+          const icon = r.gathering_type?.icon || "ri-calendar-event-line";
           const middleCell = showGatheringColumn
-            ? `<td><i class="${r.gathering_type?.icon || "ri-calendar-event-line"} me-1 text-primary"></i>${escapeHtml(r.gathering_type?.name || r.event_name || "-")}</td>`
+            ? `<td>${escapeHtml(r.gathering_type?.name || r.event_name || "-")}</td>`
             : "";
 
           return `
             <tr>
-              <td class="fw-semibold">${date}</td>
+              <td class="fw-semibold">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="avatar avatar-sm avatar-rounded bg-primary-transparent"><i class="${icon} text-primary"></i></span>
+                  ${date}
+                </div>
+              </td>
               ${middleCell}
               <td>${totalFor(r)}</td>
               <td>${escapeHtml(r.notes || "-")}</td>

@@ -125,16 +125,17 @@ const DemographicsUI = (function () {
   // ==========================================================================
   // WIDGET DASHBOARD COMPONENTS (Attendance Reports tabbed dashboard)
   //
-  // Bigger, richer cards + a small chart-type library modeled on
-  // church/dashboard/index.php's card markup and the chart patterns
-  // surveyed across the template's other demo dashboards (index-6/index-9)
-  // - additive alongside renderStatCard/renderStatCardsRow above, which
-  // stay untouched for the pages already using them. Alpha/opacity
-  // convention followed throughout (confirmed consistent across the
-  // template): 0.05 for gridlines, 0.1 for card tints, 0.2-0.3 for chart
-  // fills, 1.0 for solid strokes/bars. Charts default to a single brand
-  // color rather than forcing a two-color scheme - only the donut
-  // (genuinely categorical slices) needs more than one.
+  // Cards + a small chart-type library modeled literally on index-1.html's
+  // "Total Sales" card and "Earnings" chart (the pale bg-{color}-transparent
+  // icon tint, two-column row layout, distributed-shaded bars, and a small
+  // legend row above the chart) - additive alongside renderStatCard/
+  // renderStatCardsRow above, which stay untouched for the pages already
+  // using them. Alpha/opacity convention followed throughout (confirmed
+  // consistent across the template): 0.05 for gridlines, 0.1 for card
+  // tints, 0.2-1.0 for distributed bar shading, 1.0 for solid strokes.
+  // Charts default to a single brand color rather than forcing a
+  // two-color scheme - only the donut (genuinely categorical slices)
+  // needs more than one.
   // ==========================================================================
 
   const BRAND_COLORS = {
@@ -159,78 +160,50 @@ const DemographicsUI = (function () {
   }
 
   /**
-   * @param {object} opts {icon, label, value, trend, color, sparklineId}
-   *   sparklineId: id of an empty <div> slot for renderSparkline() to fill
-   *   after this card's HTML is in the DOM - renderWidgetCardsRow() wires
-   *   this automatically when a card carries a `sparkline` array.
-   *   color: solid `bg-{color}` icon avatar (white icon) + a colored top
-   *   border via `hrm-main-card {color}` (both already defined in
-   *   styles.css, the index-8.html HRM-dashboard pattern) - deliberately
-   *   NOT the washed-out `bg-{color}-transparent` tint used elsewhere,
-   *   which is what read as "flat/monochrome" in review.
+   * @param {object} opts {icon, label, value, trend, color}
+   *   Literal index-1.html "Total Sales" card structure: icon column with
+   *   the pale `bg-{color}-transparent` tint (not solid, not a border-top -
+   *   round 5 tried both and got corrected back to this exact reference),
+   *   value column with a trend sentence when one is given.
    */
-  function renderWidgetCard({ icon, label, value, trend = null, color = "primary", sparklineId = null }) {
-    const trendHtml = trend ? `<span class="fs-12 fw-semibold d-block mt-1">${trend}</span>` : "";
-    const sparklineHtml = sparklineId ? `<div class="ms-auto" id="${sparklineId}" style="min-width: 90px;"></div>` : "";
+  function renderWidgetCard({ icon, label, value, trend = null, color = "primary" }) {
+    const trendHtml = trend
+      ? `<div><span class="fs-12 mb-0">${trend}</span></div>`
+      : "";
 
     return `
-      <div class="card custom-card hrm-main-card ${color}">
+      <div class="card custom-card">
         <div class="card-body">
-          <div class="d-flex align-items-center gap-3">
-            <span class="avatar avatar-md avatar-rounded bg-${color} flex-shrink-0">
-              <i class="${icon} fs-18 text-white"></i>
-            </span>
-            <div class="flex-grow-1">
-              <span class="d-block mb-1 text-body fw-semibold">${label}</span>
-              <span class="fs-20 fw-semibold lh-1 d-block">${value}</span>
+          <div class="row">
+            <div class="col-xxl-3 col-xl-2 col-lg-3 col-md-3 col-sm-4 col-4 d-flex align-items-center justify-content-center ecommerce-icon px-0">
+              <span class="rounded p-3 bg-${color}-transparent">
+                <i class="${icon} fs-20 text-${color}"></i>
+              </span>
+            </div>
+            <div class="col-xxl-9 col-xl-10 col-lg-9 col-md-9 col-sm-8 col-8 px-0">
+              <div class="mb-2">${label}</div>
+              <div class="mb-1 fs-12">
+                <span class="text-dark fw-semibold fs-20 lh-1 vertical-bottom">${value}</span>
+              </div>
               ${trendHtml}
             </div>
-            ${sparklineHtml}
           </div>
         </div>
       </div>`;
   }
 
   /**
-   * Bigger 2-up grid (matches church/dashboard/index.php's wider card
-   * footprint) instead of renderStatCardsRow's 4-up compact grid. Cards
-   * carrying a non-empty `sparkline` array get their mini trend chart
-   * rendered automatically once the row's HTML is in the DOM.
+   * 2-up grid, same proportions as index-1.html's own stat-card row.
    * @param {string} containerId
-   * @param {object[]} cards - renderWidgetCard() opts, each optionally with a `sparkline: number[]`
+   * @param {object[]} cards - renderWidgetCard() opts
    */
   function renderWidgetCardsRow(containerId, cards) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    const withIds = cards.map((c, i) => ({
-      ...c,
-      sparklineId: c.sparkline && c.sparkline.length ? `${containerId}Spark${i}` : null,
-    }));
-
-    container.innerHTML = withIds
-      .map((c) => `<div class="col-xl-6 col-lg-6 col-md-6 col-sm-6">${renderWidgetCard(c)}</div>`)
+    container.innerHTML = cards
+      .map((c) => `<div class="col-lg-6 col-sm-6 col-md-6 col-xl-6">${renderWidgetCard(c)}</div>`)
       .join("");
-
-    withIds.forEach((c) => {
-      if (c.sparklineId) renderSparkline(c.sparklineId, c.sparkline, brandHex(c.color));
-    });
-  }
-
-  /** Tiny axis-less ApexCharts line, used as the embedded mini-chart on a widget card. */
-  function renderSparkline(containerId, data, color = BRAND_COLORS.primary) {
-    const el = document.getElementById(containerId);
-    if (!el || typeof ApexCharts === "undefined" || !data || data.length === 0) return null;
-
-    const chart = new ApexCharts(el, {
-      chart: { type: "line", height: 40, sparkline: { enabled: true } },
-      series: [{ data }],
-      stroke: { width: 2, curve: "smooth" },
-      colors: [brandHex(color)],
-      tooltip: { enabled: false },
-    });
-    chart.render();
-    return chart;
   }
 
   /**
@@ -257,12 +230,88 @@ const DemographicsUI = (function () {
       options.stroke = { curve: "smooth", width: 2 };
       options.fill = { type: "solid", opacity: 0.25 };
     } else {
-      options.plotOptions = { bar: { columnWidth: "45%", borderRadius: 6 } };
+      // Distributed, shaded bars (index-1.html's Earnings chart pattern) -
+      // one series, still one hue, just varying opacity per bar instead of
+      // a flat fill - richer without a forced second color.
+      const pointCount = (series[0]?.data || []).length;
+      options.colors = Array.from({ length: pointCount }, (_, i) => hexToRgba(hex, 0.3 + (0.7 * i) / Math.max(1, pointCount - 1)));
+      options.plotOptions = { bar: { columnWidth: "45%", borderRadius: 6, distributed: true } };
+      options.legend.show = false;
     }
 
     const chart = new ApexCharts(el, options);
     chart.render();
     return chart;
+  }
+
+  /**
+   * Small static legend row above a chart (colored dot + label + value) -
+   * plain HTML, no chart library involved, mirrors index-1.html's Earnings
+   * chart summary row ("First Half $51.94k +0.9% · Top Gross · Second Half").
+   * @param {string} containerId
+   * @param {object[]} items - [{label, value, color}]
+   */
+  function renderChartLegendRow(containerId, items) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (!items || items.length === 0) {
+      container.innerHTML = "";
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="d-flex flex-wrap gap-4 mb-2">
+        ${items
+          .map(
+            (it) => `
+          <div class="d-flex align-items-center gap-2">
+            <span class="rounded-circle bg-${it.color || "primary"}" style="width: 8px; height: 8px; display: inline-block;"></span>
+            <span class="fs-12 text-body">${it.label}</span>
+            <span class="fw-semibold">${it.value}</span>
+          </div>`,
+          )
+          .join("")}
+      </div>`;
+  }
+
+  /**
+   * Recent-activity list card body - modeled directly on index-1.html's
+   * "Recent Orders" list (icon avatar + primary/secondary text + a
+   * right-aligned value), a different shape from both the stat cards and
+   * the big DataTable below it.
+   * @param {string} containerId
+   * @param {object[]} items - [{icon, color, primary, secondary, value}]
+   */
+  function renderRecentList(containerId, items) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (!items || items.length === 0) {
+      container.innerHTML = `<p class="text-body fw-semibold mb-0">No records for this period</p>`;
+      return;
+    }
+
+    container.innerHTML = `
+      <ul class="list-unstyled mb-0">
+        ${items
+          .map(
+            (it) => `
+          <li class="mb-3">
+            <div class="d-flex align-items-center">
+              <span class="avatar avatar-md bg-${it.color || "primary"}-transparent">
+                <i class="${it.icon || "ri-calendar-event-line"} text-${it.color || "primary"}"></i>
+              </span>
+              <div class="flex-fill ms-2">
+                <p class="fw-semibold mb-0">${it.primary}</p>
+                <p class="fs-12 text-body mb-0">${it.secondary}</p>
+              </div>
+              <span class="fw-semibold text-success">${it.value}</span>
+            </div>
+          </li>`,
+          )
+          .join("")}
+      </ul>`;
   }
 
   /** Single-value gauge (ApexCharts radialBar) - used for the Sunday Coverage stat. */
@@ -717,8 +766,9 @@ const DemographicsUI = (function () {
     renderStatCardsRow,
     renderWidgetCard,
     renderWidgetCardsRow,
-    renderSparkline,
     renderTrendChart,
+    renderChartLegendRow,
+    renderRecentList,
     renderRadialGauge,
     renderDonutChart,
     renderComboChart,

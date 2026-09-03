@@ -67,10 +67,13 @@ $breadcrumbs = [
                 <!-- Compact clock + period filter strip -->
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3 px-3 py-2 bg-white rounded border">
                     <div class="d-flex align-items-center gap-2">
-                        <i class="ri-time-line fs-16 text-primary"></i>
-                        <span class="fw-semibold" id="reportClock">--:--:--</span>
-                        <span class="text-body">·</span>
-                        <span class="fw-semibold text-body" id="reportPeriodSummary">Selected Period: -</span>
+                        <span class="avatar avatar-md bg-primary-transparent">
+                            <i class="ri-time-line fs-20 text-primary"></i>
+                        </span>
+                        <div>
+                            <span class="d-block fw-semibold fs-16" id="reportClockTime">--:--:--</span>
+                            <span class="d-block fs-12 text-body" id="reportClockDate">-</span>
+                        </div>
                     </div>
                     <div class="d-flex flex-wrap gap-2 align-items-center">
                         <select class="form-select form-select-sm" id="reportFiscalYear" style="min-width: 100px;">
@@ -115,7 +118,7 @@ $breadcrumbs = [
                         <div id="sundayInsights"></div>
 
                         <div class="row g-3 mb-3">
-                            <div class="col-xl-4">
+                            <div class="col-xl-3">
                                 <div class="card custom-card h-100">
                                     <div class="card-header">
                                         <div class="card-title"><i class="ri-pie-chart-line me-2 text-primary"></i>Coverage</div>
@@ -125,14 +128,25 @@ $breadcrumbs = [
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-xl-8">
+                            <div class="col-xl-6">
                                 <div class="card custom-card h-100">
                                     <div class="card-header">
                                         <div class="card-title"><i class="ri-line-chart-line me-2 text-primary"></i>Attendance Trend</div>
                                     </div>
                                     <div class="card-body">
+                                        <div id="sundayChartLegend"></div>
                                         <div id="sundayTrendChart"></div>
                                         <div class="border-top pt-3 mt-3" id="sundayStatColumns"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-3">
+                                <div class="card custom-card h-100">
+                                    <div class="card-header">
+                                        <div class="card-title"><i class="ri-history-line me-2 text-primary"></i>Recent Sundays</div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="sundayRecentList"></div>
                                     </div>
                                 </div>
                             </div>
@@ -167,23 +181,34 @@ $breadcrumbs = [
                         <div id="ministryInsights"></div>
 
                         <div class="row g-3 mb-3">
-                            <div class="col-xl-5">
+                            <div class="col-xl-3">
                                 <div class="card custom-card h-100">
                                     <div class="card-header">
-                                        <div class="card-title"><i class="ri-donut-chart-line me-2 text-primary"></i>Attendance Share by Type</div>
+                                        <div class="card-title"><i class="ri-donut-chart-line me-2 text-primary"></i>Attendance Share</div>
                                     </div>
                                     <div class="card-body">
                                         <div id="ministryDonutChart"></div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-xl-7">
+                            <div class="col-xl-6">
                                 <div class="card custom-card h-100">
                                     <div class="card-header">
                                         <div class="card-title"><i class="ri-bar-chart-grouped-line me-2 text-primary"></i>Total Attendance by Type</div>
                                     </div>
                                     <div class="card-body">
+                                        <div id="ministryChartLegend"></div>
                                         <div id="ministryComparisonChart"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-3">
+                                <div class="card custom-card h-100">
+                                    <div class="card-header">
+                                        <div class="card-title"><i class="ri-history-line me-2 text-primary"></i>Recent Gatherings</div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="ministryRecentList"></div>
                                     </div>
                                 </div>
                             </div>
@@ -240,12 +265,27 @@ $breadcrumbs = [
 
                         <div id="eventsInsights"></div>
 
-                        <div class="card custom-card mb-3">
-                            <div class="card-header">
-                                <div class="card-title"><i class="ri-bar-chart-grouped-line me-2 text-primary"></i>Times Held vs. Average Attendance</div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-xl-8">
+                                <div class="card custom-card h-100">
+                                    <div class="card-header">
+                                        <div class="card-title"><i class="ri-bar-chart-grouped-line me-2 text-primary"></i>Times Held vs. Average Attendance</div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="eventsChartLegend"></div>
+                                        <div id="eventsComboChart"></div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <div id="eventsComboChart"></div>
+                            <div class="col-xl-4">
+                                <div class="card custom-card h-100">
+                                    <div class="card-header">
+                                        <div class="card-title"><i class="ri-history-line me-2 text-primary"></i>Recent Events</div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="eventsRecentList"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
