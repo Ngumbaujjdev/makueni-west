@@ -13,6 +13,10 @@ This is **two logically separate applications, physically co-located in one repo
 
 Don't assume file location from folder name alone in this repo — check `docs/AUDIT-2026-08.md` before building on top of an existing page.
 
+## Plan Before Acting
+
+For any new request or question — including a follow-up refinement to work already in progress, not just brand-new features — always propose a plan first (plan mode) before writing or editing code. Don't jump straight to implementation, even for changes that feel small or obvious; confirm the approach first.
+
 ## Dev Setup & Commands
 
 Target setup (see `docs/ROADMAP.md` — port change not yet applied):
