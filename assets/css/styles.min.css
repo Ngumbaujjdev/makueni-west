@@ -15094,6 +15094,9 @@ hr {
 .card.custom-card.hrm-main-card.danger {
   border-color: rgba(var(--danger-rgb), 0.3);
 }
+.card.custom-card.hrm-main-card.success {
+  border-color: rgba(var(--success-rgb), 0.3);
+}
 .timeline-widget {
   position: relative;
 }
@@ -26303,6 +26306,25 @@ a.link-underline-dark {
 }
 
 #secondary-nav-bar .nav-link.active {
+    color: #fff;
+    font-weight: 600;
+    background-color: #2CA4BF;
+}
+
+.nav-tabs-pill {
+    border-block-end: 0;
+    gap: 0.25rem;
+}
+
+.nav-tabs-pill .nav-link {
+    color: var(--diocese-black, #0D0D0D);
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border: 0;
+    border-radius: 0.375rem;
+}
+
+.nav-tabs-pill .nav-link.active {
     color: #fff;
     font-weight: 600;
     background-color: #2CA4BF;

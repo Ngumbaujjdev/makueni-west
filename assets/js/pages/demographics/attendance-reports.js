@@ -50,7 +50,30 @@ const AttendanceReports = (function () {
     });
 
     wireTabs();
+    wireClock();
     await loadFiscalYears();
+  }
+
+  // ==========================================================================
+  // CLOCK + PERIOD SUMMARY (compact filter strip)
+  // ==========================================================================
+
+  function wireClock() {
+    const el = document.getElementById("reportClock");
+    if (!el) return;
+    const tick = () => {
+      el.textContent = new Date().toLocaleTimeString();
+    };
+    tick();
+    setInterval(tick, 1000);
+  }
+
+  function updatePeriodSummary() {
+    const yearSelect = document.getElementById("reportFiscalYear");
+    const monthSelect = document.getElementById("reportFiscalMonth");
+    const yearLabel = yearSelect.options[yearSelect.selectedIndex]?.text || "-";
+    const monthLabel = monthSelect.value ? monthSelect.options[monthSelect.selectedIndex]?.text : "Jan - Dec";
+    document.getElementById("reportPeriodSummary").textContent = `Selected Period: FY ${yearLabel} · ${monthLabel}`;
   }
 
   // ==========================================================================
@@ -126,6 +149,7 @@ const AttendanceReports = (function () {
     const filters = currentFilters();
     if (!filters.fiscal_year_id) return;
 
+    updatePeriodSummary();
     destroyAllCharts();
     renderedTabs.clear();
 
@@ -200,6 +224,7 @@ const AttendanceReports = (function () {
 
   function renderSundayTab(data) {
     DemographicsUI.renderWidgetCardsRow("sundayCardsRow", data.stats.map(statToCardOpts));
+    DemographicsUI.renderInsightCallout("sundayInsights", data.insights);
 
     charts.sundayCoverageGauge = DemographicsUI.renderRadialGauge("sundayCoverageGauge", {
       label: "Coverage",
@@ -214,6 +239,8 @@ const AttendanceReports = (function () {
       color: "primary",
     });
 
+    DemographicsUI.renderStatColumns("sundayStatColumns", data.stat_columns);
+
     const rows = recordsForTab("sunday");
     renderRecordsTable("sunday", rows, false);
   }
@@ -221,6 +248,7 @@ const AttendanceReports = (function () {
   function renderBreakdownTab(tab, data) {
     const containerPrefix = tab === "ministry" ? "ministry" : "events";
     DemographicsUI.renderWidgetCardsRow(`${containerPrefix}CardsRow`, data.stats.map(statToCardOpts));
+    DemographicsUI.renderInsightCallout(`${containerPrefix}Insights`, data.insights);
 
     const held = data.breakdown.filter((b) => b.times_held > 0);
 
@@ -253,6 +281,23 @@ const AttendanceReports = (function () {
     renderRecordsTable(containerPrefix, rows, true);
   }
 
+  const STATUS_BADGE = {
+    on_track: { cls: "bg-success", label: "On Track" },
+    inactive: { cls: "bg-warning text-dark", label: "Inactive" },
+    never_held: { cls: "bg-secondary", label: "Not Held" },
+  };
+
+  const STATUS_AVATAR_COLOR = {
+    on_track: "success",
+    inactive: "warning",
+    never_held: "secondary",
+  };
+
+  /**
+   * Ranked "Top Selling Products"-style list: rank #, icon avatar colored
+   * by status, and right-aligned Times Held/Total Attendance/Status
+   * columns - already sorted by total attendance descending server-side.
+   */
   function renderBreakdownTable(prefix, breakdown) {
     const tbody = document.getElementById(`${prefix}BreakdownTableBody`);
 
@@ -262,16 +307,27 @@ const AttendanceReports = (function () {
     }
 
     tbody.innerHTML = breakdown
-      .map(
-        (b) => `
+      .map((b, i) => {
+        const badge = STATUS_BADGE[b.status] || STATUS_BADGE.never_held;
+        const avatarColor = STATUS_AVATAR_COLOR[b.status] || "secondary";
+        const lastHeldTitle = b.last_held ? `Last held ${b.last_held}` : "Never held this period";
+
+        return `
         <tr>
-          <td class="fw-semibold"><i class="${b.icon || "ri-calendar-event-line"} me-2 text-primary"></i>${escapeHtml(b.name)}</td>
-          <td>${b.times_held ? b.times_held : '<span class="badge bg-secondary">Not held this year</span>'}</td>
-          <td>${b.total_attendance}</td>
-          <td>${b.average_attendance}</td>
-          <td>${b.last_held ? escapeHtml(b.last_held) : "-"}</td>
-        </tr>`,
-      )
+          <td class="fw-semibold text-body">${i + 1}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2" title="${escapeHtml(lastHeldTitle)}">
+              <span class="avatar avatar-sm avatar-rounded bg-${avatarColor}">
+                <i class="${b.icon || "ri-calendar-event-line"} text-white"></i>
+              </span>
+              <span class="fw-semibold">${escapeHtml(b.name)}</span>
+            </div>
+          </td>
+          <td class="text-end">${b.times_held}</td>
+          <td class="text-end fw-semibold">${b.total_attendance}</td>
+          <td class="text-end"><span class="badge ${badge.cls}">${badge.label}</span></td>
+        </tr>`;
+      })
       .join("");
   }
 

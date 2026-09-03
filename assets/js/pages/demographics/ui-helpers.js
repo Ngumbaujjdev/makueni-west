@@ -163,17 +163,22 @@ const DemographicsUI = (function () {
    *   sparklineId: id of an empty <div> slot for renderSparkline() to fill
    *   after this card's HTML is in the DOM - renderWidgetCardsRow() wires
    *   this automatically when a card carries a `sparkline` array.
+   *   color: solid `bg-{color}` icon avatar (white icon) + a colored top
+   *   border via `hrm-main-card {color}` (both already defined in
+   *   styles.css, the index-8.html HRM-dashboard pattern) - deliberately
+   *   NOT the washed-out `bg-{color}-transparent` tint used elsewhere,
+   *   which is what read as "flat/monochrome" in review.
    */
   function renderWidgetCard({ icon, label, value, trend = null, color = "primary", sparklineId = null }) {
     const trendHtml = trend ? `<span class="fs-12 fw-semibold d-block mt-1">${trend}</span>` : "";
     const sparklineHtml = sparklineId ? `<div class="ms-auto" id="${sparklineId}" style="min-width: 90px;"></div>` : "";
 
     return `
-      <div class="card custom-card">
+      <div class="card custom-card hrm-main-card ${color}">
         <div class="card-body">
           <div class="d-flex align-items-center gap-3">
-            <span class="rounded p-3 bg-${color}-transparent flex-shrink-0">
-              <i class="${icon} fs-20 text-${color}"></i>
+            <span class="avatar avatar-md avatar-rounded bg-${color} flex-shrink-0">
+              <i class="${icon} fs-18 text-white"></i>
             </span>
             <div class="flex-grow-1">
               <span class="d-block mb-1 text-body fw-semibold">${label}</span>
@@ -333,6 +338,63 @@ const DemographicsUI = (function () {
     });
     chart.render();
     return chart;
+  }
+
+  /**
+   * Small highlighted callout for the plain-English `insights` sentences
+   * the backend computes (AttendanceReportWidgetService) - this is what
+   * makes a tab read as analysis rather than a pile of numbers.
+   * @param {string} containerId
+   * @param {string[]} sentences
+   */
+  function renderInsightCallout(containerId, sentences) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (!sentences || sentences.length === 0) {
+      container.innerHTML = "";
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="alert alert-primary bg-primary-transparent border-0 mb-3">
+        <div class="d-flex align-items-start gap-2">
+          <i class="ri-lightbulb-flash-line fs-18 mt-1"></i>
+          <div>
+            ${sentences.map((s) => `<div class="fw-semibold">${s}</div>`).join("")}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  /**
+   * Compact inline stat-columns strip - for a tab with no "types" to rank
+   * (e.g. Sunday Service), the same quick-facts role a ranked table plays
+   * elsewhere, without inventing rows to rank.
+   * @param {string} containerId
+   * @param {object[]} columns - [{label, value}]
+   */
+  function renderStatColumns(containerId, columns) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (!columns || columns.length === 0) {
+      container.innerHTML = "";
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="d-flex flex-wrap gap-4">
+        ${columns
+          .map(
+            (c) => `
+          <div>
+            <span class="d-block text-body fw-semibold fs-12 text-uppercase">${c.label}</span>
+            <span class="fs-16 fw-semibold">${c.value}</span>
+          </div>`,
+          )
+          .join("")}
+      </div>`;
   }
 
   // ==========================================================================
@@ -660,6 +722,8 @@ const DemographicsUI = (function () {
     renderRadialGauge,
     renderDonutChart,
     renderComboChart,
+    renderInsightCallout,
+    renderStatColumns,
     setButtonLoading,
     restoreButton,
     renderTableLoading,

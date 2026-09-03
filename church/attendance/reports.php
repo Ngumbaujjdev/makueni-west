@@ -64,22 +64,21 @@ $breadcrumbs = [
 
                 <?php include __DIR__ . '/../../includes/page-header.php' ?>
 
-                <!-- Year/Month filters -->
-                <div class="card custom-card mb-3">
-                    <div class="card-body">
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-                            <div class="fw-semibold text-body"><i class="ri-filter-3-line me-1 text-primary"></i>Period</div>
-                            <div class="d-flex flex-wrap gap-2 align-items-center">
-                                <label for="reportFiscalYear" class="form-label mb-0 fw-semibold">Year</label>
-                                <select class="form-select" id="reportFiscalYear" style="min-width: 120px;">
-                                    <option value="">Loading years...</option>
-                                </select>
-                                <label for="reportFiscalMonth" class="form-label mb-0 fw-semibold">Month</label>
-                                <select class="form-select" id="reportFiscalMonth" style="min-width: 160px;">
-                                    <option value="">All months</option>
-                                </select>
-                            </div>
-                        </div>
+                <!-- Compact clock + period filter strip -->
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3 px-3 py-2 bg-white rounded border">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="ri-time-line fs-16 text-primary"></i>
+                        <span class="fw-semibold" id="reportClock">--:--:--</span>
+                        <span class="text-body">·</span>
+                        <span class="fw-semibold text-body" id="reportPeriodSummary">Selected Period: -</span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <select class="form-select form-select-sm" id="reportFiscalYear" style="min-width: 100px;">
+                            <option value="">Loading years...</option>
+                        </select>
+                        <select class="form-select form-select-sm" id="reportFiscalMonth" style="min-width: 140px;">
+                            <option value="">All months</option>
+                        </select>
                     </div>
                 </div>
 
@@ -89,7 +88,7 @@ $breadcrumbs = [
                 </div>
 
                 <!-- Tab bar -->
-                <ul class="nav nav-tabs mb-3" id="reportTabs" role="tablist">
+                <ul class="nav nav-tabs nav-tabs-pill mb-3" id="reportTabs" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active" id="tab-sunday-btn" data-bs-toggle="tab" data-bs-target="#tab-sunday" type="button" role="tab">
                             <i class="ri-sun-line me-1"></i>Sunday Service
@@ -113,6 +112,8 @@ $breadcrumbs = [
                     <div class="tab-pane fade show active" id="tab-sunday" role="tabpanel">
                         <div class="row g-3 mb-3" id="sundayCardsRow"></div>
 
+                        <div id="sundayInsights"></div>
+
                         <div class="row g-3 mb-3">
                             <div class="col-xl-4">
                                 <div class="card custom-card h-100">
@@ -131,6 +132,7 @@ $breadcrumbs = [
                                     </div>
                                     <div class="card-body">
                                         <div id="sundayTrendChart"></div>
+                                        <div class="border-top pt-3 mt-3" id="sundayStatColumns"></div>
                                     </div>
                                 </div>
                             </div>
@@ -162,6 +164,8 @@ $breadcrumbs = [
                     <div class="tab-pane fade" id="tab-ministry" role="tabpanel">
                         <div class="row g-3 mb-3" id="ministryCardsRow"></div>
 
+                        <div id="ministryInsights"></div>
+
                         <div class="row g-3 mb-3">
                             <div class="col-xl-5">
                                 <div class="card custom-card h-100">
@@ -187,18 +191,18 @@ $breadcrumbs = [
 
                         <div class="card custom-card mb-3">
                             <div class="card-header">
-                                <div class="card-title"><i class="ri-list-check-2 me-2 text-primary"></i>Gathering Type Breakdown</div>
+                                <div class="card-title"><i class="ri-trophy-line me-2 text-primary"></i>Top Gathering Types</div>
                             </div>
                             <div class="card-body p-0">
                                 <div class="table-responsive">
                                     <table class="table table-hover mb-0">
                                         <thead class="table-light">
                                             <tr>
-                                                <th class="fw-semibold text-dark">Name</th>
-                                                <th class="fw-semibold text-dark">Times Held</th>
-                                                <th class="fw-semibold text-dark">Total Attendance</th>
-                                                <th class="fw-semibold text-dark">Average Attendance</th>
-                                                <th class="fw-semibold text-dark">Last Held</th>
+                                                <th class="fw-semibold text-dark" style="width: 3rem;">#</th>
+                                                <th class="fw-semibold text-dark">Gathering Type</th>
+                                                <th class="fw-semibold text-dark text-end">Times Held</th>
+                                                <th class="fw-semibold text-dark text-end">Total Attendance</th>
+                                                <th class="fw-semibold text-dark text-end">Status</th>
                                             </tr>
                                         </thead>
                                         <tbody id="ministryBreakdownTableBody"></tbody>
@@ -234,6 +238,8 @@ $breadcrumbs = [
                     <div class="tab-pane fade" id="tab-events" role="tabpanel">
                         <div class="row g-3 mb-3" id="eventsCardsRow"></div>
 
+                        <div id="eventsInsights"></div>
+
                         <div class="card custom-card mb-3">
                             <div class="card-header">
                                 <div class="card-title"><i class="ri-bar-chart-grouped-line me-2 text-primary"></i>Times Held vs. Average Attendance</div>
@@ -245,18 +251,18 @@ $breadcrumbs = [
 
                         <div class="card custom-card mb-3">
                             <div class="card-header">
-                                <div class="card-title"><i class="ri-list-check-2 me-2 text-primary"></i>Event Type Breakdown</div>
+                                <div class="card-title"><i class="ri-trophy-line me-2 text-primary"></i>Top Event Types</div>
                             </div>
                             <div class="card-body p-0">
                                 <div class="table-responsive">
                                     <table class="table table-hover mb-0">
                                         <thead class="table-light">
                                             <tr>
-                                                <th class="fw-semibold text-dark">Name</th>
-                                                <th class="fw-semibold text-dark">Times Held</th>
-                                                <th class="fw-semibold text-dark">Total Attendance</th>
-                                                <th class="fw-semibold text-dark">Average Attendance</th>
-                                                <th class="fw-semibold text-dark">Last Held</th>
+                                                <th class="fw-semibold text-dark" style="width: 3rem;">#</th>
+                                                <th class="fw-semibold text-dark">Event Type</th>
+                                                <th class="fw-semibold text-dark text-end">Times Held</th>
+                                                <th class="fw-semibold text-dark text-end">Total Attendance</th>
+                                                <th class="fw-semibold text-dark text-end">Status</th>
                                             </tr>
                                         </thead>
                                         <tbody id="eventsBreakdownTableBody"></tbody>
