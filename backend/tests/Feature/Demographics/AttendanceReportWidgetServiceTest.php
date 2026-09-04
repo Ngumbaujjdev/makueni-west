@@ -126,12 +126,113 @@ class AttendanceReportWidgetServiceTest extends TestCase
         $this->assertEquals(47, $stats[2]['value']); // Average Attendance = round(140/3)
         $this->assertStringContainsString('70 on 16 Aug', $stats[3]['value']); // Highest Attended Sunday
 
+        // No July fiscal month configured in this test, so there's no valid
+        // previous period to compare against - trend stays null, not a
+        // fabricated number. Coverage/Highest Attended Sunday never get a
+        // trend at all (composite/text values, see the service's own doc).
+        $this->assertNull($stats[0]['trend']);
+        $this->assertNull($stats[1]['trend']);
+        $this->assertNull($stats[2]['trend']);
+        $this->assertNull($stats[3]['trend']);
+
         $this->assertStringContainsString("2 Sundays weren't recorded this month", $response->json('data.insights.0'));
 
         $statColumns = collect($response->json('data.stat_columns'))->keyBy('label');
         $this->assertEquals('Aug (140)', $statColumns['Best Month']['value']);
         $this->assertEquals('47', $statColumns['Weekly Average']['value']);
         $this->assertEquals('-', $statColumns['This Month vs. Last']['value']); // only one month in scope
+    }
+
+    public function test_sunday_stats_trend_compares_to_previous_fiscal_month(): void
+    {
+        $july = FiscalMonth::create(['number' => 7, 'name' => 'July', 'short_name' => 'Jul']);
+
+        // July (previous period): 2 Sundays, total 50 (avg 25).
+        ChurchAttendanceRecord::create([
+            'territory_type' => 'church', 'territory_id' => $this->myChurch->id,
+            'service_date' => '2026-07-05', 'fiscal_year_id' => $this->fiscalYear->id, 'fiscal_month_id' => $july->id,
+            'gathering_category_id' => $this->sundayServiceCategoryId,
+            'adults_count' => 15, 'youth_count' => 3, 'children_male_count' => 1, 'children_female_count' => 1,
+            'created_by' => $this->pastor->id, 'updated_by' => $this->pastor->id,
+        ]); // total 20
+        ChurchAttendanceRecord::create([
+            'territory_type' => 'church', 'territory_id' => $this->myChurch->id,
+            'service_date' => '2026-07-12', 'fiscal_year_id' => $this->fiscalYear->id, 'fiscal_month_id' => $july->id,
+            'gathering_category_id' => $this->sundayServiceCategoryId,
+            'adults_count' => 20, 'youth_count' => 5, 'children_male_count' => 3, 'children_female_count' => 2,
+            'created_by' => $this->pastor->id, 'updated_by' => $this->pastor->id,
+        ]); // total 30
+
+        // August (current period): 3 Sundays, total 140 (avg 47) - same fixture as the coverage test above.
+        $this->createSundayRecord('2026-08-02', 20, 5, 3, 2); // total 30
+        $this->createSundayRecord('2026-08-16', 40, 15, 8, 7); // total 70
+        $this->createSundayRecord('2026-08-30', 25, 5, 5, 5); // total 40
+
+        Sanctum::actingAs($this->pastor);
+
+        $response = $this->getJson('/api/attendance-reports/widgets?'.http_build_query([
+            'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'fiscal_month_id' => $this->august->id,
+            'gathering_category_id' => $this->sundayServiceCategoryId,
+        ]));
+
+        $response->assertStatus(200);
+        $stats = $response->json('data.stats');
+
+        // Sundays Recorded: 3 vs. 2 previous = +50%.
+        $this->assertEquals('up', $stats[0]['trend']['direction']);
+        $this->assertEquals(50.0, $stats[0]['trend']['percent']);
+        $this->assertEquals('vs last month', $stats[0]['trend']['label']);
+
+        // Average Attendance: 47 (rounded) vs. 25 previous = +88%.
+        $this->assertEquals('up', $stats[2]['trend']['direction']);
+        $this->assertEquals(88.0, $stats[2]['trend']['percent']);
+
+        // Coverage and Highest Attended Sunday never get a trend badge (composite/text values).
+        $this->assertNull($stats[1]['trend']);
+        $this->assertNull($stats[3]['trend']);
+    }
+
+    public function test_combined_summary_trend_compares_to_previous_fiscal_year(): void
+    {
+        $previousYear = FiscalYear::create(['year' => 2025, 'start_date' => '2025-01-01', 'end_date' => '2025-12-31']);
+
+        // 2025 (previous period): 1 gathering, total 20.
+        ChurchAttendanceRecord::create([
+            'territory_type' => 'church', 'territory_id' => $this->myChurch->id,
+            'service_date' => '2025-08-03', 'fiscal_year_id' => $previousYear->id, 'fiscal_month_id' => $this->august->id,
+            'gathering_category_id' => $this->sundayServiceCategoryId,
+            'adults_count' => 15, 'youth_count' => 3, 'children_male_count' => 1, 'children_female_count' => 1,
+            'created_by' => $this->pastor->id, 'updated_by' => $this->pastor->id,
+        ]); // total 20
+
+        // 2026 (current period): 2 gatherings, total 60.
+        $this->createSundayRecord('2026-08-02', 20, 5, 3, 2); // total 30
+        $this->createSundayRecord('2026-08-16', 20, 5, 3, 2); // total 30
+
+        Sanctum::actingAs($this->pastor);
+
+        $response = $this->getJson('/api/attendance-reports/widgets?'.http_build_query([
+            'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
+        ]));
+
+        $response->assertStatus(200);
+        $stats = $response->json('data.stats');
+
+        // Total Gatherings Recorded: 2 vs. 1 previous year = +100%.
+        $this->assertEquals('Total Gatherings Recorded', $stats[0]['label']);
+        $this->assertEquals('up', $stats[0]['trend']['direction']);
+        $this->assertEquals(100.0, $stats[0]['trend']['percent']);
+        $this->assertEquals('vs last year', $stats[0]['trend']['label']);
+
+        // Peak Attendance: 30 vs. 20 previous year = +50%.
+        $this->assertEquals('up', $stats[1]['trend']['direction']);
+        $this->assertEquals(50.0, $stats[1]['trend']['percent']);
+
+        // Most Active Category never gets a trend badge (text value).
+        $this->assertNull($stats[3]['trend']);
     }
 
     public function test_sunday_trend_insight_compares_latest_month_to_the_years_average(): void

@@ -40,16 +40,18 @@ class AttendanceReportWidgetService
     public function widgetsFor(int $territoryId, ?GatheringCategory $category, FiscalYear $year, ?FiscalMonth $month): array
     {
         $records = $this->recordsFor($territoryId, $category, $year, $month);
+        $previousRecords = $this->previousPeriodRecords($territoryId, $category, $year, $month);
+        $trendLabel = $month !== null ? 'vs last month' : 'vs last year';
 
         if ($category === null) {
-            return ['stats' => $this->combinedStats($records)];
+            return ['stats' => $this->combinedStats($records, $previousRecords, $trendLabel)];
         }
 
         if ($category->is_weekly) {
             $coverage = $this->coverage($records, $year, $month);
 
             return [
-                'stats' => $this->sundayStats($records, $coverage),
+                'stats' => $this->sundayStats($records, $coverage, $previousRecords, $trendLabel),
                 'coverage' => $coverage,
                 'chart' => $this->trendChart($records, $year, $month),
                 'insights' => $this->sundayInsights($records, $month, $coverage),
@@ -60,9 +62,64 @@ class AttendanceReportWidgetService
         $breakdown = $this->breakdown($territoryId, $category, $records);
 
         return [
-            'stats' => $this->breakdownStats($records, $breakdown),
+            'stats' => $this->breakdownStats($records, $breakdown, $previousRecords, $trendLabel),
             'breakdown' => $breakdown,
             'insights' => $this->breakdownInsights($breakdown),
+        ];
+    }
+
+    /**
+     * Records for the immediately preceding fiscal period - the previous
+     * fiscal month (same fiscal year) when a month is selected, else the
+     * previous fiscal year entirely. `FiscalMonth.number` is a single
+     * global 1-12 sequence (not scoped per year - see FiscalMonth's own
+     * migration), so "previous month" only needs the number, not a
+     * fiscal-year match; the actual year scoping comes from passing the
+     * *current* `$year` through to `recordsFor()`. Null when there's
+     * nothing to compare against (first configured month of the year -
+     * deliberately not wrapping into the previous fiscal year's December,
+     * matching how `sundayStatColumns()` also never crosses a fiscal-year
+     * boundary - or no prior fiscal year exists yet).
+     */
+    private function previousPeriodRecords(int $territoryId, ?GatheringCategory $category, FiscalYear $year, ?FiscalMonth $month): ?Collection
+    {
+        if ($month !== null) {
+            $previousMonth = FiscalMonth::where('number', $month->number - 1)->first();
+
+            return $previousMonth ? $this->recordsFor($territoryId, $category, $year, $previousMonth) : null;
+        }
+
+        $previousYear = FiscalYear::where('year', $year->year - 1)->first();
+
+        return $previousYear ? $this->recordsFor($territoryId, $category, $previousYear, null) : null;
+    }
+
+    /**
+     * Period-over-period percent change for a stat card, e.g. index-1.html's
+     * "Increase by +4.2% this month" badge. Null when there's no prior
+     * period or it had zero activity - a percentage against zero isn't a
+     * real number, so the card shows no badge rather than a fabricated one.
+     *
+     * @param  callable(Collection): float  $metric  Same aggregation applied to both periods.
+     */
+    private function trend(float $currentValue, ?Collection $previousRecords, callable $metric, string $label): ?array
+    {
+        if ($previousRecords === null) {
+            return null;
+        }
+
+        $previousValue = $metric($previousRecords);
+
+        if ($previousValue <= 0) {
+            return null;
+        }
+
+        $percent = round((($currentValue - $previousValue) / $previousValue) * 100, 1);
+
+        return [
+            'direction' => $percent >= 0 ? 'up' : 'down',
+            'percent' => abs($percent),
+            'label' => $label,
         ];
     }
 
@@ -107,7 +164,7 @@ class AttendanceReportWidgetService
         return array_slice(array_values($monthly), -6);
     }
 
-    private function combinedStats(Collection $records): array
+    private function combinedStats(Collection $records, ?Collection $previousRecords, string $trendLabel): array
     {
         $total = $records->sum(fn ($r) => $this->totalFor($r));
         $avg = $records->count() ? round($total / $records->count()) : 0;
@@ -121,20 +178,23 @@ class AttendanceReportWidgetService
             ]);
         $mostActiveCategory = $byCategory->sortByDesc('total')->first();
 
+        $peakMetric = fn (Collection $r) => $r->map(fn ($x) => $this->totalFor($x))->max() ?? 0;
+        $avgMetric = fn (Collection $r) => $r->count() ? $r->sum(fn ($x) => $this->totalFor($x)) / $r->count() : 0;
+
         return [
-            ['label' => 'Total Gatherings Recorded', 'value' => $records->count(), 'icon' => 'ri-calendar-check-line', 'color' => 'primary', 'sparkline' => $spark],
+            ['label' => 'Total Gatherings Recorded', 'value' => $records->count(), 'icon' => 'ri-calendar-check-line', 'color' => 'primary', 'sparkline' => $spark, 'trend' => $this->trend($records->count(), $previousRecords, fn (Collection $r) => $r->count(), $trendLabel)],
             // A sum across weeks of the same recurring congregation isn't a
             // headcount (110 people at 4 Sundays isn't "440 people") - Peak
             // Attendance (a single real gathering's highest headcount) and
             // Overall Average (the typical size) are the two figures that
             // actually mean something here.
-            ['label' => 'Peak Attendance', 'value' => $peak, 'icon' => 'ri-group-line', 'color' => 'success', 'sparkline' => $spark],
-            ['label' => 'Overall Average', 'value' => $avg, 'icon' => 'ri-bar-chart-line', 'color' => 'warning', 'sparkline' => $spark],
-            ['label' => 'Most Active Category', 'value' => $mostActiveCategory ? "{$mostActiveCategory['name']} ({$mostActiveCategory['total']})" : '-', 'icon' => 'ri-fire-line', 'color' => 'danger', 'sparkline' => $spark],
+            ['label' => 'Peak Attendance', 'value' => $peak, 'icon' => 'ri-group-line', 'color' => 'success', 'sparkline' => $spark, 'trend' => $this->trend($peak, $previousRecords, $peakMetric, $trendLabel)],
+            ['label' => 'Overall Average', 'value' => $avg, 'icon' => 'ri-bar-chart-line', 'color' => 'warning', 'sparkline' => $spark, 'trend' => $this->trend($avg, $previousRecords, $avgMetric, $trendLabel)],
+            ['label' => 'Most Active Category', 'value' => $mostActiveCategory ? "{$mostActiveCategory['name']} ({$mostActiveCategory['total']})" : '-', 'icon' => 'ri-fire-line', 'color' => 'danger', 'sparkline' => $spark, 'trend' => null],
         ];
     }
 
-    private function sundayStats(Collection $records, array $coverage): array
+    private function sundayStats(Collection $records, array $coverage, ?Collection $previousRecords, string $trendLabel): array
     {
         $byDate = $records->unique('service_date');
         $total = $byDate->sum(fn ($r) => $this->totalFor($r));
@@ -146,11 +206,18 @@ class AttendanceReportWidgetService
             ? $this->totalFor($highest).' on '.Carbon::parse($highest->service_date)->format('j M')
             : '-';
 
+        $countMetric = fn (Collection $r) => $r->unique('service_date')->count();
+        $avgMetric = function (Collection $r) {
+            $byDate = $r->unique('service_date');
+
+            return $byDate->count() ? $byDate->sum(fn ($x) => $this->totalFor($x)) / $byDate->count() : 0;
+        };
+
         return [
-            ['label' => 'Sundays Recorded', 'value' => $byDate->count(), 'icon' => 'ri-calendar-check-line', 'color' => 'primary', 'sparkline' => $spark],
-            ['label' => 'Coverage', 'value' => "{$coverage['recorded']} of {$coverage['elapsed']} · {$coverage['percentage']}%", 'icon' => 'ri-pie-chart-line', 'color' => 'secondary', 'sparkline' => $spark],
-            ['label' => 'Average Attendance', 'value' => $avg, 'icon' => 'ri-bar-chart-line', 'color' => 'warning', 'sparkline' => $spark],
-            ['label' => 'Highest Attended Sunday', 'value' => $highestLabel, 'icon' => 'ri-trophy-line', 'color' => 'success', 'sparkline' => $spark],
+            ['label' => 'Sundays Recorded', 'value' => $byDate->count(), 'icon' => 'ri-calendar-check-line', 'color' => 'primary', 'sparkline' => $spark, 'trend' => $this->trend($byDate->count(), $previousRecords, $countMetric, $trendLabel)],
+            ['label' => 'Coverage', 'value' => "{$coverage['recorded']} of {$coverage['elapsed']} · {$coverage['percentage']}%", 'icon' => 'ri-pie-chart-line', 'color' => 'secondary', 'sparkline' => $spark, 'trend' => null],
+            ['label' => 'Average Attendance', 'value' => $avg, 'icon' => 'ri-bar-chart-line', 'color' => 'warning', 'sparkline' => $spark, 'trend' => $this->trend($avg, $previousRecords, $avgMetric, $trendLabel)],
+            ['label' => 'Highest Attended Sunday', 'value' => $highestLabel, 'icon' => 'ri-trophy-line', 'color' => 'success', 'sparkline' => $spark, 'trend' => null],
         ];
     }
 
@@ -308,7 +375,7 @@ class AttendanceReportWidgetService
         return $lastDate->diffInDays(Carbon::today()) > self::INACTIVE_DAYS_THRESHOLD ? 'inactive' : 'on_track';
     }
 
-    private function breakdownStats(Collection $records, array $breakdown): array
+    private function breakdownStats(Collection $records, array $breakdown, ?Collection $previousRecords, string $trendLabel): array
     {
         $held = collect($breakdown)->filter(fn ($b) => $b['times_held'] > 0);
         $mostActive = $held->sortByDesc('times_held')->first();
@@ -319,11 +386,14 @@ class AttendanceReportWidgetService
         $recordsCount = $records->count();
         $avgPerGathering = $recordsCount ? round($records->sum(fn ($r) => $this->totalFor($r)) / $recordsCount) : 0;
 
+        $countMetric = fn (Collection $r) => $r->count();
+        $avgMetric = fn (Collection $r) => $r->count() ? $r->sum(fn ($x) => $this->totalFor($x)) / $r->count() : 0;
+
         return [
-            ['label' => 'Gathering Types Held', 'value' => $held->count().' of '.count($breakdown), 'icon' => 'ri-list-check-2', 'color' => 'primary', 'sparkline' => $spark],
-            ['label' => 'Total Gatherings Recorded', 'value' => $recordsCount, 'icon' => 'ri-calendar-check-line', 'color' => 'secondary', 'sparkline' => $spark],
-            ['label' => 'Average Attendance', 'value' => $avgPerGathering, 'icon' => 'ri-group-line', 'color' => 'success', 'sparkline' => $spark],
-            ['label' => 'Most Active Type', 'value' => $mostActive ? $mostActive['name'].' ('.$mostActive['times_held'].'x)' : '-', 'icon' => 'ri-trophy-line', 'color' => 'warning', 'sparkline' => $spark],
+            ['label' => 'Gathering Types Held', 'value' => $held->count().' of '.count($breakdown), 'icon' => 'ri-list-check-2', 'color' => 'primary', 'sparkline' => $spark, 'trend' => null],
+            ['label' => 'Total Gatherings Recorded', 'value' => $recordsCount, 'icon' => 'ri-calendar-check-line', 'color' => 'secondary', 'sparkline' => $spark, 'trend' => $this->trend($recordsCount, $previousRecords, $countMetric, $trendLabel)],
+            ['label' => 'Average Attendance', 'value' => $avgPerGathering, 'icon' => 'ri-group-line', 'color' => 'success', 'sparkline' => $spark, 'trend' => $this->trend($avgPerGathering, $previousRecords, $avgMetric, $trendLabel)],
+            ['label' => 'Most Active Type', 'value' => $mostActive ? $mostActive['name'].' ('.$mostActive['times_held'].'x)' : '-', 'icon' => 'ri-trophy-line', 'color' => 'warning', 'sparkline' => $spark, 'trend' => null],
         ];
     }
 
