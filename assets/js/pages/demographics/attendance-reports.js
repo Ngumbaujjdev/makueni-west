@@ -64,15 +64,13 @@ const AttendanceReports = (function () {
 
   function wireClock() {
     const timeEl = document.getElementById("reportClockTime");
-    const weekdayEl = document.getElementById("reportClockWeekday");
     const dateEl = document.getElementById("reportClockDate");
-    if (!timeEl || !weekdayEl || !dateEl) return;
+    if (!timeEl || !dateEl) return;
 
     const tick = () => {
       const now = new Date();
       timeEl.textContent = now.toLocaleTimeString();
-      weekdayEl.textContent = now.toLocaleDateString("en-GB", { weekday: "long" });
-      dateEl.textContent = now.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+      dateEl.textContent = `${now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })} · ${periodLabel()}`;
     };
     tick();
     setInterval(tick, 1000);

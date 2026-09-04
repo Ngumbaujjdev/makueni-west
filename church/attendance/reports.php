@@ -74,51 +74,42 @@ $breadcrumbs = [
                 <?php include __DIR__ . '/../../includes/page-header.php' ?>
 
                 <!-- Compact clock + period filter strip -->
-                <div class="row g-3 mb-3">
-                    <div class="col-auto">
-                        <div class="card custom-card p-3 mb-0">
-                            <div class="fs-11 fw-semibold text-body text-uppercase mb-2">Current Time</div>
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="avatar avatar-lg bg-primary-transparent">
-                                    <i class="ri-time-line fs-24 text-primary"></i>
-                                </span>
-                                <div>
-                                    <span class="d-block fw-semibold fs-18" id="reportClockTime">--:--:--</span>
-                                    <span class="d-block fs-13 text-body" id="reportClockWeekday">-</span>
-                                    <span class="d-block fs-13 text-body" id="reportClockDate">-</span>
-                                </div>
-                            </div>
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3 px-3 py-2 bg-white rounded border">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="avatar avatar-md bg-primary-transparent">
+                            <i class="ri-time-line fs-20 text-primary"></i>
+                        </span>
+                        <div>
+                            <span class="d-block fw-semibold fs-16" id="reportClockTime">--:--:--</span>
+                            <span class="d-block fs-12 text-body" id="reportClockDate">-</span>
                         </div>
                     </div>
-                    <div class="col-auto">
-                        <div class="card custom-card dropdown p-2 mb-0">
-                            <div class="fs-11 fw-semibold text-body text-uppercase mb-1 ps-1">Selected Period</div>
-                            <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" id="periodPickerBtn"
-                                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-                                <i class="ri-calendar-2-line me-1"></i><span id="periodPickerLabel">-</span>
-                            </button>
-                            <div class="dropdown-menu dropdown-menu-end p-3" id="periodPickerMenu" style="min-width: 300px;">
-                                <div class="mb-2 fw-semibold fs-12 text-body text-uppercase">Quick Select</div>
-                                <div class="d-flex flex-wrap gap-1 mb-3">
-                                    <button type="button" class="btn btn-light btn-sm" data-quick="this_month">This Month</button>
-                                    <button type="button" class="btn btn-light btn-sm" data-quick="last_month">Last Month</button>
-                                    <button type="button" class="btn btn-light btn-sm" data-quick="this_year">This Year</button>
-                                    <button type="button" class="btn btn-light btn-sm" data-quick="last_year">Last Year</button>
-                                    <button type="button" class="btn btn-light btn-sm" data-quick="all_time">All Time</button>
-                                </div>
-                                <div class="mb-2 fw-semibold fs-12 text-body text-uppercase">Custom</div>
-                                <div class="d-flex gap-2 mb-3">
-                                    <select class="form-select form-select-sm" id="reportFiscalYear">
-                                        <option value="">Loading years...</option>
-                                    </select>
-                                    <select class="form-select form-select-sm" id="reportFiscalMonth">
-                                        <option value="">All months</option>
-                                    </select>
-                                </div>
-                                <div class="d-flex justify-content-end gap-2">
-                                    <button type="button" class="btn btn-light btn-sm" id="periodClearBtn">Clear</button>
-                                    <button type="button" class="btn btn-primary btn-sm" id="periodApplyBtn">Apply</button>
-                                </div>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" id="periodPickerBtn"
+                            data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            <i class="ri-calendar-2-line me-1"></i><span id="periodPickerLabel">-</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end p-3" id="periodPickerMenu" style="min-width: 300px;">
+                            <div class="mb-2 fw-semibold fs-12 text-body text-uppercase">Quick Select</div>
+                            <div class="d-flex flex-wrap gap-1 mb-3">
+                                <button type="button" class="btn btn-light btn-sm" data-quick="this_month">This Month</button>
+                                <button type="button" class="btn btn-light btn-sm" data-quick="last_month">Last Month</button>
+                                <button type="button" class="btn btn-light btn-sm" data-quick="this_year">This Year</button>
+                                <button type="button" class="btn btn-light btn-sm" data-quick="last_year">Last Year</button>
+                                <button type="button" class="btn btn-light btn-sm" data-quick="all_time">All Time</button>
+                            </div>
+                            <div class="mb-2 fw-semibold fs-12 text-body text-uppercase">Custom</div>
+                            <div class="d-flex gap-2 mb-3">
+                                <select class="form-select form-select-sm" id="reportFiscalYear">
+                                    <option value="">Loading years...</option>
+                                </select>
+                                <select class="form-select form-select-sm" id="reportFiscalMonth">
+                                    <option value="">All months</option>
+                                </select>
+                            </div>
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="button" class="btn btn-light btn-sm" id="periodClearBtn">Clear</button>
+                                <button type="button" class="btn btn-primary btn-sm" id="periodApplyBtn">Apply</button>
                             </div>
                         </div>
                     </div>
