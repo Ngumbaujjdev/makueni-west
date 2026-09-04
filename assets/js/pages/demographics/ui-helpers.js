@@ -123,6 +123,323 @@ const DemographicsUI = (function () {
   }
 
   // ==========================================================================
+  // WIDGET DASHBOARD COMPONENTS (Attendance Reports tabbed dashboard)
+  //
+  // Cards + a small chart-type library modeled literally on index-1.html's
+  // "Total Sales" card and "Earnings" chart (the pale bg-{color}-transparent
+  // icon tint, two-column row layout, distributed-shaded bars, and a small
+  // legend row above the chart) - additive alongside renderStatCard/
+  // renderStatCardsRow above, which stay untouched for the pages already
+  // using them. Alpha/opacity convention followed throughout (confirmed
+  // consistent across the template): 0.05 for gridlines, 0.1 for card
+  // tints, 0.2-1.0 for distributed bar shading, 1.0 for solid strokes.
+  // Charts default to a single brand color rather than forcing a
+  // two-color scheme - only the donut (genuinely categorical slices)
+  // needs more than one.
+  // ==========================================================================
+
+  const BRAND_COLORS = {
+    primary: "#2CA4BF",
+    secondary: "#F2BE22",
+    warning: "#F2BE22",
+    danger: "#F23535",
+    success: "#26bf94",
+  };
+
+  function brandHex(color) {
+    return BRAND_COLORS[color] || color;
+  }
+
+  function hexToRgba(hex, alpha) {
+    const clean = (hex || "").replace("#", "");
+    const bigint = parseInt(clean, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  /**
+   * @param {object} opts {icon, label, value, trend, color}
+   *   Literal index-1.html "Total Sales" card structure: icon column with
+   *   the pale `bg-{color}-transparent` tint (not solid, not a border-top -
+   *   round 5 tried both and got corrected back to this exact reference),
+   *   value column with a period-over-period trend badge when one is given.
+   * @param {object|null} [opts.trend] {direction: 'up'|'down', percent, label}
+   */
+  function renderWidgetCard({ icon, label, value, trend = null, color = "primary" }) {
+    const trendHtml = trend
+      ? (() => {
+          const badgeColor = trend.direction === "up" ? "success" : "danger";
+          const verb = trend.direction === "up" ? "Increased" : "Decreased";
+          const sign = trend.direction === "up" ? "+" : "-";
+          return `<div><span class="fs-12 mb-0">${verb} by <span class="badge bg-${badgeColor}-transparent text-${badgeColor} mx-1">${sign}${trend.percent}%</span> ${trend.label}</span></div>`;
+        })()
+      : "";
+
+    return `
+      <div class="card custom-card">
+        <div class="card-body">
+          <div class="row">
+            <div class="col-xxl-3 col-xl-2 col-lg-3 col-md-3 col-sm-4 col-4 d-flex align-items-center justify-content-center ecommerce-icon px-0">
+              <span class="rounded p-3 bg-${color}-transparent">
+                <i class="${icon} fs-20 text-${color}"></i>
+              </span>
+            </div>
+            <div class="col-xxl-9 col-xl-10 col-lg-9 col-md-9 col-sm-8 col-8 px-0">
+              <div class="mb-2">${label}</div>
+              <div class="mb-1 fs-12">
+                <span class="text-dark fw-semibold fs-20 lh-1 vertical-bottom">${value}</span>
+              </div>
+              ${trendHtml}
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  /**
+   * 4-up grid on wide screens (collapsing to 2-up/1-up on smaller
+   * breakpoints), so all 4 stat cards sit in one row.
+   * @param {string} containerId
+   * @param {object[]} cards - renderWidgetCard() opts
+   */
+  function renderWidgetCardsRow(containerId, cards) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = cards
+      .map((c) => `<div class="col-xl-3 col-lg-6 col-md-6">${renderWidgetCard(c)}</div>`)
+      .join("");
+  }
+
+  /**
+   * General trend chart wrapper - area or column, single series or a
+   * handful, one brand color by default (not a forced two-color scheme).
+   * @param {object} opts {categories, series, type: 'area'|'column', color}
+   */
+  function renderTrendChart(containerId, { categories, series, type = "area", color = "primary" } = {}) {
+    const el = document.getElementById(containerId);
+    if (!el || typeof ApexCharts === "undefined") return null;
+    const hex = brandHex(color);
+
+    const options = {
+      chart: { type: type === "area" ? "area" : "bar", height: 300, toolbar: { show: false }, foreColor: "#333335" },
+      series,
+      xaxis: { categories },
+      colors: [hex],
+      dataLabels: { enabled: false },
+      grid: { borderColor: hexToRgba(hex, 0.05) },
+      legend: { show: series.length > 1, position: "bottom" },
+    };
+
+    if (type === "area") {
+      options.stroke = { curve: "smooth", width: 2 };
+      options.fill = { type: "solid", opacity: 0.25 };
+    } else {
+      // Distributed, shaded bars (index-1.html's Earnings chart pattern) -
+      // one series, still one hue, just varying opacity per bar instead of
+      // a flat fill - richer without a forced second color.
+      const pointCount = (series[0]?.data || []).length;
+      options.colors = Array.from({ length: pointCount }, (_, i) => hexToRgba(hex, 0.3 + (0.7 * i) / Math.max(1, pointCount - 1)));
+      options.plotOptions = { bar: { columnWidth: "45%", borderRadius: 6, distributed: true } };
+      options.legend.show = false;
+    }
+
+    const chart = new ApexCharts(el, options);
+    chart.render();
+    return chart;
+  }
+
+  /**
+   * Recent-activity timeline - the exact `timeline-widget`/
+   * `timeline-widget-list` classes already defined in styles.css
+   * (index-8.html's "Upcoming Events" widget), not new CSS: a day-number +
+   * weekday date column connected to a title + time/badge subtitle.
+   * @param {string} containerId
+   * @param {object[]} items - [{day, weekday, title, time, badgeLabel, badgeColor}]
+   */
+  function renderTimeline(containerId, items) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (!items || items.length === 0) {
+      container.innerHTML = `<p class="text-body fw-semibold mb-0">No records for this period</p>`;
+      return;
+    }
+
+    container.innerHTML = `
+      <ul class="list-unstyled timeline-widget mb-0 my-3">
+        ${items
+          .map(
+            (it) => `
+          <li class="timeline-widget-list">
+            <div class="d-flex align-items-top">
+              <div class="me-5 text-center">
+                <span class="d-block fs-20 fw-semibold text-primary">${it.day}</span>
+                <span class="d-block fs-12 text-body">${it.weekday}</span>
+              </div>
+              <div class="flex-fill">
+                <p class="mb-1 timeline-widget-content">${it.title}</p>
+                <p class="mb-0 fs-12 lh-1 text-body">
+                  ${it.time || ""}<span class="badge bg-${it.badgeColor || "primary"}-transparent ms-2">${it.badgeLabel}</span>
+                </p>
+              </div>
+            </div>
+          </li>`,
+          )
+          .join("")}
+      </ul>`;
+  }
+
+  /**
+   * Small pill-badge legend/key row - reused for the radial gauge's
+   * Recorded/Missed key and the Ministry donut's per-type key (replacing
+   * ApexCharts' own native legend so we control the pill styling).
+   * @param {string} containerId
+   * @param {object[]} items - [{label, value, color}]
+   */
+  function renderPillLegend(containerId, items) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (!items || items.length === 0) {
+      container.innerHTML = "";
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="d-flex flex-wrap gap-2">
+        ${items
+          .map((it) => {
+            const color = it.color || "primary";
+            // Gold (secondary/warning in this app's brand palette) is too
+            // light for white text to read clearly - matches the same
+            // text-dark convention the breakdown table's status badges
+            // already use for those two colors.
+            const textCls = color === "warning" || color === "secondary" ? "text-dark" : "text-white";
+            return `
+          <span class="badge rounded-pill bg-${color} ${textCls}">
+            ${it.label}${it.value !== undefined && it.value !== null ? ` · ${it.value}` : ""}
+          </span>`;
+          })
+          .join("")}
+      </div>`;
+  }
+
+  /**
+   * Category-share donut - wraps the same ApexCharts donut config already
+   * proven on Demographics' gender-split chart, reused here instead of a
+   * new one-off config. Genuinely needs distinct colors per slice
+   * (categorical), the one chart type exempt from the single-color default.
+   * Native legend is off by default - callers render their own key via
+   * renderPillLegend() instead, for pill-styled consistency.
+   *
+   * `centerTotal` turns on ApexCharts' native donut-total label - the
+   * index-8.html "Jobs Summary" pattern (a big centered "Total N" instead
+   * of a bare ring), used for the Sunday Coverage widget's
+   * Recorded/Missed donut.
+   * @param {object} opts {labels, series, colors, showLegend, centerTotal: {label, value}}
+   */
+  function renderDonutChart(containerId, { labels, series, colors = null, showLegend = false, centerTotal = null } = {}) {
+    const el = document.getElementById(containerId);
+    if (!el || typeof ApexCharts === "undefined") return null;
+    const palette = colors || [BRAND_COLORS.primary, BRAND_COLORS.secondary, BRAND_COLORS.success, BRAND_COLORS.danger];
+
+    const options = {
+      chart: { type: "donut", height: 260, foreColor: "#333335" },
+      series,
+      labels,
+      colors: palette,
+      legend: { show: showLegend, position: "bottom" },
+      dataLabels: { enabled: false },
+    };
+
+    if (centerTotal) {
+      options.plotOptions = {
+        pie: {
+          donut: {
+            size: "70%",
+            labels: {
+              show: true,
+              name: { show: true, fontSize: "13px", color: "#333335" },
+              value: { show: true, fontSize: "18px", color: "#333335" },
+              total: {
+                show: true,
+                showAlways: true,
+                label: centerTotal.label,
+                fontSize: "20px",
+                fontWeight: 600,
+                color: "#333335",
+                formatter: () => centerTotal.value,
+              },
+            },
+          },
+        },
+      };
+    }
+
+    const chart = new ApexCharts(el, options);
+    chart.render();
+    return chart;
+  }
+
+  /**
+   * Mixed bar+line combo (e.g. Times Held vs. Average Attendance per
+   * gathering type) - both series share one brand color, differentiated by
+   * shape (solid bars vs. a line+markers) rather than by a second color.
+   */
+  function renderComboChart(containerId, { categories, barData, lineData, barLabel = "Times Held", lineLabel = "Average Attendance", color = "primary" } = {}) {
+    const el = document.getElementById(containerId);
+    if (!el || typeof ApexCharts === "undefined") return null;
+    const hex = brandHex(color);
+
+    const chart = new ApexCharts(el, {
+      chart: { height: 320, type: "line", toolbar: { show: false }, foreColor: "#333335" },
+      series: [
+        { name: barLabel, type: "column", data: barData },
+        { name: lineLabel, type: "line", data: lineData },
+      ],
+      stroke: { width: [0, 3], curve: "smooth" },
+      colors: [hex, hex],
+      plotOptions: { bar: { columnWidth: "45%", borderRadius: 6 } },
+      xaxis: { categories },
+      dataLabels: { enabled: false },
+      legend: { position: "bottom" },
+      grid: { borderColor: hexToRgba(hex, 0.05) },
+    });
+    chart.render();
+    return chart;
+  }
+
+  /**
+   * Small highlighted callout for the plain-English `insights` sentences
+   * the backend computes (AttendanceReportWidgetService) - this is what
+   * makes a tab read as analysis rather than a pile of numbers.
+   * @param {string} containerId
+   * @param {string[]} sentences
+   */
+  function renderInsightCallout(containerId, sentences) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (!sentences || sentences.length === 0) {
+      container.innerHTML = "";
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="alert alert-primary bg-primary-transparent border-0 mb-3">
+        <div class="d-flex align-items-start gap-2">
+          <i class="ri-lightbulb-flash-line fs-18 mt-1"></i>
+          <div>
+            ${sentences.map((s) => `<div class="fw-semibold">${s}</div>`).join("")}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ==========================================================================
   // BUTTON LOADING STATE
   // ==========================================================================
 
@@ -440,6 +757,14 @@ const DemographicsUI = (function () {
     renderStatusBadge,
     renderStatCard,
     renderStatCardsRow,
+    renderWidgetCard,
+    renderWidgetCardsRow,
+    renderTrendChart,
+    renderTimeline,
+    renderPillLegend,
+    renderDonutChart,
+    renderComboChart,
+    renderInsightCallout,
     setButtonLoading,
     restoreButton,
     renderTableLoading,

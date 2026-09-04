@@ -16705,6 +16705,11 @@ hr {
 .card.custom-card.hrm-main-card.danger {
   border-color: rgba(var(--danger-rgb), 0.3);
 }
+.card.custom-card.hrm-main-card.success {
+  /* Added for the Attendance Reports widget cards - the HRM demo this
+     class is modeled on only ever used primary/secondary/warning/danger. */
+  border-color: rgba(var(--success-rgb), 0.3);
+}
 
 .timeline-widget {
   position: relative;
@@ -28567,6 +28572,29 @@ a:hover {
 }
 
 #secondary-nav-bar .nav-link.active {
+    color: #fff;
+    font-weight: 600;
+    background-color: #2CA4BF;
+}
+
+/* Reusable solid-pill tab style - same "whole background, not an
+   underline" treatment as #secondary-nav-bar above, just as a class any
+   other nav-tabs bar in the app can opt into (e.g. the Attendance Reports
+   dashboard's Sunday Service/Ministry Gatherings/Special Events tabs). */
+.nav-tabs-pill {
+    border-block-end: 0;
+    gap: 0.25rem;
+}
+
+.nav-tabs-pill .nav-link {
+    color: var(--diocese-black, #0D0D0D);
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border: 0;
+    border-radius: 0.375rem;
+}
+
+.nav-tabs-pill .nav-link.active {
     color: #fff;
     font-weight: 600;
     background-color: #2CA4BF;

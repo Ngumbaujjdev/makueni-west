@@ -257,6 +257,23 @@
     }
   }
 
+  /**
+   * gathering_category_id omitted from filters = the cross-tab combined
+   * summary strip; provided = one tab's stat cards/chart/breakdown.
+   */
+  async function getAttendanceReportWidgets(territoryId, filters = {}) {
+    try {
+      const params = new URLSearchParams({ territory_id: territoryId, ...filters });
+      const response = await fetch(`${API_BASE}/attendance-reports/widgets?${params.toString()}`, {
+        method: Constants.HTTP_METHODS.GET,
+        headers: getHeaders(),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
   // ==========================================================================
   // GATHERING CATEGORIES (global, read-only) & GATHERING TYPES (church-owned)
   //
@@ -414,6 +431,7 @@
     getAttendance,
     createAttendance,
     updateAttendance,
+    getAttendanceReportWidgets,
     getGatheringCategories,
     getGatheringTypes,
     createGatheringType,

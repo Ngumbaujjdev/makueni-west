@@ -175,7 +175,14 @@ const AttendanceServices = (function () {
         const date = new Date(r.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
         return `
           <tr style="cursor: pointer;" onclick="AttendanceServices.editRow(${r.id})">
-            <td class="fw-semibold">${date}</td>
+            <td class="fw-semibold">
+              <div class="d-flex align-items-center gap-2">
+                <span class="avatar avatar-sm avatar-rounded bg-primary">
+                  <i class="ri-sun-line text-white"></i>
+                </span>
+                ${date}
+              </div>
+            </td>
             <td class="text-end">${totalFor(r)} <i class="ri-edit-line ms-1 text-primary"></i></td>
           </tr>`;
       })

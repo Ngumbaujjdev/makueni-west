@@ -62,6 +62,7 @@ Base: `backend/routes/api.php`, under `auth:sanctum`.
 | GET | `/attendance?territory_id=&service_type=&fiscal_year_id=&fiscal_month_id=` | ownership |
 | POST | `/attendance` | per `service_type`: `attendancemanagement.{serviceattendance\|specialeventsattendance\|ministryattendance}.create` |
 | PUT | `/attendance/{id}` | same prefix, `.update`, resolved from the record's existing `service_type` |
+| GET | `/attendance-reports/widgets?territory_id=&fiscal_year_id=&fiscal_month_id=&gathering_category_id=` | ownership (`userOwnsChurch`) |
 
 **Deliberately one reused permission string per model covers the entire row** (not split per field group) — `DemographicsController`'s own docblock explains this: the row is submitted/reviewed as one atomic unit.
 

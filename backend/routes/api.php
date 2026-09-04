@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AttendanceController;
+use App\Http\Controllers\Api\AttendanceReportController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BudgetCategoryController;
 use App\Http\Controllers\Api\BudgetController;
@@ -357,6 +358,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/', [AttendanceController::class, 'index']);                                 // List own church's attendance records
         Route::post('/', [AttendanceController::class, 'store']);                                // Record one service/event/gathering
         Route::put('/{attendance}', [AttendanceController::class, 'update']);                    // Update a record
+    });
+
+    // Attendance Reports - tabbed dashboard stat cards/charts/breakdown (read-only, computed server-side)
+    Route::prefix('attendance-reports')->group(function () {
+        Route::get('/widgets', [AttendanceReportController::class, 'widgets']);
     });
 
     // Gathering Categories (global, read-only - Sunday Service/Ministry Gathering/Special Event)
