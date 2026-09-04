@@ -296,7 +296,7 @@ const AttendanceReports = (function () {
   }
 
   function statToCardOpts(s) {
-    return { icon: s.icon, label: s.label, value: s.value, color: s.color };
+    return { icon: s.icon, label: s.label, value: s.value, color: s.color, trend: s.trend ?? null };
   }
 
   /** "Total / Best / Latest" legend row for a time-series chart (Sunday trend, Ministry comparison). */

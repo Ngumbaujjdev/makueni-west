@@ -164,11 +164,17 @@ const DemographicsUI = (function () {
    *   Literal index-1.html "Total Sales" card structure: icon column with
    *   the pale `bg-{color}-transparent` tint (not solid, not a border-top -
    *   round 5 tried both and got corrected back to this exact reference),
-   *   value column with a trend sentence when one is given.
+   *   value column with a period-over-period trend badge when one is given.
+   * @param {object|null} [opts.trend] {direction: 'up'|'down', percent, label}
    */
   function renderWidgetCard({ icon, label, value, trend = null, color = "primary" }) {
     const trendHtml = trend
-      ? `<div><span class="fs-12 mb-0">${trend}</span></div>`
+      ? (() => {
+          const badgeColor = trend.direction === "up" ? "success" : "danger";
+          const verb = trend.direction === "up" ? "Increased" : "Decreased";
+          const sign = trend.direction === "up" ? "+" : "-";
+          return `<div><span class="fs-12 mb-0">${verb} by <span class="badge bg-${badgeColor}-transparent text-${badgeColor} mx-1">${sign}${trend.percent}%</span> ${trend.label}</span></div>`;
+        })()
       : "";
 
     return `
