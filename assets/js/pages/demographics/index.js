@@ -6,9 +6,14 @@
  *
  * Segmented [Overview] [History] landing page for
  * church/demographics-growth/index.php, per the PWA design reference's
- * pastor-demographics.html screen.
+ * pastor-demographics.html screen. Overview is a snapshot of one selected
+ * fiscal year's latest submission (with a real percent trend badge vs.
+ * whatever was submitted right before it, year boundary or not) - the full
+ * multi-year/multi-metric drill-down lives on the separate Growth Analytics
+ * page, not here.
  *
- * Dependencies: DemographicsAPIHandler, DemographicsUI, Toast, ApexCharts
+ * Dependencies: DemographicsAPIHandler, DemographicsUI, Toast, ApexCharts,
+ * Bootstrap modal
  * ============================================================================
  */
 
@@ -70,36 +75,62 @@ const DemographicsOverview = (function () {
       return (b.fiscal_month?.number || 0) - (a.fiscal_month?.number || 0);
     });
 
-    renderOverview(allRows);
+    await loadFiscalYears();
     renderHistory(allRows);
   }
 
-  function renderOverview(rows) {
-    const latest = rows[0] || null;
-    const previous = rows[1] || null;
+  async function loadFiscalYears() {
+    const select = document.getElementById("reportFiscalYear");
+    const result = await DemographicsAPIHandler.getFiscalYears();
+
+    if (!result.success || !result.data || result.data.length === 0) {
+      select.innerHTML = '<option value="">No fiscal years configured</option>';
+      renderOverviewForYear(null);
+      return;
+    }
+
+    const years = result.data.sort((a, b) => b.year - a.year);
+    select.innerHTML = years.map((y) => `<option value="${y.id}">${y.year}</option>`).join("");
+
+    const currentYear = new Date().getFullYear();
+    const defaultYear = years.find((y) => y.year === currentYear) || years[0];
+    select.value = defaultYear.id;
+
+    select.addEventListener("change", () => renderOverviewForYear(select.value));
+    renderOverviewForYear(select.value);
+  }
+
+  function renderOverviewForYear(fiscalYearId) {
+    const yearRows = fiscalYearId ? allRows.filter((r) => String(r.fiscal_year_id) === String(fiscalYearId)) : [];
+    const latest = yearRows[0] || null;
+
+    // "vs last submission" compares to whatever was submitted right before
+    // it chronologically, regardless of fiscal-year boundary (a January
+    // submission's previous one is naturally last December's) - a
+    // different question from Attendance's deliberate non-wrapping
+    // fiscal-month comparison, which was about adjacency *within* one
+    // selected year.
+    const latestIndex = latest ? allRows.indexOf(latest) : -1;
+    const previous = latestIndex >= 0 ? allRows[latestIndex + 1] || null : null;
 
     renderStatCards(latest, previous);
     renderGenderDonut(latest);
-    renderComplianceCard(latest);
+    renderComplianceCard(latest, yearRows.length);
   }
 
   function renderEmptyOverview() {
     renderStatCards(null, null);
     renderGenderDonut(null);
-    renderComplianceCard(null);
+    renderComplianceCard(null, 0);
   }
 
-  function delta(current, prev) {
-    if (current === null || current === undefined) return null;
-    if (prev === null || prev === undefined) return null;
-    const diff = current - prev;
-    if (diff === 0) return null;
-    const sign = diff > 0 ? "+" : "";
-    return `${sign}${diff} vs last submission`;
+  function trend(current, previous) {
+    if (current === null || current === undefined || previous === null || previous === undefined || previous === 0) return null;
+    const percent = Math.round(((current - previous) / previous) * 1000) / 10;
+    return { direction: percent >= 0 ? "up" : "down", percent: Math.abs(percent), label: "vs last submission" };
   }
 
   function renderStatCards(latest, previous) {
-    const container = document.getElementById("statCardsRow");
     const cards = [
       { icon: "ri-team-line", label: "Total Members", field: "total_members", color: "primary" },
       { icon: "ri-user-star-line", label: "Youth (13-35)", field: "youth_count", color: "success" },
@@ -109,26 +140,21 @@ const DemographicsOverview = (function () {
       { icon: "ri-user-heart-line", label: "Seniors", field: "seniors_count", color: "success" },
     ];
 
-    container.innerHTML = cards
-      .map((c) => {
-        const value = c.field
-          ? latest?.[c.field] ?? "-"
-          : latest
-            ? (latest.sunday_school_male_count ?? 0) + (latest.sunday_school_female_count ?? 0)
-            : "-";
-        const prevValue = c.field ? previous?.[c.field] : previous
-          ? (previous.sunday_school_male_count ?? 0) + (previous.sunday_school_female_count ?? 0)
-          : null;
-        const trend = latest ? delta(value, prevValue) : null;
-        return `<div class="col-xl-2 col-lg-4 col-md-6">${DemographicsUI.renderStatCard({
-          icon: c.icon,
-          label: c.label,
-          value,
-          trend,
-          color: c.color,
-        })}</div>`;
-      })
-      .join("");
+    const sundaySchoolTotal = (row) => (row ? (row.sunday_school_male_count ?? 0) + (row.sunday_school_female_count ?? 0) : null);
+
+    const cardOpts = cards.map((c) => {
+      const value = c.field ? latest?.[c.field] ?? "-" : latest ? sundaySchoolTotal(latest) : "-";
+      const prevValue = c.field ? previous?.[c.field] ?? null : previous ? sundaySchoolTotal(previous) : null;
+      return {
+        icon: c.icon,
+        label: c.label,
+        value,
+        color: c.color,
+        trend: latest ? trend(value, prevValue) : null,
+      };
+    });
+
+    DemographicsUI.renderWidgetCardsRow("statCardsRow", cardOpts);
   }
 
   function renderGenderDonut(latest) {
@@ -151,14 +177,14 @@ const DemographicsOverview = (function () {
     chart.render();
   }
 
-  function renderComplianceCard(latest) {
+  function renderComplianceCard(latest, submissionsThisYear) {
     const el = document.getElementById("complianceCard");
 
     if (!latest) {
       el.innerHTML = `
         <div class="text-center py-3">
           <i class="ri-file-warning-line fs-30 text-warning mb-2 d-block"></i>
-          <p class="fw-semibold text-body mb-2">No submission recorded yet</p>
+          <p class="fw-semibold text-body mb-2">No submission recorded for this year</p>
           ${CAN_ENTER_DEMOGRAPHICS ? '<a href="demographics-tracking.php" class="btn btn-primary btn-sm">Start This Month\'s Entry</a>' : ""}
         </div>`;
       return;
@@ -168,13 +194,17 @@ const DemographicsOverview = (function () {
 
     el.innerHTML = `
       <div class="row g-3">
-        <div class="col-md-6">
+        <div class="col-md-4">
           <span class="d-block mb-1 text-body fw-semibold">Last Submission</span>
           <strong class="fs-16">${period}</strong>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
           <span class="d-block mb-1 text-body fw-semibold">Status</span>
           ${DemographicsUI.renderStatusBadge(latest.status)}
+        </div>
+        <div class="col-md-4">
+          <span class="d-block mb-1 text-body fw-semibold">Submissions This Year</span>
+          <strong class="fs-16">${submissionsThisYear} of 12</strong>
         </div>
         ${latest.review_notes ? `
         <div class="col-md-12">
@@ -188,6 +218,7 @@ const DemographicsOverview = (function () {
     const tbody = document.getElementById("historyTableBody");
     tbody.innerHTML = DemographicsUI.renderSubmissionsRows(rows, {
       onEdit: "DemographicsOverview.goToEdit",
+      onView: "DemographicsOverview.viewRow",
     });
   }
 
@@ -195,7 +226,15 @@ const DemographicsOverview = (function () {
     window.location.href = `demographics-tracking.php?id=${id}`;
   }
 
-  return { init, goToEdit };
+  function viewRow(id) {
+    const row = allRows.find((r) => r.id === id);
+    if (!row) return;
+
+    document.getElementById("demographicDetailModalBody").innerHTML = DemographicsUI.renderDemographicDetailTable(row);
+    window.bootstrap.Modal.getOrCreateInstance(document.getElementById("demographicDetailModal")).show();
+  }
+
+  return { init, goToEdit, viewRow };
 })();
 
 window.DemographicsOverview = DemographicsOverview;
