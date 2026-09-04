@@ -76,6 +76,7 @@ const DemographicsOverview = (function () {
     });
 
     await loadFiscalYears();
+    renderGrowthTrend();
     renderHistory(allRows);
   }
 
@@ -155,6 +156,65 @@ const DemographicsOverview = (function () {
     });
 
     DemographicsUI.renderWidgetCardsRow("statCardsRow", cardOpts);
+  }
+
+  /**
+   * Whole-history membership trend - deliberately not scoped to the
+   * fiscal-year select above (a single year rarely has more than a
+   * couple of submissions; growth only reads as a trend across years).
+   * Legend/stat-column facts are chosen to avoid `total_members` itself
+   * ever being averaged/summed across periods the way attendance counts
+   * are - an "average membership across 3 years" would mix different
+   * points in the church's growth into one number, the same
+   * misrepresentation round 10's attendance fix avoided.
+   */
+  function renderGrowthTrend() {
+    const legendEl = document.getElementById("growthChartLegend");
+    const chartEl = document.getElementById("growthTrendChart");
+    const columnsEl = document.getElementById("growthStatColumns");
+
+    // Only approved submissions count toward this trend, same rule every
+    // other rollup in this module already follows (DemographicsGrowthService,
+    // DemographicsReportWidgetService) - a draft's provisional numbers
+    // haven't been finalized yet.
+    const rows = [...allRows].reverse().filter((r) => r.status === "approved" && r.total_members !== null && r.total_members !== undefined);
+
+    if (rows.length < 2) {
+      legendEl.innerHTML = "";
+      chartEl.innerHTML = '<p class="text-center text-body fw-semibold py-4 mb-0">Not enough approved submission history yet to show a growth trend</p>';
+      columnsEl.innerHTML = "";
+      return;
+    }
+
+    const categories = rows.map((r) => `${r.fiscal_month?.short_name || r.fiscal_month?.name || ""} ${r.fiscal_year?.year || ""}`.trim());
+    const values = rows.map((r) => r.total_members);
+
+    const first = values[0];
+    const latest = values[values.length - 1];
+    const peakIndex = values.indexOf(Math.max(...values));
+    const growth = trend(latest, first);
+
+    DemographicsUI.renderPillLegend("growthChartLegend", [
+      { label: "Latest", value: latest, color: "primary" },
+      { label: "Peak", value: `${categories[peakIndex]} (${values[peakIndex]})`, color: "warning" },
+      growth ? { label: "Growth", value: `${growth.direction === "up" ? "+" : "-"}${growth.percent}% since first submission`, color: growth.direction === "up" ? "success" : "danger" } : null,
+    ].filter(Boolean));
+
+    DemographicsUI.renderTrendChart("growthTrendChart", {
+      categories,
+      series: [{ name: "Total Members", data: values }],
+      type: "area",
+      color: "primary",
+    });
+
+    const average = Math.round(values.reduce((a, v) => a + v, 0) / values.length);
+    const yearsTracked = new Set(rows.map((r) => r.fiscal_year_id)).size;
+
+    DemographicsUI.renderPillLegend("growthStatColumns", [
+      { label: "Average Membership", value: average, color: "primary" },
+      { label: "Submissions Logged", value: rows.length, color: "warning" },
+      { label: "Years Tracked", value: yearsTracked, color: "success" },
+    ]);
   }
 
   function renderGenderDonut(latest) {

@@ -92,6 +92,17 @@ $breadcrumbs = [
                         <!-- Stat cards injected by index.js -->
                     </div>
 
+                    <div class="card custom-card mb-3">
+                        <div class="card-header">
+                            <div class="card-title"><i class="ri-line-chart-line me-2 text-primary"></i>Membership Growth</div>
+                        </div>
+                        <div class="card-body">
+                            <div id="growthChartLegend"></div>
+                            <div id="growthTrendChart"></div>
+                            <div class="border-top pt-3 mt-3" id="growthStatColumns"></div>
+                        </div>
+                    </div>
+
                     <div class="row g-3">
                         <div class="col-xl-6">
                             <div class="card custom-card">
