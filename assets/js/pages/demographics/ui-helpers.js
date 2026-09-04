@@ -66,6 +66,7 @@ const DemographicsUI = (function () {
     approved: { cls: "bg-success", label: "Approved", icon: "ri-checkbox-circle-line" },
     flagged: { cls: "bg-warning text-dark", label: "Flagged", icon: "ri-flag-line" },
     changes_requested: { cls: "bg-danger", label: "Changes Requested", icon: "ri-edit-line" },
+    not_submitted: { cls: "bg-secondary", label: "Not Submitted", icon: "ri-close-circle-line" },
   };
 
   function renderStatusBadge(status) {
