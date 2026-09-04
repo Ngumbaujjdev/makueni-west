@@ -74,17 +74,18 @@ $breadcrumbs = [
                 <?php include __DIR__ . '/../../includes/page-header.php' ?>
 
                 <!-- Compact clock + period filter strip -->
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3 px-3 py-2 bg-white rounded border">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="avatar avatar-md bg-primary-transparent">
-                            <i class="ri-time-line fs-20 text-primary"></i>
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                    <div class="d-flex align-items-center gap-2 border rounded-3 p-3 bg-white">
+                        <span class="avatar avatar-lg bg-primary-transparent">
+                            <i class="ri-time-line fs-24 text-primary"></i>
                         </span>
                         <div>
-                            <span class="d-block fw-semibold fs-16" id="reportClockTime">--:--:--</span>
-                            <span class="d-block fs-12 text-body" id="reportClockDate">-</span>
+                            <span class="d-block fw-semibold fs-18" id="reportClockTime">--:--:--</span>
+                            <span class="d-block fs-13 text-body" id="reportClockWeekday">-</span>
+                            <span class="d-block fs-13 text-body" id="reportClockDate">-</span>
                         </div>
                     </div>
-                    <div class="dropdown">
+                    <div class="dropdown border rounded-3 p-2 bg-white">
                         <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" id="periodPickerBtn"
                             data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                             <i class="ri-calendar-2-line me-1"></i><span id="periodPickerLabel">-</span>
