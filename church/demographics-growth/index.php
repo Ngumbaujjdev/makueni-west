@@ -74,11 +74,16 @@ $breadcrumbs = [
                             <i class="ri-history-line me-1"></i>History
                         </button>
                     </div>
-                    <?php if ($canEnter): ?>
-                    <a href="<?= SITE_URL ?>/church/demographics-growth/demographics-tracking.php" class="btn btn-primary btn-wave">
-                        <i class="ri-edit-line me-1"></i>Update This Month's Data
-                    </a>
-                    <?php endif; ?>
+                    <div class="d-flex align-items-center gap-2">
+                        <select class="form-select form-select-sm" style="max-width: 140px;" id="reportFiscalYear">
+                            <option value="">Loading years...</option>
+                        </select>
+                        <?php if ($canEnter): ?>
+                        <a href="<?= SITE_URL ?>/church/demographics-growth/demographics-tracking.php" class="btn btn-primary btn-wave">
+                            <i class="ri-edit-line me-1"></i>Update This Month's Data
+                        </a>
+                        <?php endif; ?>
+                    </div>
                 </div>
 
                 <!-- OVERVIEW segment -->
@@ -87,8 +92,19 @@ $breadcrumbs = [
                         <!-- Stat cards injected by index.js -->
                     </div>
 
+                    <div class="card custom-card mb-3">
+                        <div class="card-header">
+                            <div class="card-title"><i class="ri-line-chart-line me-2 text-primary"></i>Membership Growth</div>
+                        </div>
+                        <div class="card-body">
+                            <div id="growthChartLegend"></div>
+                            <div id="growthTrendChart"></div>
+                            <div class="border-top pt-3 mt-3" id="growthStatColumns"></div>
+                        </div>
+                    </div>
+
                     <div class="row g-3">
-                        <div class="col-xl-5">
+                        <div class="col-xl-6">
                             <div class="card custom-card">
                                 <div class="card-header">
                                     <div class="card-title"><i class="ri-pie-chart-line me-2 text-primary"></i>Gender Split</div>
@@ -98,7 +114,7 @@ $breadcrumbs = [
                                 </div>
                             </div>
                         </div>
-                        <div class="col-xl-7">
+                        <div class="col-xl-6">
                             <div class="card custom-card">
                                 <div class="card-header">
                                     <div class="card-title"><i class="ri-shield-check-line me-2 text-primary"></i>Compliance Status</div>
@@ -126,10 +142,10 @@ $breadcrumbs = [
                                 <table class="table table-hover mb-0">
                                     <thead class="table-light">
                                         <tr>
-                                            <th>Period</th>
-                                            <th>Total Members</th>
-                                            <th>Status</th>
-                                            <th class="text-end">Action</th>
+                                            <th class="fw-semibold text-dark">Period</th>
+                                            <th class="fw-semibold text-dark">Total Members</th>
+                                            <th class="fw-semibold text-dark">Status</th>
+                                            <th class="fw-semibold text-dark text-end">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody id="historyTableBody">
@@ -145,6 +161,18 @@ $breadcrumbs = [
         </div>
 
         <?php include __DIR__ . '/../../includes/footer.php' ?>
+    </div>
+
+    <div class="modal fade" id="demographicDetailModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-semibold"><i class="ri-file-list-3-line me-2"></i>Submission Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="demographicDetailModalBody"></div>
+            </div>
+        </div>
     </div>
 
     <div class="scrollToTop">

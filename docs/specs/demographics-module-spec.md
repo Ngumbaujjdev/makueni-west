@@ -63,6 +63,7 @@ Base: `backend/routes/api.php`, under `auth:sanctum`.
 | POST | `/attendance` | per `service_type`: `attendancemanagement.{serviceattendance\|specialeventsattendance\|ministryattendance}.create` |
 | PUT | `/attendance/{id}` | same prefix, `.update`, resolved from the record's existing `service_type` |
 | GET | `/attendance-reports/widgets?territory_id=&fiscal_year_id=&fiscal_month_id=&gathering_category_id=` | ownership (`userOwnsChurch`) |
+| GET | `/demographics-reports/widgets?territory_id=&fiscal_year_id=` | ownership (`userOwnsChurch`) |
 
 **Deliberately one reused permission string per model covers the entire row** (not split per field group) — `DemographicsController`'s own docblock explains this: the row is submitted/reviewed as one atomic unit.
 
@@ -73,6 +74,21 @@ Base: `backend/routes/api.php`, under `auth:sanctum`.
     baptisms_count, communion_participants_count, conversions_count, churches_reporting, churches_total },
   attendance: { services_logged, average_attendance (float or null if zero records) },
   growth: { previous_month_total_members, delta, percentage (or null if previous total is 0) } }
+```
+
+`GET /demographics-reports/widgets?territory_id=&fiscal_year_id=` response shape (`DemographicsReportWidgetService::widgetsFor()`) - the Church-tier sibling of `AttendanceReportWidgetService`, backing the Spiritual Activities and Monthly Statistics pages. Unlike `summary()`, this is a single church's own whole-fiscal-year series, not a multi-church overseer rollup, so it needs no territory-tier permission match - ownership alone gates it, same as `attendance-reports/widgets`:
+```
+{ months: [ { fiscal_month_id, month (short name), status ('approved'|'not_submitted'),
+    total_members, male_count, female_count, youth_count, mens_fellowship_count,
+    womens_fellowship_count, sunday_school_male_count, sunday_school_female_count,
+    seniors_count, new_members_count, transferred_out_count, baptisms_count,
+    communion_participants_count, conversions_count (all null when status is
+    'not_submitted' - never a fabricated 0) } ] (always 12 entries, one per fiscal month),
+  stats: [ { label, value, icon, color } ] (Months Reported, Latest Total Members, Average Members),
+  spiritual: [ { metric, label, icon, color,
+      stats: [ { label, value, icon, color } ] (Total This Year, Average per Month, Best Month),
+      chart: { categories (12 month short names), series: [ { name, data } ] } }
+    ] (one entry per baptisms_count/communion_participants_count/conversions_count/transferred_out_count) }
 ```
 
 No `DELETE` endpoint on either model, by deliberate decision (frontend planning round, 2026-08-18) — corrections happen by editing a `draft`/`changes_requested` row, matching how Budget already works in this app.
