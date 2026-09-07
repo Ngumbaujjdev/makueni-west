@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use OwenIt\Auditing\Contracts\Auditable;
 
 class ChurchDemographic extends Model implements Auditable
@@ -19,6 +19,7 @@ class ChurchDemographic extends Model implements Auditable
         'territory_id',
         'fiscal_year_id',
         'fiscal_month_id',
+        'fiscal_semi_annual_id',
         'total_members',
         'male_count',
         'female_count',
@@ -78,6 +79,11 @@ class ChurchDemographic extends Model implements Auditable
     public function fiscalMonth(): BelongsTo
     {
         return $this->belongsTo(FiscalMonth::class);
+    }
+
+    public function fiscalSemiAnnual(): BelongsTo
+    {
+        return $this->belongsTo(FiscalSemiAnnual::class);
     }
 
     public function reviewer(): BelongsTo
