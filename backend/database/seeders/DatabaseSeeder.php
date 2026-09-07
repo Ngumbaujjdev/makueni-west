@@ -188,6 +188,13 @@ class DatabaseSeeder extends Seeder
             // Attendance instead of the church-level Settings module group)
             // ==========================================
             RelocateGatheringTypesToChurchSettingsSeeder::class,
+
+            // ==========================================
+            // PHASE 25: Retire Dead Demographics Sub-Submodule Links (fixes
+            // Demographics Tracking / Spiritual Activities being unreachable
+            // from the sidebar - see seeder docblock)
+            // ==========================================
+            RetireDeadDemographicsSubSubmodulesSeeder::class,
         ]);
     }
 }
