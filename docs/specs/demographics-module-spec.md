@@ -4,11 +4,23 @@
 
 ## Data Model (as built)
 
-- Aggregate counts per church per **month** — not an individual member/congregant registry.
+- Aggregate counts per church per **fiscal period** — not an individual member/congregant registry. The period's granularity is per-church configurable (see "Recording Cadence" below) — monthly, half-yearly, or yearly — not fixed at monthly.
 - **Entry only at Church level**, by the Pastor (and, per a later permission decision, Associate Pastor / Church Secretary / Church Administrator too — see Permission Rules below). Region, Subregion, and Diocese never create their own rows — their views are computed by summing descendant churches through `territories.parent_territory_id`, via `App\Services\DemographicsGrowthService`.
-- Uses the existing `fiscal_years`/`fiscal_months` tables (built for Budgets) for the period dimension.
+- Uses the existing `fiscal_years`/`fiscal_months`/`fiscal_semi_annuals` tables (built for Budgets) for the period dimension.
 - Follows `backend/app/Models/Budget.php`'s conventions: `territory_type` + `territory_id` fillable columns, `Auditable` + `SoftDeletes` traits, `created_by`/`updated_by`.
-- Complementary weekly **Attendance** model (`ChurchAttendanceRecord`) added alongside the monthly snapshot — no approval workflow ("high-frequency, low-stakes data by design," per the controller's own docblock). A church can toggle between `weekly_and_monthly` and `monthly_only` entry mode via `Church.metadata->attendance_mode`, for churches with unreliable connectivity.
+- Complementary weekly **Attendance** model (`ChurchAttendanceRecord`) added alongside the periodic snapshot — no approval workflow ("high-frequency, low-stakes data by design," per the controller's own docblock). A church can toggle between `weekly_and_monthly` and `monthly_only` entry mode via `Church.metadata->attendance_mode`, for churches with unreliable connectivity.
+
+### Recording Cadence (2026-09-07)
+
+Membership composition doesn't change week to week the way attendance does, so forcing a monthly submission was unnecessary burden. `Church.metadata->demographics_mode` (`Church::getDemographicsMode()`) is one of:
+
+- `monthly` (**default** — matches original/existing behavior for every church that hasn't explicitly changed it) — `fiscal_month_id` required, `fiscal_semi_annual_id` null.
+- `half_yearly` — `fiscal_semi_annual_id` required (one of the two `fiscal_semi_annuals` rows for that fiscal year — the Budget module's already-populated H1/H2 infrastructure, reused as-is), `fiscal_month_id` null.
+- `yearly` — both null; the fiscal year alone identifies the period, same "all period FKs null means yearly" convention `BudgetPeriod::scopeYearly()` already established.
+
+Set via the existing `PUT /churches/{id}/entry-mode` endpoint (now generalized to accept `demographics_mode` alongside `attendance_mode`, either or both per call). `DemographicsController::validatePeriodForMode()` hard-rejects (422) a submission whose period field doesn't match the church's configured mode — unlike the soft out-of-range warnings above, a mismatched period would silently corrupt any rollup that groups by mode later, so this is never just a warning.
+
+Existing historical rows are untouched — this only governs new submissions going forward. `DemographicsGrowthService`/`DemographicsReportWidgetService`'s rollups and the Spiritual Activities/Monthly Statistics report pages are not yet period-cadence-aware (they still assume monthly) — tracked as a follow-up phase, not done in this change.
 
 ### Fields (real, from `DemographicsController::store()`'s validator — `backend/app/Models/ChurchDemographic.php`)
 
@@ -20,7 +32,7 @@ new_members_count, transferred_out_count,
 baptisms_count, communion_participants_count, conversions_count
 ```
 
-All nullable|integer|min:0 except the three ids (`territory_id`, `fiscal_year_id`, `fiscal_month_id`), which are required. `sunday_school_count` (combined) and `children_count`/`total_count` are computed Eloquent accessors on `ChurchDemographic`, not stored columns.
+All nullable|integer|min:0 except `territory_id`/`fiscal_year_id` (always required) and the period fields (`fiscal_month_id`, `fiscal_semi_annual_id` — both nullable at the DB/validator level, but `validatePeriodForMode()` requires exactly the one matching the church's `demographics_mode`, or neither for `yearly` — see "Recording Cadence" above). `sunday_school_count` (combined) and `children_count`/`total_count` are computed Eloquent accessors on `ChurchDemographic`, not stored columns.
 
 Validation: sub-counts (youth/fellowship/Sunday-school/seniors) exceeding `total_members` produce a **soft, non-blocking warning** (`buildValidationWarnings()`) returned in the response `warnings[]` array — never a hard rejection.
 
