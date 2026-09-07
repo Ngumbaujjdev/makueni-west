@@ -66,6 +66,7 @@ const DemographicsUI = (function () {
     approved: { cls: "bg-success", label: "Approved", icon: "ri-checkbox-circle-line" },
     flagged: { cls: "bg-warning text-dark", label: "Flagged", icon: "ri-flag-line" },
     changes_requested: { cls: "bg-danger", label: "Changes Requested", icon: "ri-edit-line" },
+    not_submitted: { cls: "bg-secondary", label: "Not Submitted", icon: "ri-close-circle-line" },
   };
 
   function renderStatusBadge(status) {
@@ -704,7 +705,7 @@ const DemographicsUI = (function () {
   // function, two call sites, per the reusable-component principle.
   // ==========================================================================
 
-  function renderSubmissionsRows(rows, { onEdit = null } = {}) {
+  function renderSubmissionsRows(rows, { onEdit = null, onView = null } = {}) {
     if (!rows || rows.length === 0) {
       return renderTableEmpty(4, "No submissions yet", "ri-file-list-3-line");
     }
@@ -713,21 +714,75 @@ const DemographicsUI = (function () {
       .map((row) => {
         const period = `${row.fiscal_month?.name || ""} ${row.fiscal_year?.year || ""}`.trim();
         const canEdit = row.status === "draft" || row.status === "changes_requested";
+
+        const viewBtn = onView
+          ? `<button type="button" class="btn btn-sm btn-outline-primary" onclick="${onView}(${row.id})">
+               <i class="ri-eye-line me-1"></i>View
+             </button>`
+          : "";
         const editBtn = canEdit && onEdit
           ? `<button type="button" class="btn btn-sm btn-primary" onclick="${onEdit}(${row.id})">
                <i class="ri-edit-line me-1"></i>Edit
              </button>`
-          : `<span class="fs-12 text-body fw-semibold">Locked</span>`;
+          : "";
 
         return `
           <tr>
             <td class="fw-semibold">${period}</td>
             <td>${row.total_members ?? "-"}</td>
             <td>${renderStatusBadge(row.status)}</td>
-            <td class="text-end">${editBtn}</td>
+            <td class="text-end"><div class="d-flex justify-content-end gap-1">${viewBtn}${editBtn}</div></td>
           </tr>`;
       })
       .join("");
+  }
+
+  // ==========================================================================
+  // DEMOGRAPHIC SUBMISSION DETAIL (read-only view of one submission's numbers)
+  //
+  // Plain label/value table in a modal - same convention as Attendance
+  // Reports' Sunday detail modal (church/attendance/reports.php). A
+  // reviewed (approved/submitted/flagged) submission has no edit form to
+  // fall back on, so this is the only way to see its actual numbers again.
+  // ==========================================================================
+
+  const DEMOGRAPHIC_FIELD_LABELS = {
+    total_members: "Total Members",
+    male_count: "Male",
+    female_count: "Female",
+    youth_count: "Youth (13-35)",
+    mens_fellowship_count: "Men's Fellowship",
+    womens_fellowship_count: "Women's Fellowship",
+    sunday_school_male_count: "Sunday School (Male)",
+    sunday_school_female_count: "Sunday School (Female)",
+    seniors_count: "Seniors",
+    new_members_count: "New Members",
+    transferred_out_count: "Transferred Out",
+    baptisms_count: "Baptisms",
+    communion_participants_count: "Communion Participants",
+    conversions_count: "New Conversions",
+  };
+
+  function renderDemographicDetailTable(row) {
+    const period = `${row.fiscal_month?.name || ""} ${row.fiscal_year?.year || ""}`.trim();
+
+    const fieldRows = Object.entries(DEMOGRAPHIC_FIELD_LABELS)
+      .map(([field, label]) => `<tr><td class="text-body fw-semibold">${label}</td><td class="text-end">${row[field] ?? "-"}</td></tr>`)
+      .join("");
+
+    const notesRow = row.review_notes
+      ? `<tr><td class="text-body fw-semibold">Reviewer Notes</td><td class="text-end">${row.review_notes}</td></tr>`
+      : "";
+
+    return `
+      <table class="table table-sm mb-0">
+        <tbody>
+          <tr><td class="text-body fw-semibold">Period</td><td class="text-end fw-semibold">${period}</td></tr>
+          <tr><td class="text-body fw-semibold">Status</td><td class="text-end">${renderStatusBadge(row.status)}</td></tr>
+          ${fieldRows}
+          ${notesRow}
+        </tbody>
+      </table>`;
   }
 
   // ==========================================================================
@@ -775,6 +830,7 @@ const DemographicsUI = (function () {
     numberStepperHtml,
     initSteppers,
     renderSubmissionsRows,
+    renderDemographicDetailTable,
     updateCompletenessBar,
   };
 })();

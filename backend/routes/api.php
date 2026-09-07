@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\BudgetLogController;
 use App\Http\Controllers\Api\BudgetPeriodController;
 use App\Http\Controllers\Api\BudgetTypeController;
 use App\Http\Controllers\Api\DemographicsController;
+use App\Http\Controllers\Api\DemographicsReportController;
 use App\Http\Controllers\Api\FiscalYearController;
 use App\Http\Controllers\Api\GatheringCategoryController;
 use App\Http\Controllers\Api\GatheringTypeController;
@@ -363,6 +364,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Attendance Reports - tabbed dashboard stat cards/charts/breakdown (read-only, computed server-side)
     Route::prefix('attendance-reports')->group(function () {
         Route::get('/widgets', [AttendanceReportController::class, 'widgets']);
+    });
+
+    // Demographics Reports - Spiritual Activities/Monthly Statistics/Growth Analytics pages' stat cards/charts (read-only, computed server-side)
+    Route::prefix('demographics-reports')->group(function () {
+        Route::get('/widgets', [DemographicsReportController::class, 'widgets']);
     });
 
     // Gathering Categories (global, read-only - Sunday Service/Ministry Gathering/Special Event)

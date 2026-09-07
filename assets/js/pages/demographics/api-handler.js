@@ -274,6 +274,25 @@
     }
   }
 
+  /**
+   * Backs Spiritual Activities and Monthly Statistics - always returns the
+   * whole fiscal year's month-by-month series, no month/category filter
+   * (one ChurchDemographic row per church per month, so there's nothing to
+   * drill into beyond picking the year).
+   */
+  async function getDemographicsReportWidgets(territoryId, filters = {}) {
+    try {
+      const params = new URLSearchParams({ territory_id: territoryId, ...filters });
+      const response = await fetch(`${API_BASE}/demographics-reports/widgets?${params.toString()}`, {
+        method: Constants.HTTP_METHODS.GET,
+        headers: getHeaders(),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
   // ==========================================================================
   // GATHERING CATEGORIES (global, read-only) & GATHERING TYPES (church-owned)
   //
@@ -432,6 +451,7 @@
     createAttendance,
     updateAttendance,
     getAttendanceReportWidgets,
+    getDemographicsReportWidgets,
     getGatheringCategories,
     getGatheringTypes,
     createGatheringType,
