@@ -201,12 +201,13 @@
     }
   }
 
-  async function updateEntryMode(churchId, attendanceMode) {
+  /** @param {object} payload {attendance_mode?, demographics_mode?} - either or both. */
+  async function updateEntryMode(churchId, payload) {
     try {
       const response = await fetch(`${API_BASE}/churches/${churchId}/entry-mode`, {
         method: Constants.HTTP_METHODS.PUT,
         headers: getHeaders(),
-        body: JSON.stringify({ attendance_mode: attendanceMode }),
+        body: JSON.stringify(payload),
       });
       return await handleResponse(response);
     } catch (error) {
@@ -388,6 +389,19 @@
     }
   }
 
+  /** One fiscal year with its quarters/semi_annuals eager-loaded - used to populate the Half select for half-yearly demographics recording. */
+  async function getFiscalYear(fiscalYearId) {
+    try {
+      const response = await fetch(`${API_BASE}/fiscal-years/${fiscalYearId}`, {
+        method: Constants.HTTP_METHODS.GET,
+        headers: getHeaders(),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
   async function getFiscalMonthsForYear(fiscalYearId) {
     try {
       const typesResponse = await fetch(`${API_BASE}/budget-types`, {
@@ -458,6 +472,7 @@
     updateGatheringType,
     getGatheringTypeAudits,
     getFiscalYears,
+    getFiscalYear,
     getFiscalMonthsForYear,
   };
 })();

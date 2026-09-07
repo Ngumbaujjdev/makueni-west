@@ -705,6 +705,17 @@ const DemographicsUI = (function () {
   // function, two call sites, per the reusable-component principle.
   // ==========================================================================
 
+  /**
+   * A submission's period label, whichever cadence it was recorded at -
+   * month, half-year, or (both null) a whole fiscal year. Never assumes
+   * fiscal_month is present, since demographics_mode can be half_yearly/yearly.
+   */
+  function demographicPeriodLabel(row) {
+    if (row.fiscal_month?.name) return `${row.fiscal_month.name} ${row.fiscal_year?.year || ""}`.trim();
+    if (row.fiscal_semi_annual?.name) return row.fiscal_semi_annual.name;
+    return row.fiscal_year?.year ? `Year ${row.fiscal_year.year}` : "-";
+  }
+
   function renderSubmissionsRows(rows, { onEdit = null, onView = null } = {}) {
     if (!rows || rows.length === 0) {
       return renderTableEmpty(4, "No submissions yet", "ri-file-list-3-line");
@@ -712,7 +723,7 @@ const DemographicsUI = (function () {
 
     return rows
       .map((row) => {
-        const period = `${row.fiscal_month?.name || ""} ${row.fiscal_year?.year || ""}`.trim();
+        const period = demographicPeriodLabel(row);
         const canEdit = row.status === "draft" || row.status === "changes_requested";
 
         const viewBtn = onView
@@ -764,7 +775,7 @@ const DemographicsUI = (function () {
   };
 
   function renderDemographicDetailTable(row) {
-    const period = `${row.fiscal_month?.name || ""} ${row.fiscal_year?.year || ""}`.trim();
+    const period = demographicPeriodLabel(row);
 
     const fieldRows = Object.entries(DEMOGRAPHIC_FIELD_LABELS)
       .map(([field, label]) => `<tr><td class="text-body fw-semibold">${label}</td><td class="text-end">${row[field] ?? "-"}</td></tr>`)

@@ -26,6 +26,7 @@ const DemographicsOverview = (function () {
     Object.assign(USER_TERRITORY, DemographicsUI.resolveUserTerritory(USER_TERRITORY));
     wireSegments();
     loadAll();
+    loadDemographicsMode();
   }
 
   function wireSegments() {
@@ -272,6 +273,68 @@ const DemographicsOverview = (function () {
           <div class="alert alert-warning mb-0 py-2">${latest.review_notes}</div>
         </div>` : ""}
       </div>`;
+  }
+
+  // ==========================================================================
+  // RECORDING CADENCE (demographics_mode - monthly/half_yearly/yearly)
+  //
+  // Same shape as Attendance's Entry Mode card (attendance-index.js) - a
+  // radio toggle backed by GET/PUT churches/{id}/entry-mode, just 3 options
+  // instead of 2 and a different metadata key.
+  // ==========================================================================
+
+  async function loadDemographicsMode() {
+    const card = document.getElementById("demographicsModeCard");
+    const result = await DemographicsAPIHandler.getEntryMode(USER_TERRITORY.id);
+
+    if (!result.success) {
+      card.innerHTML = '<p class="text-body fw-semibold mb-0">Could not load recording cadence</p>';
+      return;
+    }
+
+    renderDemographicsModeToggle(result.data.demographics_mode);
+  }
+
+  function renderDemographicsModeToggle(currentMode) {
+    const card = document.getElementById("demographicsModeCard");
+    const options = [
+      { value: "monthly", label: "Monthly", hint: "One submission every fiscal month" },
+      { value: "half_yearly", label: "Half-Yearly", hint: "One submission per half-year (H1/H2)" },
+      { value: "yearly", label: "Yearly", hint: "One submission per fiscal year" },
+    ];
+
+    card.innerHTML = `
+      <p class="text-body fw-semibold mb-3">How often does this church record demographics?</p>
+      ${options
+        .map(
+          (o, i) => `
+        <div class="form-check ${i < options.length - 1 ? "mb-2" : ""}">
+          <input class="form-check-input" type="radio" name="demographicsMode" id="demoMode_${o.value}" value="${o.value}"
+                 ${currentMode === o.value ? "checked" : ""} ${!CAN_ENTER_DEMOGRAPHICS ? "disabled" : ""}>
+          <label class="form-check-label" for="demoMode_${o.value}">
+            <strong>${o.label}</strong>
+            <span class="d-block fs-12 text-body">${o.hint}</span>
+          </label>
+        </div>`,
+        )
+        .join("")}`;
+
+    if (CAN_ENTER_DEMOGRAPHICS) {
+      card.querySelectorAll('input[name="demographicsMode"]').forEach((radio) => {
+        radio.addEventListener("change", () => handleDemographicsModeChange(radio.value));
+      });
+    }
+  }
+
+  async function handleDemographicsModeChange(mode) {
+    const result = await DemographicsAPIHandler.updateEntryMode(USER_TERRITORY.id, { demographics_mode: mode });
+
+    if (!result.success) {
+      Toast.error(result.message || "Failed to update recording cadence");
+      return;
+    }
+
+    Toast.success("Recording cadence updated");
   }
 
   function renderHistory(rows) {

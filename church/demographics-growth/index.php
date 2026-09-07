@@ -104,7 +104,7 @@ $breadcrumbs = [
                     </div>
 
                     <div class="row g-3">
-                        <div class="col-xl-6">
+                        <div class="col-xl-4">
                             <div class="card custom-card">
                                 <div class="card-header">
                                     <div class="card-title"><i class="ri-pie-chart-line me-2 text-primary"></i>Gender Split</div>
@@ -114,12 +114,26 @@ $breadcrumbs = [
                                 </div>
                             </div>
                         </div>
-                        <div class="col-xl-6">
+                        <div class="col-xl-4">
                             <div class="card custom-card">
                                 <div class="card-header">
                                     <div class="card-title"><i class="ri-shield-check-line me-2 text-primary"></i>Compliance Status</div>
                                 </div>
                                 <div class="card-body" id="complianceCard">
+                                    <div class="text-center py-4">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-4">
+                            <div class="card custom-card">
+                                <div class="card-header">
+                                    <div class="card-title"><i class="ri-settings-3-line me-2 text-primary"></i>Recording Cadence</div>
+                                </div>
+                                <div class="card-body" id="demographicsModeCard">
                                     <div class="text-center py-4">
                                         <div class="spinner-border text-primary" role="status">
                                             <span class="visually-hidden">Loading...</span>
