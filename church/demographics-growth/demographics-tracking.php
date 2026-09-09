@@ -48,6 +48,7 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
     <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/styles/choices.min.css" />
 
     <style>
         .stepper-group .form-control { max-width: 100px; }
@@ -162,6 +163,18 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                                                 <div class="col-md-4"><?= renderStepper('sunday_school_male_count', ['label' => 'Sunday School (Male)']) ?></div>
                                                 <div class="col-md-4"><?= renderStepper('sunday_school_female_count', ['label' => 'Sunday School (Female)']) ?></div>
                                                 <div class="col-md-4"><?= renderStepper('seniors_count', ['label' => 'Seniors']) ?></div>
+                                            </div>
+
+                                            <h6 class="fw-semibold mb-3 mt-4"><i class="ri-shield-user-line me-1"></i>Leadership & Ministry Team</h6>
+                                            <div class="row gy-3">
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Pastors & Assistant Pastors</label>
+                                                    <div class="border rounded p-2 fs-14" id="clergySummaryBox">
+                                                        <span class="text-body">Loading...</span>
+                                                    </div>
+                                                    <span class="fs-11 text-body d-block mt-1">From staff records &mdash; not entered here.</span>
+                                                </div>
+                                                <div class="col-md-4"><?= renderStepper('sunday_school_teachers_count', ['label' => 'Sunday School Teachers']) ?></div>
                                             </div>
 
                                             <div id="step1Warnings" class="mt-3"></div>
@@ -299,6 +312,7 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
     <script src="<?= SITE_URL ?>/assets/js/custom-switcher.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/scripts/choices.min.js"></script>
 
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js"></script>
