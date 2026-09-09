@@ -173,6 +173,13 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                                                 <div class="col-md-4"><?= renderStepper('seniors_count', ['label' => 'Seniors']) ?></div>
                                             </div>
 
+                                            <div class="mt-3 fs-13" id="compositionTally">
+                                                <i class="ri-calculator-line me-1 text-body"></i>
+                                                <span class="text-body">Sum of the fields above:</span>
+                                                <strong id="compositionTallyValue">0</strong>
+                                                <span class="d-block fs-12 text-body mt-1">These categories can overlap (e.g. a Sunday School pupil is also counted under Male/Female), so this won't match Total Members - that's expected, not an error.</span>
+                                            </div>
+
                                             <h6 class="fw-semibold mb-3 mt-4"><i class="ri-shield-user-line me-1"></i>Leadership & Ministry Team</h6>
                                             <div class="row gy-3">
                                                 <div class="col-md-4">
