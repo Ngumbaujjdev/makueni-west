@@ -161,16 +161,31 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                                                 </div>
                                             </div>
 
-                                            <div class="row gy-3">
-                                                <div class="col-md-4"><?= renderStepper('total_members', ['label' => 'Total Members', 'required' => true]) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('male_count', ['label' => 'Male']) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('female_count', ['label' => 'Female']) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('youth_count', ['label' => "Youth (13-35)"]) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('womens_fellowship_count', ['label' => "Women's Fellowship"]) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('mens_fellowship_count', ['label' => "Men's Fellowship"]) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('sunday_school_male_count', ['label' => 'Sunday School (Male)']) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('sunday_school_female_count', ['label' => 'Sunday School (Female)']) ?></div>
-                                                <div class="col-md-4"><?= renderStepper('seniors_count', ['label' => 'Seniors']) ?></div>
+                                            <div class="border border-primary rounded-3 p-3 mb-3">
+                                                <h6 class="fw-semibold text-primary mb-3"><i class="ri-group-line me-1"></i>Whole Church Membership</h6>
+                                                <div class="row gy-3">
+                                                    <div class="col-md-4"><?= renderStepper('total_members', ['label' => 'Total Members', 'required' => true]) ?></div>
+                                                    <div class="col-md-4"><?= renderStepper('male_count', ['label' => 'Male']) ?></div>
+                                                    <div class="col-md-4"><?= renderStepper('female_count', ['label' => 'Female']) ?></div>
+                                                    <div class="col-md-4"><?= renderStepper('youth_count', ['label' => "Youth (13-35)"]) ?></div>
+                                                    <div class="col-md-4"><?= renderStepper('seniors_count', ['label' => 'Seniors']) ?></div>
+                                                </div>
+                                            </div>
+
+                                            <div class="border border-warning rounded-3 p-3 mb-3">
+                                                <h6 class="fw-semibold text-warning mb-3"><i class="ri-team-line me-1"></i>Fellowship Groups</h6>
+                                                <div class="row gy-3">
+                                                    <div class="col-md-4"><?= renderStepper('womens_fellowship_count', ['label' => "Women's Fellowship"]) ?></div>
+                                                    <div class="col-md-4"><?= renderStepper('mens_fellowship_count', ['label' => "Men's Fellowship"]) ?></div>
+                                                </div>
+                                            </div>
+
+                                            <div class="border border-success rounded-3 p-3 mb-3">
+                                                <h6 class="fw-semibold text-success mb-3"><i class="ri-book-read-line me-1"></i>Sunday School</h6>
+                                                <div class="row gy-3">
+                                                    <div class="col-md-4"><?= renderStepper('sunday_school_male_count', ['label' => 'Sunday School (Male)']) ?></div>
+                                                    <div class="col-md-4"><?= renderStepper('sunday_school_female_count', ['label' => 'Sunday School (Female)']) ?></div>
+                                                </div>
                                             </div>
 
                                             <div class="mt-3 fs-13" id="compositionTally">
