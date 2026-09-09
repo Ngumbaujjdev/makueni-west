@@ -26,6 +26,12 @@ const DemographicsTracking = (function () {
     "baptisms_count", "communion_participants_count", "conversions_count",
   ];
   const ALL_FIELDS = STEP1_FIELDS.concat(STEP2_FIELDS);
+  /** Composition fields only - not total_members (the "main number" being broken down) or sunday_school_teachers_count (staffing, not membership). Used by the live tally, purely informational since these categories overlap each other. */
+  const COMPOSITION_BREAKDOWN_FIELDS = [
+    "male_count", "female_count", "youth_count",
+    "womens_fellowship_count", "mens_fellowship_count",
+    "sunday_school_male_count", "sunday_school_female_count", "seniors_count",
+  ];
 
   const FIELD_LABELS = {
     total_members: "Total Members", male_count: "Male", female_count: "Female",
@@ -50,12 +56,15 @@ const DemographicsTracking = (function () {
   let demographicsMode = "monthly";
   /** Choices.js instance wrapping #fiscalYear - the only select on this form with a long enough list to need search. */
   let fiscalYearChoices = null;
+  /** Each STEP1_FIELDS input's value at page load (preloaded seed, or the record's own values when editing) - what the change-direction stepper coloring compares against. */
+  let baselineValues = {};
 
   function init() {
     Object.assign(USER_TERRITORY, DemographicsUI.resolveUserTerritory(USER_TERRITORY));
     wireStepNav();
     wireSteppers();
     wireCompleteness();
+    wireStep1Feedback();
     wireActions();
     loadDemographicsMode().then(() => {
       loadFiscalYears().then(() => {
@@ -289,6 +298,58 @@ const DemographicsTracking = (function () {
   }
 
   // ==========================================================================
+  // CHANGE-DIRECTION COLORING + LIVE COMPOSITION TALLY
+  //
+  // Purely presentational feedback on top of STEP1_FIELDS - never changes
+  // what gets submitted. Coloring compares each field to baselineValues
+  // (captured once the fields' starting values are known - see
+  // loadPreloadSeed()/populateForm()); the tally is a plain sum of the
+  // composition fields, explicitly NOT a validation against Total Members
+  // (those categories overlap, so they'll never truly match it).
+  // ==========================================================================
+
+  function wireStep1Feedback() {
+    STEP1_FIELDS.forEach((field) => {
+      const input = document.getElementById(field);
+      if (input) input.addEventListener("input", () => { updateStepperColors(); updateCompositionTally(); });
+    });
+  }
+
+  function captureBaseline() {
+    baselineValues = {};
+    STEP1_FIELDS.forEach((field) => {
+      const el = document.getElementById(field);
+      baselineValues[field] = el && el.value !== "" ? parseInt(el.value, 10) : 0;
+    });
+    updateStepperColors();
+    updateCompositionTally();
+  }
+
+  function updateStepperColors() {
+    STEP1_FIELDS.forEach((field) => {
+      const el = document.getElementById(field);
+      if (!el) return;
+      const base = baselineValues[field] ?? 0;
+      const current = el.value === "" ? 0 : parseInt(el.value, 10);
+      el.classList.remove("text-success", "text-danger", "fw-semibold");
+      if (current > base) {
+        el.classList.add("text-success", "fw-semibold");
+      } else if (current < base) {
+        el.classList.add("text-danger", "fw-semibold");
+      }
+    });
+  }
+
+  function updateCompositionTally() {
+    const sum = COMPOSITION_BREAKDOWN_FIELDS.reduce((total, field) => {
+      const el = document.getElementById(field);
+      const val = el && el.value !== "" ? parseInt(el.value, 10) : 0;
+      return total + val;
+    }, 0);
+    document.getElementById("compositionTallyValue").textContent = sum;
+  }
+
+  // ==========================================================================
   // FORM DATA <-> API
   // ==========================================================================
 
@@ -342,6 +403,7 @@ const DemographicsTracking = (function () {
     });
 
     updateCompleteness();
+    captureBaseline();
     updateDraftStatusLabel();
     applyEditLock();
   }
@@ -509,7 +571,10 @@ const DemographicsTracking = (function () {
 
   async function loadPreloadSeed() {
     const result = await DemographicsAPIHandler.getDemographics(USER_TERRITORY.id);
-    if (!result.success || !result.data || result.data.length === 0) return;
+    if (!result.success || !result.data || result.data.length === 0) {
+      captureBaseline();
+      return;
+    }
 
     // Prefer confirmed (approved) numbers over an unconfirmed draft; among
     // those, the most recently recorded - not an attempt to rank monthly vs
@@ -518,7 +583,10 @@ const DemographicsTracking = (function () {
     const approved = result.data.filter((r) => r.status === "approved");
     const pool = approved.length ? approved : result.data;
     const seed = pool.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
-    if (!seed) return;
+    if (!seed) {
+      captureBaseline();
+      return;
+    }
 
     STEP1_FIELDS.forEach((field) => {
       const el = document.getElementById(field);
@@ -528,6 +596,9 @@ const DemographicsTracking = (function () {
     });
 
     updateCompleteness();
+    // Baseline is the just-preloaded values, not zero - the point of the
+    // change-direction coloring is showing what's been nudged since preload.
+    captureBaseline();
 
     document.getElementById("preloadNoticeText").textContent =
       `Pre-filled from ${DemographicsUI.demographicPeriodLabel(seed)} - review and adjust the numbers below.`;
@@ -540,6 +611,7 @@ const DemographicsTracking = (function () {
       if (el) el.value = "";
     });
     updateCompleteness();
+    captureBaseline();
     document.getElementById("preloadNotice").classList.add("d-none");
   }
 
