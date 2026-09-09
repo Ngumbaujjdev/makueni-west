@@ -27,12 +27,14 @@ Existing historical rows are untouched — this only governs new submissions goi
 ```
 total_members, male_count, female_count, youth_count,
 womens_fellowship_count, mens_fellowship_count,
-sunday_school_male_count, sunday_school_female_count, seniors_count,
-new_members_count, transferred_out_count,
+sunday_school_male_count, sunday_school_female_count, sunday_school_teachers_count,
+seniors_count, new_members_count, transferred_out_count,
 baptisms_count, communion_participants_count, conversions_count
 ```
 
 All nullable|integer|min:0 except `territory_id`/`fiscal_year_id` (always required) and the period fields (`fiscal_month_id`, `fiscal_semi_annual_id` — both nullable at the DB/validator level, but `validatePeriodForMode()` requires exactly the one matching the church's `demographics_mode`, or neither for `yearly` — see "Recording Cadence" above). `sunday_school_count` (combined) and `children_count`/`total_count` are computed Eloquent accessors on `ChurchDemographic`, not stored columns.
+
+**Clergy counts (Pastors/Associate Pastors) are deliberately *not* a column on this table** (2026-09-09) — that data already exists as real, live `user_territory_assignments` rows (see `FixAndSeedRealChurchLeadershipSeeder`), so re-typing it into a demographics submission every period would just create a second, driftable copy. Instead it's surfaced read-only via `GET /churches/{id}/clergy-summary` (see API Contract below). `sunday_school_teachers_count`, by contrast, has no other data source — no staff role, no other table — so it's a normal manual counter, same as the others.
 
 Validation: sub-counts (youth/fellowship/Sunday-school/seniors) exceeding `total_members` produce a **soft, non-blocking warning** (`buildValidationWarnings()`) returned in the response `warnings[]` array — never a hard rejection.
 
@@ -71,6 +73,7 @@ Base: `backend/routes/api.php`, under `auth:sanctum`.
 | POST | `/demographics/{id}/request-changes` | `subregiondemographicsreview.churchsubmissions.requestchanges` |
 | GET | `/demographics/summary/{territory}` | tier-dependent: Subregion → `subregiondemographicsreview.churchsubmissions.read`, Region → `regiondemographicsanalytics.summary.read`, Diocese/Global → `demographicsanalytics.demographicssummary.read` |
 | GET / PUT | `/churches/{church}/entry-mode` | ownership / `...sundayschoolenrollment.update` |
+| GET | `/churches/{church}/clergy-summary` | ownership (`userOwnsChurch`) |
 | GET | `/attendance?territory_id=&service_type=&fiscal_year_id=&fiscal_month_id=` | ownership |
 | POST | `/attendance` | per `service_type`: `attendancemanagement.{serviceattendance\|specialeventsattendance\|ministryattendance}.create` |
 | PUT | `/attendance/{id}` | same prefix, `.update`, resolved from the record's existing `service_type` |
@@ -101,6 +104,11 @@ Base: `backend/routes/api.php`, under `auth:sanctum`.
       stats: [ { label, value, icon, color } ] (Total This Year, Average per Month, Best Month),
       chart: { categories (12 month short names), series: [ { name, data } ] } }
     ] (one entry per baptisms_count/communion_participants_count/conversions_count/transferred_out_count) }
+```
+
+`GET /churches/{id}/clergy-summary` response shape (`DemographicsController::clergySummary()`) — live, not stored; grouped by Spatie role name, scoped to `Senior Pastor`/`Associate Pastor` assignments active on this exact church:
+```
+{ counts: { "Senior Pastor": 1, "Associate Pastor": 2 }, total: 3 }
 ```
 
 No `DELETE` endpoint on either model, by deliberate decision (frontend planning round, 2026-08-18) — corrections happen by editing a `draft`/`changes_requested` row, matching how Budget already works in this app.

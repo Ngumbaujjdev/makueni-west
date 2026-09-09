@@ -215,6 +215,19 @@
     }
   }
 
+  /** Live count of assigned Senior/Associate Pastors for a church, grouped by role name - not stored on ChurchDemographic, always derived from staff records so it can't drift. */
+  async function getClergySummary(churchId) {
+    try {
+      const response = await fetch(`${API_BASE}/churches/${churchId}/clergy-summary`, {
+        method: Constants.HTTP_METHODS.GET,
+        headers: getHeaders(),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
   // ==========================================================================
   // ATTENDANCE
   // ==========================================================================
@@ -461,6 +474,7 @@
     getSummary,
     getEntryMode,
     updateEntryMode,
+    getClergySummary,
     getAttendance,
     createAttendance,
     updateAttendance,

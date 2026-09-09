@@ -354,6 +354,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::put('/', [DemographicsController::class, 'updateEntryMode']);
     });
 
+    // Read-only, derived live from user_territory_assignments - not part of ChurchDemographic
+    Route::get('churches/{church}/clergy-summary', [DemographicsController::class, 'clergySummary']);
+
     // Attendance (Church-level entry - Phase 3 of the Demographics module plan)
     Route::prefix('attendance')->group(function () {
         Route::get('/', [AttendanceController::class, 'index']);                                 // List own church's attendance records

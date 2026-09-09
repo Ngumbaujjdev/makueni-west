@@ -19,6 +19,7 @@ const DemographicsTracking = (function () {
     "total_members", "male_count", "female_count", "youth_count",
     "womens_fellowship_count", "mens_fellowship_count",
     "sunday_school_male_count", "sunday_school_female_count", "seniors_count",
+    "sunday_school_teachers_count",
   ];
   const STEP2_FIELDS = [
     "new_members_count", "transferred_out_count",
@@ -31,6 +32,7 @@ const DemographicsTracking = (function () {
     youth_count: "Youth (13-35)", womens_fellowship_count: "Women's Fellowship",
     mens_fellowship_count: "Men's Fellowship", sunday_school_male_count: "Sunday School (Male)",
     sunday_school_female_count: "Sunday School (Female)", seniors_count: "Seniors",
+    sunday_school_teachers_count: "Sunday School Teachers",
     new_members_count: "New Members", transferred_out_count: "Transferred Out",
     baptisms_count: "Baptisms", communion_participants_count: "Communion Participants",
     conversions_count: "New Conversions",
@@ -46,6 +48,8 @@ const DemographicsTracking = (function () {
   let currentStatus = "draft";
   /** monthly / half_yearly / yearly - this church's configured recording cadence, read once at load. */
   let demographicsMode = "monthly";
+  /** Choices.js instance wrapping #fiscalYear - the only select on this form with a long enough list to need search. */
+  let fiscalYearChoices = null;
 
   function init() {
     Object.assign(USER_TERRITORY, DemographicsUI.resolveUserTerritory(USER_TERRITORY));
@@ -61,6 +65,31 @@ const DemographicsTracking = (function () {
       });
     });
     loadRecentSubmissions();
+    loadClergySummary();
+  }
+
+  // ==========================================================================
+  // CLERGY SUMMARY (read-only - derived live from staff records, never entered here)
+  // ==========================================================================
+
+  async function loadClergySummary() {
+    const box = document.getElementById("clergySummaryBox");
+    const result = await DemographicsAPIHandler.getClergySummary(USER_TERRITORY.id);
+
+    if (!result.success) {
+      box.innerHTML = '<span class="text-body">Could not load</span>';
+      return;
+    }
+
+    const counts = result.data.counts || {};
+    const roleNames = Object.keys(counts);
+
+    if (roleNames.length === 0) {
+      box.innerHTML = '<span class="text-body">No pastors on record</span>';
+      return;
+    }
+
+    box.innerHTML = roleNames.map((role) => `<strong>${counts[role]}</strong> ${role}`).join(" &middot; ");
   }
 
   // ==========================================================================
@@ -109,11 +138,21 @@ const DemographicsTracking = (function () {
       .map((y) => `<option value="${y.id}">${y.year}</option>`)
       .join("");
 
+    if (fiscalYearChoices) fiscalYearChoices.destroy();
+    fiscalYearChoices = new Choices(select, {
+      searchEnabled: true,
+      searchPlaceholderValue: "Search year...",
+      itemSelectText: "",
+      allowHTML: false,
+      placeholder: true,
+      placeholderValue: "Select Fiscal Year",
+    });
+
     // `is_active` just means "not disabled" - every year has it true here.
     // Default to the year matching today's real calendar year instead.
     const currentYear = new Date().getFullYear();
     const defaultYear = years.find((y) => y.year === currentYear) || years[0];
-    select.value = defaultYear.id;
+    fiscalYearChoices.setChoiceByValue(String(defaultYear.id));
     await loadPeriodOptionsFor(defaultYear.id);
 
     select.addEventListener("change", () => loadPeriodOptionsFor(select.value));
@@ -272,7 +311,11 @@ const DemographicsTracking = (function () {
     currentRecordId = record.id;
     currentStatus = record.status;
 
-    document.getElementById("fiscalYear").value = record.fiscal_year_id;
+    if (fiscalYearChoices) {
+      fiscalYearChoices.setChoiceByValue(String(record.fiscal_year_id));
+    } else {
+      document.getElementById("fiscalYear").value = record.fiscal_year_id;
+    }
 
     // A record's own period field tells us how it was actually recorded -
     // that can differ from the church's *current* demographicsMode if the
