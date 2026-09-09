@@ -115,6 +115,12 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
 
                                 <?= renderCompletenessBar('formCompleteness') ?>
 
+                                <div class="alert alert-primary mb-3" id="cadenceBanner">
+                                    <i class="ri-calendar-2-line me-2"></i>
+                                    <strong id="cadenceBannerTitle">Loading...</strong>
+                                    <span class="d-block fs-13 mt-1" id="cadenceBannerDescription"></span>
+                                </div>
+
                                 <form id="demographicsForm">
                                     <div class="tab-content">
 

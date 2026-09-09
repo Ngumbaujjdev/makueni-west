@@ -36,6 +36,12 @@ const DemographicsTracking = (function () {
     conversions_count: "New Conversions",
   };
 
+  const CADENCE_COPY = {
+    monthly: { title: "Monthly Recording", description: "This church submits one demographics report every fiscal month." },
+    half_yearly: { title: "Half-Yearly Recording", description: "This church submits one demographics report every half-year (H1/H2)." },
+    yearly: { title: "Yearly Recording", description: "This church submits one demographics report per fiscal year." },
+  };
+
   let currentRecordId = null;
   let currentStatus = "draft";
   /** monthly / half_yearly / yearly - this church's configured recording cadence, read once at load. */
@@ -67,7 +73,7 @@ const DemographicsTracking = (function () {
     applyPeriodPickerMode();
   }
 
-  /** Shows the Month select (monthly), the Half select (half_yearly), or neither (yearly) - and keeps `required` in sync so validateStep1() only checks the field that's actually visible. */
+  /** Shows the Month select (monthly), the Half select (half_yearly), or neither (yearly) - and keeps `required` in sync so validateStep1() only checks the field that's actually visible. Also updates the cadence banner so the active mode is always visible at a glance, not just implied by which select is shown. */
   function applyPeriodPickerMode() {
     const monthWrapper = document.getElementById("fiscalMonthWrapper");
     const halfWrapper = document.getElementById("fiscalHalfWrapper");
@@ -78,6 +84,10 @@ const DemographicsTracking = (function () {
     halfWrapper.style.display = demographicsMode === "half_yearly" ? "" : "none";
     monthSelect.required = demographicsMode === "monthly";
     halfSelect.required = demographicsMode === "half_yearly";
+
+    const copy = CADENCE_COPY[demographicsMode] || CADENCE_COPY.monthly;
+    document.getElementById("cadenceBannerTitle").textContent = copy.title;
+    document.getElementById("cadenceBannerDescription").textContent = copy.description;
   }
 
   // ==========================================================================
