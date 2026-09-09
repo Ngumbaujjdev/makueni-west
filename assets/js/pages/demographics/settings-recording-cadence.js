@@ -11,7 +11,7 @@
  * mode read-only and links here to change it - this page is the one place
  * that actually writes it.
  *
- * Dependencies: DemographicsAPIHandler, Toast
+ * Dependencies: DemographicsAPIHandler, DemographicsUI, Toast
  * ============================================================================
  */
 
@@ -19,6 +19,7 @@ const DemographicsSettingsRecordingCadence = (function () {
   "use strict";
 
   function init() {
+    Object.assign(USER_TERRITORY, DemographicsUI.resolveUserTerritory(USER_TERRITORY));
     loadDemographicsMode();
   }
 

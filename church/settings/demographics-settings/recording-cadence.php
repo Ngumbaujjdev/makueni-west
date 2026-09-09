@@ -112,6 +112,7 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
 
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/settings-recording-cadence.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => window.DemographicsSettingsRecordingCadence.init());
