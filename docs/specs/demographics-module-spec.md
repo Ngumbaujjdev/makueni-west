@@ -14,11 +14,11 @@
 
 Membership composition doesn't change week to week the way attendance does, so forcing a monthly submission was unnecessary burden. `Church.metadata->demographics_mode` (`Church::getDemographicsMode()`) is one of:
 
-- `monthly` (**default** — matches original/existing behavior for every church that hasn't explicitly changed it) — `fiscal_month_id` required, `fiscal_semi_annual_id` null.
-- `half_yearly` — `fiscal_semi_annual_id` required (one of the two `fiscal_semi_annuals` rows for that fiscal year — the Budget module's already-populated H1/H2 infrastructure, reused as-is), `fiscal_month_id` null.
+- `half_yearly` (**default**, changed 2026-09-09 from the original `monthly` default — matches original/existing behavior only for a church that has explicitly set it back to `monthly`) — `fiscal_semi_annual_id` required (one of the two `fiscal_semi_annuals` rows for that fiscal year — the Budget module's already-populated H1/H2 infrastructure, reused as-is), `fiscal_month_id` null.
+- `monthly` — `fiscal_month_id` required, `fiscal_semi_annual_id` null.
 - `yearly` — both null; the fiscal year alone identifies the period, same "all period FKs null means yearly" convention `BudgetPeriod::scopeYearly()` already established.
 
-Set via the existing `PUT /churches/{id}/entry-mode` endpoint (now generalized to accept `demographics_mode` alongside `attendance_mode`, either or both per call). `DemographicsController::validatePeriodForMode()` hard-rejects (422) a submission whose period field doesn't match the church's configured mode — unlike the soft out-of-range warnings above, a mismatched period would silently corrupt any rollup that groups by mode later, so this is never just a warning.
+Set via **Settings → Demographics Settings → Recording Cadence** (`church/settings/demographics-settings/recording-cadence.php`, seeded by `AddDemographicsSettingsSubmoduleSeeder` — mirrors Attendance Settings → Gathering Types). Moved here 2026-09-09 from a Growth Overview dashboard card; Growth Overview now shows the mode read-only with a link to this page, so there's exactly one place that writes it. Backed by the same existing `PUT /churches/{id}/entry-mode` endpoint (generalized to accept `demographics_mode` alongside `attendance_mode`, either or both per call) — no new API for the move. `DemographicsController::validatePeriodForMode()` hard-rejects (422) a submission whose period field doesn't match the church's configured mode — unlike the soft out-of-range warnings above, a mismatched period would silently corrupt any rollup that groups by mode later, so this is never just a warning.
 
 Existing historical rows are untouched — this only governs new submissions going forward. `DemographicsGrowthService`/`DemographicsReportWidgetService`'s rollups and the Spiritual Activities/Monthly Statistics report pages are not yet period-cadence-aware (they still assume monthly) — tracked as a follow-up phase, not done in this change.
 

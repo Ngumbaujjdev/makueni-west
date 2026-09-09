@@ -188,6 +188,13 @@ class DatabaseSeeder extends Seeder
             // Attendance instead of the church-level Settings module group)
             // ==========================================
             RelocateGatheringTypesToChurchSettingsSeeder::class,
+
+            // ==========================================
+            // PHASE 25: Demographics Settings > Recording Cadence submodule
+            // (moved off the Growth Overview dashboard onto its own Settings
+            // page, mirroring Attendance Settings > Gathering Types)
+            // ==========================================
+            AddDemographicsSettingsSubmoduleSeeder::class,
         ]);
     }
 }

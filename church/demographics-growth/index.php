@@ -130,8 +130,11 @@ $breadcrumbs = [
                         </div>
                         <div class="col-xl-4">
                             <div class="card custom-card">
-                                <div class="card-header">
+                                <div class="card-header d-flex justify-content-between align-items-center">
                                     <div class="card-title"><i class="ri-settings-3-line me-2 text-primary"></i>Recording Cadence</div>
+                                    <a href="<?= SITE_URL ?>/church/settings/demographics-settings/recording-cadence.php" class="fs-12">
+                                        Manage in Settings <i class="ri-arrow-right-line ms-1"></i>
+                                    </a>
                                 </div>
                                 <div class="card-body" id="demographicsModeCard">
                                     <div class="text-center py-4">

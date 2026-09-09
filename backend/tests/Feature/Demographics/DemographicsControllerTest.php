@@ -35,11 +35,18 @@ class DemographicsControllerTest extends TestCase
     {
         parent::setUp();
 
+        // demographics_mode explicitly 'monthly' here - these fixtures back
+        // most of this file's generic create/update/submit CRUD tests, which
+        // exercise monthly-period mechanics specifically and don't care
+        // about cadence selection (that's covered separately below). The
+        // real default is 'half_yearly' (Church::getDemographicsMode()).
         $this->myChurch = Church::create([
             'name' => 'My Church', 'code' => 'MY-CH', 'territory_type' => 'church', 'level' => 4,
+            'metadata' => ['demographics_mode' => 'monthly'],
         ]);
         $this->otherChurch = Church::create([
             'name' => 'Other Church', 'code' => 'OTHER-CH', 'territory_type' => 'church', 'level' => 4,
+            'metadata' => ['demographics_mode' => 'monthly'],
         ]);
 
         $this->fiscalYear = FiscalYear::create(['year' => 2026, 'start_date' => '2026-01-01', 'end_date' => '2026-12-31']);
@@ -270,22 +277,37 @@ class DemographicsControllerTest extends TestCase
     // RECORDING CADENCE (demographics_mode - monthly/half_yearly/yearly)
     // ==========================================================================
 
-    public function test_demographics_mode_defaults_to_monthly_and_can_be_changed(): void
+    public function test_demographics_mode_defaults_to_half_yearly_and_can_be_changed(): void
     {
         Sanctum::actingAs($this->pastor);
 
-        $getResponse = $this->getJson("/api/churches/{$this->myChurch->id}/entry-mode");
-        $getResponse->assertStatus(200)->assertJsonPath('data.demographics_mode', 'monthly');
+        // A fresh church with no metadata override - myChurch/otherChurch
+        // set 'monthly' explicitly in setUp() to back the CRUD tests above,
+        // so the real fallback has to be tested against an unconfigured one.
+        $freshChurch = Church::create(['name' => 'Fresh Church', 'code' => 'FRESH-CH', 'territory_type' => 'church', 'level' => 4]);
+        UserTerritoryAssignment::create([
+            'user_id' => $this->pastor->id,
+            'territory_id' => $freshChurch->id,
+            'role_id' => $this->pastorRole->id,
+            'assignment_type' => 'primary',
+            'is_active' => true,
+            'effective_from' => now()->subDay(),
+            'assigned_by' => $this->pastor->id,
+            'assigned_at' => now()->subDay(),
+        ]);
 
-        $putResponse = $this->putJson("/api/churches/{$this->myChurch->id}/entry-mode", [
-            'demographics_mode' => 'half_yearly',
+        $getResponse = $this->getJson("/api/churches/{$freshChurch->id}/entry-mode");
+        $getResponse->assertStatus(200)->assertJsonPath('data.demographics_mode', 'half_yearly');
+
+        $putResponse = $this->putJson("/api/churches/{$freshChurch->id}/entry-mode", [
+            'demographics_mode' => 'monthly',
         ]);
         $putResponse->assertStatus(200)
-            ->assertJsonPath('data.demographics_mode', 'half_yearly')
+            ->assertJsonPath('data.demographics_mode', 'monthly')
             ->assertJsonPath('data.attendance_mode', 'weekly_and_monthly'); // untouched by this call
 
-        $getAgain = $this->getJson("/api/churches/{$this->myChurch->id}/entry-mode");
-        $getAgain->assertStatus(200)->assertJsonPath('data.demographics_mode', 'half_yearly');
+        $getAgain = $this->getJson("/api/churches/{$freshChurch->id}/entry-mode");
+        $getAgain->assertStatus(200)->assertJsonPath('data.demographics_mode', 'monthly');
     }
 
     public function test_updating_entry_mode_requires_at_least_one_field(): void
