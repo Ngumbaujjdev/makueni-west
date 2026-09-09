@@ -134,6 +134,12 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                                                 Select the reporting period, then enter this month's membership counts. Use the +/- steppers or type directly.
                                             </div>
 
+                                            <div class="alert alert-primary d-none mb-4" id="preloadNotice">
+                                                <i class="ri-history-line me-2"></i>
+                                                <span id="preloadNoticeText"></span>
+                                                <button type="button" class="btn btn-sm btn-outline-primary ms-2" id="preloadClearBtn">Clear</button>
+                                            </div>
+
                                             <div class="row gy-3 mb-4">
                                                 <div class="col-md-6">
                                                     <label for="fiscalYear" class="form-label">Fiscal Year <span class="text-danger">*</span></label>
