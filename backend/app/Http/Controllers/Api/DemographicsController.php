@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Church;
 use App\Models\ChurchDemographic;
 use App\Models\Territory;
+use App\Models\UserTerritoryAssignment;
 use App\Services\DemographicsGrowthService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -109,6 +110,7 @@ class DemographicsController extends Controller
             'mens_fellowship_count' => 'nullable|integer|min:0',
             'sunday_school_male_count' => 'nullable|integer|min:0',
             'sunday_school_female_count' => 'nullable|integer|min:0',
+            'sunday_school_teachers_count' => 'nullable|integer|min:0',
             'seniors_count' => 'nullable|integer|min:0',
             'new_members_count' => 'nullable|integer|min:0',
             'transferred_out_count' => 'nullable|integer|min:0',
@@ -232,6 +234,7 @@ class DemographicsController extends Controller
             'mens_fellowship_count' => 'nullable|integer|min:0',
             'sunday_school_male_count' => 'nullable|integer|min:0',
             'sunday_school_female_count' => 'nullable|integer|min:0',
+            'sunday_school_teachers_count' => 'nullable|integer|min:0',
             'seniors_count' => 'nullable|integer|min:0',
             'new_members_count' => 'nullable|integer|min:0',
             'transferred_out_count' => 'nullable|integer|min:0',
@@ -577,6 +580,43 @@ class DemographicsController extends Controller
             'data' => [
                 'attendance_mode' => $church->getAttendanceMode(),
                 'demographics_mode' => $church->getDemographicsMode(),
+            ],
+        ]);
+    }
+
+    /**
+     * Live count of assigned Senior/Associate Pastors for a church, grouped
+     * by role name - read-only, not stored on ChurchDemographic (see
+     * migration docblock). Sourced from user_territory_assignments, the
+     * same real staff-assignment data FixAndSeedRealChurchLeadershipSeeder
+     * writes to, so this can never drift the way a manually re-typed count
+     * could.
+     */
+    public function clergySummary(Request $request, Church $church)
+    {
+        if (! $this->userOwnsChurch($request->user(), $church->id)) {
+            return response()->json([
+                'success' => false,
+                'status' => 403,
+                'message' => 'You do not have access to this church\'s staff records.',
+            ], 403);
+        }
+
+        $counts = UserTerritoryAssignment::where('territory_id', $church->id)
+            ->active()
+            ->whereHas('role', fn ($q) => $q->whereIn('name', ['Senior Pastor', 'Associate Pastor']))
+            ->with('role:id,name')
+            ->get()
+            ->groupBy(fn ($assignment) => $assignment->role->name)
+            ->map->count();
+
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'message' => 'Clergy summary retrieved successfully',
+            'data' => [
+                'counts' => $counts,
+                'total' => $counts->sum(),
             ],
         ]);
     }

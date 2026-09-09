@@ -395,4 +395,89 @@ class DemographicsControllerTest extends TestCase
 
         $response->assertStatus(422);
     }
+
+    // ==========================================================================
+    // LEADERSHIP & MINISTRY TEAM (sunday_school_teachers_count + clergy-summary)
+    // ==========================================================================
+
+    public function test_sunday_school_teachers_count_is_accepted_on_create_and_update(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $createResponse = $this->postJson('/api/demographics', [
+            'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'fiscal_month_id' => $this->fiscalMonth->id,
+            'total_members' => 100,
+            'sunday_school_teachers_count' => 4,
+        ]);
+
+        $createResponse->assertStatus(201)->assertJsonPath('data.sunday_school_teachers_count', 4);
+
+        $demographicId = $createResponse->json('data.id');
+        $updateResponse = $this->putJson("/api/demographics/{$demographicId}", ['sunday_school_teachers_count' => 6]);
+
+        $updateResponse->assertStatus(200)->assertJsonPath('data.sunday_school_teachers_count', 6);
+    }
+
+    public function test_clergy_summary_returns_counts_scoped_to_one_church_only(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $seniorPastorRole = Role::create(['name' => 'Senior Pastor', 'guard_name' => 'web', 'territory_level' => 'church']);
+        $associatePastorRole = Role::create(['name' => 'Associate Pastor', 'guard_name' => 'web', 'territory_level' => 'church']);
+
+        $this->assignClergy($this->myChurch, $seniorPastorRole);
+        $this->assignClergy($this->myChurch, $associatePastorRole);
+        $this->assignClergy($this->myChurch, $associatePastorRole);
+        // A pastor on a different church must never leak into this church's count.
+        $this->assignClergy($this->otherChurch, $seniorPastorRole);
+
+        $response = $this->getJson("/api/churches/{$this->myChurch->id}/clergy-summary");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.counts.Senior Pastor', 1)
+            ->assertJsonPath('data.counts.Associate Pastor', 2)
+            ->assertJsonPath('data.total', 3);
+    }
+
+    public function test_clergy_summary_returns_zero_for_a_church_with_no_assigned_pastors(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $response = $this->getJson("/api/churches/{$this->myChurch->id}/clergy-summary");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.counts', [])
+            ->assertJsonPath('data.total', 0);
+    }
+
+    public function test_clergy_summary_cannot_be_read_for_another_church(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $response = $this->getJson("/api/churches/{$this->otherChurch->id}/clergy-summary");
+
+        $response->assertStatus(403);
+    }
+
+    private function assignClergy(Church $church, Role $role): void
+    {
+        $user = User::create([
+            'firstname' => 'Clergy', 'lastname' => (string) \Illuminate\Support\Str::uuid(),
+            'username' => 'clergy.'.\Illuminate\Support\Str::uuid(),
+            'email' => \Illuminate\Support\Str::uuid().'@example.test', 'password' => bcrypt('password'),
+        ]);
+
+        UserTerritoryAssignment::create([
+            'user_id' => $user->id,
+            'territory_id' => $church->id,
+            'role_id' => $role->id,
+            'assignment_type' => 'primary',
+            'is_active' => true,
+            'effective_from' => now()->subDay(),
+            'assigned_by' => $user->id,
+            'assigned_at' => now()->subDay(),
+        ]);
+    }
 }
