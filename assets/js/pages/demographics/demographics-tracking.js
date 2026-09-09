@@ -517,7 +517,10 @@ const DemographicsTracking = (function () {
       })
       .slice(0, 6);
 
-    tbody.innerHTML = DemographicsUI.renderSubmissionsRows(rows, { onEdit: "DemographicsTracking.loadForEdit" });
+    // onView (not onEdit) for every row - loadForEdit()/applyEditLock() already
+    // renders the full submission read-only when status isn't draft/changes_requested,
+    // so one "View" button works whether or not the row is actually editable.
+    tbody.innerHTML = DemographicsUI.renderSubmissionsRows(rows, { onView: "DemographicsTracking.loadForEdit" });
   }
 
   async function loadForEdit(id) {
