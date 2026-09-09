@@ -162,7 +162,8 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                                             </div>
 
                                             <div class="border border-primary rounded-3 p-3 mb-3">
-                                                <h6 class="fw-semibold text-primary mb-3"><i class="ri-group-line me-1"></i>Whole Church Membership</h6>
+                                                <h6 class="fw-semibold text-primary mb-1"><i class="ri-group-line me-1"></i>Whole Church Membership</h6>
+                                                <p class="fs-12 text-body mb-3">Overall congregation counts, split by gender and age bracket.</p>
                                                 <div class="row gy-3">
                                                     <div class="col-md-4"><?= renderStepper('total_members', ['label' => 'Total Members', 'required' => true]) ?></div>
                                                     <div class="col-md-4"><?= renderStepper('male_count', ['label' => 'Male']) ?></div>
@@ -173,7 +174,8 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                                             </div>
 
                                             <div class="border border-warning rounded-3 p-3 mb-3">
-                                                <h6 class="fw-semibold text-warning mb-3"><i class="ri-team-line me-1"></i>Fellowship Groups</h6>
+                                                <h6 class="fw-semibold text-warning mb-1"><i class="ri-team-line me-1"></i>Fellowship Groups</h6>
+                                                <p class="fs-12 text-body mb-3">Members active in the Women's or Men's fellowship ministry.</p>
                                                 <div class="row gy-3">
                                                     <div class="col-md-4"><?= renderStepper('womens_fellowship_count', ['label' => "Women's Fellowship"]) ?></div>
                                                     <div class="col-md-4"><?= renderStepper('mens_fellowship_count', ['label' => "Men's Fellowship"]) ?></div>
@@ -181,18 +183,21 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                                             </div>
 
                                             <div class="border border-success rounded-3 p-3 mb-3">
-                                                <h6 class="fw-semibold text-success mb-3"><i class="ri-book-read-line me-1"></i>Sunday School</h6>
+                                                <h6 class="fw-semibold text-success mb-1"><i class="ri-book-read-line me-1"></i>Sunday School</h6>
+                                                <p class="fs-12 text-body mb-3">Children currently enrolled in Sunday School, by gender.</p>
                                                 <div class="row gy-3">
                                                     <div class="col-md-4"><?= renderStepper('sunday_school_male_count', ['label' => 'Sunday School (Male)']) ?></div>
                                                     <div class="col-md-4"><?= renderStepper('sunday_school_female_count', ['label' => 'Sunday School (Female)']) ?></div>
                                                 </div>
                                             </div>
 
-                                            <div class="mt-3 fs-13" id="compositionTally">
-                                                <i class="ri-calculator-line me-1 text-body"></i>
-                                                <span class="text-body">Sum of the fields above:</span>
-                                                <strong id="compositionTallyValue">0</strong>
-                                                <span class="d-block fs-12 text-body mt-1">These categories can overlap (e.g. a Sunday School pupil is also counted under Male/Female), so this won't match Total Members - that's expected, not an error.</span>
+                                            <div class="alert alert-secondary d-flex align-items-center mb-4" id="compositionTally">
+                                                <i class="ri-calculator-line fs-22 me-3 text-primary"></i>
+                                                <div>
+                                                    <span class="text-body">Sum of the fields above:</span>
+                                                    <span class="fs-18 fw-bold text-primary ms-1" id="compositionTallyValue">0</span>
+                                                    <span class="d-block fs-12 text-body mt-1">These categories can overlap (e.g. a Sunday School pupil is also counted under Male/Female), so this won't match Total Members - that's expected, not an error.</span>
+                                                </div>
                                             </div>
 
                                             <h6 class="fw-semibold mb-3 mt-4"><i class="ri-shield-user-line me-1"></i>Leadership & Ministry Team</h6>
