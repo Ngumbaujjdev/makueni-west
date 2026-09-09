@@ -9,12 +9,16 @@
  * the entry form. Built entirely from what GET /demographics/{id}
  * (DemographicsAPIHandler.getDemographic) already returns - no new backend.
  *
- * Dependencies: DemographicsAPIHandler, DemographicsUI, Toast, ApexCharts
+ * Card style is renderWidgetCard/renderWidgetCardsRow throughout - the same
+ * pale-icon-tint "index-1.html Total Sales card" pattern already used on
+ * Attendance Reports and Growth Overview, not the plainer renderStatCard.
  * ============================================================================
  */
 
 const DemographicsViewSubmission = (function () {
   "use strict";
+
+  const CHART_HEIGHT = 280;
 
   async function init() {
     Object.assign(USER_TERRITORY, DemographicsUI.resolveUserTerritory(USER_TERRITORY));
@@ -38,47 +42,48 @@ const DemographicsViewSubmission = (function () {
   function renderHeader(record) {
     const period = DemographicsUI.demographicPeriodLabel(record);
     const backBtn = `<a href="demographics-tracking.php" class="btn btn-outline-primary btn-sm me-2"><i class="ri-arrow-left-line me-1"></i>Back</a>`;
-    // is_editable is a real Eloquent accessor on ChurchDemographic but isn't
-    // in $appends, so it never actually serializes into the API response -
-    // same status check applyEditLock() already does in demographics-tracking.js.
     const isEditable = record.status === "draft" || record.status === "changes_requested";
     const editBtn = isEditable
       ? `<a href="demographics-tracking.php?id=${record.id}" class="btn btn-primary btn-sm"><i class="ri-edit-line me-1"></i>Edit</a>`
       : "";
 
+    const chips = [
+      record.submitted_at
+        ? `<span class="fs-12 text-body"><i class="ri-send-plane-line me-1"></i>${new Date(record.submitted_at).toLocaleDateString()}</span>`
+        : "",
+      record.reviewer
+        ? `<span class="fs-12 text-body"><i class="ri-user-star-line me-1"></i>${record.reviewer.firstname || ""} ${record.reviewer.lastname || ""}</span>`
+        : "",
+    ]
+      .filter(Boolean)
+      .join('<span class="text-body mx-1">&middot;</span>');
+
     document.getElementById("submissionHeaderCard").innerHTML = `
-      <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
-        <div>
-          <h4 class="fw-semibold mb-1">${period}</h4>
-          ${DemographicsUI.renderStatusBadge(record.status)}
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div class="d-flex align-items-center gap-3">
+          <span class="avatar avatar-lg avatar-rounded bg-primary-transparent">
+            <i class="ri-file-chart-2-line fs-22 text-primary"></i>
+          </span>
+          <div>
+            <div class="d-flex align-items-center gap-2">
+              <h4 class="fw-semibold mb-0">${period}</h4>
+              ${DemographicsUI.renderStatusBadge(record.status)}
+            </div>
+            ${chips ? `<div class="mt-1">${chips}</div>` : ""}
+          </div>
         </div>
         <div>${backBtn}${editBtn}</div>
       </div>
-      <div class="row g-3 mt-1">
-        ${record.submitted_at ? `
-        <div class="col-md-4">
-          <span class="d-block mb-1 text-body fw-semibold">Submitted</span>
-          <strong class="fs-14">${new Date(record.submitted_at).toLocaleDateString()}</strong>
-        </div>` : ""}
-        ${record.reviewer ? `
-        <div class="col-md-4">
-          <span class="d-block mb-1 text-body fw-semibold">Reviewed By</span>
-          <strong class="fs-14">${record.reviewer.firstname || ""} ${record.reviewer.lastname || ""}</strong>
-        </div>` : ""}
-      </div>
       ${record.review_notes ? `
-      <div class="alert alert-warning mt-3 mb-0">
+      <div class="alert alert-warning mt-3 mb-0 py-2">
         <i class="ri-message-2-line me-2"></i>${record.review_notes}
       </div>` : ""}`;
   }
 
   function renderStats(record) {
-    // sunday_school_count is a real accessor on ChurchDemographic but, like
-    // is_editable, isn't in $appends - computed here the same way, from the
-    // two raw counts that do serialize.
     const sundaySchoolCount = (record.sunday_school_male_count ?? 0) + (record.sunday_school_female_count ?? 0);
 
-    DemographicsUI.renderStatCardsRow("statCardsRow", [
+    DemographicsUI.renderWidgetCardsRow("statCardsRow", [
       { icon: "ri-team-line", label: "Total Members", value: record.total_members ?? 0, color: "primary" },
       { icon: "ri-user-add-line", label: "New Members", value: record.new_members_count ?? 0, color: "success" },
       { icon: "ri-drop-line", label: "Baptisms", value: record.baptisms_count ?? 0, color: "info" },
@@ -89,10 +94,10 @@ const DemographicsViewSubmission = (function () {
   function renderCharts(record) {
     const donutEl = document.getElementById("genderDonutChart");
     if (!record.male_count && !record.female_count) {
-      donutEl.innerHTML = '<p class="text-center text-body fw-semibold py-4 mb-0">No gender-split data on this submission</p>';
+      donutEl.innerHTML = '<p class="text-center text-body fw-semibold py-5 mb-0">No gender-split data on this submission</p>';
     } else {
       new ApexCharts(donutEl, {
-        chart: { type: "donut", height: 260 },
+        chart: { type: "donut", height: CHART_HEIGHT },
         series: [record.male_count || 0, record.female_count || 0],
         labels: ["Male", "Female"],
         colors: ["#2CA4BF", "#F2BE22"],
@@ -101,56 +106,67 @@ const DemographicsViewSubmission = (function () {
       }).render();
     }
 
-    DemographicsUI.renderTrendChart("compositionChart", {
-      type: "column",
-      color: "primary",
-      categories: ["Youth", "Women's Fellowship", "Men's Fellowship", "Sunday School (M)", "Sunday School (F)", "Seniors"],
-      series: [
-        {
-          name: "Count",
-          data: [
-            record.youth_count ?? 0,
-            record.womens_fellowship_count ?? 0,
-            record.mens_fellowship_count ?? 0,
-            record.sunday_school_male_count ?? 0,
-            record.sunday_school_female_count ?? 0,
-            record.seniors_count ?? 0,
-          ],
-        },
-      ],
-    });
+    const compositionEl = document.getElementById("compositionChart");
+    const categories = ["Youth", "Women's Fellowship", "Men's Fellowship", "Sunday School (Male)", "Sunday School (Female)", "Seniors"];
+    const data = [
+      record.youth_count ?? 0,
+      record.womens_fellowship_count ?? 0,
+      record.mens_fellowship_count ?? 0,
+      record.sunday_school_male_count ?? 0,
+      record.sunday_school_female_count ?? 0,
+      record.seniors_count ?? 0,
+    ];
+    // Horizontal, not vertical (renderTrendChart's shape) - full category
+    // labels sit on the y-axis instead of being squeezed under thin columns,
+    // and it fills the card height evenly next to the donut.
+    new ApexCharts(compositionEl, {
+      chart: { type: "bar", height: CHART_HEIGHT, toolbar: { show: false }, foreColor: "#333335" },
+      series: [{ name: "Count", data }],
+      xaxis: { categories },
+      colors: data.map((_, i) => `rgba(44, 164, 191, ${(0.35 + (0.65 * i) / (data.length - 1)).toFixed(2)})`),
+      plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 4, barHeight: "60%" } },
+      dataLabels: { enabled: true },
+      legend: { show: false },
+      grid: { borderColor: "rgba(44, 164, 191, 0.08)" },
+    }).render();
   }
 
   function renderActivityStats(record) {
-    DemographicsUI.renderStatCardsRow("activityStatsRow", [
+    const container = document.getElementById("activityStatsRow");
+    if (!container) return;
+
+    const cards = [
       { icon: "ri-user-add-line", label: "New Members", value: record.new_members_count ?? 0, color: "success" },
       { icon: "ri-user-unfollow-line", label: "Transferred Out", value: record.transferred_out_count ?? 0, color: "secondary" },
       { icon: "ri-drop-line", label: "Baptisms", value: record.baptisms_count ?? 0, color: "info" },
-      { icon: "ri-cup-line", label: "Communion Participants", value: record.communion_participants_count ?? 0, color: "primary" },
+      { icon: "ri-cup-line", label: "Communion", value: record.communion_participants_count ?? 0, color: "primary" },
       { icon: "ri-heart-line", label: "New Conversions", value: record.conversions_count ?? 0, color: "warning" },
-    ]);
+    ];
+
+    // Manual .col wrapping (not renderWidgetCardsRow's fixed 4-per-row) so
+    // all 5 cards sit evenly in one row via the container's own row-cols-xl-5.
+    container.innerHTML = cards.map((c) => `<div class="col">${DemographicsUI.renderWidgetCard(c)}</div>`).join("");
   }
 
   async function loadLeadership(record) {
     const card = document.getElementById("leadershipCard");
     const result = await DemographicsAPIHandler.getClergySummary(USER_TERRITORY.id);
-
-    const clergyCounts = result.success ? result.data.counts || {} : {};
-    const roleNames = Object.keys(clergyCounts);
-    const clergyText = roleNames.length
-      ? roleNames.map((role) => `<strong>${clergyCounts[role]}</strong> ${role}`).join(" &middot; ")
-      : "No pastors on record";
+    const clergyTotal = result.success ? result.data.total ?? 0 : 0;
 
     card.innerHTML = `
       <div class="row g-3">
-        <div class="col-md-6">
-          <span class="d-block mb-1 text-body fw-semibold">Pastors & Assistant Pastors (current)</span>
-          <div class="fs-14">${clergyText}</div>
-        </div>
-        <div class="col-md-6">
-          <span class="d-block mb-1 text-body fw-semibold">Sunday School Teachers (this submission)</span>
-          <h5 class="fw-semibold mb-0">${record.sunday_school_teachers_count ?? 0}</h5>
-        </div>
+        <div class="col-xl-6">${DemographicsUI.renderWidgetCard({
+          icon: "ri-shield-user-line",
+          label: "Pastors & Assistant Pastors",
+          value: clergyTotal,
+          color: "primary",
+        })}</div>
+        <div class="col-xl-6">${DemographicsUI.renderWidgetCard({
+          icon: "ri-book-read-line",
+          label: "Sunday School Teachers",
+          value: record.sunday_school_teachers_count ?? 0,
+          color: "warning",
+        })}</div>
       </div>`;
   }
 

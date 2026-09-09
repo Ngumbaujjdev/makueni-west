@@ -115,7 +115,7 @@ $breadcrumbs = [
                         <div class="card-title"><i class="ri-hand-heart-line me-2 text-primary"></i>Changes & Spiritual Activities</div>
                     </div>
                     <div class="card-body">
-                        <div class="row g-3" id="activityStatsRow"></div>
+                        <div class="row g-3 row-cols-1 row-cols-md-3 row-cols-xl-5" id="activityStatsRow"></div>
                     </div>
                 </div>
 
