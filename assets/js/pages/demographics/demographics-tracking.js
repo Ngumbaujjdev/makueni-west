@@ -508,19 +508,44 @@ const DemographicsTracking = (function () {
       return;
     }
 
-    const rows = (result.data || [])
-      .sort((a, b) => {
-        const ay = a.fiscal_year?.year || 0;
-        const by = b.fiscal_year?.year || 0;
-        if (ay !== by) return by - ay;
-        return (b.fiscal_month?.number || 0) - (a.fiscal_month?.number || 0);
-      })
-      .slice(0, 6);
+    const rows = (result.data || []).sort((a, b) => {
+      const ay = a.fiscal_year?.year || 0;
+      const by = b.fiscal_year?.year || 0;
+      if (ay !== by) return by - ay;
+      return (b.fiscal_month?.number || 0) - (a.fiscal_month?.number || 0);
+    });
 
     // onView (not onEdit) for every row - loadForEdit()/applyEditLock() already
     // renders the full submission read-only when status isn't draft/changes_requested,
     // so one "View" button works whether or not the row is actually editable.
     tbody.innerHTML = DemographicsUI.renderSubmissionsRows(rows, { onView: "DemographicsTracking.loadForEdit" });
+
+    DemographicsUI.renderFilterToolbar("submissionsFilterToolbar", {
+      searchPlaceholder: "Search submissions...",
+      filters: [
+        {
+          id: "submissionsStatusFilter",
+          label: "All Statuses",
+          options: [
+            { value: "Draft", label: "Draft" },
+            { value: "Approved", label: "Approved" },
+            { value: "Flagged", label: "Flagged" },
+            { value: "Changes Requested", label: "Changes Requested" },
+          ],
+        },
+      ],
+    });
+
+    const table = DemographicsUI.initListDataTable("recentSubmissionsTable", {
+      searchPlaceholder: "Search submissions...",
+      order: [], // rows are already sorted newest-first - don't let DataTables re-sort column 0 alphabetically
+      nonSortableColumns: [3],
+      hideDefaultSearch: true,
+    });
+
+    DemographicsUI.wireFilterToolbar("submissionsFilterToolbar", table, [
+      { id: "submissionsStatusFilter", columnIndex: 2, exact: true },
+    ]);
   }
 
   async function loadForEdit(id) {

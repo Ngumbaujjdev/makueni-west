@@ -49,6 +49,8 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
     <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/styles/choices.min.css" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/data-tables/responsive/2.3.0/css/responsive.bootstrap.min.css" />
 
     <style>
         .stepper-group .form-control { max-width: 100px; }
@@ -273,8 +275,9 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                         <div class="card-title"><i class="ri-history-line me-2 text-primary"></i>Recent Submissions</div>
                     </div>
                     <div class="card-body p-0">
+                        <div class="px-3 pt-3" id="submissionsFilterToolbar"></div>
                         <div class="table-responsive">
-                            <table class="table table-hover mb-0">
+                            <table class="table table-hover mb-0" id="recentSubmissionsTable">
                                 <thead class="table-light">
                                     <tr>
                                         <th class="fw-semibold text-dark">Period</th>
@@ -313,6 +316,12 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
     <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
     <script src="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/scripts/choices.min.js"></script>
+
+    <!-- jQuery + DataTables (search/filter/pagination) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/jquery.dataTables.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/data-tables/responsive/2.3.0/js/dataTables.responsive.min.js"></script>
 
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js"></script>
