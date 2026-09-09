@@ -103,7 +103,7 @@ const AttendanceOverview = (function () {
   }
 
   async function handleModeChange(mode) {
-    const result = await DemographicsAPIHandler.updateEntryMode(USER_TERRITORY.id, mode);
+    const result = await DemographicsAPIHandler.updateEntryMode(USER_TERRITORY.id, { attendance_mode: mode });
 
     if (!result.success) {
       Toast.error(result.message || "Failed to update entry mode");

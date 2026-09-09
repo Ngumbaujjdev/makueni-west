@@ -5,6 +5,7 @@ namespace Tests\Feature\Demographics;
 use App\Models\Church;
 use App\Models\ChurchDemographic;
 use App\Models\FiscalMonth;
+use App\Models\FiscalSemiAnnual;
 use App\Models\FiscalYear;
 use App\Models\Permission;
 use App\Models\Role;
@@ -263,5 +264,135 @@ class DemographicsControllerTest extends TestCase
         $response = $this->getJson("/api/churches/{$this->otherChurch->id}/entry-mode");
 
         $response->assertStatus(403);
+    }
+
+    // ==========================================================================
+    // RECORDING CADENCE (demographics_mode - monthly/half_yearly/yearly)
+    // ==========================================================================
+
+    public function test_demographics_mode_defaults_to_monthly_and_can_be_changed(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $getResponse = $this->getJson("/api/churches/{$this->myChurch->id}/entry-mode");
+        $getResponse->assertStatus(200)->assertJsonPath('data.demographics_mode', 'monthly');
+
+        $putResponse = $this->putJson("/api/churches/{$this->myChurch->id}/entry-mode", [
+            'demographics_mode' => 'half_yearly',
+        ]);
+        $putResponse->assertStatus(200)
+            ->assertJsonPath('data.demographics_mode', 'half_yearly')
+            ->assertJsonPath('data.attendance_mode', 'weekly_and_monthly'); // untouched by this call
+
+        $getAgain = $this->getJson("/api/churches/{$this->myChurch->id}/entry-mode");
+        $getAgain->assertStatus(200)->assertJsonPath('data.demographics_mode', 'half_yearly');
+    }
+
+    public function test_updating_entry_mode_requires_at_least_one_field(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $response = $this->putJson("/api/churches/{$this->myChurch->id}/entry-mode", []);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_half_yearly_church_can_submit_with_a_fiscal_semi_annual(): void
+    {
+        Sanctum::actingAs($this->pastor);
+        $this->putJson("/api/churches/{$this->myChurch->id}/entry-mode", ['demographics_mode' => 'half_yearly']);
+
+        // FiscalYear::create() auto-generates its own quarters/semi-annuals
+        // (see FiscalYear::boot()) - no need to create one here.
+        $h1 = FiscalSemiAnnual::where('fiscal_year_id', $this->fiscalYear->id)->where('number', 1)->firstOrFail();
+
+        $response = $this->postJson('/api/demographics', [
+            'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'fiscal_semi_annual_id' => $h1->id,
+            'total_members' => 100,
+        ]);
+
+        $response->assertStatus(201)->assertJsonPath('data.fiscal_semi_annual_id', $h1->id);
+        $this->assertDatabaseHas('church_demographics', [
+            'territory_id' => $this->myChurch->id,
+            'fiscal_semi_annual_id' => $h1->id,
+            'fiscal_month_id' => null,
+        ]);
+    }
+
+    public function test_half_yearly_church_is_rejected_for_submitting_a_fiscal_month_instead(): void
+    {
+        Sanctum::actingAs($this->pastor);
+        $this->putJson("/api/churches/{$this->myChurch->id}/entry-mode", ['demographics_mode' => 'half_yearly']);
+
+        $response = $this->postJson('/api/demographics', [
+            'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'fiscal_month_id' => $this->fiscalMonth->id,
+            'total_members' => 100,
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertDatabaseMissing('church_demographics', ['territory_id' => $this->myChurch->id]);
+    }
+
+    public function test_yearly_church_can_submit_with_no_period_field_at_all(): void
+    {
+        Sanctum::actingAs($this->pastor);
+        $this->putJson("/api/churches/{$this->myChurch->id}/entry-mode", ['demographics_mode' => 'yearly']);
+
+        $response = $this->postJson('/api/demographics', [
+            'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'total_members' => 100,
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('church_demographics', [
+            'territory_id' => $this->myChurch->id,
+            'fiscal_month_id' => null,
+            'fiscal_semi_annual_id' => null,
+        ]);
+    }
+
+    public function test_duplicate_submission_for_the_same_half_year_is_rejected(): void
+    {
+        Sanctum::actingAs($this->pastor);
+        $this->putJson("/api/churches/{$this->myChurch->id}/entry-mode", ['demographics_mode' => 'half_yearly']);
+
+        // FiscalYear::create() auto-generates its own quarters/semi-annuals
+        // (see FiscalYear::boot()) - no need to create one here.
+        $h1 = FiscalSemiAnnual::where('fiscal_year_id', $this->fiscalYear->id)->where('number', 1)->firstOrFail();
+        ChurchDemographic::create([
+            'territory_type' => 'church', 'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id, 'fiscal_semi_annual_id' => $h1->id,
+        ]);
+
+        $response = $this->postJson('/api/demographics', [
+            'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'fiscal_semi_annual_id' => $h1->id,
+        ]);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_duplicate_submission_for_the_same_year_is_rejected(): void
+    {
+        Sanctum::actingAs($this->pastor);
+        $this->putJson("/api/churches/{$this->myChurch->id}/entry-mode", ['demographics_mode' => 'yearly']);
+
+        ChurchDemographic::create([
+            'territory_type' => 'church', 'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
+        ]);
+
+        $response = $this->postJson('/api/demographics', [
+            'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
+        ]);
+
+        $response->assertStatus(422);
     }
 }

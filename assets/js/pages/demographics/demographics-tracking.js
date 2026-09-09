@@ -36,8 +36,16 @@ const DemographicsTracking = (function () {
     conversions_count: "New Conversions",
   };
 
+  const CADENCE_COPY = {
+    monthly: { title: "Monthly Recording", description: "This church submits one demographics report every fiscal month." },
+    half_yearly: { title: "Half-Yearly Recording", description: "This church submits one demographics report every half-year (H1/H2)." },
+    yearly: { title: "Yearly Recording", description: "This church submits one demographics report per fiscal year." },
+  };
+
   let currentRecordId = null;
   let currentStatus = "draft";
+  /** monthly / half_yearly / yearly - this church's configured recording cadence, read once at load. */
+  let demographicsMode = "monthly";
 
   function init() {
     Object.assign(USER_TERRITORY, DemographicsUI.resolveUserTerritory(USER_TERRITORY));
@@ -45,12 +53,41 @@ const DemographicsTracking = (function () {
     wireSteppers();
     wireCompleteness();
     wireActions();
-    loadFiscalYears().then(() => {
-      if (EDIT_DEMOGRAPHIC_ID) {
-        loadForEdit(EDIT_DEMOGRAPHIC_ID);
-      }
+    loadDemographicsMode().then(() => {
+      loadFiscalYears().then(() => {
+        if (EDIT_DEMOGRAPHIC_ID) {
+          loadForEdit(EDIT_DEMOGRAPHIC_ID);
+        }
+      });
     });
     loadRecentSubmissions();
+  }
+
+  // ==========================================================================
+  // RECORDING CADENCE (read-only here - set on the Growth Overview page)
+  // ==========================================================================
+
+  async function loadDemographicsMode() {
+    const result = await DemographicsAPIHandler.getEntryMode(USER_TERRITORY.id);
+    demographicsMode = result.success ? result.data.demographics_mode : "monthly";
+    applyPeriodPickerMode();
+  }
+
+  /** Shows the Month select (monthly), the Half select (half_yearly), or neither (yearly) - and keeps `required` in sync so validateStep1() only checks the field that's actually visible. Also updates the cadence banner so the active mode is always visible at a glance, not just implied by which select is shown. */
+  function applyPeriodPickerMode() {
+    const monthWrapper = document.getElementById("fiscalMonthWrapper");
+    const halfWrapper = document.getElementById("fiscalHalfWrapper");
+    const monthSelect = document.getElementById("fiscalMonth");
+    const halfSelect = document.getElementById("fiscalHalf");
+
+    monthWrapper.style.display = demographicsMode === "monthly" ? "" : "none";
+    halfWrapper.style.display = demographicsMode === "half_yearly" ? "" : "none";
+    monthSelect.required = demographicsMode === "monthly";
+    halfSelect.required = demographicsMode === "half_yearly";
+
+    const copy = CADENCE_COPY[demographicsMode] || CADENCE_COPY.monthly;
+    document.getElementById("cadenceBannerTitle").textContent = copy.title;
+    document.getElementById("cadenceBannerDescription").textContent = copy.description;
   }
 
   // ==========================================================================
@@ -77,9 +114,15 @@ const DemographicsTracking = (function () {
     const currentYear = new Date().getFullYear();
     const defaultYear = years.find((y) => y.year === currentYear) || years[0];
     select.value = defaultYear.id;
-    await loadFiscalMonths(defaultYear.id);
+    await loadPeriodOptionsFor(defaultYear.id);
 
-    select.addEventListener("change", () => loadFiscalMonths(select.value));
+    select.addEventListener("change", () => loadPeriodOptionsFor(select.value));
+  }
+
+  /** Loads whichever period select the church's mode actually uses - a no-op for yearly, since there's nothing below Fiscal Year to pick. */
+  async function loadPeriodOptionsFor(fiscalYearId, selectPeriodId = null) {
+    if (demographicsMode === "monthly") return loadFiscalMonths(fiscalYearId, selectPeriodId);
+    if (demographicsMode === "half_yearly") return loadFiscalHalves(fiscalYearId, selectPeriodId);
   }
 
   async function loadFiscalMonths(fiscalYearId, selectMonthId = null) {
@@ -106,6 +149,34 @@ const DemographicsTracking = (function () {
     }
   }
 
+  async function loadFiscalHalves(fiscalYearId, selectHalfId = null) {
+    const select = document.getElementById("fiscalHalf");
+    select.disabled = true;
+    select.innerHTML = '<option value="">Loading...</option>';
+
+    const result = await DemographicsAPIHandler.getFiscalYear(fiscalYearId);
+    const halves = result.success ? result.data.semi_annuals || [] : [];
+
+    if (halves.length === 0) {
+      select.innerHTML = '<option value="">No half-years available</option>';
+      return;
+    }
+
+    select.innerHTML = halves
+      .sort((a, b) => a.number - b.number)
+      .map((h) => `<option value="${h.id}">${h.name}</option>`)
+      .join("");
+    select.disabled = false;
+
+    if (selectHalfId) {
+      select.value = selectHalfId;
+    } else {
+      const currentHalfNumber = new Date().getMonth() + 1 <= 6 ? 1 : 2;
+      const currentHalf = halves.find((h) => h.number === currentHalfNumber);
+      if (currentHalf) select.value = currentHalf.id;
+    }
+  }
+
   // ==========================================================================
   // STEP NAVIGATION
   // ==========================================================================
@@ -113,10 +184,19 @@ const DemographicsTracking = (function () {
   function validateStep1() {
     const fiscalYear = document.getElementById("fiscalYear");
     const fiscalMonth = document.getElementById("fiscalMonth");
+    const fiscalHalf = document.getElementById("fiscalHalf");
     const totalMembers = document.getElementById("total_members");
 
-    if (!fiscalYear.value || !fiscalMonth.value) {
-      Toast.warning("Please select a fiscal year and month");
+    if (!fiscalYear.value) {
+      Toast.warning("Please select a fiscal year");
+      return false;
+    }
+    if (demographicsMode === "monthly" && !fiscalMonth.value) {
+      Toast.warning("Please select a month");
+      return false;
+    }
+    if (demographicsMode === "half_yearly" && !fiscalHalf.value) {
+      Toast.warning("Please select a half-year");
       return false;
     }
 
@@ -175,8 +255,12 @@ const DemographicsTracking = (function () {
     const data = {
       territory_id: USER_TERRITORY.id,
       fiscal_year_id: parseInt(document.getElementById("fiscalYear").value, 10),
-      fiscal_month_id: parseInt(document.getElementById("fiscalMonth").value, 10),
     };
+    if (demographicsMode === "monthly") {
+      data.fiscal_month_id = parseInt(document.getElementById("fiscalMonth").value, 10);
+    } else if (demographicsMode === "half_yearly") {
+      data.fiscal_semi_annual_id = parseInt(document.getElementById("fiscalHalf").value, 10);
+    }
     ALL_FIELDS.forEach((field) => {
       const val = document.getElementById(field).value;
       data[field] = val === "" ? null : parseInt(val, 10);
@@ -189,7 +273,23 @@ const DemographicsTracking = (function () {
     currentStatus = record.status;
 
     document.getElementById("fiscalYear").value = record.fiscal_year_id;
-    loadFiscalMonths(record.fiscal_year_id, record.fiscal_month_id);
+
+    // A record's own period field tells us how it was actually recorded -
+    // that can differ from the church's *current* demographicsMode if the
+    // mode was changed after this record was created, so this switches the
+    // visible picker to match the record, not just whatever's configured now.
+    if (record.fiscal_semi_annual_id) {
+      demographicsMode = "half_yearly";
+      applyPeriodPickerMode();
+      loadFiscalHalves(record.fiscal_year_id, record.fiscal_semi_annual_id);
+    } else if (record.fiscal_month_id) {
+      demographicsMode = "monthly";
+      applyPeriodPickerMode();
+      loadFiscalMonths(record.fiscal_year_id, record.fiscal_month_id);
+    } else {
+      demographicsMode = "yearly";
+      applyPeriodPickerMode();
+    }
 
     ALL_FIELDS.forEach((field) => {
       const el = document.getElementById(field);

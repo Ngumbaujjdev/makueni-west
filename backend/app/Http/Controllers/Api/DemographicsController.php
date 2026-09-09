@@ -48,7 +48,7 @@ class DemographicsController extends Controller
 
         $demographics = ChurchDemographic::where('territory_type', 'church')
             ->where('territory_id', $territoryId)
-            ->with(['fiscalYear', 'fiscalMonth', 'reviewer'])
+            ->with(['fiscalYear', 'fiscalMonth', 'fiscalSemiAnnual', 'reviewer'])
             ->orderByDesc('fiscal_year_id')
             ->orderByDesc('fiscal_month_id')
             ->get();
@@ -71,7 +71,7 @@ class DemographicsController extends Controller
             ], 403);
         }
 
-        $demographic->load(['fiscalYear', 'fiscalMonth', 'reviewer', 'creator']);
+        $demographic->load(['fiscalYear', 'fiscalMonth', 'fiscalSemiAnnual', 'reviewer', 'creator']);
 
         return response()->json([
             'success' => true,
@@ -99,7 +99,8 @@ class DemographicsController extends Controller
         $validator = Validator::make($request->all(), [
             'territory_id' => 'required|integer',
             'fiscal_year_id' => 'required|exists:fiscal_years,id',
-            'fiscal_month_id' => 'required|exists:fiscal_months,id',
+            'fiscal_month_id' => 'nullable|exists:fiscal_months,id',
+            'fiscal_semi_annual_id' => 'nullable|exists:fiscal_semi_annuals,id',
             'total_members' => 'nullable|integer|min:0',
             'male_count' => 'nullable|integer|min:0',
             'female_count' => 'nullable|integer|min:0',
@@ -135,17 +136,30 @@ class DemographicsController extends Controller
             ], 403);
         }
 
+        $church = Church::find($data['territory_id']);
+        $mode = $church?->getDemographicsMode() ?? 'half_yearly';
+
+        if ($periodError = $this->validatePeriodForMode($data, $mode)) {
+            return response()->json([
+                'success' => false,
+                'status' => 422,
+                'message' => $periodError,
+            ], 422);
+        }
+
         $existing = ChurchDemographic::where('territory_type', 'church')
             ->where('territory_id', $data['territory_id'])
             ->where('fiscal_year_id', $data['fiscal_year_id'])
-            ->where('fiscal_month_id', $data['fiscal_month_id'])
+            ->when($mode === 'monthly', fn ($q) => $q->where('fiscal_month_id', $data['fiscal_month_id']))
+            ->when($mode === 'half_yearly', fn ($q) => $q->where('fiscal_semi_annual_id', $data['fiscal_semi_annual_id']))
+            ->when($mode === 'yearly', fn ($q) => $q->whereNull('fiscal_month_id')->whereNull('fiscal_semi_annual_id'))
             ->first();
 
         if ($existing) {
             return response()->json([
                 'success' => false,
                 'status' => 422,
-                'message' => 'A demographics submission already exists for this month. Update it instead.',
+                'message' => 'A demographics submission already exists for this period. Update it instead.',
                 'data' => $existing,
             ], 422);
         }
@@ -157,7 +171,7 @@ class DemographicsController extends Controller
             $data['updated_by'] = $user->id;
 
             $demographic = ChurchDemographic::create($data);
-            $demographic->load(['fiscalYear', 'fiscalMonth']);
+            $demographic->load(['fiscalYear', 'fiscalMonth', 'fiscalSemiAnnual']);
 
             return response()->json([
                 'success' => true,
@@ -244,7 +258,7 @@ class DemographicsController extends Controller
         }
 
         $demographic->update($data);
-        $demographic->load(['fiscalYear', 'fiscalMonth']);
+        $demographic->load(['fiscalYear', 'fiscalMonth', 'fiscalSemiAnnual']);
 
         return response()->json([
             'success' => true,
@@ -253,6 +267,26 @@ class DemographicsController extends Controller
             'data' => $demographic,
             'warnings' => $this->buildValidationWarnings($demographic),
         ]);
+    }
+
+    /**
+     * A submission's period must match the church's configured
+     * demographics_mode exactly - not a soft warning like
+     * buildValidationWarnings() below, since a mismatched period would
+     * otherwise silently corrupt every rollup that groups by mode later.
+     * Returns an error message, or null when the period is valid for the mode.
+     */
+    private function validatePeriodForMode(array $data, string $mode): ?string
+    {
+        $hasMonth = ! empty($data['fiscal_month_id']);
+        $hasSemiAnnual = ! empty($data['fiscal_semi_annual_id']);
+
+        return match ($mode) {
+            'monthly' => $hasMonth && ! $hasSemiAnnual ? null : 'This church records demographics monthly - fiscal_month_id is required.',
+            'half_yearly' => $hasSemiAnnual && ! $hasMonth ? null : 'This church records demographics half-yearly - fiscal_semi_annual_id is required.',
+            'yearly' => ! $hasMonth && ! $hasSemiAnnual ? null : 'This church records demographics yearly - neither fiscal_month_id nor fiscal_semi_annual_id should be set.',
+            default => 'Unrecognized demographics recording mode.',
+        };
     }
 
     /**
@@ -480,15 +514,21 @@ class DemographicsController extends Controller
             'success' => true,
             'status' => 200,
             'message' => 'Entry mode retrieved successfully',
-            'data' => ['attendance_mode' => $church->getAttendanceMode()],
+            'data' => [
+                'attendance_mode' => $church->getAttendanceMode(),
+                'demographics_mode' => $church->getDemographicsMode(),
+            ],
         ]);
     }
 
     /**
-     * Set the caller's own church's entry-mode setting - 'weekly_and_monthly'
-     * (default) or 'monthly_only', for churches with unreliable internet
-     * where weekly attendance entry isn't realistic. See the module plan's
-     * "Data Model Changes" section.
+     * Set the caller's own church's entry-mode setting(s) - either or both
+     * of: attendance_mode ('weekly_and_monthly' default or 'monthly_only',
+     * for churches with unreliable internet where weekly attendance entry
+     * isn't realistic) and demographics_mode ('monthly', 'half_yearly'
+     * default, or 'yearly' - membership composition doesn't change week to
+     * week the way attendance does, so most churches don't need monthly
+     * submissions). See the module plan's "Data Model Changes" section.
      */
     public function updateEntryMode(Request $request, Church $church)
     {
@@ -511,7 +551,8 @@ class DemographicsController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'attendance_mode' => 'required|in:weekly_and_monthly,monthly_only',
+            'attendance_mode' => 'required_without:demographics_mode|in:weekly_and_monthly,monthly_only',
+            'demographics_mode' => 'required_without:attendance_mode|in:monthly,half_yearly,yearly',
         ]);
 
         if ($validator->fails()) {
@@ -523,16 +564,20 @@ class DemographicsController extends Controller
             ], 422);
         }
 
-        $church->metadata = array_merge($church->metadata ?? [], [
+        $church->metadata = array_merge($church->metadata ?? [], array_filter([
             'attendance_mode' => $request->input('attendance_mode'),
-        ]);
+            'demographics_mode' => $request->input('demographics_mode'),
+        ], fn ($value) => $value !== null));
         $church->save();
 
         return response()->json([
             'success' => true,
             'status' => 200,
             'message' => 'Entry mode updated successfully',
-            'data' => ['attendance_mode' => $church->getAttendanceMode()],
+            'data' => [
+                'attendance_mode' => $church->getAttendanceMode(),
+                'demographics_mode' => $church->getDemographicsMode(),
+            ],
         ]);
     }
 

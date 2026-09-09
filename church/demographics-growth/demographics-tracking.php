@@ -115,6 +115,12 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
 
                                 <?= renderCompletenessBar('formCompleteness') ?>
 
+                                <div class="alert alert-primary mb-3" id="cadenceBanner">
+                                    <i class="ri-calendar-2-line me-2"></i>
+                                    <strong id="cadenceBannerTitle">Loading...</strong>
+                                    <span class="d-block fs-13 mt-1" id="cadenceBannerDescription"></span>
+                                </div>
+
                                 <form id="demographicsForm">
                                     <div class="tab-content">
 
@@ -132,9 +138,15 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                                                         <option value="">Loading fiscal years...</option>
                                                     </select>
                                                 </div>
-                                                <div class="col-md-6">
+                                                <div class="col-md-6" id="fiscalMonthWrapper">
                                                     <label for="fiscalMonth" class="form-label">Month <span class="text-danger">*</span></label>
                                                     <select class="form-select" id="fiscalMonth" required disabled>
+                                                        <option value="">Select fiscal year first</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6" id="fiscalHalfWrapper" style="display: none;">
+                                                    <label for="fiscalHalf" class="form-label">Half <span class="text-danger">*</span></label>
+                                                    <select class="form-select" id="fiscalHalf" required disabled>
                                                         <option value="">Select fiscal year first</option>
                                                     </select>
                                                 </div>
