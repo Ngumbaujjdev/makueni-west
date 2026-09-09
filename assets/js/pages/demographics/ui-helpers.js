@@ -842,6 +842,7 @@ const DemographicsUI = (function () {
     initSteppers,
     renderSubmissionsRows,
     renderDemographicDetailTable,
+    demographicPeriodLabel,
     updateCompletenessBar,
   };
 })();
