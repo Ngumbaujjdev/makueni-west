@@ -96,15 +96,15 @@ class Church extends Territory
     }
 
     /**
-     * Demographics recording cadence: 'monthly' (default - matches existing
-     * behavior for every church that hasn't explicitly opted into a lower
-     * cadence), 'half_yearly', or 'yearly' - membership composition doesn't
-     * change week to week the way attendance does, so most churches don't
-     * *need* monthly submissions, but nothing switches them automatically.
-     * Self-service, set by the Pastor. See docs/specs/demographics-module-spec.md.
+     * Demographics recording cadence: 'half_yearly' (default, 2026-09-09 -
+     * membership composition doesn't change week to week the way attendance
+     * does, so monthly submissions are unnecessary burden by default),
+     * 'monthly', or 'yearly'. Self-service, set by the Pastor via Settings
+     * > Demographics Settings > Recording Cadence. See
+     * docs/specs/demographics-module-spec.md.
      */
     public function getDemographicsMode(): string
     {
-        return $this->metadata['demographics_mode'] ?? 'monthly';
+        return $this->metadata['demographics_mode'] ?? 'half_yearly';
     }
 }
