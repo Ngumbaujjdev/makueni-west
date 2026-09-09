@@ -61,6 +61,8 @@ const DemographicsTracking = (function () {
       loadFiscalYears().then(() => {
         if (EDIT_DEMOGRAPHIC_ID) {
           loadForEdit(EDIT_DEMOGRAPHIC_ID);
+        } else {
+          loadPreloadSeed();
         }
       });
     });
@@ -491,6 +493,54 @@ const DemographicsTracking = (function () {
   function wireActions() {
     document.getElementById("saveDraftBtn").addEventListener("click", handleSaveDraft);
     document.getElementById("submitBtn").addEventListener("click", handleSubmit);
+    document.getElementById("preloadClearBtn").addEventListener("click", clearPreload);
+  }
+
+  // ==========================================================================
+  // PRELOAD PREVIOUS NUMBERS (new entry only - loadForEdit() untouched)
+  //
+  // Membership composition barely moves period to period, so a brand-new
+  // submission starts from the last known numbers instead of blank/0 - just
+  // nudge a few up or down instead of retyping everything. Only STEP1_FIELDS
+  // (composition, a real current-state snapshot) preload - STEP2_FIELDS
+  // (this period's changes/activities) never do, since those are inherently
+  // period-specific deltas that last period's numbers say nothing about.
+  // ==========================================================================
+
+  async function loadPreloadSeed() {
+    const result = await DemographicsAPIHandler.getDemographics(USER_TERRITORY.id);
+    if (!result.success || !result.data || result.data.length === 0) return;
+
+    // Prefer confirmed (approved) numbers over an unconfirmed draft; among
+    // those, the most recently recorded - not an attempt to rank monthly vs
+    // half-yearly vs yearly periods against each other, which has no single
+    // well-defined ordering. This is "the last real numbers we have."
+    const approved = result.data.filter((r) => r.status === "approved");
+    const pool = approved.length ? approved : result.data;
+    const seed = pool.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+    if (!seed) return;
+
+    STEP1_FIELDS.forEach((field) => {
+      const el = document.getElementById(field);
+      if (el && seed[field] !== undefined && seed[field] !== null) {
+        el.value = seed[field];
+      }
+    });
+
+    updateCompleteness();
+
+    document.getElementById("preloadNoticeText").textContent =
+      `Pre-filled from ${DemographicsUI.demographicPeriodLabel(seed)} - review and adjust the numbers below.`;
+    document.getElementById("preloadNotice").classList.remove("d-none");
+  }
+
+  function clearPreload() {
+    STEP1_FIELDS.forEach((field) => {
+      const el = document.getElementById(field);
+      if (el) el.value = "";
+    });
+    updateCompleteness();
+    document.getElementById("preloadNotice").classList.add("d-none");
   }
 
   // ==========================================================================
