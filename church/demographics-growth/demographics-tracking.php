@@ -165,11 +165,11 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                                                 <h6 class="fw-semibold text-primary mb-1"><i class="ri-group-line me-1"></i>Whole Church Membership</h6>
                                                 <p class="fs-12 text-body mb-3">Overall congregation counts, split by gender and age bracket.</p>
                                                 <div class="row gy-3">
-                                                    <div class="col-md-4"><?= renderStepper('total_members', ['label' => 'Total Members', 'required' => true]) ?></div>
-                                                    <div class="col-md-4"><?= renderStepper('male_count', ['label' => 'Male']) ?></div>
-                                                    <div class="col-md-4"><?= renderStepper('female_count', ['label' => 'Female']) ?></div>
-                                                    <div class="col-md-4"><?= renderStepper('youth_count', ['label' => "Youth (13-35)"]) ?></div>
-                                                    <div class="col-md-4"><?= renderStepper('seniors_count', ['label' => 'Seniors']) ?></div>
+                                                    <div class="col-md-4"><?= renderStepper('total_members', ['label' => 'Total Members', 'required' => true, 'placeholder' => 634]) ?></div>
+                                                    <div class="col-md-4"><?= renderStepper('male_count', ['label' => 'Male', 'placeholder' => 300]) ?></div>
+                                                    <div class="col-md-4"><?= renderStepper('female_count', ['label' => 'Female', 'placeholder' => 334]) ?></div>
+                                                    <div class="col-md-4"><?= renderStepper('youth_count', ['label' => "Youth (13-35)", 'placeholder' => 220]) ?></div>
+                                                    <div class="col-md-4"><?= renderStepper('seniors_count', ['label' => 'Seniors (60+)', 'placeholder' => 60]) ?></div>
                                                 </div>
                                             </div>
 
@@ -177,8 +177,8 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                                                 <h6 class="fw-semibold text-warning mb-1"><i class="ri-team-line me-1"></i>Fellowship Groups</h6>
                                                 <p class="fs-12 text-body mb-3">Members active in the Women's or Men's fellowship ministry.</p>
                                                 <div class="row gy-3">
-                                                    <div class="col-md-4"><?= renderStepper('womens_fellowship_count', ['label' => "Women's Fellowship"]) ?></div>
-                                                    <div class="col-md-4"><?= renderStepper('mens_fellowship_count', ['label' => "Men's Fellowship"]) ?></div>
+                                                    <div class="col-md-4"><?= renderStepper('womens_fellowship_count', ['label' => "Women's Fellowship", 'placeholder' => 150]) ?></div>
+                                                    <div class="col-md-4"><?= renderStepper('mens_fellowship_count', ['label' => "Men's Fellowship", 'placeholder' => 90]) ?></div>
                                                 </div>
                                             </div>
 
@@ -186,8 +186,8 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                                                 <h6 class="fw-semibold text-success mb-1"><i class="ri-book-read-line me-1"></i>Sunday School</h6>
                                                 <p class="fs-12 text-body mb-3">Children currently enrolled in Sunday School, by gender.</p>
                                                 <div class="row gy-3">
-                                                    <div class="col-md-4"><?= renderStepper('sunday_school_male_count', ['label' => 'Sunday School (Male)']) ?></div>
-                                                    <div class="col-md-4"><?= renderStepper('sunday_school_female_count', ['label' => 'Sunday School (Female)']) ?></div>
+                                                    <div class="col-md-4"><?= renderStepper('sunday_school_male_count', ['label' => 'Sunday School (Male)', 'placeholder' => 70]) ?></div>
+                                                    <div class="col-md-4"><?= renderStepper('sunday_school_female_count', ['label' => 'Sunday School (Female)', 'placeholder' => 65]) ?></div>
                                                 </div>
                                             </div>
 

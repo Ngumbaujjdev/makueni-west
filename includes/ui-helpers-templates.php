@@ -17,9 +17,11 @@ function renderStepper(string $fieldId, array $opts = []): string
     $min = $opts['min'] ?? 0;
     $max = $opts['max'] ?? 99999;
     $required = !empty($opts['required']);
+    $placeholder = $opts['placeholder'] ?? null;
 
     $requiredMark = $required ? ' <span class="text-danger">*</span>' : '';
     $requiredAttr = $required ? 'required' : '';
+    $placeholderAttr = $placeholder !== null ? 'placeholder="e.g. ' . htmlspecialchars((string) $placeholder) . '"' : '';
 
     return <<<HTML
     <label for="{$fieldId}" class="form-label">{$label}{$requiredMark}</label>
@@ -28,7 +30,7 @@ function renderStepper(string $fieldId, array $opts = []): string
             <i class="ri-subtract-line"></i>
         </button>
         <input type="number" class="form-control text-center" id="{$fieldId}" name="{$fieldId}"
-               min="{$min}" max="{$max}" value="" {$requiredAttr}>
+               min="{$min}" max="{$max}" value="" {$requiredAttr} {$placeholderAttr}>
         <button class="btn btn-outline-primary stepper-btn" type="button" data-stepper-target="{$fieldId}" data-stepper-dir="1">
             <i class="ri-add-line"></i>
         </button>
