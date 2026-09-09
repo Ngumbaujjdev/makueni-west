@@ -515,10 +515,12 @@ const DemographicsTracking = (function () {
       return (b.fiscal_month?.number || 0) - (a.fiscal_month?.number || 0);
     });
 
-    // onView (not onEdit) for every row - loadForEdit()/applyEditLock() already
-    // renders the full submission read-only when status isn't draft/changes_requested,
-    // so one "View" button works whether or not the row is actually editable.
-    tbody.innerHTML = DemographicsUI.renderSubmissionsRows(rows, { onView: "DemographicsTracking.loadForEdit" });
+    // View always navigates to the dashboard-style report page; Edit (draft/
+    // changes_requested only) still opens the same-page wizard as before.
+    tbody.innerHTML = DemographicsUI.renderSubmissionsRows(rows, {
+      onView: "DemographicsTracking.viewSubmission",
+      onEdit: "DemographicsTracking.loadForEdit",
+    });
 
     DemographicsUI.renderFilterToolbar("submissionsFilterToolbar", {
       searchPlaceholder: "Search submissions...",
@@ -561,7 +563,11 @@ const DemographicsTracking = (function () {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  return { init, loadForEdit };
+  function viewSubmission(id) {
+    window.location.href = `view-submission.php?id=${id}`;
+  }
+
+  return { init, loadForEdit, viewSubmission };
 })();
 
 window.DemographicsTracking = DemographicsTracking;
