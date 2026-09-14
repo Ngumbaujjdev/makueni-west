@@ -159,7 +159,12 @@ const DemographicsOverview = (function () {
     // other card here that needs one; the rest are already atomic counts,
     // and Total Members' own split is already shown by the Gender Split
     // donut right below, so repeating it there would just be clutter).
-    const sundaySchoolSublabel = (row) => (row ? `${row.sunday_school_male_count ?? 0} Male &middot; ${row.sunday_school_female_count ?? 0} Female` : "");
+    // Colored to match the Gender Split donut's own Male/Female convention
+    // (teal/gold, #2CA4BF/#F2BE22) rather than plain text-body - the two
+    // halves of a gender split should read the same way everywhere on this
+    // page.
+    const sundaySchoolSublabel = (row) =>
+      row ? `<span class="text-primary">${row.sunday_school_male_count ?? 0} Male</span> &middot; <span class="text-warning">${row.sunday_school_female_count ?? 0} Female</span>` : "";
 
     container.innerHTML = cards
       .map((c) => {
