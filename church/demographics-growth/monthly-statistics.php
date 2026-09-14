@@ -73,14 +73,14 @@ $breadcrumbs = [
 
                 <div class="card custom-card">
                     <div class="card-header">
-                        <div class="card-title"><i class="ri-table-line me-2 text-primary"></i>Monthly Breakdown</div>
+                        <div class="card-title"><i class="ri-table-line me-2 text-primary"></i>Period Breakdown</div>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th class="fw-semibold text-dark">Month</th>
+                                        <th class="fw-semibold text-dark">Period</th>
                                         <th class="fw-semibold text-dark">Status</th>
                                         <th class="fw-semibold text-dark text-end">Total Members</th>
                                         <th class="fw-semibold text-dark text-end">Male</th>
@@ -129,9 +129,9 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
     <script src="<?= SITE_URL ?>/assets/libs/apexcharts/apexcharts.min.js"></script>
 
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/monthly-statistics.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js<?= assetVersion('assets/js/pages/demographics/api-handler.js') ?>"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js<?= assetVersion('assets/js/pages/demographics/ui-helpers.js') ?>"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/monthly-statistics.js<?= assetVersion('assets/js/pages/demographics/monthly-statistics.js') ?>"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => window.MonthlyStatistics.init());
     </script>

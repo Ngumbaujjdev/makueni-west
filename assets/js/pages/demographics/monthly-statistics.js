@@ -5,11 +5,13 @@
  * Diocese Management System - Makueni West
  *
  * Plain table companion to Spiritual Activities' charts - one row per
- * fiscal month, straight from the same DemographicsReportWidgetService
- * response (`data.months`). A month with no approved submission shows "-"
- * on every numeric column, never a fabricated 0 - the service itself
- * already enforces this (see its own docblock), this file just renders
- * what it's given.
+ * reporting period, straight from the same (now cadence-aware)
+ * DemographicsReportWidgetService response (`data.months` - still called
+ * "months" in the API response for backward compatibility, but its rows
+ * are Jan-Dec for a monthly church, H1/H2 for half-yearly, or one row for
+ * yearly). A period with no approved submission shows "-" on every numeric
+ * column, never a fabricated 0 - the service itself already enforces this
+ * (see its own docblock), this file just renders what it's given.
  *
  * Dependencies: DemographicsAPIHandler, DemographicsUI
  * ============================================================================
@@ -64,8 +66,15 @@ const MonthlyStatistics = (function () {
     const result = await DemographicsAPIHandler.getDemographicsReportWidgets(USER_TERRITORY.id, { fiscal_year_id: fiscalYearId });
     const data = result.success ? result.data : null;
 
-    DemographicsUI.renderWidgetCardsRow("statCardsRow", data?.stats || []);
+    renderStatCards(data?.stats || []);
     renderTable(data?.months || []);
+  }
+
+  /** Solid-icon cards, matching every other Demographics page now - the backend already sends {label, value, icon, color} per card, just mapped through the shared renderer instead of the pale-tint renderWidgetCard. */
+  function renderStatCards(stats) {
+    const container = document.getElementById("statCardsRow");
+    if (!container) return;
+    container.innerHTML = stats.map((c) => `<div class="col-xl-4 col-lg-6 col-md-6">${DemographicsUI.renderSolidStatCard(c)}</div>`).join("");
   }
 
   function renderTable(months) {
@@ -78,7 +87,11 @@ const MonthlyStatistics = (function () {
 
     tbody.innerHTML = months
       .map((m) => {
-        const cells = COLUMNS.map((c) => `<td class="text-end">${m[c] ?? "-"}</td>`).join("");
+        // total_members is the headline number in a 14-column table - bold
+        // like every other numeric-column convention this session
+        // established, so it doesn't read at the same weight as everything
+        // else next to it.
+        const cells = COLUMNS.map((c) => `<td class="text-end${c === "total_members" ? " fw-semibold" : ""}">${m[c] ?? "-"}</td>`).join("");
         return `
           <tr>
             <td class="fw-semibold">${m.month}</td>
