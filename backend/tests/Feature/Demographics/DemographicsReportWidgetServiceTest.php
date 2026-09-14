@@ -5,6 +5,7 @@ namespace Tests\Feature\Demographics;
 use App\Models\Church;
 use App\Models\ChurchDemographic;
 use App\Models\FiscalMonth;
+use App\Models\FiscalSemiAnnual;
 use App\Models\FiscalYear;
 use App\Models\Role;
 use App\Models\User;
@@ -51,7 +52,12 @@ class DemographicsReportWidgetServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->myChurch = Church::create(['name' => 'My Church', 'code' => 'MY-CH', 'territory_type' => 'church', 'level' => 4]);
+        // demographics_mode explicitly 'monthly' - the widget service now
+        // branches on this (previously it ignored cadence and always
+        // assumed monthly), and Church::getDemographicsMode() defaults to
+        // 'half_yearly' when unset, so this test's monthly assertions need
+        // to be explicit about the mode they're exercising.
+        $this->myChurch = Church::create(['name' => 'My Church', 'code' => 'MY-CH', 'territory_type' => 'church', 'level' => 4, 'metadata' => ['demographics_mode' => 'monthly']]);
         $this->otherChurch = Church::create(['name' => 'Other Church', 'code' => 'OTHER-CH', 'territory_type' => 'church', 'level' => 4]);
 
         $this->fiscalYear = FiscalYear::create(['year' => 2026, 'start_date' => '2026-01-01', 'end_date' => '2026-12-31']);
@@ -172,6 +178,76 @@ class DemographicsReportWidgetServiceTest extends TestCase
         $this->assertEquals(0, $baptisms['Total This Year']['value']);
         $this->assertEquals('-', $baptisms['Average per Month']['value']);
         $this->assertEquals('-', $baptisms['Best Month']['value']);
+    }
+
+    public function test_widgets_use_half_yearly_periods_for_a_half_yearly_church(): void
+    {
+        $this->myChurch->update(['metadata' => ['demographics_mode' => 'half_yearly']]);
+
+        // FiscalYear::create() auto-generates its own semi-annuals (see
+        // FiscalYear::boot()) - no need to create them here.
+        $h1 = FiscalSemiAnnual::where('fiscal_year_id', $this->fiscalYear->id)->where('number', 1)->firstOrFail();
+        $h2 = FiscalSemiAnnual::where('fiscal_year_id', $this->fiscalYear->id)->where('number', 2)->firstOrFail();
+
+        ChurchDemographic::create([
+            'territory_type' => 'church', 'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id, 'fiscal_semi_annual_id' => $h1->id,
+            'status' => 'approved', 'total_members' => 100,
+            'baptisms_count' => 2, 'communion_participants_count' => 50, 'conversions_count' => 1, 'transferred_out_count' => 0,
+        ]);
+
+        Sanctum::actingAs($this->pastor);
+
+        $response = $this->getJson('/api/demographics-reports/widgets?'.http_build_query([
+            'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
+        ]));
+
+        $response->assertStatus(200);
+        $this->assertCount(2, $response->json('data.months'));
+
+        $months = collect($response->json('data.months'))->keyBy('month');
+        $this->assertEquals('approved', $months[$h1->name]['status']);
+        $this->assertEquals(100, $months[$h1->name]['total_members']);
+        $this->assertEquals('not_submitted', $months[$h2->name]['status']);
+        $this->assertNull($months[$h2->name]['total_members']);
+
+        $stats = collect($response->json('data.stats'))->keyBy('label');
+        $this->assertEquals('1 of 2', $stats['Halves Reported']['value']);
+        $this->assertEquals(100, $stats['Latest Total Members']['value']);
+
+        $spiritual = collect($response->json('data.spiritual'))->keyBy('metric');
+        $baptisms = collect($spiritual['baptisms_count']['stats'])->keyBy('label');
+        $this->assertEquals(2, $baptisms['Total This Year']['value']);
+        $this->assertEquals("{$h1->name} (2)", $baptisms['Best Half']['value']);
+        $this->assertEquals([$h1->name, $h2->name], $spiritual['baptisms_count']['chart']['categories']);
+    }
+
+    public function test_widgets_use_a_single_yearly_period_for_a_yearly_church(): void
+    {
+        $this->myChurch->update(['metadata' => ['demographics_mode' => 'yearly']]);
+
+        ChurchDemographic::create([
+            'territory_type' => 'church', 'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'status' => 'approved', 'total_members' => 300,
+        ]);
+
+        Sanctum::actingAs($this->pastor);
+
+        $response = $this->getJson('/api/demographics-reports/widgets?'.http_build_query([
+            'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
+        ]));
+
+        $response->assertStatus(200);
+        $months = collect($response->json('data.months'));
+        $this->assertCount(1, $months);
+        $this->assertEquals("Year {$this->fiscalYear->year}", $months->first()['month']);
+        $this->assertEquals(300, $months->first()['total_members']);
+
+        $stats = collect($response->json('data.stats'))->keyBy('label');
+        $this->assertEquals('1 of 1', $stats['Years Reported']['value']);
     }
 
     public function test_pastor_cannot_view_widgets_for_another_church(): void
