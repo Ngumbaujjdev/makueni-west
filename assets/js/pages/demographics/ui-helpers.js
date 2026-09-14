@@ -223,6 +223,64 @@ const DemographicsUI = (function () {
       .join("");
   }
 
+  // ==========================================================================
+  // SOLID-ICON KPI CARD (View Submission, Growth Overview)
+  //
+  // Promoted from view-submission.js once Growth Overview needed the exact
+  // same card a second time - label + solid bg-${color} icon avatar (not
+  // renderWidgetCard's pale tint, which stays as-is for Attendance Reports),
+  // a large bold value, and an absolute-diff trend badge. trendFor() is
+  // null-safe on purpose: a genuine 0 in the previous period must still
+  // produce a real trend, not be mistaken for "no data to compare."
+  // ==========================================================================
+
+  /**
+   * null when there's no previous value to compare against - callers just
+   * skip the trend. Checks for null/undefined explicitly (not truthiness) so
+   * a genuine 0 in the previous period still produces a real trend.
+   */
+  function trendFor(current, previousValue) {
+    return previousValue == null ? null : { diff: current - previousValue };
+  }
+
+  /**
+   * @param {object} opts {icon, label, value, sublabel, color, trend}
+   *   Label + solid bg-${color} icon avatar (top row), a large bold value,
+   *   then either a green/red trend badge (`trend: {diff}` - same
+   *   bg-${color}-transparent arrow-pill convention as renderWidgetCard()/
+   *   the Recent Submissions table) or a plain sublabel when there's no
+   *   period to compare against.
+   */
+  function renderSolidStatCard({ icon, label, value, sublabel = "", color = "primary", trend = null }) {
+    let trendHtml = "";
+    if (trend) {
+      if (trend.diff === 0) {
+        trendHtml = `<span class="fs-12 text-body fw-semibold">No change vs last period</span>`;
+      } else {
+        const trendColor = trend.diff > 0 ? "success" : "danger";
+        const arrow = trend.diff > 0 ? "ri-arrow-up-line" : "ri-arrow-down-line";
+        const sign = trend.diff > 0 ? "+" : "-";
+        trendHtml = `<span class="badge bg-${trendColor}-transparent text-${trendColor} fs-11"><i class="${arrow}"></i> ${sign}${Math.abs(trend.diff)} vs last period</span>`;
+      }
+    } else if (sublabel) {
+      trendHtml = `<span class="fs-12 text-body fw-semibold">${sublabel}</span>`;
+    }
+
+    return `
+      <div class="card custom-card">
+        <div class="card-body">
+          <div class="d-flex align-items-start justify-content-between mb-2">
+            <span class="fs-13 fw-semibold text-body">${label}</span>
+            <span class="avatar avatar-sm avatar-rounded bg-${color} text-white flex-shrink-0">
+              <i class="${icon} fs-16"></i>
+            </span>
+          </div>
+          <h2 class="fw-bold mb-1">${value}</h2>
+          ${trendHtml}
+        </div>
+      </div>`;
+  }
+
   /**
    * General trend chart wrapper - area or column, single series or a
    * handful, one brand color by default (not a forced two-color scheme).
@@ -725,6 +783,26 @@ const DemographicsUI = (function () {
     return row.fiscal_year?.year ? `Year ${row.fiscal_year.year}` : "-";
   }
 
+  /**
+   * Newest-first sort across any mix of monthly/half-yearly/yearly rows -
+   * fiscal_year.year desc, then a cadence-agnostic period number desc
+   * (fiscal_semi_annual.number for half-yearly rows, fiscal_month.number for
+   * monthly, 0 for yearly/either-missing). Sorting by fiscal_month.number
+   * alone (an earlier, duplicated inline comparator) always evaluated to 0
+   * for half-yearly rows, so H1 and H2 of the same year didn't reliably
+   * order against each other - this is the one correct version, shared by
+   * every page that needs "most recent submission first."
+   */
+  function sortSubmissionsNewestFirst(rows) {
+    const periodNumber = (r) => r.fiscal_semi_annual?.number ?? r.fiscal_month?.number ?? 0;
+    return [...rows].sort((a, b) => {
+      const ay = a.fiscal_year?.year || 0;
+      const by = b.fiscal_year?.year || 0;
+      if (ay !== by) return by - ay;
+      return periodNumber(b) - periodNumber(a);
+    });
+  }
+
   /** "Mar 14, 2026" from a row's created_at - blank (not "Invalid Date") if the field is missing or unparseable. */
   function formatSubmittedDate(createdAt) {
     if (!createdAt) return "";
@@ -877,6 +955,8 @@ const DemographicsUI = (function () {
     renderStatCardsRow,
     renderWidgetCard,
     renderWidgetCardsRow,
+    renderSolidStatCard,
+    trendFor,
     renderTrendChart,
     renderTimeline,
     renderPillLegend,
@@ -895,6 +975,7 @@ const DemographicsUI = (function () {
     renderSubmissionsRows,
     renderDemographicDetailTable,
     demographicPeriodLabel,
+    sortSubmissionsNewestFirst,
     updateCompletenessBar,
   };
 })();
