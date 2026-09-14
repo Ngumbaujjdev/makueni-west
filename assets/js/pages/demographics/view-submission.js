@@ -34,36 +34,71 @@ const DemographicsViewSubmission = (function () {
     }
 
     const record = result.data;
+    const previous = await loadPreviousRecord(record);
+
     renderHeader(record);
-    renderStats(record);
+    renderStats(record, previous);
     renderCharts(record);
-    renderActivityStats(record);
-    loadLeadership(record);
+    renderActivityStats(record, previous);
+    loadLeadership(record, previous);
   }
 
   /**
-   * @param {object} opts {icon, label, value, sublabel, color} - solid
-   *   bg-${color} icon square + text-white icon, not the pale
-   *   bg-${color}-transparent renderWidgetCard uses.
+   * The submission immediately before this one (same newest-first ordering
+   * used by demographics-tracking.js/index.js) - lets the stat cards show a
+   * real period-over-period trend instead of a bare number. Returns null for
+   * the oldest/only submission, which callers treat as "no trend to show."
    */
-  function renderSolidStatCard({ icon, label, value, sublabel = "", color = "primary" }) {
+  async function loadPreviousRecord(record) {
+    const result = await DemographicsAPIHandler.getDemographics(USER_TERRITORY.id);
+    if (!result.success || !result.data) return null;
+
+    const rows = result.data.sort((a, b) => {
+      const ay = a.fiscal_year?.year || 0;
+      const by = b.fiscal_year?.year || 0;
+      if (ay !== by) return by - ay;
+      return (b.fiscal_month?.number || 0) - (a.fiscal_month?.number || 0);
+    });
+
+    const index = rows.findIndex((r) => r.id === record.id);
+    return index !== -1 && rows[index + 1] ? rows[index + 1] : null;
+  }
+
+  /**
+   * @param {object} opts {icon, label, value, sublabel, color, trend}
+   *   Label + solid bg-${color} icon avatar (top row), a large bold value,
+   *   then either a green/red trend badge (`trend: {diff}` - same
+   *   bg-${color}-transparent arrow-pill convention as renderWidgetCard()/
+   *   the Recent Submissions table) or a plain sublabel when there's no
+   *   period to compare against (e.g. the Leadership card's live clergy
+   *   count, which isn't stored per submission).
+   */
+  function renderSolidStatCard({ icon, label, value, sublabel = "", color = "primary", trend = null }) {
+    let trendHtml = "";
+    if (trend) {
+      if (trend.diff === 0) {
+        trendHtml = `<span class="fs-12 text-body fw-semibold">No change vs last period</span>`;
+      } else {
+        const trendColor = trend.diff > 0 ? "success" : "danger";
+        const arrow = trend.diff > 0 ? "ri-arrow-up-line" : "ri-arrow-down-line";
+        const sign = trend.diff > 0 ? "+" : "-";
+        trendHtml = `<span class="badge bg-${trendColor}-transparent text-${trendColor} fs-11"><i class="${arrow}"></i> ${sign}${Math.abs(trend.diff)} vs last period</span>`;
+      }
+    } else if (sublabel) {
+      trendHtml = `<span class="fs-12 text-body fw-semibold">${sublabel}</span>`;
+    }
+
     return `
-      <div class="card custom-card">
+      <div class="card custom-card border-start border-4 border-${color}">
         <div class="card-body">
-          <div class="row">
-            <div class="col-xxl-3 col-xl-2 col-lg-3 col-md-3 col-sm-4 col-4 d-flex align-items-center justify-content-center ecommerce-icon px-0">
-              <span class="rounded p-3 bg-${color}">
-                <i class="${icon} fs-20 text-white"></i>
-              </span>
-            </div>
-            <div class="col-xxl-9 col-xl-10 col-lg-9 col-md-9 col-sm-8 col-8 px-0">
-              <div class="mb-2">${label}</div>
-              <div class="mb-1 fs-12">
-                <span class="text-dark fw-semibold fs-20 lh-1 vertical-bottom">${value}</span>
-              </div>
-              ${sublabel ? `<span class="fs-12 text-body fw-semibold">${sublabel}</span>` : ""}
-            </div>
+          <div class="d-flex align-items-start justify-content-between mb-2">
+            <span class="fs-13 fw-semibold text-body">${label}</span>
+            <span class="avatar avatar-sm avatar-rounded bg-${color} text-white flex-shrink-0">
+              <i class="${icon} fs-16"></i>
+            </span>
           </div>
+          <h2 class="fw-bold mb-1">${value}</h2>
+          ${trendHtml}
         </div>
       </div>`;
   }
@@ -109,16 +144,27 @@ const DemographicsViewSubmission = (function () {
       </div>` : ""}`;
   }
 
-  function renderStats(record) {
+  /**
+   * null when there's no previous value to compare against - callers just
+   * skip the trend. Checks for null/undefined explicitly (not truthiness) so
+   * a genuine 0 in the previous period (e.g. 0 baptisms last period) still
+   * produces a real trend instead of being mistaken for "no data."
+   */
+  function trendFor(current, previousValue) {
+    return previousValue == null ? null : { diff: current - previousValue };
+  }
+
+  function renderStats(record, previous) {
     const sundaySchoolCount = (record.sunday_school_male_count ?? 0) + (record.sunday_school_female_count ?? 0);
+    const prevSundaySchoolCount = previous ? (previous.sunday_school_male_count ?? 0) + (previous.sunday_school_female_count ?? 0) : null;
     const container = document.getElementById("statCardsRow");
     if (!container) return;
 
     const cards = [
-      { icon: "ri-team-line", label: "Total Members", value: record.total_members ?? 0, color: "primary" },
-      { icon: "ri-user-add-line", label: "New Members", value: record.new_members_count ?? 0, color: "success" },
-      { icon: "ri-drop-line", label: "Baptisms", value: record.baptisms_count ?? 0, color: "info" },
-      { icon: "ri-book-read-line", label: "Sunday School", value: sundaySchoolCount, color: "warning" },
+      { icon: "ri-team-line", label: "Total Members", value: record.total_members ?? 0, color: "primary", trend: trendFor(record.total_members ?? 0, previous?.total_members) },
+      { icon: "ri-user-add-line", label: "New Members", value: record.new_members_count ?? 0, color: "success", trend: trendFor(record.new_members_count ?? 0, previous?.new_members_count) },
+      { icon: "ri-drop-line", label: "Baptisms", value: record.baptisms_count ?? 0, color: "info", trend: trendFor(record.baptisms_count ?? 0, previous?.baptisms_count) },
+      { icon: "ri-book-read-line", label: "Sunday School", value: sundaySchoolCount, color: "warning", trend: trendFor(sundaySchoolCount, prevSundaySchoolCount) },
     ];
     container.innerHTML = cards.map((c) => `<div class="col-xl-3 col-lg-6 col-md-6">${renderSolidStatCard(c)}</div>`).join("");
   }
@@ -163,16 +209,16 @@ const DemographicsViewSubmission = (function () {
     }).render();
   }
 
-  function renderActivityStats(record) {
+  function renderActivityStats(record, previous) {
     const container = document.getElementById("activityStatsRow");
     if (!container) return;
 
     const cards = [
-      { icon: "ri-user-add-line", label: "New Members", value: record.new_members_count ?? 0, color: "success" },
-      { icon: "ri-user-unfollow-line", label: "Transferred Out", value: record.transferred_out_count ?? 0, color: "secondary" },
-      { icon: "ri-drop-line", label: "Baptisms", value: record.baptisms_count ?? 0, color: "info" },
-      { icon: "ri-cup-line", label: "Communion", value: record.communion_participants_count ?? 0, color: "primary" },
-      { icon: "ri-heart-line", label: "New Conversions", value: record.conversions_count ?? 0, color: "warning" },
+      { icon: "ri-user-add-line", label: "New Members", value: record.new_members_count ?? 0, color: "success", trend: trendFor(record.new_members_count ?? 0, previous?.new_members_count) },
+      { icon: "ri-user-unfollow-line", label: "Transferred Out", value: record.transferred_out_count ?? 0, color: "secondary", trend: trendFor(record.transferred_out_count ?? 0, previous?.transferred_out_count) },
+      { icon: "ri-drop-line", label: "Baptisms", value: record.baptisms_count ?? 0, color: "info", trend: trendFor(record.baptisms_count ?? 0, previous?.baptisms_count) },
+      { icon: "ri-cup-line", label: "Communion", value: record.communion_participants_count ?? 0, color: "primary", trend: trendFor(record.communion_participants_count ?? 0, previous?.communion_participants_count) },
+      { icon: "ri-heart-line", label: "New Conversions", value: record.conversions_count ?? 0, color: "warning", trend: trendFor(record.conversions_count ?? 0, previous?.conversions_count) },
     ];
 
     // Manual .col wrapping (not a fixed 4-per-row) so all 5 cards sit evenly
@@ -180,7 +226,7 @@ const DemographicsViewSubmission = (function () {
     container.innerHTML = cards.map((c) => `<div class="col">${renderSolidStatCard(c)}</div>`).join("");
   }
 
-  async function loadLeadership(record) {
+  async function loadLeadership(record, previous) {
     const card = document.getElementById("leadershipCard");
     const result = await DemographicsAPIHandler.getClergySummary(USER_TERRITORY.id);
     const counts = result.success ? result.data.counts || {} : {};
@@ -203,6 +249,7 @@ const DemographicsViewSubmission = (function () {
           label: "Sunday School Teachers",
           value: record.sunday_school_teachers_count ?? 0,
           color: "warning",
+          trend: trendFor(record.sunday_school_teachers_count ?? 0, previous?.sunday_school_teachers_count),
         })}</div>
       </div>`;
   }
