@@ -26,6 +26,12 @@ const DemographicsTracking = (function () {
     "baptisms_count", "communion_participants_count", "conversions_count",
   ];
   const ALL_FIELDS = STEP1_FIELDS.concat(STEP2_FIELDS);
+  /** Same grouping as the Step 1 boxes, reused by the Review step so the two steps read as one consistent layout instead of Review being a flat list. */
+  const REVIEW_GROUPS = {
+    wholeChurch: ["total_members", "male_count", "female_count", "youth_count", "seniors_count", "sunday_school_teachers_count"],
+    fellowship: ["womens_fellowship_count", "mens_fellowship_count"],
+    sundaySchool: ["sunday_school_male_count", "sunday_school_female_count"],
+  };
 
   const FIELD_LABELS = {
     total_members: "Total Members", male_count: "Male", female_count: "Female",
@@ -458,21 +464,21 @@ const DemographicsTracking = (function () {
   // REVIEW STEP
   // ==========================================================================
 
-  function renderFieldGrid(fields) {
-    return `<div class="row g-3">${fields
-      .map(
-        (f) => `
-      <div class="col-md-4">
-        <span class="d-block mb-1 text-body fw-semibold">${FIELD_LABELS[f]}</span>
-        <strong class="fs-16">${document.getElementById(f).value || 0}</strong>
-      </div>`,
-      )
+  /** Each field as a small colored tag/chip instead of a plain label-over-value pair - vivid text-{color} on a soft bg-{color}-transparent pill, not gray, so it reads as a deliberate tag rather than washed-out text. */
+  function renderReviewTags(fields, color) {
+    return `<div class="d-flex flex-wrap gap-2">${fields
+      .map((f) => {
+        const value = document.getElementById(f).value || 0;
+        return `<span class="badge bg-${color}-transparent text-${color} fs-13 fw-semibold px-3 py-2">${FIELD_LABELS[f]}: ${value}</span>`;
+      })
       .join("")}</div>`;
   }
 
   function renderReview() {
-    document.getElementById("reviewMembership").innerHTML = renderFieldGrid(STEP1_FIELDS);
-    document.getElementById("reviewActivities").innerHTML = renderFieldGrid(STEP2_FIELDS);
+    document.getElementById("reviewWholeChurch").innerHTML = renderReviewTags(REVIEW_GROUPS.wholeChurch, "primary");
+    document.getElementById("reviewFellowship").innerHTML = renderReviewTags(REVIEW_GROUPS.fellowship, "warning");
+    document.getElementById("reviewSundaySchool").innerHTML = renderReviewTags(REVIEW_GROUPS.sundaySchool, "success");
+    document.getElementById("reviewActivities").innerHTML = renderReviewTags(STEP2_FIELDS, "info");
   }
 
   function renderWarnings(warnings) {
