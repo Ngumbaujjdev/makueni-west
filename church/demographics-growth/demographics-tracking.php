@@ -163,7 +163,7 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
 
                                             <div class="border border-primary rounded-3 p-3 mb-3">
                                                 <h6 class="fw-semibold text-primary mb-1"><i class="ri-group-line me-1"></i>Whole Church Membership</h6>
-                                                <p class="fs-12 text-body mb-3">Overall congregation counts, split by gender and age bracket.</p>
+                                                <p class="fs-12 text-body mb-3">Overall congregation counts. Male + Female must add up to Total Members - this is the whole church's gender split, not a subgroup.</p>
                                                 <div class="row gy-3">
                                                     <div class="col-md-4"><?= renderStepper('total_members', ['label' => 'Total Members', 'required' => true, 'placeholder' => 634]) ?></div>
                                                     <div class="col-md-4"><?= renderStepper('male_count', ['label' => 'Male', 'placeholder' => 300]) ?></div>
@@ -171,6 +171,7 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                                                     <div class="col-md-4"><?= renderStepper('youth_count', ['label' => "Youth (13-35)", 'placeholder' => 220]) ?></div>
                                                     <div class="col-md-4"><?= renderStepper('seniors_count', ['label' => 'Seniors (60+)', 'placeholder' => 60]) ?></div>
                                                 </div>
+                                                <div class="mt-3 fs-13" id="wholeChurchCheck"></div>
                                             </div>
 
                                             <div class="border border-warning rounded-3 p-3 mb-3">
@@ -180,6 +181,7 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                                                     <div class="col-md-4"><?= renderStepper('womens_fellowship_count', ['label' => "Women's Fellowship", 'placeholder' => 150]) ?></div>
                                                     <div class="col-md-4"><?= renderStepper('mens_fellowship_count', ['label' => "Men's Fellowship", 'placeholder' => 90]) ?></div>
                                                 </div>
+                                                <div class="mt-3 fs-13 text-body" id="fellowshipSubtotal"></div>
                                             </div>
 
                                             <div class="border border-success rounded-3 p-3 mb-3">
@@ -189,15 +191,7 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
                                                     <div class="col-md-4"><?= renderStepper('sunday_school_male_count', ['label' => 'Sunday School (Male)', 'placeholder' => 70]) ?></div>
                                                     <div class="col-md-4"><?= renderStepper('sunday_school_female_count', ['label' => 'Sunday School (Female)', 'placeholder' => 65]) ?></div>
                                                 </div>
-                                            </div>
-
-                                            <div class="alert alert-secondary d-flex align-items-center mb-4" id="compositionTally">
-                                                <i class="ri-calculator-line fs-22 me-3 text-primary"></i>
-                                                <div>
-                                                    <span class="text-body">Sum of the fields above:</span>
-                                                    <span class="fs-18 fw-bold text-primary ms-1" id="compositionTallyValue">0</span>
-                                                    <span class="d-block fs-12 text-body mt-1">These categories can overlap (e.g. a Sunday School pupil is also counted under Male/Female), so this won't match Total Members - that's expected, not an error.</span>
-                                                </div>
+                                                <div class="mt-3 fs-13 text-body" id="sundaySchoolSubtotal"></div>
                                             </div>
 
                                             <h6 class="fw-semibold mb-3 mt-4"><i class="ri-shield-user-line me-1"></i>Leadership & Ministry Team</h6>

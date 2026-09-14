@@ -26,12 +26,6 @@ const DemographicsTracking = (function () {
     "baptisms_count", "communion_participants_count", "conversions_count",
   ];
   const ALL_FIELDS = STEP1_FIELDS.concat(STEP2_FIELDS);
-  /** Composition fields only - not total_members (the "main number" being broken down) or sunday_school_teachers_count (staffing, not membership). Used by the live tally, purely informational since these categories overlap each other. */
-  const COMPOSITION_BREAKDOWN_FIELDS = [
-    "male_count", "female_count", "youth_count",
-    "womens_fellowship_count", "mens_fellowship_count",
-    "sunday_school_male_count", "sunday_school_female_count", "seniors_count",
-  ];
 
   const FIELD_LABELS = {
     total_members: "Total Members", male_count: "Male", female_count: "Female",
@@ -298,31 +292,47 @@ const DemographicsTracking = (function () {
   }
 
   // ==========================================================================
-  // CHANGE-DIRECTION COLORING + LIVE COMPOSITION TALLY
+  // CHANGE-DIRECTION COLORING + PER-BOX SUBTOTALS
   //
   // Purely presentational feedback on top of STEP1_FIELDS - never changes
   // what gets submitted. Coloring compares each field to baselineValues
   // (captured once the fields' starting values are known - see
-  // loadPreloadSeed()/populateForm()); the tally is a plain sum of the
-  // composition fields, explicitly NOT a validation against Total Members
-  // (those categories overlap, so they'll never truly match it).
+  // loadPreloadSeed()/populateForm()).
+  //
+  // The subtotals deliberately stay inside their own box, not combined into
+  // one cross-box number - a prior version summed all 8 composition fields
+  // together and got a number (e.g. 1801) that looked like an error because
+  // Fellowship/Sunday School are subsets of Male+Female, not additional
+  // people. Male+Female is the one pair that's a true, non-overlapping split
+  // of Total Members, so that's the only place a real match/mismatch check
+  // belongs; Fellowship and Sunday School just get their own honest totals.
   // ==========================================================================
 
   function wireStep1Feedback() {
     STEP1_FIELDS.forEach((field) => {
       const input = document.getElementById(field);
-      if (input) input.addEventListener("input", () => { updateStepperColors(); updateCompositionTally(); });
+      if (input) input.addEventListener("input", updateStep1Feedback);
     });
+  }
+
+  function updateStep1Feedback() {
+    updateStepperColors();
+    updateWholeChurchCheck();
+    updateFellowshipSubtotal();
+    updateSundaySchoolSubtotal();
+  }
+
+  function fieldValue(field) {
+    const el = document.getElementById(field);
+    return el && el.value !== "" ? parseInt(el.value, 10) : 0;
   }
 
   function captureBaseline() {
     baselineValues = {};
     STEP1_FIELDS.forEach((field) => {
-      const el = document.getElementById(field);
-      baselineValues[field] = el && el.value !== "" ? parseInt(el.value, 10) : 0;
+      baselineValues[field] = fieldValue(field);
     });
-    updateStepperColors();
-    updateCompositionTally();
+    updateStep1Feedback();
   }
 
   function updateStepperColors() {
@@ -330,7 +340,7 @@ const DemographicsTracking = (function () {
       const el = document.getElementById(field);
       if (!el) return;
       const base = baselineValues[field] ?? 0;
-      const current = el.value === "" ? 0 : parseInt(el.value, 10);
+      const current = fieldValue(field);
       el.classList.remove("text-success", "text-danger", "fw-semibold");
       if (current > base) {
         el.classList.add("text-success", "fw-semibold");
@@ -340,13 +350,29 @@ const DemographicsTracking = (function () {
     });
   }
 
-  function updateCompositionTally() {
-    const sum = COMPOSITION_BREAKDOWN_FIELDS.reduce((total, field) => {
-      const el = document.getElementById(field);
-      const val = el && el.value !== "" ? parseInt(el.value, 10) : 0;
-      return total + val;
-    }, 0);
-    document.getElementById("compositionTallyValue").textContent = sum;
+  function updateWholeChurchCheck() {
+    const el = document.getElementById("wholeChurchCheck");
+    if (!el) return;
+    const total = fieldValue("total_members");
+    const genderSum = fieldValue("male_count") + fieldValue("female_count");
+    const matches = genderSum === total;
+    el.classList.toggle("text-success", matches);
+    el.classList.toggle("text-danger", !matches);
+    el.innerHTML = `<i class="ri-${matches ? "checkbox-circle" : "error-warning"}-line me-1"></i>Male + Female: <strong>${genderSum}</strong> of Total Members (${total})`;
+  }
+
+  function updateFellowshipSubtotal() {
+    const el = document.getElementById("fellowshipSubtotal");
+    if (!el) return;
+    const sum = fieldValue("womens_fellowship_count") + fieldValue("mens_fellowship_count");
+    el.textContent = `Fellowship Groups total: ${sum}`;
+  }
+
+  function updateSundaySchoolSubtotal() {
+    const el = document.getElementById("sundaySchoolSubtotal");
+    if (!el) return;
+    const sum = fieldValue("sunday_school_male_count") + fieldValue("sunday_school_female_count");
+    el.textContent = `Sunday School total: ${sum}`;
   }
 
   // ==========================================================================
