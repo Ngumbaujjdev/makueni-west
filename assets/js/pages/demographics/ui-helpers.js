@@ -151,6 +151,9 @@ const DemographicsUI = (function () {
     warning: "#F2BE22",
     danger: "#F23535",
     success: "#26bf94",
+    // Matches --info-rgb (44, 164, 191) in styles.css, which is the same
+    // value as the diocese teal - this just mirrors the CSS, not a new color.
+    info: "#2CA4BF",
   };
 
   function brandHex(color) {
@@ -869,6 +872,7 @@ const DemographicsUI = (function () {
   return {
     resolveUserTerritory,
     renderStatusBadge,
+    brandHex,
     renderStatCard,
     renderStatCardsRow,
     renderWidgetCard,
