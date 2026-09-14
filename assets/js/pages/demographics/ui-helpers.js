@@ -61,17 +61,23 @@ const DemographicsUI = (function () {
   // ==========================================================================
 
   const STATUS_BADGES = {
-    draft: { cls: "bg-secondary", label: "Draft", icon: "ri-draft-line" },
-    submitted: { cls: "bg-primary", label: "Submitted", icon: "ri-send-plane-line" },
-    approved: { cls: "bg-success", label: "Approved", icon: "ri-checkbox-circle-line" },
-    flagged: { cls: "bg-warning text-dark", label: "Flagged", icon: "ri-flag-line" },
-    changes_requested: { cls: "bg-danger", label: "Changes Requested", icon: "ri-edit-line" },
-    not_submitted: { cls: "bg-secondary", label: "Not Submitted", icon: "ri-close-circle-line" },
+    draft: { color: "secondary", label: "Draft", icon: "ri-draft-line" },
+    submitted: { color: "primary", label: "Submitted", icon: "ri-send-plane-line" },
+    approved: { color: "success", label: "Approved", icon: "ri-checkbox-circle-line" },
+    flagged: { color: "warning", label: "Flagged", icon: "ri-flag-line", textDark: true },
+    changes_requested: { color: "danger", label: "Changes Requested", icon: "ri-edit-line" },
+    not_submitted: { color: "secondary", label: "Not Submitted", icon: "ri-close-circle-line" },
   };
 
+  /** Shared status -> {color, icon, label} lookup, reused by renderStatusBadge() and the Recent Submissions row avatar so both stay in sync off one map. */
+  function statusMeta(status) {
+    return STATUS_BADGES[status] || { color: "secondary", label: status || "Unknown", icon: "ri-question-line" };
+  }
+
   function renderStatusBadge(status) {
-    const cfg = STATUS_BADGES[status] || { cls: "bg-secondary", label: status || "Unknown", icon: "ri-question-line" };
-    return `<span class="badge ${cfg.cls}"><i class="${cfg.icon} me-1"></i>${cfg.label}</span>`;
+    const cfg = statusMeta(status);
+    const cls = `bg-${cfg.color}${cfg.textDark ? " text-dark" : ""}`;
+    return `<span class="badge ${cls}"><i class="${cfg.icon} me-1"></i>${cfg.label}</span>`;
   }
 
   // ==========================================================================
@@ -716,15 +722,47 @@ const DemographicsUI = (function () {
     return row.fiscal_year?.year ? `Year ${row.fiscal_year.year}` : "-";
   }
 
+  /** "Mar 14, 2026" from a row's created_at - blank (not "Invalid Date") if the field is missing or unparseable. */
+  function formatSubmittedDate(createdAt) {
+    if (!createdAt) return "";
+    const date = new Date(createdAt);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  /**
+   * Change-direction pill next to Total Members - same bg-{color}-transparent
+   * + arrow-icon convention as renderWidgetCard()'s trend badge, comparing
+   * this row's total against the next-older row in `rows` (the array is
+   * always passed in newest-first, per both call sites' sort). Returns ""
+   * for the oldest row (nothing to compare against) or a zero change, so the
+   * row doesn't get a pointless "no change" pill.
+   */
+  function renderMembersTrend(rows, index) {
+    const current = rows[index].total_members;
+    const previous = rows[index + 1] ? rows[index + 1].total_members : null;
+    if (current == null || previous == null) return "";
+
+    const diff = current - previous;
+    if (diff === 0) return "";
+
+    const color = diff > 0 ? "success" : "danger";
+    const icon = diff > 0 ? "ri-arrow-up-line" : "ri-arrow-down-line";
+    const sign = diff > 0 ? "+" : "-";
+    return `<span class="badge bg-${color}-transparent text-${color} fs-11 ms-2"><i class="${icon}"></i> ${sign}${Math.abs(diff)}</span>`;
+  }
+
   function renderSubmissionsRows(rows, { onEdit = null, onView = null } = {}) {
     if (!rows || rows.length === 0) {
       return renderTableEmpty(4, "No submissions yet", "ri-file-list-3-line");
     }
 
     return rows
-      .map((row) => {
+      .map((row, index) => {
         const period = demographicPeriodLabel(row);
         const canEdit = row.status === "draft" || row.status === "changes_requested";
+        const meta = statusMeta(row.status);
+        const submittedOn = formatSubmittedDate(row.created_at);
 
         const viewBtn = onView
           ? `<button type="button" class="btn btn-sm btn-outline-primary" onclick="${onView}(${row.id})">
@@ -739,8 +777,18 @@ const DemographicsUI = (function () {
 
         return `
           <tr>
-            <td class="fw-semibold">${period}</td>
-            <td>${row.total_members ?? "-"}</td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="avatar avatar-sm avatar-rounded bg-${meta.color} text-white flex-shrink-0">
+                  <i class="${meta.icon}"></i>
+                </span>
+                <div>
+                  <span class="d-block fw-semibold">${period}</span>
+                  ${submittedOn ? `<span class="d-block fs-11 text-body fw-semibold">Submitted ${submittedOn}</span>` : ""}
+                </div>
+              </div>
+            </td>
+            <td><span class="fw-semibold fs-15">${row.total_members ?? "-"}</span>${renderMembersTrend(rows, index)}</td>
             <td>${renderStatusBadge(row.status)}</td>
             <td class="text-end"><div class="d-flex justify-content-end gap-1">${viewBtn}${editBtn}</div></td>
           </tr>`;
