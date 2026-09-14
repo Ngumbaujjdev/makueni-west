@@ -7,10 +7,11 @@
  * Segmented [Overview] [History] landing page for
  * church/demographics-growth/index.php, per the PWA design reference's
  * pastor-demographics.html screen. Overview is a snapshot of one selected
- * fiscal year's latest submission (with a real percent trend badge vs.
- * whatever was submitted right before it, year boundary or not) - the full
+ * fiscal year's latest submission (with a real trend badge vs. whatever
+ * was submitted right before it, year boundary or not) - the full
  * multi-year/multi-metric drill-down lives on the separate Growth Analytics
- * page, not here.
+ * page, not here. Cadence-agnostic throughout (monthly/half_yearly/yearly)
+ * via DemographicsUI.sortSubmissionsNewestFirst()/demographicPeriodLabel().
  *
  * Dependencies: DemographicsAPIHandler, DemographicsUI, Toast, ApexCharts,
  * Bootstrap modal
@@ -21,12 +22,14 @@ const DemographicsOverview = (function () {
   "use strict";
 
   let allRows = [];
+  /** monthly/half_yearly/yearly - read once at load, before Overview first renders, so the Compliance card's period count is never wrong on first paint. */
+  let currentMode = "monthly";
 
-  function init() {
+  async function init() {
     Object.assign(USER_TERRITORY, DemographicsUI.resolveUserTerritory(USER_TERRITORY));
     wireSegments();
+    await loadDemographicsMode();
     loadAll();
-    loadDemographicsMode();
   }
 
   function wireSegments() {
@@ -69,12 +72,7 @@ const DemographicsOverview = (function () {
       return;
     }
 
-    allRows = (result.data || []).sort((a, b) => {
-      const ay = a.fiscal_year?.year || 0;
-      const by = b.fiscal_year?.year || 0;
-      if (ay !== by) return by - ay;
-      return (b.fiscal_month?.number || 0) - (a.fiscal_month?.number || 0);
-    });
+    allRows = DemographicsUI.sortSubmissionsNewestFirst(result.data || []);
 
     await loadFiscalYears();
     renderGrowthTrend();
@@ -132,7 +130,19 @@ const DemographicsOverview = (function () {
     return { direction: percent >= 0 ? "up" : "down", percent: Math.abs(percent), label: "vs last submission" };
   }
 
+  /**
+   * Solid-icon KPI cards (DemographicsUI.renderSolidStatCard, promoted from
+   * View Submission) with an absolute-diff trend badge - one consistent
+   * trend language across every Demographics surface instead of this page's
+   * former percent-based badge, which also went silent whenever the
+   * previous value was 0 (a real risk here: Women's/Men's Fellowship and
+   * Sunday School can legitimately start at 0 for a newer congregation).
+   * 3-up (not renderWidgetCard's 4-up) so 6 cards fill two even rows.
+   */
   function renderStatCards(latest, previous) {
+    const container = document.getElementById("statCardsRow");
+    if (!container) return;
+
     const cards = [
       { icon: "ri-team-line", label: "Total Members", field: "total_members", color: "primary" },
       { icon: "ri-user-star-line", label: "Youth (13-35)", field: "youth_count", color: "success" },
@@ -144,19 +154,32 @@ const DemographicsOverview = (function () {
 
     const sundaySchoolTotal = (row) => (row ? (row.sunday_school_male_count ?? 0) + (row.sunday_school_female_count ?? 0) : null);
 
-    const cardOpts = cards.map((c) => {
-      const value = c.field ? latest?.[c.field] ?? "-" : latest ? sundaySchoolTotal(latest) : "-";
-      const prevValue = c.field ? previous?.[c.field] ?? null : previous ? sundaySchoolTotal(previous) : null;
-      return {
-        icon: c.icon,
-        label: c.label,
-        value,
-        color: c.color,
-        trend: latest ? trend(value, prevValue) : null,
-      };
-    });
+    container.innerHTML = cards
+      .map((c) => {
+        const rawValue = c.field ? latest?.[c.field] ?? null : latest ? sundaySchoolTotal(latest) : null;
+        const prevValue = c.field ? previous?.[c.field] ?? null : previous ? sundaySchoolTotal(previous) : null;
+        const opts = {
+          icon: c.icon,
+          label: c.label,
+          value: rawValue ?? "-",
+          color: c.color,
+          trend: rawValue != null ? DemographicsUI.trendFor(rawValue, prevValue) : null,
+        };
+        return `<div class="col-xl-4 col-lg-6 col-md-6">${DemographicsUI.renderSolidStatCard(opts)}</div>`;
+      })
+      .join("");
+  }
 
-    DemographicsUI.renderWidgetCardsRow("statCardsRow", cardOpts);
+  /**
+   * Short chart-axis label - "Jan 2026" for a monthly row (short_name, not
+   * demographicPeriodLabel()'s full "January 2026", which would crowd a
+   * years-long x-axis), "H1 2026"/"Year 2026" for half-yearly/yearly rows
+   * via demographicPeriodLabel() (already compact - fiscal_semi_annual.name
+   * is short by design).
+   */
+  function chartPeriodLabel(row) {
+    if (row.fiscal_month) return `${row.fiscal_month.short_name || row.fiscal_month.name} ${row.fiscal_year?.year || ""}`.trim();
+    return DemographicsUI.demographicPeriodLabel(row);
   }
 
   /**
@@ -187,7 +210,7 @@ const DemographicsOverview = (function () {
       return;
     }
 
-    const categories = rows.map((r) => `${r.fiscal_month?.short_name || r.fiscal_month?.name || ""} ${r.fiscal_year?.year || ""}`.trim());
+    const categories = rows.map((r) => chartPeriodLabel(r));
     const values = rows.map((r) => r.total_members);
 
     const first = values[0];
@@ -240,18 +263,19 @@ const DemographicsOverview = (function () {
 
   function renderComplianceCard(latest, submissionsThisYear) {
     const el = document.getElementById("complianceCard");
+    const periodsPerYear = PERIODS_PER_YEAR[currentMode] || 12;
 
     if (!latest) {
       el.innerHTML = `
         <div class="text-center py-3">
           <i class="ri-file-warning-line fs-30 text-warning mb-2 d-block"></i>
           <p class="fw-semibold text-body mb-2">No submission recorded for this year</p>
-          ${CAN_ENTER_DEMOGRAPHICS ? '<a href="demographics-tracking.php" class="btn btn-primary btn-sm">Start This Month\'s Entry</a>' : ""}
+          ${CAN_ENTER_DEMOGRAPHICS ? '<a href="demographics-tracking.php" class="btn btn-primary btn-sm">Start This Period\'s Entry</a>' : ""}
         </div>`;
       return;
     }
 
-    const period = `${latest.fiscal_month?.name || ""} ${latest.fiscal_year?.year || ""}`.trim();
+    const period = DemographicsUI.demographicPeriodLabel(latest);
 
     el.innerHTML = `
       <div class="row g-3">
@@ -265,7 +289,7 @@ const DemographicsOverview = (function () {
         </div>
         <div class="col-md-4">
           <span class="d-block mb-1 text-body fw-semibold">Submissions This Year</span>
-          <strong class="fs-16">${submissionsThisYear} of 12</strong>
+          <strong class="fs-16">${submissionsThisYear} of ${periodsPerYear}</strong>
         </div>
         ${latest.review_notes ? `
         <div class="col-md-12">
@@ -290,6 +314,13 @@ const DemographicsOverview = (function () {
     yearly: "Yearly",
   };
 
+  /** How many periods a church is expected to submit per fiscal year at each cadence - drives the Compliance card's "X of N" target. */
+  const PERIODS_PER_YEAR = {
+    monthly: 12,
+    half_yearly: 2,
+    yearly: 1,
+  };
+
   async function loadDemographicsMode() {
     const card = document.getElementById("demographicsModeCard");
     const result = await DemographicsAPIHandler.getEntryMode(USER_TERRITORY.id);
@@ -299,10 +330,10 @@ const DemographicsOverview = (function () {
       return;
     }
 
-    const mode = result.data.demographics_mode;
+    currentMode = result.data.demographics_mode;
     card.innerHTML = `
       <p class="text-body fs-12 mb-1">This church currently records demographics:</p>
-      <h5 class="fw-semibold mb-0">${MODE_LABELS[mode] || mode}</h5>`;
+      <h5 class="fw-semibold mb-0">${MODE_LABELS[currentMode] || currentMode}</h5>`;
   }
 
   function renderHistory(rows) {

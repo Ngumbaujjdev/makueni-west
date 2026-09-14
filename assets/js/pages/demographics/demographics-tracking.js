@@ -662,12 +662,7 @@ const DemographicsTracking = (function () {
       return;
     }
 
-    const rows = (result.data || []).sort((a, b) => {
-      const ay = a.fiscal_year?.year || 0;
-      const by = b.fiscal_year?.year || 0;
-      if (ay !== by) return by - ay;
-      return (b.fiscal_month?.number || 0) - (a.fiscal_month?.number || 0);
-    });
+    const rows = DemographicsUI.sortSubmissionsNewestFirst(result.data || []);
 
     // View always navigates to the dashboard-style report page; Edit (draft/
     // changes_requested only) still opens the same-page wizard as before.
