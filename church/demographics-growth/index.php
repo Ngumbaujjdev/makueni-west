@@ -80,7 +80,7 @@ $breadcrumbs = [
                         </select>
                         <?php if ($canEnter): ?>
                         <a href="<?= SITE_URL ?>/church/demographics-growth/demographics-tracking.php" class="btn btn-primary btn-wave">
-                            <i class="ri-edit-line me-1"></i>Update This Month's Data
+                            <i class="ri-edit-line me-1"></i>Update This <span id="updateDataBtnLabel">Month</span>'s Data
                         </a>
                         <?php endif; ?>
                     </div>

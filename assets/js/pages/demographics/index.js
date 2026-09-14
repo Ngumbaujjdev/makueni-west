@@ -336,6 +336,13 @@ const DemographicsOverview = (function () {
     yearly: 1,
   };
 
+  /** The period word for "Update This ___'s Data" - server-rendered in index.php as "Month" by default, corrected here once the real cadence is known. */
+  const PERIOD_NOUN = {
+    monthly: "Month",
+    half_yearly: "Half",
+    yearly: "Year",
+  };
+
   /**
    * An identity block (icon avatar + mode name + what it means), not a
    * numeric stat - renderSolidStatCard's big-bold-number shape doesn't fit
@@ -363,6 +370,9 @@ const DemographicsOverview = (function () {
           <p class="text-body fs-12 mb-0">${MODE_DESCRIPTIONS[currentMode] || ""}</p>
         </div>
       </div>`;
+
+    const updateBtnLabel = document.getElementById("updateDataBtnLabel");
+    if (updateBtnLabel) updateBtnLabel.textContent = PERIOD_NOUN[currentMode] || "Month";
   }
 
   function renderHistory(rows) {
