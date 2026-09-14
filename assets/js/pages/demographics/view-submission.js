@@ -34,30 +34,24 @@ const DemographicsViewSubmission = (function () {
     }
 
     const record = result.data;
-    const { previous, history } = await loadRecentHistory(record);
+    const previous = await loadPreviousRecord(record);
 
     renderHeader(record);
-    renderStats(record, previous, history);
+    renderStats(record, previous);
     renderCharts(record);
-    renderActivityStats(record, previous, history);
-    loadLeadership(record, previous, history);
+    renderActivityStats(record, previous);
+    loadLeadership(record, previous);
   }
 
-  const HISTORY_WINDOW = 6;
-
   /**
-   * The last few submissions ending at this one (same newest-first ordering
-   * used by demographics-tracking.js/index.js), for the stat cards' trend
-   * badge and sparkline. `previous` is just the one immediately-older
-   * submission (trend badge math); `history` is up to HISTORY_WINDOW
-   * submissions, oldest-to-newest, ending at the current record (sparkline
-   * series - a line needs to read left-to-right chronologically). Both are
-   * null/a single-item array when this is the oldest/only submission -
-   * callers treat that as "nothing to compare/plot."
+   * The submission immediately before this one (same newest-first ordering
+   * used by demographics-tracking.js/index.js) - lets the stat cards show a
+   * real period-over-period trend instead of a bare number. Returns null for
+   * the oldest/only submission, which callers treat as "no trend to show."
    */
-  async function loadRecentHistory(record) {
+  async function loadPreviousRecord(record) {
     const result = await DemographicsAPIHandler.getDemographics(USER_TERRITORY.id);
-    if (!result.success || !result.data) return { previous: null, history: [record] };
+    if (!result.success || !result.data) return null;
 
     const rows = result.data.sort((a, b) => {
       const ay = a.fiscal_year?.year || 0;
@@ -67,27 +61,18 @@ const DemographicsViewSubmission = (function () {
     });
 
     const index = rows.findIndex((r) => r.id === record.id);
-    if (index === -1) return { previous: null, history: [record] };
-
-    const previous = rows[index + 1] || null;
-    const history = rows.slice(index, index + HISTORY_WINDOW).reverse();
-    return { previous, history };
+    return index !== -1 && rows[index + 1] ? rows[index + 1] : null;
   }
 
   /**
-   * @param {object} opts {id, icon, label, value, sublabel, color, trend, sparkline}
+   * @param {object} opts {icon, label, value, sublabel, color, trend}
    *   Label + solid bg-${color} icon avatar (top row), a large bold value,
-   *   an optional sparkline (`sparkline`: number[], oldest-to-newest - drawn
-   *   separately by renderCardSparklines() once this HTML is in the DOM,
-   *   since ApexCharts needs a real element to mount on), then either a
-   *   green/red trend badge (`trend: {diff}` - same bg-${color}-transparent
-   *   arrow-pill convention as renderWidgetCard()/the Recent Submissions
-   *   table) or a plain sublabel when there's no period to compare against
-   *   (e.g. the Leadership card's live clergy count, which isn't stored per
-   *   submission). `id` must be unique across the whole page - it addresses
-   *   the sparkline's mount point.
+   *   then either a green/red trend badge (`trend: {diff}` - same
+   *   bg-${color}-transparent arrow-pill convention as renderWidgetCard()/
+   *   the Recent Submissions table) or a plain sublabel when there's no
+   *   period to compare against.
    */
-  function renderSolidStatCard({ id, icon, label, value, sublabel = "", color = "primary", trend = null, sparkline = null }) {
+  function renderSolidStatCard({ icon, label, value, sublabel = "", color = "primary", trend = null }) {
     let trendHtml = "";
     if (trend) {
       if (trend.diff === 0) {
@@ -102,9 +87,6 @@ const DemographicsViewSubmission = (function () {
       trendHtml = `<span class="fs-12 text-body fw-semibold">${sublabel}</span>`;
     }
 
-    const hasSparkline = sparkline && sparkline.length > 1;
-    const sparklineHtml = hasSparkline ? `<div id="spark-${id}" class="mb-1" style="height: 36px;"></div>` : "";
-
     return `
       <div class="card custom-card">
         <div class="card-body">
@@ -115,31 +97,48 @@ const DemographicsViewSubmission = (function () {
             </span>
           </div>
           <h2 class="fw-bold mb-1">${value}</h2>
-          ${sparklineHtml}
           ${trendHtml}
         </div>
       </div>`;
   }
 
   /**
-   * Draws each card's sparkline (skipping cards with no/too-short series) -
-   * called after a section's card HTML is already in the DOM, since
-   * ApexCharts needs a real mounted element. True sparkline mode: no axes/
-   * gridlines/labels/tooltip, one solid brand-color stroke, no gradient.
+   * Per-role breakdown list, modeled on index-1.html's "Recent Orders"
+   * widget (card-header title + card-body > list-unstyled of icon/title/
+   * trailing-value rows) - adapted to this app's solid-icon + no-muted-text
+   * convention instead of the template's pale avatar image + text-muted.
+   * Replaces a single lumped "N pastors" number with one row per role, so
+   * "1 Senior Pastor, 3 Associate Pastor" is actually legible instead of a
+   * squashed text line.
    */
-  function renderCardSparklines(cards) {
-    cards.forEach((c) => {
-      if (!c.sparkline || c.sparkline.length < 2) return;
-      const el = document.getElementById(`spark-${c.id}`);
-      if (!el) return;
-      new ApexCharts(el, {
-        chart: { type: "line", height: 36, sparkline: { enabled: true } },
-        series: [{ data: c.sparkline }],
-        stroke: { width: 2, curve: "smooth" },
-        colors: [DemographicsUI.brandHex(c.color)],
-        tooltip: { enabled: false },
-      }).render();
-    });
+  function renderClergyListCard(counts, total) {
+    const roleNames = Object.keys(counts);
+
+    const rows = roleNames.length
+      ? roleNames
+          .map(
+            (role, i) => `
+        <li class="d-flex align-items-center${i < roleNames.length - 1 ? " mb-3" : ""}">
+          <span class="avatar avatar-sm avatar-rounded bg-primary text-white flex-shrink-0 me-2">
+            <i class="ri-user-star-line"></i>
+          </span>
+          <span class="flex-fill fw-semibold">${role}</span>
+          <span class="badge bg-primary-transparent text-primary fs-13 fw-semibold">${counts[role]}</span>
+        </li>`,
+          )
+          .join("")
+      : `<li class="fs-13 text-body fw-semibold">No pastors on record</li>`;
+
+    return `
+      <div class="card custom-card h-100">
+        <div class="card-header justify-content-between">
+          <div class="card-title">Pastors & Assistant Pastors</div>
+          ${roleNames.length ? `<span class="badge bg-primary-transparent text-primary fw-semibold">${total} total</span>` : ""}
+        </div>
+        <div class="card-body">
+          <ul class="list-unstyled mb-0">${rows}</ul>
+        </div>
+      </div>`;
   }
 
   function renderHeader(record) {
@@ -193,25 +192,19 @@ const DemographicsViewSubmission = (function () {
     return previousValue == null ? null : { diff: current - previousValue };
   }
 
-  /** Sums Sunday School male+female for each record in `history`, oldest-to-newest - the sparkline series for the combined Sunday School stat card. */
-  function sundaySchoolSeries(history) {
-    return history.map((r) => (r.sunday_school_male_count ?? 0) + (r.sunday_school_female_count ?? 0));
-  }
-
-  function renderStats(record, previous, history) {
+  function renderStats(record, previous) {
     const sundaySchoolCount = (record.sunday_school_male_count ?? 0) + (record.sunday_school_female_count ?? 0);
     const prevSundaySchoolCount = previous ? (previous.sunday_school_male_count ?? 0) + (previous.sunday_school_female_count ?? 0) : null;
     const container = document.getElementById("statCardsRow");
     if (!container) return;
 
     const cards = [
-      { id: "stat-total_members", icon: "ri-team-line", label: "Total Members", value: record.total_members ?? 0, color: "primary", trend: trendFor(record.total_members ?? 0, previous?.total_members), sparkline: history.map((r) => r.total_members ?? 0) },
-      { id: "stat-new_members_count", icon: "ri-user-add-line", label: "New Members", value: record.new_members_count ?? 0, color: "success", trend: trendFor(record.new_members_count ?? 0, previous?.new_members_count), sparkline: history.map((r) => r.new_members_count ?? 0) },
-      { id: "stat-baptisms_count", icon: "ri-drop-line", label: "Baptisms", value: record.baptisms_count ?? 0, color: "info", trend: trendFor(record.baptisms_count ?? 0, previous?.baptisms_count), sparkline: history.map((r) => r.baptisms_count ?? 0) },
-      { id: "stat-sunday_school", icon: "ri-book-read-line", label: "Sunday School", value: sundaySchoolCount, color: "warning", trend: trendFor(sundaySchoolCount, prevSundaySchoolCount), sparkline: sundaySchoolSeries(history) },
+      { icon: "ri-team-line", label: "Total Members", value: record.total_members ?? 0, color: "primary", trend: trendFor(record.total_members ?? 0, previous?.total_members) },
+      { icon: "ri-user-add-line", label: "New Members", value: record.new_members_count ?? 0, color: "success", trend: trendFor(record.new_members_count ?? 0, previous?.new_members_count) },
+      { icon: "ri-drop-line", label: "Baptisms", value: record.baptisms_count ?? 0, color: "info", trend: trendFor(record.baptisms_count ?? 0, previous?.baptisms_count) },
+      { icon: "ri-book-read-line", label: "Sunday School", value: sundaySchoolCount, color: "warning", trend: trendFor(sundaySchoolCount, prevSundaySchoolCount) },
     ];
     container.innerHTML = cards.map((c) => `<div class="col-xl-3 col-lg-6 col-md-6">${renderSolidStatCard(c)}</div>`).join("");
-    renderCardSparklines(cards);
   }
 
   function renderCharts(record) {
@@ -254,61 +247,42 @@ const DemographicsViewSubmission = (function () {
     }).render();
   }
 
-  function renderActivityStats(record, previous, history) {
+  function renderActivityStats(record, previous) {
     const container = document.getElementById("activityStatsRow");
     if (!container) return;
 
     const cards = [
-      { id: "activity-new_members_count", icon: "ri-user-add-line", label: "New Members", value: record.new_members_count ?? 0, color: "success", trend: trendFor(record.new_members_count ?? 0, previous?.new_members_count), sparkline: history.map((r) => r.new_members_count ?? 0) },
-      { id: "activity-transferred_out_count", icon: "ri-user-unfollow-line", label: "Transferred Out", value: record.transferred_out_count ?? 0, color: "secondary", trend: trendFor(record.transferred_out_count ?? 0, previous?.transferred_out_count), sparkline: history.map((r) => r.transferred_out_count ?? 0) },
-      { id: "activity-baptisms_count", icon: "ri-drop-line", label: "Baptisms", value: record.baptisms_count ?? 0, color: "info", trend: trendFor(record.baptisms_count ?? 0, previous?.baptisms_count), sparkline: history.map((r) => r.baptisms_count ?? 0) },
-      { id: "activity-communion_participants_count", icon: "ri-cup-line", label: "Communion", value: record.communion_participants_count ?? 0, color: "primary", trend: trendFor(record.communion_participants_count ?? 0, previous?.communion_participants_count), sparkline: history.map((r) => r.communion_participants_count ?? 0) },
-      { id: "activity-conversions_count", icon: "ri-heart-line", label: "New Conversions", value: record.conversions_count ?? 0, color: "warning", trend: trendFor(record.conversions_count ?? 0, previous?.conversions_count), sparkline: history.map((r) => r.conversions_count ?? 0) },
+      { icon: "ri-user-add-line", label: "New Members", value: record.new_members_count ?? 0, color: "success", trend: trendFor(record.new_members_count ?? 0, previous?.new_members_count) },
+      { icon: "ri-user-unfollow-line", label: "Transferred Out", value: record.transferred_out_count ?? 0, color: "secondary", trend: trendFor(record.transferred_out_count ?? 0, previous?.transferred_out_count) },
+      { icon: "ri-drop-line", label: "Baptisms", value: record.baptisms_count ?? 0, color: "info", trend: trendFor(record.baptisms_count ?? 0, previous?.baptisms_count) },
+      { icon: "ri-cup-line", label: "Communion", value: record.communion_participants_count ?? 0, color: "primary", trend: trendFor(record.communion_participants_count ?? 0, previous?.communion_participants_count) },
+      { icon: "ri-heart-line", label: "New Conversions", value: record.conversions_count ?? 0, color: "warning", trend: trendFor(record.conversions_count ?? 0, previous?.conversions_count) },
     ];
 
     // Manual .col wrapping (not a fixed 4-per-row) so all 5 cards sit evenly
     // in one row via the container's own row-cols-xl-5.
     container.innerHTML = cards.map((c) => `<div class="col">${renderSolidStatCard(c)}</div>`).join("");
-    renderCardSparklines(cards);
   }
 
-  async function loadLeadership(record, previous, history) {
+  async function loadLeadership(record, previous) {
     const card = document.getElementById("leadershipCard");
     const result = await DemographicsAPIHandler.getClergySummary(USER_TERRITORY.id);
     const counts = result.success ? result.data.counts || {} : {};
     const clergyTotal = result.success ? result.data.total ?? 0 : 0;
-    const clergySublabel = Object.keys(counts).length
-      ? Object.entries(counts).map(([role, n]) => `${n} ${role}`).join(" &middot; ")
-      : "No pastors on record";
 
-    const cards = [
-      {
-        id: "leadership-clergy",
-        icon: "ri-shield-user-line",
-        label: "Pastors & Assistant Pastors",
-        value: clergyTotal,
-        sublabel: clergySublabel,
-        color: "primary",
-        // No sparkline: clergy counts are live/derived from staff records,
-        // never stored per submission, so there's no real series to plot.
-      },
-      {
-        id: "leadership-sunday_school_teachers_count",
-        icon: "ri-book-read-line",
-        label: "Sunday School Teachers",
-        value: record.sunday_school_teachers_count ?? 0,
-        color: "warning",
-        trend: trendFor(record.sunday_school_teachers_count ?? 0, previous?.sunday_school_teachers_count),
-        sparkline: history.map((r) => r.sunday_school_teachers_count ?? 0),
-      },
-    ];
+    const teachersCard = renderSolidStatCard({
+      icon: "ri-book-read-line",
+      label: "Sunday School Teachers",
+      value: record.sunday_school_teachers_count ?? 0,
+      color: "warning",
+      trend: trendFor(record.sunday_school_teachers_count ?? 0, previous?.sunday_school_teachers_count),
+    });
 
     card.innerHTML = `
       <div class="row g-3">
-        <div class="col-xl-6">${renderSolidStatCard(cards[0])}</div>
-        <div class="col-xl-6">${renderSolidStatCard(cards[1])}</div>
+        <div class="col-xl-6">${renderClergyListCard(counts, clergyTotal)}</div>
+        <div class="col-xl-6">${teachersCard}</div>
       </div>`;
-    renderCardSparklines(cards);
   }
 
   return { init };
