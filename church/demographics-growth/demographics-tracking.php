@@ -254,18 +254,24 @@ require __DIR__ . '/../../includes/ui-helpers-templates.php';
 
                                             <div id="reviewWarnings"></div>
 
-                                            <div class="card border mb-3">
-                                                <div class="card-header bg-light">
-                                                    <h6 class="mb-0 fw-semibold"><i class="ri-team-line me-2"></i>Membership Counts</h6>
-                                                </div>
-                                                <div class="card-body" id="reviewMembership"></div>
+                                            <div class="border border-primary rounded-3 p-3 mb-3">
+                                                <h6 class="fw-semibold text-primary mb-3"><i class="ri-group-line me-1"></i>Whole Church Membership</h6>
+                                                <div id="reviewWholeChurch"></div>
                                             </div>
 
-                                            <div class="card border mb-3">
-                                                <div class="card-header bg-light">
-                                                    <h6 class="mb-0 fw-semibold"><i class="ri-hand-heart-line me-2"></i>Changes & Spiritual Activities</h6>
-                                                </div>
-                                                <div class="card-body" id="reviewActivities"></div>
+                                            <div class="border border-warning rounded-3 p-3 mb-3">
+                                                <h6 class="fw-semibold text-warning mb-3"><i class="ri-team-line me-1"></i>Fellowship Groups</h6>
+                                                <div id="reviewFellowship"></div>
+                                            </div>
+
+                                            <div class="border border-success rounded-3 p-3 mb-3">
+                                                <h6 class="fw-semibold text-success mb-3"><i class="ri-book-read-line me-1"></i>Sunday School</h6>
+                                                <div id="reviewSundaySchool"></div>
+                                            </div>
+
+                                            <div class="border border-info rounded-3 p-3 mb-3">
+                                                <h6 class="fw-semibold text-info mb-3"><i class="ri-hand-heart-line me-1"></i>Changes & Spiritual Activities</h6>
+                                                <div id="reviewActivities"></div>
                                             </div>
 
                                             <div class="mt-4 pt-3 border-top d-flex justify-content-start">
