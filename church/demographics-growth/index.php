@@ -180,18 +180,6 @@ $breadcrumbs = [
         <?php include __DIR__ . '/../../includes/footer.php' ?>
     </div>
 
-    <div class="modal fade" id="demographicDetailModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-semibold"><i class="ri-file-list-3-line me-2"></i>Submission Details</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="demographicDetailModalBody"></div>
-            </div>
-        </div>
-    </div>
-
     <div class="scrollToTop">
         <span class="arrow"><i class="ri-arrow-up-s-fill fs-20"></i></span>
     </div>

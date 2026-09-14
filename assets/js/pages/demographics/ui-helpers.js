@@ -262,9 +262,12 @@ const DemographicsUI = (function () {
         const sign = trend.diff > 0 ? "+" : "-";
         trendHtml = `<span class="badge bg-${trendColor}-transparent text-${trendColor} fs-11"><i class="${arrow}"></i> ${sign}${Math.abs(trend.diff)} vs last period</span>`;
       }
-    } else if (sublabel) {
-      trendHtml = `<span class="fs-12 text-body fw-semibold">${sublabel}</span>`;
     }
+    // Sublabel renders whenever given, alongside the trend badge (not
+    // instead of it) - e.g. Sunday School shows both its trend and a
+    // "N Male · N Female" breakdown. Every current caller only ever passes
+    // one or the other, so this is additive, not a behavior change.
+    const sublabelHtml = sublabel ? `<span class="d-block fs-12 text-body fw-semibold mt-1">${sublabel}</span>` : "";
 
     return `
       <div class="card custom-card">
@@ -277,6 +280,7 @@ const DemographicsUI = (function () {
           </div>
           <h2 class="fw-bold mb-1">${value}</h2>
           ${trendHtml}
+          ${sublabelHtml}
         </div>
       </div>`;
   }
@@ -878,54 +882,6 @@ const DemographicsUI = (function () {
   }
 
   // ==========================================================================
-  // DEMOGRAPHIC SUBMISSION DETAIL (read-only view of one submission's numbers)
-  //
-  // Plain label/value table in a modal - same convention as Attendance
-  // Reports' Sunday detail modal (church/attendance/reports.php). A
-  // reviewed (approved/submitted/flagged) submission has no edit form to
-  // fall back on, so this is the only way to see its actual numbers again.
-  // ==========================================================================
-
-  const DEMOGRAPHIC_FIELD_LABELS = {
-    total_members: "Total Members",
-    male_count: "Male",
-    female_count: "Female",
-    youth_count: "Youth (13-35)",
-    mens_fellowship_count: "Men's Fellowship",
-    womens_fellowship_count: "Women's Fellowship",
-    sunday_school_male_count: "Sunday School (Male)",
-    sunday_school_female_count: "Sunday School (Female)",
-    seniors_count: "Seniors",
-    new_members_count: "New Members",
-    transferred_out_count: "Transferred Out",
-    baptisms_count: "Baptisms",
-    communion_participants_count: "Communion Participants",
-    conversions_count: "New Conversions",
-  };
-
-  function renderDemographicDetailTable(row) {
-    const period = demographicPeriodLabel(row);
-
-    const fieldRows = Object.entries(DEMOGRAPHIC_FIELD_LABELS)
-      .map(([field, label]) => `<tr><td class="text-body fw-semibold">${label}</td><td class="text-end">${row[field] ?? "-"}</td></tr>`)
-      .join("");
-
-    const notesRow = row.review_notes
-      ? `<tr><td class="text-body fw-semibold">Reviewer Notes</td><td class="text-end">${row.review_notes}</td></tr>`
-      : "";
-
-    return `
-      <table class="table table-sm mb-0">
-        <tbody>
-          <tr><td class="text-body fw-semibold">Period</td><td class="text-end fw-semibold">${period}</td></tr>
-          <tr><td class="text-body fw-semibold">Status</td><td class="text-end">${renderStatusBadge(row.status)}</td></tr>
-          ${fieldRows}
-          ${notesRow}
-        </tbody>
-      </table>`;
-  }
-
-  // ==========================================================================
   // COMPLETENESS BAR
   //
   // Static shell is rendered server-side (includes/ui-helpers-templates.php
@@ -973,7 +929,6 @@ const DemographicsUI = (function () {
     numberStepperHtml,
     initSteppers,
     renderSubmissionsRows,
-    renderDemographicDetailTable,
     demographicPeriodLabel,
     sortSubmissionsNewestFirst,
     updateCompletenessBar,

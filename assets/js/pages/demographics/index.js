@@ -153,9 +153,17 @@ const DemographicsOverview = (function () {
     ];
 
     const sundaySchoolTotal = (row) => (row ? (row.sunday_school_male_count ?? 0) + (row.sunday_school_female_count ?? 0) : null);
+    // Sunday School is the only headline card built from two sub-fields -
+    // a bare combined number loses the split entirely, so it gets a
+    // "N Male · N Female" sublabel alongside its trend badge (the only
+    // other card here that needs one; the rest are already atomic counts,
+    // and Total Members' own split is already shown by the Gender Split
+    // donut right below, so repeating it there would just be clutter).
+    const sundaySchoolSublabel = (row) => (row ? `${row.sunday_school_male_count ?? 0} Male &middot; ${row.sunday_school_female_count ?? 0} Female` : "");
 
     container.innerHTML = cards
       .map((c) => {
+        const isSundaySchool = c.field === null;
         const rawValue = c.field ? latest?.[c.field] ?? null : latest ? sundaySchoolTotal(latest) : null;
         const prevValue = c.field ? previous?.[c.field] ?? null : previous ? sundaySchoolTotal(previous) : null;
         const opts = {
@@ -164,6 +172,7 @@ const DemographicsOverview = (function () {
           value: rawValue ?? "-",
           color: c.color,
           trend: rawValue != null ? DemographicsUI.trendFor(rawValue, prevValue) : null,
+          sublabel: isSundaySchool ? sundaySchoolSublabel(latest) : "",
         };
         return `<div class="col-xl-4 col-lg-6 col-md-6">${DemographicsUI.renderSolidStatCard(opts)}</div>`;
       })
@@ -314,6 +323,12 @@ const DemographicsOverview = (function () {
     yearly: "Yearly",
   };
 
+  const MODE_DESCRIPTIONS = {
+    monthly: "This church submits one demographics report every fiscal month.",
+    half_yearly: "This church submits one demographics report every half-year (H1/H2).",
+    yearly: "This church submits one demographics report per fiscal year.",
+  };
+
   /** How many periods a church is expected to submit per fiscal year at each cadence - drives the Compliance card's "X of N" target. */
   const PERIODS_PER_YEAR = {
     monthly: 12,
@@ -321,6 +336,13 @@ const DemographicsOverview = (function () {
     yearly: 1,
   };
 
+  /**
+   * An identity block (icon avatar + mode name + what it means), not a
+   * numeric stat - renderSolidStatCard's big-bold-number shape doesn't fit
+   * a setting with no value to report, so this gets its own small treatment
+   * using the same solid-icon visual language instead of the bare two-line
+   * text block this card used to be.
+   */
   async function loadDemographicsMode() {
     const card = document.getElementById("demographicsModeCard");
     const result = await DemographicsAPIHandler.getEntryMode(USER_TERRITORY.id);
@@ -332,8 +354,15 @@ const DemographicsOverview = (function () {
 
     currentMode = result.data.demographics_mode;
     card.innerHTML = `
-      <p class="text-body fs-12 mb-1">This church currently records demographics:</p>
-      <h5 class="fw-semibold mb-0">${MODE_LABELS[currentMode] || currentMode}</h5>`;
+      <div class="d-flex align-items-start gap-3">
+        <span class="avatar avatar-md avatar-rounded bg-primary text-white flex-shrink-0">
+          <i class="ri-calendar-2-line fs-18"></i>
+        </span>
+        <div>
+          <h5 class="fw-semibold mb-1">${MODE_LABELS[currentMode] || currentMode}</h5>
+          <p class="text-body fs-12 mb-0">${MODE_DESCRIPTIONS[currentMode] || ""}</p>
+        </div>
+      </div>`;
   }
 
   function renderHistory(rows) {
@@ -348,12 +377,11 @@ const DemographicsOverview = (function () {
     window.location.href = `demographics-tracking.php?id=${id}`;
   }
 
+  // Navigates to the dashboard-style submission page (same one Demographics
+  // Tracking's Recent Submissions table already uses) instead of a plain
+  // label/value modal - one real detail view, not two.
   function viewRow(id) {
-    const row = allRows.find((r) => r.id === id);
-    if (!row) return;
-
-    document.getElementById("demographicDetailModalBody").innerHTML = DemographicsUI.renderDemographicDetailTable(row);
-    window.bootstrap.Modal.getOrCreateInstance(document.getElementById("demographicDetailModal")).show();
+    window.location.href = `view-submission.php?id=${id}`;
   }
 
   return { init, goToEdit, viewRow };
