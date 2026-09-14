@@ -22,6 +22,26 @@ if (!defined('BACKEND_API_URL')) {
     define('BACKEND_API_URL', 'http://127.0.0.1:8004/api');
 }
 
+/*
+ * Cache-busting query string for a versioned asset URL - append the return
+ * value of assetVersion('assets/js/foo.js') straight after a script/link
+ * src/href that already starts with SITE_URL . '/assets/js/foo.js'.
+ * Reflects the file's real last-modified time, so it updates itself on
+ * every future edit - nothing to remember to bump by hand. Falls back to
+ * no query string at all if the file can't be found, rather than erroring.
+ * NOTE: a block comment (like this one) is required here rather than a
+ * line comment - PHP's lexer treats a closing short-echo tag as ending the
+ * enclosing PHP block even inside a same-line "//" comment, which would
+ * silently truncate this file right there.
+ */
+if (!function_exists('assetVersion')) {
+    function assetVersion(string $relativePath): string
+    {
+        $fullPath = __DIR__ . '/../' . ltrim($relativePath, '/');
+        return file_exists($fullPath) ? '?v=' . filemtime($fullPath) : '';
+    }
+}
+
 // Session configuration
 ini_set('session.cookie_httponly', 1);
 ini_set('session.use_only_cookies', 1);
