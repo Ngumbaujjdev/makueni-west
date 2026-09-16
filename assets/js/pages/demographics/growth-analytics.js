@@ -28,6 +28,13 @@
  * list (icon SVGs there swapped for this app's own `<i class="ri-...">`
  * convention - same container class, simpler markup).
  *
+ * Chart segment picker (2026-09-16, v3): the chart isn't locked to Total
+ * Members - a "Gender"/"Sunday School" toggle swaps it to a genuine
+ * two-line comparison (SEGMENTS map), each with its own latest-value cards
+ * below it (renderSegmentBreakdownCards). DemographicsUI.renderTrendChart()
+ * gained an optional `colors` array for this - without it, a multi-series
+ * chart would render every line in the same single derived hue.
+ *
  * Dependencies: DemographicsAPIHandler, DemographicsUI, ApexCharts
  * ============================================================================
  */
@@ -39,10 +46,29 @@ const GrowthAnalytics = (function () {
   let approvedRows = [];
   /** Years back from the latest to show - null means all time. */
   let currentRangeYears = null;
+  /** Which chart breakdown is showing - "total" is the single-line default. */
+  let currentSegment = "total";
+
+  /** Two-way comparisons the chart can swap to - each a pair of raw ChurchDemographic columns (already present on every row from GET /demographics, no backend change needed). Male-coded entries always use "primary", female-coded always "secondary" - one consistent mapping across both segments, not per-chart reassignment. */
+  const SEGMENTS = {
+    gender: {
+      series: [
+        { key: "male_count", name: "Male", color: "primary", icon: "ri-men-line" },
+        { key: "female_count", name: "Female", color: "secondary", icon: "ri-women-line" },
+      ],
+    },
+    sunday_school: {
+      series: [
+        { key: "sunday_school_male_count", name: "Sunday School (Male)", color: "primary", icon: "ri-men-line" },
+        { key: "sunday_school_female_count", name: "Sunday School (Female)", color: "secondary", icon: "ri-women-line" },
+      ],
+    },
+  };
 
   async function init() {
     Object.assign(USER_TERRITORY, DemographicsUI.resolveUserTerritory(USER_TERRITORY));
     wireRangeButtons();
+    wireSegmentButtons();
     await loadData();
     render();
   }
@@ -89,10 +115,26 @@ const GrowthAnalytics = (function () {
     });
   }
 
+  function wireSegmentButtons() {
+    document.querySelectorAll("#chartSegmentSelect button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#chartSegmentSelect button").forEach((b) => {
+          b.classList.remove("btn-primary", "active");
+          b.classList.add("btn-outline-primary");
+        });
+        btn.classList.remove("btn-outline-primary");
+        btn.classList.add("btn-primary", "active");
+        currentSegment = btn.dataset.segment;
+        render();
+      });
+    });
+  }
+
   function render() {
     const rows = currentRangeRows();
     renderHero(rows);
     renderDrivers(rows);
+    renderSegmentBreakdownCards(rows);
     renderChart(rows);
   }
 
@@ -191,12 +233,37 @@ const GrowthAnalytics = (function () {
       .join("");
   }
 
+  /** Below the chart when a segment (not "total") is selected - the current segment's two categories as latest-value cards, reusing the shared stat-card renderer rather than new markup. */
+  function renderSegmentBreakdownCards(rows) {
+    const container = document.getElementById("segmentBreakdownRow");
+    if (!container) return;
+
+    const segment = SEGMENTS[currentSegment];
+    if (!segment || rows.length === 0) {
+      container.innerHTML = "";
+      return;
+    }
+
+    const latest = rows[rows.length - 1];
+    const previous = rows.length > 1 ? rows[rows.length - 2] : null;
+
+    const cards = segment.series.map((s) => ({
+      icon: s.icon,
+      label: s.name,
+      value: latest[s.key] ?? 0,
+      color: s.color,
+      trend: previous ? DemographicsUI.trendFor(latest[s.key] ?? 0, previous[s.key] ?? 0) : null,
+    }));
+
+    container.innerHTML = cards.map((c) => `<div class="col-xl-6 col-lg-6 col-md-6">${DemographicsUI.renderSolidStatCard(c)}</div>`).join("");
+  }
+
   function renderChart(rows) {
     const el = document.getElementById("growthChart");
     if (!el) return;
     // Clear first - ApexCharts doesn't replace a prior instance in the same
     // container on its own, and this chart re-renders every time the Quick
-    // Select range changes.
+    // Select range or the segment changes.
     el.innerHTML = "";
 
     if (rows.length < 2) {
@@ -205,13 +272,24 @@ const GrowthAnalytics = (function () {
     }
 
     const categories = rows.map((r) => (r.fiscal_year?.year ? String(r.fiscal_year.year) : DemographicsUI.demographicPeriodLabel(r)));
-    const values = rows.map((r) => r.total_members);
+    const segment = SEGMENTS[currentSegment];
+
+    if (!segment) {
+      const values = rows.map((r) => r.total_members);
+      DemographicsUI.renderTrendChart("growthChart", {
+        categories,
+        series: [{ name: "Total Members", data: values }],
+        type: "area",
+        color: "primary",
+      });
+      return;
+    }
 
     DemographicsUI.renderTrendChart("growthChart", {
       categories,
-      series: [{ name: "Total Members", data: values }],
-      type: "area",
-      color: "primary",
+      series: segment.series.map((s) => ({ name: s.name, data: rows.map((r) => r[s.key] ?? 0) })),
+      type: "line",
+      colors: segment.series.map((s) => DemographicsUI.brandHex(s.color)),
     });
   }
 
