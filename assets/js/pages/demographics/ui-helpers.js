@@ -290,16 +290,29 @@ const DemographicsUI = (function () {
    * handful, one brand color by default (not a forced two-color scheme).
    * @param {object} opts {categories, series, type: 'area'|'column', color}
    */
-  function renderTrendChart(containerId, { categories, series, type = "area", color = "primary" } = {}) {
+  /**
+   * @param {string[]} [colors] - genuinely distinct hex per series, for a
+   *   real multi-series comparison (e.g. Male vs Female). Omit for the
+   *   single-hue cases (area/bar) - falls back to the one color derived
+   *   from `color`, exactly as before. Passing multiple series without
+   *   `colors` would render every line in the same hue, which is the bug
+   *   this param exists to prevent.
+   */
+  function renderTrendChart(containerId, { categories, series, type = "area", color = "primary", colors = null } = {}) {
     const el = document.getElementById(containerId);
     if (!el || typeof ApexCharts === "undefined") return null;
     const hex = brandHex(color);
+    // Only "area" and the new "line" get their own real ApexCharts type -
+    // every other value ("bar", "column", or anything else already passed
+    // by existing callers) keeps mapping to the distributed-bar branch
+    // below, exactly as before this function supported "line".
+    const chartType = type === "area" ? "area" : type === "line" ? "line" : "bar";
 
     const options = {
-      chart: { type: type === "area" ? "area" : "bar", height: 300, toolbar: { show: false }, foreColor: "#333335" },
+      chart: { type: chartType, height: 300, toolbar: { show: false }, foreColor: "#333335" },
       series,
       xaxis: { categories },
-      colors: [hex],
+      colors: colors || [hex],
       dataLabels: { enabled: false },
       grid: { borderColor: hexToRgba(hex, 0.05) },
       legend: { show: series.length > 1, position: "bottom" },
@@ -308,13 +321,18 @@ const DemographicsUI = (function () {
     if (type === "area") {
       options.stroke = { curve: "smooth", width: 2 };
       options.fill = { type: "solid", opacity: 0.25 };
+    } else if (type === "line") {
+      // Real multi-line comparison (e.g. Male vs Female) - smooth strokes,
+      // no fill, so two overlapping series stay readable instead of
+      // muddying together the way two translucent areas would.
+      options.stroke = { curve: "smooth", width: 2 };
     } else {
       // Distributed, shaded bars (index-1.html's Earnings chart pattern) -
       // one series, still one hue, just varying opacity per bar instead of
       // a flat fill - richer without a forced second color.
       const pointCount = (series[0]?.data || []).length;
-      options.colors = Array.from({ length: pointCount }, (_, i) => hexToRgba(hex, 0.3 + (0.7 * i) / Math.max(1, pointCount - 1)));
-      options.plotOptions = { bar: { columnWidth: "45%", borderRadius: 6, distributed: true } };
+      options.colors = colors || Array.from({ length: pointCount }, (_, i) => hexToRgba(hex, 0.3 + (0.7 * i) / Math.max(1, pointCount - 1)));
+      options.plotOptions = { bar: { columnWidth: "45%", borderRadius: 6, distributed: !colors } };
       options.legend.show = false;
     }
 

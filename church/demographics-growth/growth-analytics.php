@@ -96,9 +96,18 @@ $breadcrumbs = [
                     </div>
                 </div>
 
+                <div class="row g-3 mb-3" id="segmentBreakdownRow">
+                    <!-- Latest-value cards for the selected segment, injected by growth-analytics.js - empty while "Total Members" is selected -->
+                </div>
+
                 <div class="card custom-card">
-                    <div class="card-header">
+                    <div class="card-header justify-content-between flex-wrap gap-2">
                         <div class="card-title"><i class="ri-line-chart-line me-2 text-primary"></i>Total Members Over Time</div>
+                        <div class="d-flex flex-wrap gap-2" id="chartSegmentSelect">
+                            <button type="button" class="btn btn-primary btn-sm active" data-segment="total">Total Members</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-segment="gender">Gender</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-segment="sunday_school">Sunday School</button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div id="growthChart" style="min-height: 380px;"></div>
