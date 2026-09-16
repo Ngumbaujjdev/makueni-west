@@ -20,6 +20,14 @@
  * avatar markup throughout, just arranged by importance instead of by
  * equal-weight cards.
  *
+ * The hero and driver-row markup (2026-09-16, v2) is pulled directly from
+ * two named files in docs/design/ynex-component-reference.md rather than
+ * improvised: the hero number's identity row + size follow
+ * crypto-currency-exchange.html's row-2 KPI card, and each driver row
+ * follows invoice-list.html's dashed-divider `svg-icon-background` KPI
+ * list (icon SVGs there swapped for this app's own `<i class="ri-...">`
+ * convention - same container class, simpler markup).
+ *
  * Dependencies: DemographicsAPIHandler, DemographicsUI, ApexCharts
  * ============================================================================
  */
@@ -127,11 +135,11 @@ const GrowthAnalytics = (function () {
     }
 
     container.innerHTML = `
-      <div class="d-flex align-items-center gap-2 mb-2">
-        <span class="avatar avatar-md avatar-rounded bg-primary text-white flex-shrink-0"><i class="ri-team-line fs-18"></i></span>
-        <span class="fs-13 fw-semibold text-body">Total Members</span>
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <span class="avatar avatar-rounded avatar-sm bg-primary text-white flex-shrink-0"><i class="ri-team-line"></i></span>
+        <h6 class="fw-semibold mb-0">Total Members</h6>
       </div>
-      <h1 class="fw-bold mb-2 display-3">${latest.total_members}</h1>
+      <h1 class="fw-bold mb-2 display-6">${latest.total_members}</h1>
       ${trendHtml}
       ${insightHtml}`;
   }
@@ -142,7 +150,7 @@ const GrowthAnalytics = (function () {
     if (!container) return;
 
     if (rows.length === 0) {
-      container.innerHTML = '<li class="fs-13 text-body fw-semibold">No data yet</li>';
+      container.innerHTML = '<li class="fs-13 text-body fw-semibold p-3">No data yet</li>';
       return;
     }
 
@@ -170,13 +178,15 @@ const GrowthAnalytics = (function () {
 
     container.innerHTML = drivers
       .map((d, i) => `
-        <li class="d-flex align-items-center${i < drivers.length - 1 ? " mb-3" : ""}">
-          <span class="avatar avatar-sm avatar-rounded bg-${d.color} text-white flex-shrink-0 me-2"><i class="${d.icon}"></i></span>
-          <div class="flex-fill">
-            <span class="d-block fs-12 fw-semibold text-body">${d.label}</span>
-            <span class="d-block fs-13 text-dark fw-semibold">${d.sublabel}</span>
+        <li class="d-flex align-items-top p-3${i < drivers.length - 1 ? " border-bottom border-block-end-dashed" : ""}">
+          <div class="svg-icon-background bg-${d.color}-transparent me-3 flex-shrink-0">
+            <i class="${d.icon} fs-16 text-${d.color}"></i>
           </div>
-          <span class="fs-18 fw-bold text-dark">${d.value}</span>
+          <div class="flex-fill">
+            <h6 class="mb-1 fs-12 text-body fw-semibold">${d.label}</h6>
+            <h4 class="fs-18 fw-semibold mb-1">${d.value}</h4>
+            <p class="text-muted fs-11 mb-0 lh-1">${d.sublabel}</p>
+          </div>
         </li>`)
       .join("");
   }
