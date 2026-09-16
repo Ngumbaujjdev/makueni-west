@@ -255,7 +255,7 @@ const DemographicsUI = (function () {
     let trendHtml = "";
     if (trend) {
       if (trend.diff === 0) {
-        trendHtml = `<span class="fs-12 text-body fw-semibold">No change vs last period</span>`;
+        trendHtml = `<span class="badge bg-primary-transparent text-primary fs-12"><i class="ri-subtract-line"></i> No change vs last period</span>`;
       } else {
         const trendColor = trend.diff > 0 ? "success" : "danger";
         const arrow = trend.diff > 0 ? "ri-arrow-up-line" : "ri-arrow-down-line";
