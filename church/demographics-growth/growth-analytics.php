@@ -62,28 +62,46 @@ $breadcrumbs = [
 
                 <?php include __DIR__ . '/../../includes/page-header.php' ?>
 
-                <!-- Quick Select range - the one piece of Attendance Reports' period-picker
-                     this page borrows (church/attendance/reports.php's Quick Select row),
-                     kept to just this since a full custom-range picker is more control than
-                     a single trend line needs. -->
-                <div class="d-flex flex-wrap gap-2 mb-3" id="rangeQuickSelect">
-                    <button type="button" class="btn btn-outline-primary btn-sm" data-range="3">Last 3 Years</button>
-                    <button type="button" class="btn btn-outline-primary btn-sm" data-range="5">Last 5 Years</button>
-                    <button type="button" class="btn btn-primary btn-sm active" data-range="all">All Time</button>
+                <!-- Hero split: one dominant Tier-1 metric (left, with its own range
+                     control in the header) plus secondary Tier-2 driver metrics (right) -
+                     an inverted-pyramid hierarchy instead of N equal-weight cards, so the
+                     single most important fact reads first. -->
+                <div class="row g-3 mb-3">
+                    <div class="col-xl-8">
+                        <div class="card custom-card h-100">
+                            <div class="card-header justify-content-between flex-wrap gap-2">
+                                <div class="card-title">Total Members Now</div>
+                                <div class="d-flex flex-wrap gap-2" id="rangeQuickSelect">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" data-range="3">Last 3 Years</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" data-range="5">Last 5 Years</button>
+                                    <button type="button" class="btn btn-primary btn-sm active" data-range="all">All Time</button>
+                                </div>
+                            </div>
+                            <div class="card-body" id="heroCard">
+                                <!-- Hero number + trend + insight sentence injected by growth-analytics.js -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-4">
+                        <div class="card custom-card h-100">
+                            <div class="card-header">
+                                <div class="card-title">Growth Drivers</div>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-unstyled mb-0" id="driverStats">
+                                    <!-- Driver rows injected by growth-analytics.js -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-
-                <div class="row g-3 mb-3" id="statCardsRow">
-                    <!-- Stat cards injected by growth-analytics.js -->
-                </div>
-
-                <div id="insightCallout" class="mb-3"></div>
 
                 <div class="card custom-card">
                     <div class="card-header">
                         <div class="card-title"><i class="ri-line-chart-line me-2 text-primary"></i>Total Members Over Time</div>
                     </div>
                     <div class="card-body">
-                        <div id="growthChart"></div>
+                        <div id="growthChart" style="min-height: 380px;"></div>
                     </div>
                 </div>
 
