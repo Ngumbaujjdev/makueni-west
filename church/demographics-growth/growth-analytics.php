@@ -87,7 +87,7 @@ $breadcrumbs = [
                             <div class="card-header">
                                 <div class="card-title">Growth Drivers</div>
                             </div>
-                            <div class="card-body">
+                            <div class="card-body p-0">
                                 <ul class="list-unstyled mb-0" id="driverStats">
                                     <!-- Driver rows injected by growth-analytics.js -->
                                 </ul>
