@@ -10,6 +10,7 @@ Start with `../CLAUDE.md` (root) for working conventions — git workflow, testi
 | [TEST-LOGINS.md](TEST-LOGINS.md) | Real seeded dev-account credentials, by role, with a known bug flagged |
 | [specs/](specs/README.md) | Spec-driven development specs — one file per module, written before that module's code |
 | [design/](design/demographics-mobile-app-design.md) | Design references (currently: the Demographics mobile PWA design — a future build, kept here for its field lists and workflow) |
+| [design/ynex-component-reference.md](design/ynex-component-reference.md) | Pattern → file lookup across the YNEX template's 172 HTML files — which demo file has the KPI card, progress breakdown, kanban board, etc. you need, plus flagged gradient/decoration spots to avoid copying |
 
 ## Docs that already existed before this pass (not duplicated here — go read them directly)
 
