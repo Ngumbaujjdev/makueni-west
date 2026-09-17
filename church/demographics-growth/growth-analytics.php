@@ -125,7 +125,7 @@ $breadcrumbs = [
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-hover mb-0">
+                            <table class="table table-hover table-bordered mb-0">
                                 <thead class="table-light">
                                     <tr id="comparisonTableHead">
                                         <th class="fw-semibold text-dark">Category</th>
