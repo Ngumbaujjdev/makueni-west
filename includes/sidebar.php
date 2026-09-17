@@ -65,7 +65,7 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
                 <!-- Loading Placeholder -->
                 <li class="slide" id="modules-loading">
                     <a href="javascript:void(0);" class="side-menu__item">
-                        <i class="fa fa-spinner fa-spin side-menu__icon"></i>
+                        <i class="ri-loader-4-line ri-spin side-menu__icon"></i>
                         <span class="side-menu__label">Loading modules...</span>
                     </a>
                 </li>
@@ -80,21 +80,21 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
 
                 <li class="slide">
                     <a href="<?= $baseUrl ?>/profile" class="side-menu__item">
-                        <i class="fa fa-user side-menu__icon"></i>
+                        <i class="ri-user-line side-menu__icon"></i>
                         <span class="side-menu__label">My Profile</span>
                     </a>
                 </li>
 
                 <li class="slide">
                     <a href="<?= $baseUrl ?>/support" class="side-menu__item">
-                        <i class="fa fa-headset side-menu__icon"></i>
+                        <i class="ri-customer-service-2-line side-menu__icon"></i>
                         <span class="side-menu__label">Help & Support</span>
                     </a>
                 </li>
 
                 <li class="slide">
                     <a href="javascript:void(0);" onclick="handleLogout()" class="side-menu__item">
-                        <i class="fa fa-right-from-bracket side-menu__icon"></i>
+                        <i class="ri-logout-box-r-line side-menu__icon"></i>
                         <span class="side-menu__label">Logout</span>
                     </a>
                 </li>
@@ -129,32 +129,59 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
 (function() {
     'use strict';
 
-    // Icon mapping for modules (Font Awesome)
+    // Icon mapping for modules (RemixIcon - the icon set every other page
+    // in this app uses; matches ri.startsWith() detection in getIconClass()
+    // below). Exhaustive as of 2026-09-17 against every distinct 'icon'
+    // value actually seeded in backend/database/seeders/*.php (verified
+    // by grep, not guessed) - a slug added by a future seeder that isn't
+    // in this map falls back to 'default', same limitation the old
+    // Font-Awesome version of this map already had.
     const ICON_MAP = {
-        'dashboard': 'fa-gauge-high',
-        'users-chart': 'fa-chart-line',
-        'chart-line': 'fa-chart-area',
-        'church-building': 'fa-church',
-        'church-detail': 'fa-building-columns',
-        'shield-check': 'fa-shield-halved',
-        'hand-holding-dollar': 'fa-hand-holding-dollar',
-        'calculator': 'fa-calculator',
-        'share-alt': 'fa-share-nodes',
-        'coins': 'fa-coins',
-        'receipt': 'fa-receipt',
-        'file-invoice-dollar': 'fa-file-invoice-dollar',
-        'graduation-cap': 'fa-graduation-cap',
-        'calendar-star': 'fa-calendar-days',
-        'calendar-alt': 'fa-calendar',
-        'megaphone': 'fa-bullhorn',
-        'cogs': 'fa-gears',
-        'package': 'fa-box',
-        'calendar': 'fa-calendar',
-        'scale': 'fa-scale-balanced',
-        'file-bar-chart': 'fa-chart-bar',
-        'folder': 'fa-folder',
-        'default': 'fa-circle'
+        'bar-chart': 'ri-bar-chart-line',
+        'building': 'ri-building-line',
+        'calculator': 'ri-calculator-line',
+        'calendar': 'ri-calendar-line',
+        'calendar-alt': 'ri-calendar-2-line',
+        'calendar-check': 'ri-calendar-check-line',
+        'calendar-star': 'ri-calendar-event-line',
+        'chart-line': 'ri-line-chart-line',
+        'church': 'ri-government-line',
+        'church-building': 'ri-government-line',
+        'church-detail': 'ri-building-2-line',
+        'clipboard-check': 'ri-clipboard-line',
+        'cogs': 'ri-settings-3-line',
+        'coins': 'ri-coins-line',
+        'dashboard': 'ri-dashboard-line',
+        'dollar-sign': 'ri-money-dollar-circle-line',
+        'eye': 'ri-eye-line',
+        'file-bar-chart': 'ri-file-chart-line',
+        'file-invoice-dollar': 'ri-bill-line',
+        'file-text': 'ri-file-text-line',
+        'graduation-cap': 'ri-award-line',
+        'hand-holding-dollar': 'ri-hand-coin-line',
+        'handshake': 'ri-hand-heart-line',
+        'heart': 'ri-heart-line',
+        'heart-handshake': 'ri-hand-heart-line',
+        'megaphone': 'ri-speaker-line',
+        'package': 'ri-archive-line',
+        'receipt': 'ri-bill-line',
+        'scale': 'ri-scales-3-line',
+        'share-alt': 'ri-share-line',
+        'shield-check': 'ri-shield-check-line',
+        'shield-user': 'ri-shield-check-line',
+        'user-plus': 'ri-user-add-line',
+        'users': 'ri-team-line',
+        'users-chart': 'ri-bar-chart-grouped-line',
+        'folder': 'ri-folder-line',
+        'default': 'ri-checkbox-blank-circle-line'
     };
+
+    // Per-group icon accent color, cycled round-robin - this app's own
+    // Bootstrap semantic color classes (matching the *-rgb variables in
+    // styles.css's :root), not thonge-leather's literal, off-brand hex
+    // values. Every module within a group shares its group's color, so
+    // the sidebar reads as organized-by-category rather than flat.
+    const ICON_COLOR_CYCLE = ['icon-primary', 'icon-secondary', 'icon-success', 'icon-danger'];
 
     // Initialize on DOM ready
     document.addEventListener('DOMContentLoaded', function() {
@@ -175,21 +202,16 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
     });
 
     /**
-     * Get Font Awesome icon class
+     * Get RemixIcon class for a module's stored icon value. Already-correct
+     * ri-* values (about a third of what's seeded today) pass through
+     * untouched instead of being stripped and looked up - there's nothing
+     * to translate when the data is already right.
      */
     function getIconClass(iconName) {
-        if (!iconName) return 'fa ' + (ICON_MAP['default'] || 'fa-circle');
-        if (iconName.startsWith('fa-')) return 'fa ' + iconName;
+        if (!iconName) return ICON_MAP['default'];
+        if (iconName.startsWith('ri-')) return iconName;
 
-        // Handle remixicon format (ri-xxx-line -> xxx)
-        if (iconName.startsWith('ri-')) {
-            const cleanIcon = iconName.replace('ri-', '').replace('-line', '').replace('-fill', '');
-            const mappedIcon = ICON_MAP[cleanIcon] || ICON_MAP['folder'];
-            return 'fa ' + mappedIcon;
-        }
-
-        const mappedIcon = ICON_MAP[iconName] || ICON_MAP['folder'];
-        return 'fa ' + mappedIcon;
+        return ICON_MAP[iconName] || ICON_MAP['folder'];
     }
 
     /**
@@ -268,11 +290,13 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
 
         // Loop through each group
         moduleGroups.forEach((group, groupIndex) => {
+            const colorClass = ICON_COLOR_CYCLE[groupIndex % ICON_COLOR_CYCLE.length];
+
             // Add group header
             html += `
             <li class="slide__category">
                 <span class="category-name">
-                    <i class="${getIconClass(group.icon)} me-2"></i>
+                    <i class="${getIconClass(group.icon)} me-2 ${colorClass}"></i>
                     ${escapeHtml(group.name)}
                 </span>
             </li>`;
@@ -289,7 +313,7 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
 
                 if (hasSubmodules) {
                     html += `
-                    <li class="slide has-sub" data-module-id="${module.id}">
+                    <li class="slide has-sub ${colorClass}" data-module-id="${module.id}">
                         <a href="javascript:void(0);" class="side-menu__item" data-toggle-submenu>
                             <i class="${iconClass} side-menu__icon"></i>
                             <span class="side-menu__label">${escapeHtml(module.name)}</span>
@@ -308,7 +332,7 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
                     </li>`;
                 } else {
                     html += `
-                    <li class="slide">
+                    <li class="slide ${colorClass}">
                         <a href="javascript:void(0);" class="side-menu__item">
                             <i class="${iconClass} side-menu__icon"></i>
                             <span class="side-menu__label">${escapeHtml(module.name)}</span>
@@ -662,7 +686,7 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
         if (loadingEl) {
             loadingEl.innerHTML = `
                 <a href="javascript:void(0);" class="side-menu__item text-warning">
-                    <i class="fa fa-triangle-exclamation side-menu__icon"></i>
+                    <i class="ri-error-warning-line side-menu__icon"></i>
                     <span class="side-menu__label">No modules available</span>
                 </a>`;
         }
@@ -673,7 +697,7 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
         if (loadingEl) {
             loadingEl.innerHTML = `
                 <a href="javascript:void(0);" class="side-menu__item text-danger">
-                    <i class="fa fa-circle-xmark side-menu__icon"></i>
+                    <i class="ri-close-circle-line side-menu__icon"></i>
                     <span class="side-menu__label">${message}</span>
                 </a>`;
         }
