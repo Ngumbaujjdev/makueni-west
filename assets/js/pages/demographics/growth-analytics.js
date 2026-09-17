@@ -83,6 +83,15 @@
  * buttons like everything else on this page, so switching ranges shows a
  * recent-trend vs. all-time-trend projection, not always the same number.
  *
+ * Comparison table polish (2026-09-17, v10): the plain black-text table
+ * from v7 read as boring - each row now gets the same icon + color already
+ * established for it in SEGMENTS (Male=ri-men-line/primary, etc.), and
+ * each value gets a small trend arrow against the previous column via
+ * DemographicsUI.trendFor() - the same helper the hero card's own trend
+ * badge already uses. table-bordered added in the PHP for visible grid
+ * lines. Deliberately not a DataTables.js integration (search/sort/
+ * pagination) - a materially bigger feature than a styling pass.
+ *
  * Dependencies: DemographicsAPIHandler, DemographicsUI, ApexCharts
  * ============================================================================
  */
@@ -140,16 +149,16 @@ const GrowthAnalytics = (function () {
 
   /** Every tracked category, for the year-by-year comparison table - same fields SEGMENTS above draws from, just flattened into one list instead of grouped into chart-friendly pairs. */
   const COMPARISON_CATEGORIES = [
-    { key: "total_members", label: "Total Members", emphasize: true },
-    { key: "male_count", label: "Male" },
-    { key: "female_count", label: "Female" },
-    { key: "youth_count", label: "Youth" },
-    { key: "mens_fellowship_count", label: "Men's Fellowship" },
-    { key: "womens_fellowship_count", label: "Women's Fellowship" },
-    { key: "sunday_school_male_count", label: "Sunday School (Male)" },
-    { key: "sunday_school_female_count", label: "Sunday School (Female)" },
-    { key: "sunday_school_teachers_count", label: "Sunday School Teachers" },
-    { key: "seniors_count", label: "Seniors" },
+    { key: "total_members", label: "Total Members", emphasize: true, icon: "ri-team-line", color: "primary" },
+    { key: "male_count", label: "Male", icon: "ri-men-line", color: "primary" },
+    { key: "female_count", label: "Female", icon: "ri-women-line", color: "secondary" },
+    { key: "youth_count", label: "Youth", icon: "ri-run-line", color: "primary" },
+    { key: "mens_fellowship_count", label: "Men's Fellowship", icon: "ri-men-line", color: "primary" },
+    { key: "womens_fellowship_count", label: "Women's Fellowship", icon: "ri-women-line", color: "secondary" },
+    { key: "sunday_school_male_count", label: "Sunday School (Male)", icon: "ri-men-line", color: "primary" },
+    { key: "sunday_school_female_count", label: "Sunday School (Female)", icon: "ri-women-line", color: "secondary" },
+    { key: "sunday_school_teachers_count", label: "Sunday School Teachers", icon: "ri-book-open-line", color: "primary" },
+    { key: "seniors_count", label: "Seniors", icon: "ri-walk-line", color: "primary" },
   ];
 
   async function init() {
@@ -387,8 +396,29 @@ const GrowthAnalytics = (function () {
     head.innerHTML = '<th class="fw-semibold text-dark">Category</th>' + rows.map((r) => `<th class="fw-semibold text-dark text-end">${yearLabel(r)}</th>`).join("");
 
     body.innerHTML = COMPARISON_CATEGORIES.map((cat) => {
-      const cells = rows.map((r) => `<td class="text-end${cat.emphasize ? " fw-semibold" : ""}">${r[cat.key] ?? "-"}</td>`).join("");
-      return `<tr><td class="fw-semibold">${cat.label}</td>${cells}</tr>`;
+      const cells = rows.map((r, i) => {
+        const value = r[cat.key] ?? 0;
+        // Trend arrow against the previous column - nothing on the first
+        // column (no prior year to compare against), same DemographicsUI.trendFor()
+        // the hero card's own trend badge already uses.
+        const previous = i > 0 ? rows[i - 1] : null;
+        const trend = previous ? DemographicsUI.trendFor(value, previous[cat.key] ?? 0) : null;
+        let arrowHtml = "";
+        if (trend && trend.diff !== 0) {
+          const arrowColor = trend.diff > 0 ? "success" : "danger";
+          const arrow = trend.diff > 0 ? "ri-arrow-up-line" : "ri-arrow-down-line";
+          arrowHtml = ` <i class="${arrow} text-${arrowColor} fs-12"></i>`;
+        }
+        return `<td class="text-end${cat.emphasize ? " fw-semibold" : ""}">${value}${arrowHtml}</td>`;
+      }).join("");
+
+      return `
+        <tr>
+          <td class="fw-semibold">
+            <i class="${cat.icon} text-${cat.color} me-2"></i>${cat.label}
+          </td>
+          ${cells}
+        </tr>`;
     }).join("");
   }
 
