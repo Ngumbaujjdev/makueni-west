@@ -1056,7 +1056,13 @@ html {
   border-color: #fff;
 }
 [data-menu-styles="dark"][data-theme-mode="light"] {
-  --menu-bg: #064c4f;
+  /* 2026-09-17: was #064c4f (a dark teal-green from the original
+     template) - this app's actual data-theme-mode="light" +
+     data-menu-styles="dark" combination, matched to the navy now used
+     for the sidebar body (--primary-bordered-bg) and the flyout submenu
+     panel, so the logo header strip stops reading as a different,
+     mismatched surface from the rest of the sidebar. */
+  --menu-bg: #151a2e;
 }
 [data-menu-styles="dark"][data-theme-mode="light"][data-bg-img="bgimg1"] {
   --menu-bg: url(../images/menu-bg-images/bg-img1.jpg);
@@ -1100,7 +1106,12 @@ html {
   }
 }
 [data-menu-styles="dark"][data-theme-mode="light"] {
-  --menu-bg: #064c4f;
+  /* Second declaration block for this same selector (see the other one
+     above, ~line 1058) - later in source order, so this is the one that
+     actually wins the cascade for --menu-bg. Kept both in sync rather
+     than consolidating - not touching the original template's structure
+     more than necessary. */
+  --menu-bg: #151a2e;
   --menu-prime-color: #a3aed1;
 }
 
