@@ -53,6 +53,11 @@
  * so it has no fiscal-year history to plot as a trend; it already shows
  * live on View Submission's "Pastors & Assistant Pastors" card.
  *
+ * Youth/Fellowship/Seniors segments (2026-09-17, v6): same two patterns as
+ * v5/v3 above, just more of them - Youth and Seniors are single-series
+ * (their own sub-counts, no pair to stack), Fellowship is a Men's/Women's
+ * pair (stacked columns + Total line, same as Gender/Sunday School).
+ *
  * Dependencies: DemographicsAPIHandler, DemographicsUI, ApexCharts
  * ============================================================================
  */
@@ -88,6 +93,22 @@ const GrowthAnalytics = (function () {
     sunday_school_teachers: {
       series: [
         { key: "sunday_school_teachers_count", name: "Sunday School Teachers", color: "primary", icon: "ri-book-open-line" },
+      ],
+    },
+    youth: {
+      series: [
+        { key: "youth_count", name: "Youth", color: "primary", icon: "ri-run-line" },
+      ],
+    },
+    fellowship: {
+      series: [
+        { key: "mens_fellowship_count", name: "Men's Fellowship", color: "primary", icon: "ri-men-line" },
+        { key: "womens_fellowship_count", name: "Women's Fellowship", color: "secondary", icon: "ri-women-line" },
+      ],
+    },
+    seniors: {
+      series: [
+        { key: "seniors_count", name: "Seniors", color: "primary", icon: "ri-walk-line" },
       ],
     },
   };

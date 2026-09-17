@@ -108,6 +108,9 @@ $breadcrumbs = [
                             <button type="button" class="btn btn-outline-primary btn-sm" data-segment="gender">Gender</button>
                             <button type="button" class="btn btn-outline-primary btn-sm" data-segment="sunday_school">Sunday School</button>
                             <button type="button" class="btn btn-outline-primary btn-sm" data-segment="sunday_school_teachers">SS Teachers</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-segment="youth">Youth</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-segment="fellowship">Fellowship</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-segment="seniors">Seniors</button>
                         </div>
                     </div>
                     <div class="card-body">
