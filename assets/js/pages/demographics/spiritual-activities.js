@@ -11,6 +11,12 @@
  * the same payload. Tabs render lazily on first `shown.bs.tab`, matching
  * attendance-reports.js's own pattern.
  *
+ * Cards (2026-09-17): now DemographicsUI.renderSolidStatCard() like every
+ * other Demographics page - was still the older pale-tint renderWidgetCard,
+ * the one page in this module never migrated when the rest moved over.
+ * Chart stays a plain single-color column - one metric per tab, nothing to
+ * split, so the Growth Analytics stacked/mixed treatment doesn't apply here.
+ *
  * Dependencies: DemographicsAPIHandler, DemographicsUI, ApexCharts,
  * Bootstrap tabs
  * ============================================================================
@@ -82,13 +88,20 @@ const SpiritualActivities = (function () {
     renderTab(activeMetric());
   }
 
+  /** Solid-icon cards, matching every other Demographics page - the backend already sends {label, value, icon, color} per card, just mapped through the shared renderer instead of the pale-tint renderWidgetCard. */
+  function renderStatCards(containerId, stats) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = stats.map((c) => `<div class="col-xl-3 col-lg-6 col-md-6">${DemographicsUI.renderSolidStatCard(c)}</div>`).join("");
+  }
+
   function renderTab(metric) {
     renderedTabs.add(metric);
 
     const widget = widgetsData?.spiritual?.find((s) => s.metric === metric);
     if (!widget) return;
 
-    DemographicsUI.renderWidgetCardsRow(`${metric}CardsRow`, widget.stats);
+    renderStatCards(`${metric}CardsRow`, widget.stats);
 
     charts[metric] = DemographicsUI.renderTrendChart(`${metric}Chart`, {
       categories: widget.chart.categories,
