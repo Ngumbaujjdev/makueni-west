@@ -139,6 +139,16 @@ $breadcrumbs = [
                     </div>
                 </div>
 
+                <!-- Heatmap: same categories/years as the comparison table above, as color intensity instead of raw numbers - which categories are growing/shrinking at a glance -->
+                <div class="card custom-card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="ri-grid-line me-2 text-primary"></i>Growth Heatmap</div>
+                    </div>
+                    <div class="card-body">
+                        <div id="growthHeatmap" style="min-height: 380px;"></div>
+                    </div>
+                </div>
+
             </div>
         </div>
 

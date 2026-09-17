@@ -306,15 +306,15 @@ const DemographicsUI = (function () {
     const el = document.getElementById(containerId);
     if (!el || typeof ApexCharts === "undefined") return null;
     const hex = brandHex(color);
-    // "area"/"line"/"mixed" each get their own real ApexCharts type - every
-    // other value ("bar", "column", or anything else already passed by
-    // existing callers) keeps mapping to the distributed-bar branch below,
-    // exactly as before this function only supported "area" vs everything-
-    // else. A "mixed" chart's container type is "line" per ApexCharts' own
-    // convention for combo charts (confirmed against the template's
-    // assets/js/apexcharts-mixed.js) - each series then carries its own
-    // "column"/"line" type.
-    const chartType = type === "area" ? "area" : type === "line" || type === "mixed" ? "line" : "bar";
+    // "area"/"line"/"mixed"/"heatmap" each get their own real ApexCharts
+    // type - every other value ("bar", "column", or anything else already
+    // passed by existing callers) keeps mapping to the distributed-bar
+    // branch below, exactly as before this function only supported "area"
+    // vs everything-else. A "mixed" chart's container type is "line" per
+    // ApexCharts' own convention for combo charts (confirmed against the
+    // template's assets/js/apexcharts-mixed.js) - each series then carries
+    // its own "column"/"line" type.
+    const chartType = type === "area" ? "area" : type === "line" || type === "mixed" ? "line" : type === "heatmap" ? "heatmap" : "bar";
 
     const options = {
       chart: { type: chartType, height: 300, toolbar: { show: false }, foreColor: "#333335" },
@@ -350,6 +350,17 @@ const DemographicsUI = (function () {
       // convention that file uses.
       options.chart.stacked = stacked;
       options.stroke = { width: series.map((s) => (s.type === "line" ? 3 : 1)) };
+    } else if (type === "heatmap") {
+      // One base color, auto-shaded light-to-dark across the data's value
+      // range (ApexCharts' own default shadeIntensity behavior for a
+      // single-color heatmap - confirmed against the template's own
+      // assets/js/apexcharts-heatmap.js, which does the same: one hex in
+      // `colors`, no manually-built colorScale.ranges needed). Each series
+      // is one row (e.g. a category), with {x, y} points across columns
+      // (e.g. fiscal years) - a data-encoding intensity scale, not a
+      // decorative gradient, so it's exempt from the no-gradients Design
+      // Rule the same way the donut chart's categorical colors already are.
+      options.legend.show = false;
     } else {
       // Distributed, shaded bars (index-1.html's Earnings chart pattern) -
       // one series, still one hue, just varying opacity per bar instead of

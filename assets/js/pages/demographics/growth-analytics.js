@@ -65,6 +65,15 @@
  * compares the church's own categories/years against each other, not
  * against other churches.
  *
+ * Heatmap (2026-09-17, v8): "heatmap" from the same ClickUp scope - same
+ * categories/years as the comparison table, color intensity instead of raw
+ * numbers (renderComparisonHeatmap). DemographicsUI.renderTrendChart()
+ * gained a "heatmap" type for this, modeled on the template's own
+ * assets/js/apexcharts-heatmap.js (one base color, ApexCharts auto-shades
+ * light-to-dark across the value range - not a manually-built color scale).
+ * Total Members excluded from the heatmap - it would dominate the shading
+ * scale and wash out every sub-category next to it.
+ *
  * Dependencies: DemographicsAPIHandler, DemographicsUI, ApexCharts
  * ============================================================================
  */
@@ -206,6 +215,7 @@ const GrowthAnalytics = (function () {
     renderSegmentBreakdownCards(rows);
     renderChart(rows);
     renderComparisonTable(rows);
+    renderComparisonHeatmap(rows);
   }
 
   /** Tier-1: the single dominant number - big, full-contrast, with its own trend badge and a folded-in plain-English insight sentence right underneath it (no separate callout box to jump to). */
@@ -352,6 +362,33 @@ const GrowthAnalytics = (function () {
       const cells = rows.map((r) => `<td class="text-end${cat.emphasize ? " fw-semibold" : ""}">${r[cat.key] ?? "-"}</td>`).join("");
       return `<tr><td class="fw-semibold">${cat.label}</td>${cells}</tr>`;
     }).join("");
+  }
+
+  /** Same rows/categories as the comparison table, as color-intensity instead of raw numbers - excludes "Total Members" (would dominate the scale and wash out every sub-category next to it). */
+  function renderComparisonHeatmap(rows) {
+    const el = document.getElementById("growthHeatmap");
+    if (!el) return;
+    el.innerHTML = "";
+
+    if (rows.length === 0) {
+      el.innerHTML = '<p class="text-center text-body fw-semibold py-4 mb-0">No approved submissions yet for this range</p>';
+      return;
+    }
+
+    const yearLabel = (r) => (r.fiscal_year?.year ? String(r.fiscal_year.year) : DemographicsUI.demographicPeriodLabel(r));
+    const categories = rows.map(yearLabel);
+
+    const series = COMPARISON_CATEGORIES.filter((cat) => !cat.emphasize).map((cat) => ({
+      name: cat.label,
+      data: rows.map((r, i) => ({ x: categories[i], y: r[cat.key] ?? 0 })),
+    }));
+
+    DemographicsUI.renderTrendChart("growthHeatmap", {
+      categories,
+      series,
+      type: "heatmap",
+      color: "primary",
+    });
   }
 
   function renderChart(rows) {
