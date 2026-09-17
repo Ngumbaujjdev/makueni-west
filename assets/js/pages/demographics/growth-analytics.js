@@ -74,6 +74,15 @@
  * Total Members excluded from the heatmap - it would dominate the shading
  * scale and wash out every sub-category next to it.
  *
+ * Growth projection (2026-09-17, v9): "forecasting" from the same ClickUp
+ * scope - one computed sentence appended to the hero card's insight line,
+ * not a new chart or card. Average year-over-year change across the
+ * currently-selected range, projected one step further - deliberately
+ * simple (no real statistical model), explicitly "projected"/"~" language
+ * rather than presented as a real number. Respects the 3/5/All range
+ * buttons like everything else on this page, so switching ranges shows a
+ * recent-trend vs. all-time-trend projection, not always the same number.
+ *
  * Dependencies: DemographicsAPIHandler, DemographicsUI, ApexCharts
  * ============================================================================
  */
@@ -256,6 +265,24 @@ const GrowthAnalytics = (function () {
       insightHtml = `<p class="fs-14 text-body fw-semibold mb-0 mt-3"><i class="ri-lightbulb-line text-warning me-1"></i>${sentence}</p>`;
     }
 
+    let projectionHtml = "";
+    if (rows.length >= 2) {
+      // Average year-over-year change across the currently-selected range
+      // (telescopes to (latest - first) / (n - 1) - the sum of every
+      // consecutive step collapses to just the endpoints) - projecting one
+      // step further at that same average rate. Deliberately simple (no
+      // real statistical model) and clearly labeled as an estimate, not a
+      // real number, matching this codebase's existing "no fabricated
+      // precision" convention (e.g. DemographicsReportWidgetService's own
+      // "never a fabricated 0" rule for missing data).
+      const avgChange = (latest.total_members - first.total_members) / (rows.length - 1);
+      const nextYear = (latest.fiscal_year?.year ?? 0) + 1;
+      const projected = Math.round(latest.total_members + avgChange);
+      if (latest.fiscal_year?.year) {
+        projectionHtml = `<p class="fs-14 text-body fw-semibold mb-0 mt-2"><i class="ri-route-line text-primary me-1"></i>At the current rate, membership is projected to reach ~${projected} by ${nextYear}.</p>`;
+      }
+    }
+
     container.innerHTML = `
       <div class="d-flex align-items-center gap-2 mb-3">
         <span class="avatar avatar-rounded avatar-sm bg-primary text-white flex-shrink-0"><i class="ri-team-line"></i></span>
@@ -263,7 +290,8 @@ const GrowthAnalytics = (function () {
       </div>
       <h1 class="fw-bold mb-2 display-6">${latest.total_members}</h1>
       ${trendHtml}
-      ${insightHtml}`;
+      ${insightHtml}
+      ${projectionHtml}`;
   }
 
   /** Tier-2: secondary driver metrics, demoted by construction - list rows inside one card, not their own full stat cards. */
