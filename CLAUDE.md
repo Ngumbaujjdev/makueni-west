@@ -91,6 +91,14 @@ This applies going forward — the existing Budget/Territory/Permission modules 
 
 Single source of truth for colors: `assets/css/styles.css`, `:root` block (search `Diocese Branding Colors from Logo`). Never hardcode a hex value in a page or component — reference the CSS custom properties below.
 
+**Every page links `assets/css/styles.min.css`, not `styles.css`.** `styles.min.css` is a separately committed, pre-built artifact — there's no build step that regenerates it automatically (`styles.css` editing it alone has zero visible effect, confirmed the hard way on 2026-09-17: `styles.min.css` had silently gone stale for two weeks of CSS-only changes before anyone noticed). **Any edit to `styles.css` must be followed, in the same commit, by regenerating `styles.min.css`:**
+
+```bash
+npx clean-css-cli -o assets/css/styles.min.css assets/css/styles.css
+```
+
+No install needed — `npx` fetches `clean-css-cli` on demand. Verify the regenerated file actually contains what you just added (`grep` for a distinctive class/property from your change) before committing — a silent failure here is easy to miss since the page still renders, just with the old styling.
+
 ### Brand Tokens
 
 ```css
