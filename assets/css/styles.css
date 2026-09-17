@@ -75,6 +75,18 @@ typography
      boxes. */
   --app-zoom: 90%;
 
+  /* .app-sidebar's own base rule (search "width: 15rem" further down)
+     references --primary-bordered-bg, which is never actually defined
+     anywhere in this codebase - confirmed via `git log -S` that it's
+     been a dangling reference since this repo's first commit, an
+     artifact of the original YNEX template export. An unresolved var()
+     makes that whole background declaration invalid, so the sidebar
+     silently rendered with no real background at all. Same dark navy
+     already used for the flyout submenu panel (2026-09-17), so the rail
+     and the panel it pops submenus out of read as one consistent
+     surface. */
+  --primary-bordered-bg: #151a2e;
+
   /* Diocese Branding Colors from Logo */
   --diocese-teal-rgb: 44, 164, 191; /* #2CA4BF - Primary */
   --diocese-gold-rgb: 242, 190, 34; /* #F2BE22 - Secondary */
