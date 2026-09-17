@@ -58,6 +58,13 @@
  * (their own sub-counts, no pair to stack), Fellowship is a Men's/Women's
  * pair (stacked columns + Total line, same as Gender/Sunday School).
  *
+ * Comparison table (2026-09-17, v7): "comparative" from the ClickUp scope
+ * for this page - every tracked category as rows, fiscal years as columns,
+ * same range-filtered data the chart already renders from (renderComparisonTable).
+ * Church-tier only (no cross-church data ever reaches this page), so this
+ * compares the church's own categories/years against each other, not
+ * against other churches.
+ *
  * Dependencies: DemographicsAPIHandler, DemographicsUI, ApexCharts
  * ============================================================================
  */
@@ -112,6 +119,20 @@ const GrowthAnalytics = (function () {
       ],
     },
   };
+
+  /** Every tracked category, for the year-by-year comparison table - same fields SEGMENTS above draws from, just flattened into one list instead of grouped into chart-friendly pairs. */
+  const COMPARISON_CATEGORIES = [
+    { key: "total_members", label: "Total Members", emphasize: true },
+    { key: "male_count", label: "Male" },
+    { key: "female_count", label: "Female" },
+    { key: "youth_count", label: "Youth" },
+    { key: "mens_fellowship_count", label: "Men's Fellowship" },
+    { key: "womens_fellowship_count", label: "Women's Fellowship" },
+    { key: "sunday_school_male_count", label: "Sunday School (Male)" },
+    { key: "sunday_school_female_count", label: "Sunday School (Female)" },
+    { key: "sunday_school_teachers_count", label: "Sunday School Teachers" },
+    { key: "seniors_count", label: "Seniors" },
+  ];
 
   async function init() {
     Object.assign(USER_TERRITORY, DemographicsUI.resolveUserTerritory(USER_TERRITORY));
@@ -184,6 +205,7 @@ const GrowthAnalytics = (function () {
     renderDrivers(rows);
     renderSegmentBreakdownCards(rows);
     renderChart(rows);
+    renderComparisonTable(rows);
   }
 
   /** Tier-1: the single dominant number - big, full-contrast, with its own trend badge and a folded-in plain-English insight sentence right underneath it (no separate callout box to jump to). */
@@ -308,6 +330,28 @@ const GrowthAnalytics = (function () {
     // column so a lone card doesn't stretch oddly wide.
     const colClass = segment.series.length === 1 ? "col-xl-4 col-lg-6 col-md-6" : "col-xl-6 col-lg-6 col-md-6";
     container.innerHTML = cards.map((c) => `<div class="${colClass}">${DemographicsUI.renderSolidStatCard(c)}</div>`).join("");
+  }
+
+  /** Comparative: every tracked category as rows, fiscal years as columns - the same range-filtered rows the chart/hero/drivers already use, just laid out for side-by-side reading instead of a trend line. */
+  function renderComparisonTable(rows) {
+    const head = document.getElementById("comparisonTableHead");
+    const body = document.getElementById("comparisonTableBody");
+    if (!head || !body) return;
+
+    if (rows.length === 0) {
+      head.innerHTML = '<th class="fw-semibold text-dark">Category</th>';
+      body.innerHTML = DemographicsUI.renderTableEmpty(1, "No approved submissions yet for this range", "ri-table-line");
+      return;
+    }
+
+    const yearLabel = (r) => (r.fiscal_year?.year ? String(r.fiscal_year.year) : DemographicsUI.demographicPeriodLabel(r));
+
+    head.innerHTML = '<th class="fw-semibold text-dark">Category</th>' + rows.map((r) => `<th class="fw-semibold text-dark text-end">${yearLabel(r)}</th>`).join("");
+
+    body.innerHTML = COMPARISON_CATEGORIES.map((cat) => {
+      const cells = rows.map((r) => `<td class="text-end${cat.emphasize ? " fw-semibold" : ""}">${r[cat.key] ?? "-"}</td>`).join("");
+      return `<tr><td class="fw-semibold">${cat.label}</td>${cells}</tr>`;
+    }).join("");
   }
 
   function renderChart(rows) {

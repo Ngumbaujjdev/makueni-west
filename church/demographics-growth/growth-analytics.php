@@ -118,6 +118,27 @@ $breadcrumbs = [
                     </div>
                 </div>
 
+                <!-- Comparative: every tracked category, fiscal years as columns - same range-button-filtered data the chart above already uses -->
+                <div class="card custom-card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="ri-table-line me-2 text-primary"></i>Year-by-Year Comparison</div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr id="comparisonTableHead">
+                                        <th class="fw-semibold text-dark">Category</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="comparisonTableBody">
+                                    <!-- Rows injected by growth-analytics.js -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
