@@ -67,6 +67,14 @@ typography
 /* Montserrat */
 @import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600&amp;display=swap");
 :root {
+  /* App-wide density (2026-09-17) - a single tunable knob rather than a
+     scattered set of shrunk font-sizes/paddings, so "make everything a bit
+     denser" stays a one-line change. zoom (not transform:scale) reflows
+     layout at the new size - tables/cards/sidebar all actually get more
+     compact, not just visually shrunk inside their old, now-oversized
+     boxes. */
+  --app-zoom: 90%;
+
   /* Diocese Branding Colors from Logo */
   --diocese-teal-rgb: 44, 164, 191; /* #2CA4BF - Primary */
   --diocese-gold-rgb: 242, 190, 34; /* #F2BE22 - Secondary */
@@ -150,6 +158,10 @@ typography
   --black-7: rgba(0, 0, 0, 0.7);
   --black-8: rgba(0, 0, 0, 0.8);
   --black-9: rgba(0, 0, 0, 0.9);
+}
+
+html {
+  zoom: var(--app-zoom);
 }
 
 /*Font Family*/
@@ -28383,13 +28395,21 @@ a:hover {
    bottom edge. Shadow all around (not just inline-end) so it reads as a
    floating card rather than a flush, attached panel. */
 @media (min-width: 992px) {
+    /* 2026-09-17: recolored from a white floating panel to dark navy
+       (matching a sibling project's sidebar submenu look) - was
+       deliberately white before specifically so it wouldn't inherit the
+       sidebar's own dark-theme text colors unreadably; now dark on
+       purpose, so it reads as an extension of the dark sidebar rather
+       than an unrelated white card. Text-color rules right below flip to
+       match (light-on-dark), same values the <992px mobile accordion
+       already used for its own dark-navy background - now shared. */
     #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 {
         display: none;
         position: fixed;
         width: 14rem;
-        background-color: var(--custom-white, #fff);
+        background-color: #151a2e;
         border-radius: 0.5rem;
-        box-shadow: 0 0.25rem 1rem rgba(13, 13, 13, 0.15);
+        box-shadow: 0 0.25rem 1rem rgba(13, 13, 13, 0.35);
         overflow-y: auto;
         z-index: 1030;
         padding: 0;
@@ -28452,41 +28472,23 @@ a:hover {
     }
 }
 
-/* The flyout is a light/white panel, but its content still inherits
-   text colors meant for the sidebar's own dark theme (this file's own
-   --menu-prime-color, and white-on-hover/active rules scoped to
-   [data-menu-styles="dark"]) - on a white background those read as
-   pale gray or, on hover, literally white-on-white. Force solid,
-   readable colors inside the flyout regardless of the sidebar's own
+/* The flyout's own content still inherits text colors meant for the
+   sidebar's own dark theme (this file's own --menu-prime-color, and
+   white-on-hover/active rules scoped to [data-menu-styles="dark"]) -
+   force solid, readable light text regardless of the sidebar's own
    data-menu-styles. #dynamic-modules-container gives this enough
    specificity to beat those attribute-scoped rules without needing
-   !important on every property. */
-/* Desktop only - the mobile accordion (<992px) sits on the sidebar's own
-   transparent/dark navy background, not white like the desktop flyout,
-   so it needs the opposite treatment (see the <992px rule further down):
-   this dark-text override applied unscoped used to make mobile submodule
-   text dark-on-dark-navy - nearly invisible. */
-@media (min-width: 992px) {
-    #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__label1 a {
-        color: var(--diocese-black, #0D0D0D) !important;
-    }
-
-    #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item {
-        color: var(--diocese-black, #0D0D0D) !important;
-    }
-
-    #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__angle {
-        color: var(--diocese-black, #0D0D0D) !important;
-    }
-}
-
-/* Mobile inline accordion counterpart to the desktop-only block above -
-   light text for the dark navy background it actually sits on. */
-@media (max-width: 991.98px) {
-    #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item,
-    #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__angle {
-        color: rgba(255, 255, 255, 0.85) !important;
-    }
+   !important on every property.
+   2026-09-17: now the SAME rule at every width, not a desktop/mobile
+   pair with opposite colors - since the flyout panel above became dark
+   navy (previously it was white, needing dark text; the <992px mobile
+   accordion was already dark-navy, needing light text - those two
+   states now match, so one rule covers both instead of two opposing
+   media-query blocks). */
+#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__label1 a,
+#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item,
+#dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__angle {
+    color: rgba(255, 255, 255, 0.85) !important;
 }
 
 #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item:hover {
@@ -28598,4 +28600,76 @@ a:hover {
     color: #fff;
     font-weight: 600;
     background-color: #2CA4BF;
+}
+
+/* ==========================================================================
+   Sidebar density/polish pass (2026-09-17)
+   Same base template + flyout interaction model as the "Sidebar flyout
+   nav" section above - this adds the missing visual polish (per-category
+   icon color, rounded-pill rows, a deliberate type scale) that section
+   never had, modeled on comparing against a sibling project's sidebar
+   (thonge-leather) that already had it. The flyout panel itself
+   (#dynamic-modules-container > li[data-module-id] > .slide-menu.child1,
+   above) already has its own rounded-corner/shadow treatment - not
+   duplicated here.
+   ========================================================================== */
+
+/* Per-category icon color - cycled round-robin per module group in
+   renderModuleGroups() (includes/sidebar.php). Bootstrap semantic *-rgb
+   vars from :root above, not literal hex, so a future brand-token change
+   propagates here too. :not(.active) + !important (matching this file's
+   existing convention for beating dark-mode's own specificity, see the
+   hover-state comment above) so the existing "active = solid teal" cue
+   stays the one consistent signal for "you are here" regardless of a
+   module's category color. */
+#dynamic-modules-container li.icon-primary .side-menu__item:not(.active) .side-menu__icon,
+#dynamic-modules-container .category-name .icon-primary {
+    color: rgb(var(--primary-rgb)) !important;
+}
+
+#dynamic-modules-container li.icon-secondary .side-menu__item:not(.active) .side-menu__icon,
+#dynamic-modules-container .category-name .icon-secondary {
+    color: rgb(var(--secondary-rgb)) !important;
+}
+
+#dynamic-modules-container li.icon-success .side-menu__item:not(.active) .side-menu__icon,
+#dynamic-modules-container .category-name .icon-success {
+    color: rgb(var(--success-rgb)) !important;
+}
+
+#dynamic-modules-container li.icon-danger .side-menu__item:not(.active) .side-menu__icon,
+#dynamic-modules-container .category-name .icon-danger {
+    color: rgb(var(--danger-rgb)) !important;
+}
+
+/* Rounded-pill rows with breathing room, instead of flush full-width
+   strips - every top-level nav row (not just the active one) reads as a
+   discrete, deliberate button. */
+#dynamic-modules-container > li > .side-menu__item {
+    border-radius: 0.375rem;
+    margin-inline: 0.5rem;
+}
+
+/* Deliberate type scale for category labels/menu labels - previously
+   relied on the base template's plain default sizing, which read flatter
+   than the rest of this app's own considered typography. */
+.category-name {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.09rem;
+}
+
+.side-menu__label {
+    font-size: 0.825rem;
+    font-weight: 500;
+}
+
+/* Spinning loader icon utility - reuses the @keyframes spin already
+   defined above (Start::Switcher) rather than a second, duplicate
+   keyframes block. Used by the sidebar's "Loading modules..." icon
+   (ri-loader-4-line, which - unlike Font Awesome's fa-spin - has no
+   animation of its own). */
+.ri-spin {
+    display: inline-block;
+    animation: spin 1s linear infinite;
 }
