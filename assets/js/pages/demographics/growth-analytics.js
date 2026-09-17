@@ -30,10 +30,18 @@
  *
  * Chart segment picker (2026-09-16, v3): the chart isn't locked to Total
  * Members - a "Gender"/"Sunday School" toggle swaps it to a genuine
- * two-line comparison (SEGMENTS map), each with its own latest-value cards
- * below it (renderSegmentBreakdownCards). DemographicsUI.renderTrendChart()
- * gained an optional `colors` array for this - without it, a multi-series
- * chart would render every line in the same single derived hue.
+ * comparison (SEGMENTS map), each with its own latest-value cards below it
+ * (renderSegmentBreakdownCards). DemographicsUI.renderTrendChart() gained
+ * an optional `colors` array for this - without it, a multi-series chart
+ * would render every line in the same single derived hue.
+ *
+ * Stacked mixed chart (2026-09-16, v4): a segment's two categories now
+ * render as stacked columns (bar height = the combined total, each
+ * segment's share visible within it) with a synthetic "Total" line
+ * overlaid - shows the actual split, not just two crossing trends.
+ * DemographicsUI.renderTrendChart() gained a "mixed" type + `stacked` flag
+ * for this, modeled on the template's own apexcharts-mixed.js (bar+line
+ * combo) and apexcharts-column.js (stacked:true) examples.
  *
  * Dependencies: DemographicsAPIHandler, DemographicsUI, ApexCharts
  * ============================================================================
@@ -285,11 +293,17 @@ const GrowthAnalytics = (function () {
       return;
     }
 
+    // Stacked columns (Male + Female share of the combined total) with a
+    // Total line overlaid - shows the split, not just two crossing trends.
+    const columnSeries = segment.series.map((s) => ({ name: s.name, type: "column", data: rows.map((r) => r[s.key] ?? 0) }));
+    const totalSeries = { name: "Total", type: "line", data: rows.map((r) => segment.series.reduce((sum, s) => sum + (r[s.key] ?? 0), 0)) };
+
     DemographicsUI.renderTrendChart("growthChart", {
       categories,
-      series: segment.series.map((s) => ({ name: s.name, data: rows.map((r) => r[s.key] ?? 0) })),
-      type: "line",
-      colors: segment.series.map((s) => DemographicsUI.brandHex(s.color)),
+      series: [...columnSeries, totalSeries],
+      type: "mixed",
+      stacked: true,
+      colors: [...segment.series.map((s) => DemographicsUI.brandHex(s.color)), DemographicsUI.brandHex("dark")],
     });
   }
 
