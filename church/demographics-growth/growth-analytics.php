@@ -107,6 +107,7 @@ $breadcrumbs = [
                             <button type="button" class="btn btn-primary btn-sm active" data-segment="total">Total Members</button>
                             <button type="button" class="btn btn-outline-primary btn-sm" data-segment="gender">Gender</button>
                             <button type="button" class="btn btn-outline-primary btn-sm" data-segment="sunday_school">Sunday School</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-segment="sunday_school_teachers">SS Teachers</button>
                         </div>
                     </div>
                     <div class="card-body">

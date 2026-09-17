@@ -43,6 +43,16 @@
  * for this, modeled on the template's own apexcharts-mixed.js (bar+line
  * combo) and apexcharts-column.js (stacked:true) examples.
  *
+ * Sunday School Teachers segment (2026-09-17, v5): a single-series segment
+ * (sunday_school_teachers_count is a lone manual counter, no Male/Female
+ * pair to stack) - renders as its own simple trend line instead of the
+ * stacked-columns-plus-Total treatment above, which only makes sense for
+ * 2+ categories. Clergy (Pastors/Associate Pastors) deliberately excluded
+ * from this chart - that data comes from GET /churches/{id}/clergy-summary
+ * (user_territory_assignments, "live, not stored" per the module spec),
+ * so it has no fiscal-year history to plot as a trend; it already shows
+ * live on View Submission's "Pastors & Assistant Pastors" card.
+ *
  * Dependencies: DemographicsAPIHandler, DemographicsUI, ApexCharts
  * ============================================================================
  */
@@ -69,6 +79,15 @@ const GrowthAnalytics = (function () {
       series: [
         { key: "sunday_school_male_count", name: "Sunday School (Male)", color: "primary", icon: "ri-men-line" },
         { key: "sunday_school_female_count", name: "Sunday School (Female)", color: "secondary", icon: "ri-women-line" },
+      ],
+    },
+    // Single-series segment - a sub-count like Youth/Seniors/Fellowship
+    // (manual counter, no other data source per the module spec), not a
+    // pair that splits a total, so it gets its own single trend line
+    // rather than the stacked-columns-plus-Total treatment above.
+    sunday_school_teachers: {
+      series: [
+        { key: "sunday_school_teachers_count", name: "Sunday School Teachers", color: "primary", icon: "ri-book-open-line" },
       ],
     },
   };
@@ -263,7 +282,11 @@ const GrowthAnalytics = (function () {
       trend: previous ? DemographicsUI.trendFor(latest[s.key] ?? 0, previous[s.key] ?? 0) : null,
     }));
 
-    container.innerHTML = cards.map((c) => `<div class="col-xl-6 col-lg-6 col-md-6">${DemographicsUI.renderSolidStatCard(c)}</div>`).join("");
+    // A 2-series segment (Gender/Sunday School) keeps the existing half-width
+    // pair; a 1-series segment (Sunday School Teachers) uses a narrower
+    // column so a lone card doesn't stretch oddly wide.
+    const colClass = segment.series.length === 1 ? "col-xl-4 col-lg-6 col-md-6" : "col-xl-6 col-lg-6 col-md-6";
+    container.innerHTML = cards.map((c) => `<div class="${colClass}">${DemographicsUI.renderSolidStatCard(c)}</div>`).join("");
   }
 
   function renderChart(rows) {
@@ -289,6 +312,19 @@ const GrowthAnalytics = (function () {
         series: [{ name: "Total Members", data: values }],
         type: "area",
         color: "primary",
+      });
+      return;
+    }
+
+    if (segment.series.length === 1) {
+      // Nothing to stack or overlay a Total line onto with a single
+      // category (e.g. Sunday School Teachers) - just its own trend line.
+      const s = segment.series[0];
+      DemographicsUI.renderTrendChart("growthChart", {
+        categories,
+        series: [{ name: s.name, data: rows.map((r) => r[s.key] ?? 0) }],
+        type: "line",
+        color: s.color,
       });
       return;
     }
