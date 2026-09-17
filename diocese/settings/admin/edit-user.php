@@ -46,7 +46,7 @@ if ($editUserId <= 0) {
         rel="stylesheet" />
 
     <!-- Style Css -->
-    <link href="<?= SITE_URL ?>/assets/css/styles.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/css/styles.min.css<?= assetVersion('assets/css/styles.min.css') ?>" rel="stylesheet" />
 
     <!-- Icons Css -->
     <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />

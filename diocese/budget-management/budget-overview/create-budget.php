@@ -41,7 +41,7 @@ $userTerritoryName = $currentRole['territory']['name'] ?? 'Diocese';
     <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
 
     <!-- Style Css -->
-    <link href="<?= SITE_URL ?>/assets/css/styles.min.css" rel="stylesheet" />
+    <link href="<?= SITE_URL ?>/assets/css/styles.min.css<?= assetVersion('assets/css/styles.min.css') ?>" rel="stylesheet" />
 
     <!-- Icons Css -->
     <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />
