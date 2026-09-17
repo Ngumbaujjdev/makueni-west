@@ -92,6 +92,12 @@
  * lines. Deliberately not a DataTables.js integration (search/sort/
  * pagination) - a materially bigger feature than a styling pass.
  *
+ * Insight sentence fix (2026-09-17, v11): renderHero()'s "Grew from X to Y"
+ * text used to show for ANY non-zero change, including declines - a real
+ * wording bug, not just a styling one. Now three real branches (grew/
+ * declined/flat) with the numbers colored success/danger to match, instead
+ * of reading identically to a flat, no-information number.
+ *
  * Dependencies: DemographicsAPIHandler, DemographicsUI, ApexCharts
  * ============================================================================
  */
@@ -268,10 +274,28 @@ const GrowthAnalytics = (function () {
       const change = latest.total_members - first.total_members;
       const startYear = first.fiscal_year?.year;
       const endYear = latest.fiscal_year?.year;
-      const sentence = change === 0
-        ? `Membership stayed steady at ${latest.total_members} between ${startYear} and ${endYear}.`
-        : `Grew from ${first.total_members} to ${latest.total_members} members between ${startYear} and ${endYear}.`;
-      insightHtml = `<p class="fs-14 text-body fw-semibold mb-0 mt-3"><i class="ri-lightbulb-line text-warning me-1"></i>${sentence}</p>`;
+      // Three real branches, not two - the old version said "Grew from X
+      // to Y" for ANY non-zero change, including declines, which read
+      // backwards for a church that actually lost members. Colored to
+      // match, since a number that carries real information (grew vs.
+      // declined) shouldn't render identically to one that doesn't - same
+      // success/danger convention as every trend badge/arrow elsewhere on
+      // this page.
+      let icon = "ri-lightbulb-line";
+      let iconColor = "warning";
+      let sentence;
+      if (change > 0) {
+        icon = "ri-arrow-up-line";
+        iconColor = "success";
+        sentence = `Grew from <span class="text-success">${first.total_members}</span> to <span class="text-success">${latest.total_members}</span> members between ${startYear} and ${endYear}.`;
+      } else if (change < 0) {
+        icon = "ri-arrow-down-line";
+        iconColor = "danger";
+        sentence = `Declined from <span class="text-danger">${first.total_members}</span> to <span class="text-danger">${latest.total_members}</span> members between ${startYear} and ${endYear}.`;
+      } else {
+        sentence = `Membership stayed steady at ${latest.total_members} between ${startYear} and ${endYear}.`;
+      }
+      insightHtml = `<p class="fs-14 text-body fw-semibold mb-0 mt-3"><i class="${icon} text-${iconColor} me-1"></i>${sentence}</p>`;
     }
 
     let projectionHtml = "";
