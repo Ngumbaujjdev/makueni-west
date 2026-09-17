@@ -154,6 +154,10 @@ const DemographicsUI = (function () {
     // Matches --info-rgb (44, 164, 191) in styles.css, which is the same
     // value as the diocese teal - this just mirrors the CSS, not a new color.
     info: "#2CA4BF",
+    // Diocese black (CLAUDE.md Brand Tokens: --diocese-black) - the neutral
+    // choice for chart elements that aren't a semantic success/danger/etc.
+    // color, e.g. a "combined total" reference line, or axis label text.
+    dark: "#0D0D0D",
   };
 
   function brandHex(color) {
@@ -298,20 +302,31 @@ const DemographicsUI = (function () {
    *   `colors` would render every line in the same hue, which is the bug
    *   this param exists to prevent.
    */
-  function renderTrendChart(containerId, { categories, series, type = "area", color = "primary", colors = null } = {}) {
+  function renderTrendChart(containerId, { categories, series, type = "area", color = "primary", colors = null, stacked = false } = {}) {
     const el = document.getElementById(containerId);
     if (!el || typeof ApexCharts === "undefined") return null;
     const hex = brandHex(color);
-    // Only "area" and the new "line" get their own real ApexCharts type -
-    // every other value ("bar", "column", or anything else already passed
-    // by existing callers) keeps mapping to the distributed-bar branch
-    // below, exactly as before this function supported "line".
-    const chartType = type === "area" ? "area" : type === "line" ? "line" : "bar";
+    // "area"/"line"/"mixed" each get their own real ApexCharts type - every
+    // other value ("bar", "column", or anything else already passed by
+    // existing callers) keeps mapping to the distributed-bar branch below,
+    // exactly as before this function only supported "area" vs everything-
+    // else. A "mixed" chart's container type is "line" per ApexCharts' own
+    // convention for combo charts (confirmed against the template's
+    // assets/js/apexcharts-mixed.js) - each series then carries its own
+    // "column"/"line" type.
+    const chartType = type === "area" ? "area" : type === "line" || type === "mixed" ? "line" : "bar";
 
     const options = {
       chart: { type: chartType, height: 300, toolbar: { show: false }, foreColor: "#333335" },
       series,
-      xaxis: { categories },
+      xaxis: {
+        categories,
+        // Full-contrast, bold axis labels - the template's default
+        // foreColor above is a legible-enough mid-gray for most chart
+        // text, but the year/category labels specifically read as too
+        // faint against this app's own no-muted-text Design Rule.
+        labels: { style: { colors: BRAND_COLORS.dark, fontWeight: 600 } },
+      },
       colors: colors || [hex],
       dataLabels: { enabled: false },
       grid: { borderColor: hexToRgba(hex, 0.05) },
@@ -326,6 +341,15 @@ const DemographicsUI = (function () {
       // no fill, so two overlapping series stay readable instead of
       // muddying together the way two translucent areas would.
       options.stroke = { curve: "smooth", width: 2 };
+    } else if (type === "mixed") {
+      // Stacked columns (shows composition, e.g. Male+Female share of a
+      // combined total) with a Total line overlaid - each series in
+      // `series` carries its own `type: "column"`/`"line"`, mirroring
+      // apexcharts-mixed.js's bar+line combo. `stroke.width` is an array
+      // matching series count (thin for bars, thicker for the line), same
+      // convention that file uses.
+      options.chart.stacked = stacked;
+      options.stroke = { width: series.map((s) => (s.type === "line" ? 3 : 1)) };
     } else {
       // Distributed, shaded bars (index-1.html's Earnings chart pattern) -
       // one series, still one hue, just varying opacity per bar instead of
