@@ -6,6 +6,7 @@ use App\Models\Church;
 use App\Models\FiscalMonth;
 use App\Models\FiscalYear;
 use App\Models\GatheringCategory;
+use App\Models\GatheringType;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\UserTerritoryAssignment;
@@ -136,5 +137,95 @@ class AttendanceReportPdfExportTest extends TestCase
         ]));
 
         $response->assertStatus(422)->assertJsonValidationErrors('fiscal_year_id');
+    }
+
+    public function test_pdf_can_drill_down_to_one_gathering_type(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $type = GatheringType::create([
+            'gathering_category_id' => $this->ministryGatheringCategoryId,
+            'territory_id' => $this->myChurch->id,
+            'name' => 'Tuesday Fellowship',
+            'slug' => 'tuesday-fellowship',
+        ]);
+
+        $response = $this->get('/api/attendance-reports/export-pdf?'.http_build_query([
+            'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => FiscalYear::first()->id,
+            'gathering_category_id' => $this->ministryGatheringCategoryId,
+            'gathering_type_id' => $type->id,
+        ]));
+
+        $response->assertStatus(200);
+        $response->assertHeader('Content-Type', 'application/pdf');
+    }
+
+    public function test_export_rejects_a_gathering_type_from_another_church(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $otherChurchType = GatheringType::create([
+            'gathering_category_id' => $this->ministryGatheringCategoryId,
+            'territory_id' => $this->otherChurch->id,
+            'name' => 'Tuesday Fellowship',
+            'slug' => 'tuesday-fellowship',
+        ]);
+
+        $response = $this->get('/api/attendance-reports/export-pdf?'.http_build_query([
+            'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => FiscalYear::first()->id,
+            'gathering_category_id' => $this->ministryGatheringCategoryId,
+            'gathering_type_id' => $otherChurchType->id,
+        ]));
+
+        $response->assertStatus(422)->assertJsonValidationErrors('gathering_type_id');
+    }
+
+    public function test_pastor_can_export_excel_for_a_weekly_category(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $response = $this->get('/api/attendance-reports/export-excel?'.http_build_query([
+            'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => FiscalYear::first()->id,
+            'gathering_category_id' => $this->sundayServiceCategoryId,
+        ]));
+
+        $response->assertStatus(200);
+        $response->assertHeader(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+    }
+
+    public function test_pastor_can_export_excel_for_a_breakdown_category(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $response = $this->get('/api/attendance-reports/export-excel?'.http_build_query([
+            'territory_id' => $this->myChurch->id,
+            'fiscal_year_id' => FiscalYear::first()->id,
+            'gathering_category_id' => $this->ministryGatheringCategoryId,
+        ]));
+
+        $response->assertStatus(200);
+        $response->assertHeader(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+    }
+
+    public function test_pastor_cannot_export_excel_for_another_church(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $response = $this->get('/api/attendance-reports/export-excel?'.http_build_query([
+            'territory_id' => $this->otherChurch->id,
+            'fiscal_year_id' => FiscalYear::first()->id,
+            'gathering_category_id' => $this->sundayServiceCategoryId,
+        ]));
+
+        $response->assertStatus(403);
     }
 }

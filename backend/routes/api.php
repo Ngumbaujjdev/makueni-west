@@ -368,6 +368,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('attendance-reports')->group(function () {
         Route::get('/widgets', [AttendanceReportController::class, 'widgets']);
         Route::get('/export-pdf', [AttendanceReportController::class, 'exportPdf']);
+        Route::get('/export-excel', [AttendanceReportController::class, 'exportExcel']);
     });
 
     // Demographics Reports - Spiritual Activities/Monthly Statistics/Growth Analytics pages' stat cards/charts (read-only, computed server-side)

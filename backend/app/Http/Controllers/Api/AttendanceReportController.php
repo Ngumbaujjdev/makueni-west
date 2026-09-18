@@ -2,15 +2,19 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exports\AttendanceReportExport;
 use App\Http\Controllers\Controller;
 use App\Models\FiscalMonth;
 use App\Models\FiscalYear;
 use App\Models\GatheringCategory;
+use App\Models\GatheringType;
 use App\Models\Territory;
 use App\Services\AttendanceReportWidgetService;
 use App\Services\Pdf\AttendanceSummaryPdfReport;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
 
 /**
  * Backs the Attendance Reports tabbed dashboard's stat cards/charts/
@@ -74,9 +78,62 @@ class AttendanceReportController extends Controller
      * convention, not something this one endpoint should diverge from).
      * gathering_category_id is required here (unlike widgets(), where
      * omitting it means "combined summary") - the PDF report picker only
-     * offers the 3 real categories, no combined report.
+     * offers the 3 real categories, no combined report. gathering_type_id
+     * is an optional further drill-down to one configured type.
      */
     public function exportPdf(Request $request)
+    {
+        $context = $this->resolveExportContext($request);
+        if ($context instanceof JsonResponse) {
+            return $context;
+        }
+        [$church, $year, $month, $category, $gatheringType] = $context;
+
+        $widgets = $this->widgets->widgetsFor($church->id, $category, $year, $month, $gatheringType?->id);
+        $reportId = $this->buildReportId($year, $month);
+
+        $pdf = (new AttendanceSummaryPdfReport($church->name, $category, $year, $month, $widgets, $reportId, $gatheringType))->build();
+        $filename = $reportId.'.pdf';
+
+        return response($pdf->Output($filename, 'S'), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => "inline; filename=\"{$filename}\"",
+        ]);
+    }
+
+    /**
+     * Excel counterpart to exportPdf() - same widgetsFor() output and the
+     * same request contract (including the gathering_type_id drill-down),
+     * just tabular instead of drawn.
+     */
+    public function exportExcel(Request $request)
+    {
+        $context = $this->resolveExportContext($request);
+        if ($context instanceof JsonResponse) {
+            return $context;
+        }
+        [$church, $year, $month, $category, $gatheringType] = $context;
+
+        $widgets = $this->widgets->widgetsFor($church->id, $category, $year, $month, $gatheringType?->id);
+        $reportId = $this->buildReportId($year, $month);
+
+        return Excel::download(new AttendanceReportExport($category, $widgets), $reportId.'.xlsx');
+    }
+
+    private function buildReportId(FiscalYear $year, ?FiscalMonth $month): string
+    {
+        return sprintf('ATTREPORT-%d-%s-%s', $year->year, $month ? $month->short_name : 'FY', now()->format('YmdHis'));
+    }
+
+    /**
+     * Shared validation + lookup for exportPdf()/exportExcel() - territory
+     * ownership, the fiscal year/month/category/type params, and (matching
+     * AttendanceController's own convention for this exact check) rejecting
+     * a gathering_type_id that belongs to a different church.
+     *
+     * @return JsonResponse|array{0: Territory, 1: FiscalYear, 2: ?FiscalMonth, 3: GatheringCategory, 4: ?GatheringType}
+     */
+    private function resolveExportContext(Request $request): JsonResponse|array
     {
         $user = $request->user();
         $territoryId = (int) $request->query('territory_id');
@@ -93,6 +150,7 @@ class AttendanceReportController extends Controller
             'fiscal_year_id' => 'required|exists:fiscal_years,id',
             'fiscal_month_id' => 'nullable|exists:fiscal_months,id',
             'gathering_category_id' => 'required|exists:gathering_categories,id',
+            'gathering_type_id' => 'nullable|exists:gathering_types,id',
         ]);
 
         if ($validator->fails()) {
@@ -109,22 +167,21 @@ class AttendanceReportController extends Controller
         $month = $request->filled('fiscal_month_id') ? FiscalMonth::find($request->query('fiscal_month_id')) : null;
         $category = GatheringCategory::findOrFail($request->query('gathering_category_id'));
 
-        $widgets = $this->widgets->widgetsFor($territoryId, $category, $year, $month);
+        $gatheringType = null;
+        if ($request->filled('gathering_type_id')) {
+            $gatheringType = GatheringType::find($request->query('gathering_type_id'));
 
-        $reportId = sprintf(
-            'ATTREPORT-%d-%s-%s',
-            $year->year,
-            $month ? $month->short_name : 'FY',
-            now()->format('YmdHis')
-        );
+            if (! $gatheringType || (int) $gatheringType->territory_id !== $territoryId) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 422,
+                    'message' => 'The selected gathering type does not belong to this church.',
+                    'errors' => ['gathering_type_id' => ['Invalid gathering type for this church.']],
+                ], 422);
+            }
+        }
 
-        $pdf = (new AttendanceSummaryPdfReport($church->name, $category, $year, $month, $widgets, $reportId))->build();
-        $filename = $reportId.'.pdf';
-
-        return response($pdf->Output($filename, 'S'), 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => "inline; filename=\"{$filename}\"",
-        ]);
+        return [$church, $year, $month, $category, $gatheringType];
     }
 
     /**

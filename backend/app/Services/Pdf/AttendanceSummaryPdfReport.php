@@ -6,6 +6,7 @@ use App\Enums\DioceseBranding;
 use App\Models\FiscalMonth;
 use App\Models\FiscalYear;
 use App\Models\GatheringCategory;
+use App\Models\GatheringType;
 
 /**
  * Formats AttendanceReportWidgetService::widgetsFor()'s output as a
@@ -25,16 +26,19 @@ class AttendanceSummaryPdfReport extends DiocesePdfReport
         private readonly ?FiscalMonth $month,
         private readonly array $widgets,
         private readonly string $reportId,
+        private readonly ?GatheringType $gatheringType = null,
     ) {
         parent::__construct();
     }
 
     public function build(): static
     {
-        $this->initReport(
-            $this->category->name.' Attendance Report',
-            "{$this->churchName} \xC2\xB7 {$this->periodLabel()}"
-        );
+        $subtitle = "{$this->churchName} \xC2\xB7 {$this->periodLabel()}";
+        if ($this->gatheringType) {
+            $subtitle .= " \xC2\xB7 {$this->gatheringType->name}";
+        }
+
+        $this->initReport($this->category->name.' Attendance Report', $subtitle);
 
         $this->addKpiBoxes($this->kpiBoxes());
 
@@ -45,9 +49,32 @@ class AttendanceSummaryPdfReport extends DiocesePdfReport
         }
 
         $this->addInsightsList('Insights', $this->widgets['insights'] ?? []);
-        $this->addReportFooter($this->reportId);
+        $this->addReportFooter($this->reportId, $this->qrContent());
 
         return $this;
+    }
+
+    /**
+     * Encodes the same authentication metadata ifms-core-server's own
+     * report QR codes carry - church, category (+ drilled-down type, if
+     * any), period, report ID, and generation timestamp.
+     */
+    private function qrContent(): string
+    {
+        $lines = [
+            'Makueni West Diocese - '.$this->category->name.' Attendance Report',
+            'Church: '.$this->churchName,
+            'Period: '.$this->periodLabel(),
+        ];
+
+        if ($this->gatheringType) {
+            $lines[] = 'Gathering Type: '.$this->gatheringType->name;
+        }
+
+        $lines[] = 'Report ID: '.$this->reportId;
+        $lines[] = 'Generated: '.now()->toDateTimeString();
+
+        return implode("\n", $lines);
     }
 
     private function periodLabel(): string
