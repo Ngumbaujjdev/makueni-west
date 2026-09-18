@@ -36,11 +36,23 @@ class AttendanceReportWidgetService
 
     /**
      * @param  GatheringCategory|null  $category  null = all 3 categories combined (the cross-tab summary strip)
+     * @param  int|null  $gatheringTypeId  Narrows a non-weekly category down to one configured
+     *                                     gathering type (e.g. just "Kesha," not the whole
+     *                                     Ministry Gatherings category) - the PDF/Excel report
+     *                                     pickers' optional drill-down. Ignored for a weekly
+     *                                     category (Sunday Service has no "types" concept) and
+     *                                     for the combined cross-tab summary, matching how this
+     *                                     method already treats category-shape as authoritative.
      */
-    public function widgetsFor(int $territoryId, ?GatheringCategory $category, FiscalYear $year, ?FiscalMonth $month): array
+    public function widgetsFor(int $territoryId, ?GatheringCategory $category, FiscalYear $year, ?FiscalMonth $month, ?int $gatheringTypeId = null): array
     {
-        $records = $this->recordsFor($territoryId, $category, $year, $month);
-        $previousRecords = $this->previousPeriodRecords($territoryId, $category, $year, $month);
+        // Only meaningful for a non-weekly category - see the docblock above.
+        if ($category === null || $category->is_weekly) {
+            $gatheringTypeId = null;
+        }
+
+        $records = $this->recordsFor($territoryId, $category, $year, $month, $gatheringTypeId);
+        $previousRecords = $this->previousPeriodRecords($territoryId, $category, $year, $month, $gatheringTypeId);
         $trendLabel = $month !== null ? 'vs last month' : 'vs last year';
 
         if ($category === null) {
@@ -59,7 +71,7 @@ class AttendanceReportWidgetService
             ];
         }
 
-        $breakdown = $this->breakdown($territoryId, $category, $records);
+        $breakdown = $this->breakdown($territoryId, $category, $records, $gatheringTypeId);
 
         return [
             'stats' => $this->breakdownStats($records, $breakdown, $previousRecords, $trendLabel),
@@ -81,17 +93,17 @@ class AttendanceReportWidgetService
      * matching how `sundayStatColumns()` also never crosses a fiscal-year
      * boundary - or no prior fiscal year exists yet).
      */
-    private function previousPeriodRecords(int $territoryId, ?GatheringCategory $category, FiscalYear $year, ?FiscalMonth $month): ?Collection
+    private function previousPeriodRecords(int $territoryId, ?GatheringCategory $category, FiscalYear $year, ?FiscalMonth $month, ?int $gatheringTypeId = null): ?Collection
     {
         if ($month !== null) {
             $previousMonth = FiscalMonth::where('number', $month->number - 1)->first();
 
-            return $previousMonth ? $this->recordsFor($territoryId, $category, $year, $previousMonth) : null;
+            return $previousMonth ? $this->recordsFor($territoryId, $category, $year, $previousMonth, $gatheringTypeId) : null;
         }
 
         $previousYear = FiscalYear::where('year', $year->year - 1)->first();
 
-        return $previousYear ? $this->recordsFor($territoryId, $category, $previousYear, null) : null;
+        return $previousYear ? $this->recordsFor($territoryId, $category, $previousYear, null, $gatheringTypeId) : null;
     }
 
     /**
@@ -123,7 +135,7 @@ class AttendanceReportWidgetService
         ];
     }
 
-    private function recordsFor(int $territoryId, ?GatheringCategory $category, FiscalYear $year, ?FiscalMonth $month): Collection
+    private function recordsFor(int $territoryId, ?GatheringCategory $category, FiscalYear $year, ?FiscalMonth $month, ?int $gatheringTypeId = null): Collection
     {
         $query = ChurchAttendanceRecord::where('territory_type', 'church')
             ->where('territory_id', $territoryId)
@@ -136,6 +148,10 @@ class AttendanceReportWidgetService
 
         if ($month !== null) {
             $query->where('fiscal_month_id', $month->id);
+        }
+
+        if ($gatheringTypeId !== null) {
+            $query->where('gathering_type_id', $gatheringTypeId);
         }
 
         return $query->get();
@@ -341,12 +357,20 @@ class AttendanceReportWidgetService
      * have any." Sorted by total attendance descending, same "ranked list"
      * shape as a Top Selling Products table.
      */
-    private function breakdown(int $territoryId, GatheringCategory $category, Collection $records): array
+    private function breakdown(int $territoryId, GatheringCategory $category, Collection $records, ?int $gatheringTypeId = null): array
     {
-        $types = GatheringType::where('territory_id', $territoryId)
+        $typesQuery = GatheringType::where('territory_id', $territoryId)
             ->where('gathering_category_id', $category->id)
-            ->orderBy('display_order')
-            ->get();
+            ->orderBy('display_order');
+
+        // Drilled down to one type - $records is already filtered to it
+        // (see recordsFor()), so this just collapses the table to that
+        // type's single row instead of restructuring how rows are built.
+        if ($gatheringTypeId !== null) {
+            $typesQuery->where('id', $gatheringTypeId);
+        }
+
+        $types = $typesQuery->get();
 
         return $types->map(function (GatheringType $type) use ($records) {
             $typeRecords = $records->where('gathering_type_id', $type->id);

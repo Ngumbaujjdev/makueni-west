@@ -60,7 +60,10 @@ abstract class DiocesePdfReport extends TCPDF
         $this->applyTextColor(DioceseBranding::DARK_GRAY);
         $this->Cell(0, 6, $subtitle, 0, 1, 'C');
 
-        $this->Ln(6);
+        $this->Ln(3);
+        $this->applyDrawColor(DioceseBranding::LIGHT_GRAY);
+        $this->Line(self::MARGIN, $this->GetY(), $this->getPageWidth() - self::MARGIN, $this->GetY());
+        $this->Ln(5);
     }
 
     /**
@@ -77,30 +80,50 @@ abstract class DiocesePdfReport extends TCPDF
         $gap = 4;
         $usableWidth = $this->getPageWidth() - (2 * self::MARGIN);
         $boxWidth = ($usableWidth - ($gap * (count($boxes) - 1))) / count($boxes);
-        // Tall enough for a 2-line wrapped label - some labels (e.g. "Total
-        // Gatherings Recorded", "Most Active Type") don't fit one line at
-        // this box width, and Cell() doesn't wrap/clip text, so an
-        // unwrapped long label bled into the next box.
-        $boxHeight = 26;
+        $innerWidth = $boxWidth - 4;
         $startY = $this->GetY();
         $x = self::MARGIN;
 
-        foreach ($boxes as $box) {
+        $topPad = 3;
+        $valueLineHeight = 6;
+        $labelLineHeight = 3.2;
+        $gapBetween = 2;
+        $bottomPad = 3;
+
+        // Two-pass: a value isn't always a short number - "Most Active
+        // Type" is a descriptive string (e.g. "Tuesday Fellowship (2x)")
+        // that doesn't fit one line at this box width, and Cell() (used
+        // here previously) doesn't wrap - it just spills past the box
+        // border. Measure every box's line count up front with
+        // getNumLines() so the whole row can share one common height,
+        // keeping the boxes visually aligned regardless of which one
+        // wraps.
+        $this->SetFont('helvetica', 'B', 14);
+        $valueLines = array_map(fn (array $box) => $this->getNumLines((string) $box['value'], $innerWidth), $boxes);
+        $this->SetFont('helvetica', '', 7.5);
+        $labelLines = array_map(fn (array $box) => $this->getNumLines(strtoupper((string) $box['label']), $innerWidth), $boxes);
+
+        $rowHeights = array_map(
+            fn (int $i) => $topPad + ($valueLines[$i] * $valueLineHeight) + $gapBetween + ($labelLines[$i] * $labelLineHeight) + $bottomPad,
+            array_keys($boxes)
+        );
+        $boxHeight = max(26, ...$rowHeights);
+
+        foreach ($boxes as $i => $box) {
             $color = $box['color'] ?? DioceseBranding::PRIMARY_TEAL;
 
-            $this->SetXY($x, $startY);
             $this->applyDrawColor($color);
             $this->Rect($x, $startY, $boxWidth, $boxHeight, 'D');
 
-            $this->SetXY($x + 2, $startY + 3);
+            $this->SetXY($x + 2, $startY + $topPad);
             $this->applyTextColor($color);
             $this->SetFont('helvetica', 'B', 14);
-            $this->Cell($boxWidth - 4, 8, (string) $box['value'], 0, 2, 'L');
+            $this->MultiCell($innerWidth, $valueLineHeight, (string) $box['value'], 0, 'L', false, 1);
 
-            $this->SetXY($x + 2, $startY + 13);
+            $this->SetXY($x + 2, $startY + $topPad + ($valueLines[$i] * $valueLineHeight) + $gapBetween);
             $this->applyTextColor(DioceseBranding::DARK_GRAY);
             $this->SetFont('helvetica', '', 7.5);
-            $this->MultiCell($boxWidth - 4, 3.2, strtoupper((string) $box['label']), 0, 'L', false, 0);
+            $this->MultiCell($innerWidth, $labelLineHeight, strtoupper((string) $box['label']), 0, 'L', false, 1);
 
             $x += $boxWidth + $gap;
         }
@@ -174,12 +197,28 @@ abstract class DiocesePdfReport extends TCPDF
     }
 
     /**
-     * Report ID + generated-on timestamp + "computer-generated document"
-     * disclaimer - called once, at the very end of the report content.
+     * QR code + report ID + generated-on timestamp + "computer-generated
+     * document" disclaimer - called once, at the very end of the report
+     * content. $qrContent, when given, is encoded as a small "Report
+     * Authentication" QR code above the disclaimer text - matching the
+     * pattern ifms-core-server's own reports use, minus a live
+     * verification endpoint (out of scope here; this is a lightweight
+     * authenticity marker a viewer can read the encoded text from, not a
+     * scan-to-verify flow).
      */
-    protected function addReportFooter(string $reportId): void
+    protected function addReportFooter(string $reportId, ?string $qrContent = null): void
     {
         $this->Ln(4);
+        $this->applyDrawColor(DioceseBranding::LIGHT_GRAY);
+        $this->Line(self::MARGIN, $this->GetY(), $this->getPageWidth() - self::MARGIN, $this->GetY());
+        $this->Ln(4);
+
+        if ($qrContent !== null) {
+            $qrSize = 20;
+            $this->write2DBarcode($qrContent, 'QRCODE,L', ($this->getPageWidth() - $qrSize) / 2, $this->GetY(), $qrSize, $qrSize, [], 'C');
+            $this->SetY($this->GetY() + $qrSize + 2);
+        }
+
         $this->SetFont('helvetica', 'I', 8);
         $this->applyTextColor(DioceseBranding::DARK_GRAY);
         $this->MultiCell(0, 5, 'This is a computer-generated document and does not require a signature.', 0, 'C');
