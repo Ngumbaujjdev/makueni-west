@@ -316,6 +316,31 @@
   }
 
   /**
+   * Same shape as exportAttendanceReportPdf(), for
+   * GET /attendance-reports/export-excel - accepts the same filters
+   * (including the optional gathering_type_id drill-down) and returns a
+   * Blob on success.
+   */
+  async function exportAttendanceReportExcel(territoryId, filters = {}) {
+    try {
+      const params = new URLSearchParams({ territory_id: territoryId, ...filters });
+      const response = await fetch(`${API_BASE}/attendance-reports/export-excel?${params.toString()}`, {
+        method: Constants.HTTP_METHODS.GET,
+        headers: getHeaders(),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        return { success: false, message: data.message || "Failed to generate Excel report", status: response.status };
+      }
+
+      return { success: true, blob: await response.blob() };
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
+  /**
    * Backs Spiritual Activities and Monthly Statistics - always returns the
    * whole fiscal year's month-by-month series, no month/category filter
    * (one ChurchDemographic row per church per month, so there's nothing to
@@ -507,6 +532,7 @@
     updateAttendance,
     getAttendanceReportWidgets,
     exportAttendanceReportPdf,
+    exportAttendanceReportExcel,
     getDemographicsReportWidgets,
     getGatheringCategories,
     getGatheringTypes,
