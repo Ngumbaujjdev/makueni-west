@@ -86,16 +86,31 @@
     }
 
     /**
-     * The app-header (and, on desktop, the sidebar) are position:fixed, so
-     * a normal-flow #secondary-nav-bar placed right after </header> in
-     * header.php renders at y=0, hidden behind the fixed header rather
-     * than pushed below it. Position it like the sidebar's flyout panel:
-     * computed at render-time against the actual header/sidebar rects,
-     * so it stays correct if either one's size changes.
+     * getBoundingClientRect() returns post-zoom (visual) pixel values, but
+     * this app applies html { zoom: var(--app-zoom) } site-wide - writing
+     * a getBoundingClientRect() value straight into an inline style on an
+     * element inside that zoomed subtree double-applies the zoom. Anything
+     * measured this way must be divided by the zoom factor before being
+     * written back into a style property. Defaults to 1 (no-op) if the
+     * custom property is unset or unparseable.
+     */
+    function getAppZoomFactor() {
+        const raw = getComputedStyle(document.documentElement).getPropertyValue('--app-zoom').trim();
+        const parsed = parseFloat(raw) / 100;
+        return parsed > 0 ? parsed : 1;
+    }
+
+    /**
+     * left/top are handled declaratively by #secondary-nav-bar's own CSS
+     * (kept in lockstep with .app-header's height and .app-sidebar's width
+     * there, same pattern - and for the same double-zoom reason described
+     * above, this used to compute them here via getBoundingClientRect() and
+     * write them into inline style.left/top, which mispositioned the bar
+     * under the app's zoom). This function now only toggles visibility and
+     * pushes page content down to clear the bar's own (dynamic, tab-count
+     * dependent) height.
      */
     function positionSecondaryNav(container, visible) {
-        const headerEl = document.querySelector('.app-header');
-        const sidebarEl = document.getElementById('sidebar');
         const mainContent = document.querySelector('.main-content');
 
         if (!visible) {
@@ -105,14 +120,6 @@
         }
 
         container.style.display = 'block';
-        container.style.position = 'fixed';
-        container.style.zIndex = '90'; // below the header's z-index 100
-
-        const headerRect = headerEl ? headerEl.getBoundingClientRect() : { bottom: 0 };
-        const sidebarRect = sidebarEl ? sidebarEl.getBoundingClientRect() : { right: 0 };
-        container.style.top = headerRect.bottom + 'px';
-        container.style.left = sidebarRect.right + 'px';
-        container.style.right = '0';
 
         // Push page content down to make room for the bar, on top of
         // whatever clearance it already reserves for the fixed header -
@@ -131,7 +138,7 @@
                 mainContent.dataset.baseTopOffset = getComputedStyle(mainContent).paddingBlockStart;
             }
             const baseOffset = parseFloat(mainContent.dataset.baseTopOffset) || 0;
-            const barHeight = container.getBoundingClientRect().height;
+            const barHeight = container.getBoundingClientRect().height / getAppZoomFactor();
             mainContent.style.paddingBlockStart = (baseOffset + barHeight) + 'px';
         }
     }
