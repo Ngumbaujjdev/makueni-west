@@ -289,6 +289,33 @@
   }
 
   /**
+   * Streams the branded PDF export from GET /attendance-reports/export-pdf.
+   * Not routed through handleResponse() - that assumes a JSON body, and
+   * this endpoint returns a raw PDF binary - so this returns the Blob
+   * directly on success, in the same {success, ...} shape the rest of
+   * this handler uses so callers don't need a different error-handling
+   * convention for this one call.
+   */
+  async function exportAttendanceReportPdf(territoryId, filters = {}) {
+    try {
+      const params = new URLSearchParams({ territory_id: territoryId, ...filters });
+      const response = await fetch(`${API_BASE}/attendance-reports/export-pdf?${params.toString()}`, {
+        method: Constants.HTTP_METHODS.GET,
+        headers: getHeaders(),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        return { success: false, message: data.message || "Failed to generate PDF report", status: response.status };
+      }
+
+      return { success: true, blob: await response.blob() };
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
+  /**
    * Backs Spiritual Activities and Monthly Statistics - always returns the
    * whole fiscal year's month-by-month series, no month/category filter
    * (one ChurchDemographic row per church per month, so there's nothing to
@@ -479,6 +506,7 @@
     createAttendance,
     updateAttendance,
     getAttendanceReportWidgets,
+    exportAttendanceReportPdf,
     getDemographicsReportWidgets,
     getGatheringCategories,
     getGatheringTypes,
