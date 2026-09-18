@@ -33,3 +33,4 @@ assertion, rewrite it until it can.
 | Spec | Status |
 |---|---|
 | [demographics-module-spec.md](demographics-module-spec.md) | Outline only — data model shape and territory-level rules are decided (see `../ROADMAP.md`), full contract not yet written |
+| [attendance-pdf-reports-spec.md](attendance-pdf-reports-spec.md) | Complete — `GET /attendance-reports/export-pdf`, one endpoint |
