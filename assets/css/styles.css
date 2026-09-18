@@ -522,7 +522,9 @@ html {
 @media (max-width: 991.98px) {
   [data-toggled="close"] .app-sidebar {
     transition: all 300ms ease;
-    transform: translateX(-15rem);
+    /* Kept in lockstep with .app-sidebar's own width, or the hidden
+       mobile drawer would leave a visible sliver on-screen. */
+    transform: translateX(-16.5rem);
   }
   [data-toggled="close"] .app-header {
     padding-inline-start: 0rem;
@@ -532,7 +534,7 @@ html {
   }
   [data-toggled="close"][dir="rtl"] .app-sidebar {
     transition: all 300ms ease;
-    transform: translateX(15rem);
+    transform: translateX(16.5rem);
   }
 }
 
@@ -13380,7 +13382,8 @@ button {
     min-height: calc(100vh - 7.5rem);
     margin-block-end: 0;
     margin-block-start: 3.75rem;
-    margin-inline-start: 15rem;
+    /* Kept in lockstep with .app-sidebar's own width. */
+    margin-inline-start: 16.5rem;
     transition: all 0.05s ease;
   }
 }
@@ -23183,7 +23186,13 @@ code[class*="language-"] {
 }
 
 .app-sidebar {
-  width: 15rem;
+  /* 2026-09-18: widened from 15rem - longer labels (Demographics
+     Settings, Attendance Settings, ...) were getting clipped by
+     .side-menu__label's white-space:nowrap against too little room.
+     Three other rules must stay in lockstep with this value - see the
+     matching comments on .main-sidebar-header, .app-content's
+     margin-inline-start, and the mobile off-canvas transform. */
+  width: 16.5rem;
   height: 100%;
   background: var(--primary-bordered-bg);
   border-inline-end: 1px solid var(--menu-border-color);
@@ -23196,7 +23205,8 @@ code[class*="language-"] {
 }
 .app-sidebar .main-sidebar-header {
   height: 3.75rem;
-  width: 15rem;
+  /* Kept in lockstep with .app-sidebar's own width above. */
+  width: 16.5rem;
   position: fixed;
   display: flex;
   background: var(--menu-bg);
