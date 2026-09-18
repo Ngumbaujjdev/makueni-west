@@ -137,6 +137,11 @@ $breadcrumbs = [
                             <i class="ri-calendar-event-line me-1"></i>Special Events
                         </button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-pdf-btn" data-bs-toggle="tab" data-bs-target="#tab-pdf" type="button" role="tab">
+                            <i class="ri-file-pdf-line me-1"></i>PDF Reports
+                        </button>
+                    </li>
                 </ul>
 
                 <div class="tab-content">
@@ -377,6 +382,45 @@ $breadcrumbs = [
                         </div>
                     </div>
 
+                    <!-- TAB 4: PDF Reports -->
+                    <div class="tab-pane fade" id="tab-pdf" role="tabpanel">
+                        <div class="card custom-card">
+                            <div class="card-header">
+                                <div class="card-title"><i class="ri-file-pdf-line me-2 text-primary"></i>Generate a PDF Report</div>
+                            </div>
+                            <div class="card-body">
+                                <p class="fs-13 text-body mb-3">
+                                    Uses the period selected in the filter above (<span id="pdfPeriodLabel">-</span>).
+                                </p>
+                                <div class="row g-3 align-items-end">
+                                    <div class="col-md-6">
+                                        <label class="form-label" for="pdfReportType">Report Type</label>
+                                        <select class="form-select" id="pdfReportType">
+                                            <option value="">Loading report types...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button type="button" class="btn btn-primary w-100" id="pdfGenerateBtn">
+                                            <i class="ri-file-download-line me-1"></i>Generate PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card custom-card mt-3 d-none" id="pdfPreviewCard">
+                            <div class="card-header justify-content-between flex-wrap">
+                                <div class="card-title"><i class="ri-eye-line me-2 text-primary"></i>Preview</div>
+                                <a href="javascript:void(0);" class="btn btn-light btn-sm" id="pdfOpenNewTabBtn" target="_blank" rel="noopener">
+                                    <i class="ri-external-link-line me-1"></i>Open in New Tab
+                                </a>
+                            </div>
+                            <div class="card-body p-0">
+                                <iframe id="pdfPreviewFrame" title="PDF report preview" style="width: 100%; height: 70vh; border: 0;"></iframe>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
             </div>
@@ -425,6 +469,7 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-reports.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-pdf-export.js<?= assetVersion('assets/js/pages/demographics/attendance-pdf-export.js') ?>"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => window.AttendanceReports.init());
     </script>
