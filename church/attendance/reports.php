@@ -386,23 +386,34 @@ $breadcrumbs = [
                     <div class="tab-pane fade" id="tab-pdf" role="tabpanel">
                         <div class="card custom-card">
                             <div class="card-header">
-                                <div class="card-title"><i class="ri-file-pdf-line me-2 text-primary"></i>Generate a PDF Report</div>
+                                <div class="card-title"><i class="ri-file-pdf-line me-2 text-primary"></i>Generate a Report</div>
                             </div>
                             <div class="card-body">
                                 <p class="fs-13 text-body mb-3">
                                     Uses the period selected in the filter above (<span id="pdfPeriodLabel">-</span>).
                                 </p>
                                 <div class="row g-3 align-items-end">
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <label class="form-label" for="pdfReportType">Report Type</label>
                                         <select class="form-select" id="pdfReportType">
                                             <option value="">Loading report types...</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-3">
-                                        <button type="button" class="btn btn-primary w-100" id="pdfGenerateBtn">
-                                            <i class="ri-file-download-line me-1"></i>Generate PDF
-                                        </button>
+                                    <div class="col-md-4 d-none" id="pdfGatheringTypeWrap">
+                                        <label class="form-label" for="pdfGatheringType">Gathering Type <span class="text-body fw-normal">(optional)</span></label>
+                                        <select class="form-select" id="pdfGatheringType">
+                                            <option value="">All types</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-primary w-100" id="pdfGenerateBtn">
+                                                <i class="ri-file-download-line me-1"></i>Generate PDF
+                                            </button>
+                                            <button type="button" class="btn btn-outline-success w-100" id="pdfExcelBtn">
+                                                <i class="ri-file-excel-2-line me-1"></i>Export Excel
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
