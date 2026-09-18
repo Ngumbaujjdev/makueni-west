@@ -13591,7 +13591,8 @@ button {
 /*  Start::Footer*/
 @media (min-width: 992px) {
   .footer {
-    padding-inline-start: 15rem;
+    /* Kept in lockstep with .app-sidebar's own width. */
+    padding-inline-start: 16.5rem;
   }
 }
 .footer {
@@ -17034,7 +17035,9 @@ hr {
 
 @media (min-width: 992px) {
   .app-header {
-    padding-inline-start: 15rem;
+    /* Kept in lockstep with .app-sidebar's own width, or header content
+       (toggle button, search, profile menu) overlaps the sidebar edge. */
+    padding-inline-start: 16.5rem;
   }
 }
 .header-icon-badge {
