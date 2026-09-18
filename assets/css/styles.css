@@ -28574,10 +28574,28 @@ a:hover {
     margin-block: 1rem !important;
 }
 
+/* Positioned declaratively (not via secondary-nav.js measuring
+   getBoundingClientRect() and writing the raw pixels into inline
+   style.left/top) because this app applies html { zoom: var(--app-zoom) }
+   site-wide - getBoundingClientRect() already returns post-zoom values,
+   so writing them straight into an inline style on an element inside the
+   zoomed subtree double-applies the zoom and mispositions the bar. */
 #secondary-nav-bar:not(:empty) {
     background-color: var(--custom-white, #fff);
     border-block-end: 1px solid var(--default-border, #e9edf4);
     padding-inline: 1rem;
+    position: fixed;
+    z-index: 90;
+    inset-inline-start: 0;
+    inset-inline-end: 0;
+    /* Matches .app-header's own height. */
+    inset-block-start: 3.75rem;
+}
+@media (min-width: 992px) {
+    #secondary-nav-bar:not(:empty) {
+        /* Kept in lockstep with .app-sidebar's own width. */
+        inset-inline-start: 16.5rem;
+    }
 }
 
 /* nowrap + horizontal scroll instead of Bootstrap's default flex-wrap:
