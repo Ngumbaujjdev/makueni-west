@@ -26,8 +26,12 @@
             <div class="modal-body">
                 <!-- 1. Choose -->
                 <div class="rp-step" data-rp-step="choose">
-                    <div class="rp-label">Report</div>
-                    <div class="rp-reports" id="rpReports" role="radiogroup" aria-label="Report"></div>
+                    <!-- Opened from a page's Export: just that page's report -->
+                    <div class="rp-locked" id="rpLocked" hidden></div>
+                    <div id="rpReportsWrap">
+                        <div class="rp-label">Report</div>
+                        <div class="rp-reports" id="rpReports" role="radiogroup" aria-label="Report"></div>
+                    </div>
                     <div class="rp-options">
                         <div class="rp-option" id="rpPeriodWrap">
                             <div class="rp-label" id="rpPeriodTitle">Period</div>

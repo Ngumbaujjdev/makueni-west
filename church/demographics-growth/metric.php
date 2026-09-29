@@ -82,7 +82,7 @@ $breadcrumbs = [
                     <div class="page-toolbar-controls">
                         <div id="metricSwitchWrap" class="metric-switch"></div>
                         <?php if (canExportDemographicsReports()): ?>
-                            <button type="button" class="btn btn-outline-primary" id="exportReportBtn" data-report-key="demographics.summary"><i class="ri-download-2-line me-1"></i>Export</button>
+                            <button type="button" class="btn btn-outline-primary" id="exportReportBtn" data-lock="1" data-report-key="demographics.metric" data-fiscal-year-id="all"><i class="ri-download-2-line me-1"></i>Export</button>
                         <?php endif ?>
                     </div>
                 </div>

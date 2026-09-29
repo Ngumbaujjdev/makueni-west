@@ -80,7 +80,7 @@ const DemographicsViewSubmission = (function () {
           <a href="demographics-tracking.php" class="btn btn-light"><i class="ri-arrow-left-line me-1"></i>Back</a>
           ${
             typeof CAN_EXPORT_REPORTS !== "undefined" && CAN_EXPORT_REPORTS
-              ? `<button type="button" class="btn btn-outline-primary" id="exportReportBtn" data-report-key="demographics.submission" data-demographic-id="${record.id}" data-submission-label="${UI.demographicPeriodLabel(record)}"><i class="ri-download-2-line me-1"></i>Export</button>`
+              ? `<button type="button" class="btn btn-outline-primary" id="exportReportBtn" data-lock="1" data-report-key="demographics.submission" data-demographic-id="${record.id}" data-submission-label="${UI.demographicPeriodLabel(record)}"><i class="ri-download-2-line me-1"></i>Export</button>`
               : ""
           }
           ${editable ? `<a href="demographics-tracking.php?id=${record.id}" class="btn btn-primary"><i class="ri-edit-line me-1"></i>Edit</a>` : ""}
