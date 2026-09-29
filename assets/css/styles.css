@@ -30113,3 +30113,180 @@ tr.list-row-flash > td {
     max-width: none;
   }
 }
+
+/* ==========================================================================
+   App modal (2026-09-29) - add/edit modals, same design as the
+   v1-events-backend edit modals: solid accent header with an icon tile,
+   title + subtitle, roomy body, light footer, an in-modal "Saving..." state
+   and a success view. Opt in with .app-modal on the .modal element.
+   ========================================================================== */
+.app-modal .modal-content {
+  border: 0;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+}
+.app-modal .modal-header {
+  gap: 0.85rem;
+  padding: 1.1rem 1.5rem;
+  border-bottom: 0;
+  background: rgb(var(--primary-rgb));
+  color: #fff;
+}
+.app-modal-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 1.3rem;
+}
+.app-modal .modal-title {
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.app-modal-subtitle {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+.app-modal .btn-close {
+  filter: invert(1) grayscale(1) brightness(2);
+  opacity: 0.85;
+}
+.app-modal .modal-body {
+  position: relative;
+  padding: 1.35rem 1.5rem;
+}
+.app-modal .modal-footer {
+  padding: 0.9rem 1.5rem;
+  border-top: 1px solid var(--default-border);
+  background: rgb(var(--light-rgb));
+}
+.app-modal-section {
+  margin-bottom: 1.1rem;
+}
+.app-modal-section-title {
+  margin-bottom: 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.app-modal .form-text,
+.app-modal .field-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.app-modal .invalid-feedback {
+  font-weight: 600;
+}
+
+/* Coloured dot before a count label (Adults / Youth / ...). */
+.count-dot {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-inline-end: 0.35rem;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+/* Live total with a segmented breakdown bar (solid segments, no gradient). */
+.count-total {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.75rem;
+}
+.count-total-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v2-heading);
+}
+.count-total-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.count-bar {
+  display: flex;
+  flex: 1 1 auto;
+  height: 0.6rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(var(--light-rgb));
+}
+.count-bar > span {
+  height: 100%;
+  transition: width 0.25s ease;
+}
+
+/* In-modal busy + success views (replace the body/footer while shown). */
+.app-modal-state {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 16rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+.app-modal.is-busy .app-modal-state.is-busy-view,
+.app-modal.is-done .app-modal-state.is-done-view {
+  display: flex;
+}
+.app-modal.is-busy .modal-body,
+.app-modal.is-busy .modal-footer,
+.app-modal.is-done .modal-body,
+.app-modal.is-done .modal-footer {
+  display: none;
+}
+.app-modal-spinner {
+  width: 2.9rem;
+  height: 2.9rem;
+  border: 4px solid rgba(var(--primary-rgb), 0.18);
+  border-top-color: rgb(var(--primary-rgb));
+  border-radius: 50%;
+  animation: app-modal-spin 0.8s linear infinite;
+}
+@keyframes app-modal-spin {
+  to { transform: rotate(360deg); }
+}
+.app-modal-tick {
+  display: grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  background: rgb(var(--success-rgb));
+  color: #fff;
+  font-size: 2rem;
+  animation: app-modal-pop 0.35s ease-out;
+}
+@keyframes app-modal-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.app-reduce-motion .app-modal-tick,
+.app-reduce-motion .app-modal-spinner {
+  animation: none;
+}
+.app-modal-facts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0.25rem 0 0.5rem;
+}

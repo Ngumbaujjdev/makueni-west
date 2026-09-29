@@ -1137,6 +1137,18 @@ const DemographicsUI = (function () {
     return `<span class="badge bg-${color} ${iconTextClass(color)} list-pill">${icon ? `<i class="${icon} me-1"></i>` : ""}${text}</span>`;
   }
 
+  /** Briefly highlight a just-saved row (tr[data-row-id]) so the change is easy to spot. */
+  function flashRow(id) {
+    if (id == null) return;
+    const row = document.querySelector(`tr[data-row-id="${id}"]`);
+    if (!row) return;
+    row.classList.remove("list-row-flash");
+    void row.offsetWidth; // restart the animation if it's already running
+    row.classList.add("list-row-flash");
+    row.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    setTimeout(() => row.classList.remove("list-row-flash"), 1800);
+  }
+
   /** Small solid change pill for table cells, e.g. [▲ 4] (blank when no change/no previous). */
   function changePill(current, previous) {
     if (previous == null || current == null || current === previous) return "";
@@ -1281,6 +1293,7 @@ const DemographicsUI = (function () {
     avatarTile,
     pill,
     changePill,
+    flashRow,
     renderSparkCard,
     mountSparklines,
     monthlySeries,

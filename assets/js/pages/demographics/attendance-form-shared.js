@@ -35,49 +35,183 @@ const AttendanceFormShared = (function () {
   // Fellowship at a glance in the list, not just by reading the label.
   let gatheringTypeChoices = null;
 
+  const COUNT_FIELDS = ["attendanceAdults", "attendanceYouth", "attendanceChildrenMale", "attendanceChildrenFemale"];
+
+  // Backend validation field -> input id, for showing 422 errors inline.
+  const FIELD_INPUTS = {
+    service_date: "attendanceServiceDate",
+    gathering_type_id: "attendanceGatheringType",
+    event_name: "attendanceEventName",
+    adults_count: "attendanceAdults",
+    youth_count: "attendanceYouth",
+    children_male_count: "attendanceChildrenMale",
+    children_female_count: "attendanceChildrenFemale",
+    notes: "attendanceNotes",
+  };
+
+  function categoryLabel() {
+    if (!currentConfig) return "";
+    if (currentConfig.isWeekly) return "Sunday service";
+    return currentConfig.categoryLabel || "Gathering";
+  }
+
+  function formatLongDate(iso) {
+    if (!iso) return "";
+    const d = new Date(`${iso}T00:00:00`);
+    return isNaN(d) ? "" : d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", year: "numeric" });
+  }
+
+  function updateDateHint() {
+    const iso = document.getElementById("attendanceServiceDate").value;
+    const hint = document.getElementById("attendanceDateHint");
+    const subtitle = document.getElementById("attendanceModalSubtitle");
+    const pretty = formatLongDate(iso);
+    const d = iso ? new Date(`${iso}T00:00:00`) : null;
+    const notSunday = currentConfig && currentConfig.isWeekly && d && d.getDay() !== 0;
+    hint.innerHTML = !pretty
+      ? "The Sunday or gathering date this count is for."
+      : notSunday
+        ? `<span class="text-danger fw-semibold"><i class="ri-error-warning-line me-1"></i>${pretty} isn't a Sunday</span>`
+        : `<i class="ri-calendar-line me-1"></i>${pretty}`;
+    subtitle.textContent = [categoryLabel(), pretty].filter(Boolean).join(" · ");
+    document.getElementById("attendanceServiceDate").classList.remove("is-invalid");
+  }
+
+  function countValue(id) {
+    return parseInt(document.getElementById(id).value, 10) || 0;
+  }
+
+  function updateTotal() {
+    const values = COUNT_FIELDS.map(countValue);
+    const total = values.reduce((a, b) => a + b, 0);
+    document.getElementById("attendanceTotal").textContent = total.toLocaleString();
+    document.querySelectorAll("#attendanceTotalBar > span").forEach((seg) => {
+      const v = countValue(seg.dataset.part);
+      seg.style.width = total ? `${(v / total) * 100}%` : "0";
+    });
+    if (total > 0) hideError("attendanceCountsError");
+  }
+
+  function showError(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.setProperty("display", "block", "important");
+  }
+
+  function hideError(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.setProperty("display", "none", "important");
+  }
+
+  function clearErrors() {
+    document.querySelectorAll(`#${MODAL_ID} .is-invalid`).forEach((el) => el.classList.remove("is-invalid"));
+    ["attendanceGatheringTypeError", "attendanceCountsError"].forEach(hideError);
+  }
+
+  /** Mark fields invalid from a backend 422 `errors` map. */
+  function showBackendErrors(errors) {
+    Object.entries(errors || {}).forEach(([field, messages]) => {
+      const input = document.getElementById(FIELD_INPUTS[field]);
+      if (!input) return;
+      input.classList.add("is-invalid");
+      const feedback = input.parentElement.querySelector(".invalid-feedback") || input.closest("[class*=col]")?.querySelector(".invalid-feedback");
+      if (feedback) {
+        feedback.textContent = Array.isArray(messages) ? messages[0] : messages;
+        feedback.style.setProperty("display", "block", "important");
+      }
+    });
+  }
+
   function ensureModalMounted() {
     if (document.getElementById(MODAL_ID)) return;
 
+    const count = (id, label, color) => `
+      <div class="col-6">
+        ${DemographicsUI.numberStepperHtml(id, { label: `<span class="count-dot bg-${color}"></span>${label}` })}
+      </div>`;
+
     const modalHtml = `
-      <div class="modal fade" id="${MODAL_ID}" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
+      <div class="modal fade app-modal" id="${MODAL_ID}" tabindex="-1" aria-hidden="true" aria-labelledby="attendanceModalTitle">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
           <div class="modal-content">
             <div class="modal-header">
-              <h5 class="modal-title" id="attendanceModalTitle">Record Attendance</h5>
+              <span class="app-modal-icon"><i class="ri-calendar-check-line"></i></span>
+              <div class="flex-fill" style="min-width: 0;">
+                <h5 class="modal-title" id="attendanceModalTitle">Record attendance</h5>
+                <div class="app-modal-subtitle" id="attendanceModalSubtitle"></div>
+              </div>
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-              <div class="mb-3">
-                <label for="attendanceServiceDate" class="form-label">Date <span class="text-danger">*</span></label>
-                <input type="date" class="form-control" id="attendanceServiceDate" required>
-                <small class="form-text text-body">The Sunday or gathering date this attendance count is for.</small>
+              <div class="app-modal-section">
+                <div class="row g-3">
+                  <div class="col-12" id="attendanceDateCol">
+                    <label for="attendanceServiceDate" class="form-label">Date <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="attendanceServiceDate" required>
+                    <div class="invalid-feedback">Pick the date of this gathering.</div>
+                    <div class="field-hint mt-1" id="attendanceDateHint">The Sunday or gathering date this count is for.</div>
+                  </div>
+                  <div class="col-12" id="attendanceGatheringTypeGroup" style="display: none;">
+                    <label for="attendanceGatheringType" class="form-label">Gathering <span class="text-danger">*</span></label>
+                    <select class="form-select" id="attendanceGatheringType">
+                      <option value="">Loading gathering types...</option>
+                    </select>
+                    <div class="invalid-feedback d-block" id="attendanceGatheringTypeError" style="display: none !important;">Choose which gathering this was.</div>
+                  </div>
+                  <div class="col-12" id="attendanceEventNameGroup" style="display: none;">
+                    <label for="attendanceEventName" class="form-label">Event name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="attendanceEventName" placeholder="e.g. Diocese Youth Camp 2026">
+                    <div class="invalid-feedback">Give this event a name.</div>
+                  </div>
+                </div>
               </div>
-              <div class="mb-3" id="attendanceGatheringTypeGroup" style="display: none;">
-                <label for="attendanceGatheringType" class="form-label">Gathering <span class="text-danger">*</span></label>
-                <select class="form-select" id="attendanceGatheringType">
-                  <option value="">Loading gathering types...</option>
-                </select>
+
+              <div class="app-modal-section mb-0">
+                <div class="app-modal-section-title">Who attended</div>
+                <div class="row g-3">
+                  ${count("attendanceAdults", "Adults", "primary")}
+                  ${count("attendanceYouth", "Youth", "success")}
+                  ${count("attendanceChildrenMale", "Children (male)", "purple")}
+                  ${count("attendanceChildrenFemale", "Children (female)", "pink")}
+                </div>
+                <div class="count-total">
+                  <div>
+                    <div class="count-total-label">Total</div>
+                    <div class="count-total-value" id="attendanceTotal">0</div>
+                  </div>
+                  <div class="count-bar" id="attendanceTotalBar" aria-hidden="true">
+                    <span class="bg-primary" data-part="attendanceAdults"></span>
+                    <span class="bg-success" data-part="attendanceYouth"></span>
+                    <span class="bg-purple" data-part="attendanceChildrenMale"></span>
+                    <span class="bg-pink" data-part="attendanceChildrenFemale"></span>
+                  </div>
+                </div>
+                <div class="invalid-feedback d-block" id="attendanceCountsError" style="display: none !important;">Enter at least one count.</div>
               </div>
-              <div class="mb-3" id="attendanceEventNameGroup" style="display: none;">
-                <label for="attendanceEventName" class="form-label">Event Name <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="attendanceEventName" placeholder="e.g. Diocese Youth Camp 2026">
-              </div>
-              <div class="row gy-3">
-                <div class="col-md-6">${DemographicsUI.numberStepperHtml("attendanceAdults", { label: "Adults" })}</div>
-                <div class="col-md-6">${DemographicsUI.numberStepperHtml("attendanceYouth", { label: "Youth" })}</div>
-                <div class="col-md-6">${DemographicsUI.numberStepperHtml("attendanceChildrenMale", { label: "Children (Male)" })}</div>
-                <div class="col-md-6">${DemographicsUI.numberStepperHtml("attendanceChildrenFemale", { label: "Children (Female)" })}</div>
-              </div>
+
               <div class="mt-3">
                 <label for="attendanceNotes" class="form-label">Notes</label>
-                <textarea class="form-control" id="attendanceNotes" rows="2" placeholder="Any additional notes about this gathering..."></textarea>
+                <textarea class="form-control" id="attendanceNotes" rows="2" placeholder="Anything worth remembering about this gathering..."></textarea>
               </div>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
               <button type="button" class="btn btn-primary" id="attendanceModalSaveBtn">
-                <i class="ri-save-line me-1"></i>Save
+                <i class="ri-check-line me-1"></i>Save
               </button>
+            </div>
+
+            <div class="app-modal-state is-busy-view" role="status">
+              <div class="app-modal-spinner"></div>
+              <div class="fw-semibold">Saving...</div>
+            </div>
+            <div class="app-modal-state is-done-view">
+              <div class="app-modal-tick"><i class="ri-check-line"></i></div>
+              <div class="fs-5 fw-bold" id="attendanceDoneTitle">Attendance saved</div>
+              <div class="app-modal-facts" id="attendanceDoneFacts"></div>
+              <div class="d-flex flex-wrap justify-content-center gap-2">
+                <button type="button" class="btn btn-light" id="attendanceAddAnotherBtn"><i class="ri-add-line me-1"></i>Add another</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
+              </div>
             </div>
           </div>
         </div>
@@ -87,8 +221,19 @@ const AttendanceFormShared = (function () {
     container.innerHTML = modalHtml;
     document.body.appendChild(container.firstElementChild);
 
-    DemographicsUI.initSteppers(document.getElementById(MODAL_ID));
+    const modalEl = document.getElementById(MODAL_ID);
+    DemographicsUI.initSteppers(modalEl);
     document.getElementById("attendanceModalSaveBtn").addEventListener("click", handleModalSave);
+    COUNT_FIELDS.forEach((id) => document.getElementById(id).addEventListener("input", updateTotal));
+    document.getElementById("attendanceServiceDate").addEventListener("change", updateDateHint);
+    // Add another: same day is a sensible default for ministries/events
+    // (several can happen on one date); a Sunday only has one service.
+    document.getElementById("attendanceAddAnotherBtn").addEventListener("click", () => {
+      const lastDate = document.getElementById("attendanceServiceDate").value;
+      openEntryModal({ ...currentConfig, record: null, defaultDate: currentConfig.isWeekly ? "" : lastDate });
+    });
+    // Reset the busy/success views whenever the modal closes.
+    modalEl.addEventListener("hidden.bs.modal", () => modalEl.classList.remove("is-busy", "is-done"));
 
     const selectEl = document.getElementById("attendanceGatheringType");
     if (typeof Choices !== "undefined") {
@@ -107,6 +252,7 @@ const AttendanceFormShared = (function () {
 
   function handleGatheringTypeChange() {
     const select = document.getElementById("attendanceGatheringType");
+    if (select.value) hideError("attendanceGatheringTypeError");
     const eventGroup = document.getElementById("attendanceEventNameGroup");
     eventGroup.style.display = select.value === OTHER_VALUE ? "" : "none";
   }
@@ -128,7 +274,10 @@ const AttendanceFormShared = (function () {
     currentConfig = config;
     currentRecordId = config.record ? config.record.id : null;
 
-    document.getElementById("attendanceModalTitle").textContent = config.record ? "Edit Attendance" : "Record Attendance";
+    const modalEl = document.getElementById(MODAL_ID);
+    modalEl.classList.remove("is-busy", "is-done");
+    clearErrors();
+    document.getElementById("attendanceModalTitle").textContent = config.record ? "Edit attendance" : "Record attendance";
 
     const record = config.record || {};
     document.getElementById("attendanceServiceDate").value = record.service_date
@@ -139,6 +288,8 @@ const AttendanceFormShared = (function () {
     document.getElementById("attendanceChildrenMale").value = record.children_male_count ?? "";
     document.getElementById("attendanceChildrenFemale").value = record.children_female_count ?? "";
     document.getElementById("attendanceNotes").value = record.notes || "";
+    updateTotal();
+    updateDateHint();
 
     const typeGroup = document.getElementById("attendanceGatheringTypeGroup");
     const eventGroup = document.getElementById("attendanceEventNameGroup");
@@ -164,18 +315,23 @@ const AttendanceFormShared = (function () {
         );
       }
 
-      const modalEl = document.getElementById(MODAL_ID);
-      new bootstrap.Modal(modalEl).show();
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
 
-      await populateGatheringTypeSelect(config.territoryId, config.gatheringCategoryId, record.gathering_type_id || null);
+      // No saving until the gathering list has loaded - otherwise a quick
+      // Save on a slow connection fails with "choose a gathering".
+      const saveBtn = document.getElementById("attendanceModalSaveBtn");
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Loading...';
+      await populateGatheringTypeSelect(config.territoryId, config.gatheringCategoryId, record.gathering_type_id || null, !!config.record);
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<i class="ri-check-line me-1"></i>Save';
       return;
     }
 
-    const modalEl = document.getElementById(MODAL_ID);
-    new bootstrap.Modal(modalEl).show();
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
   }
 
-  async function populateGatheringTypeSelect(territoryId, gatheringCategoryId, selectedTypeId) {
+  async function populateGatheringTypeSelect(territoryId, gatheringCategoryId, selectedTypeId, isEdit = false) {
     const select = document.getElementById("attendanceGatheringType");
     const result = await DemographicsAPIHandler.getGatheringTypes(territoryId, { gathering_category_id: gatheringCategoryId });
 
@@ -199,28 +355,38 @@ const AttendanceFormShared = (function () {
       });
     }
 
+    // New entries start on the first real gathering type (not "Other");
+    // edits keep what was saved (a type, or Other for a named event).
+    const initial = selectedTypeId ? String(selectedTypeId) : !isEdit && types.length ? String(types[0].id) : OTHER_VALUE;
+
     if (gatheringTypeChoices) {
       gatheringTypeChoices.enable();
       gatheringTypeChoices.clearChoices();
       gatheringTypeChoices.setChoices(choices, "value", "label", true);
-      gatheringTypeChoices.setChoiceByValue(selectedTypeId ? String(selectedTypeId) : OTHER_VALUE);
+      gatheringTypeChoices.setChoiceByValue(initial);
     } else {
       // Choices.js failed to load (e.g. script tag missing on this page) -
       // fall back to the plain <select> so entry still works.
       select.innerHTML = choices
         .map((c) => `<option value="${c.value}" ${c.disabled ? "disabled" : ""}>${c.label.replace(/<[^>]+>/g, "")}</option>`)
         .join("");
-      select.value = selectedTypeId ? String(selectedTypeId) : OTHER_VALUE;
+      select.value = initial;
     }
 
     handleGatheringTypeChange();
   }
 
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
   async function handleModalSave() {
-    const dateVal = document.getElementById("attendanceServiceDate").value;
+    clearErrors();
+    let valid = true;
+
+    const dateInput = document.getElementById("attendanceServiceDate");
+    const dateVal = dateInput.value;
     if (!dateVal) {
-      Toast.warning("Please select a date");
-      return;
+      dateInput.classList.add("is-invalid");
+      valid = false;
     }
 
     const payload = {
@@ -236,44 +402,77 @@ const AttendanceFormShared = (function () {
       notes: document.getElementById("attendanceNotes").value.trim() || null,
     };
 
+    let gatheringName = categoryLabel();
     if (!currentConfig.isWeekly) {
       const selectedValue = document.getElementById("attendanceGatheringType").value;
 
       if (!selectedValue) {
-        Toast.warning("Please select a gathering");
-        return;
-      }
-
-      if (selectedValue === OTHER_VALUE) {
-        const eventName = document.getElementById("attendanceEventName").value.trim();
+        showError("attendanceGatheringTypeError");
+        valid = false;
+      } else if (selectedValue === OTHER_VALUE) {
+        const eventInput = document.getElementById("attendanceEventName");
+        const eventName = eventInput.value.trim();
         if (!eventName) {
-          Toast.warning("Please enter an event name");
-          return;
+          eventInput.classList.add("is-invalid");
+          valid = false;
         }
         payload.event_name = eventName;
+        gatheringName = eventName || gatheringName;
       } else {
         payload.gathering_type_id = parseInt(selectedValue, 10);
+        const selected = gatheringTypeChoices ? gatheringTypeChoices.getValue() : null;
+        gatheringName = selected?.customProperties?.plainName || gatheringName;
       }
     }
 
-    const btn = document.getElementById("attendanceModalSaveBtn");
-    DemographicsUI.setButtonLoading(btn, "Saving...");
+    const total = COUNT_FIELDS.map(countValue).reduce((a, b) => a + b, 0);
+    if (total === 0) {
+      showError("attendanceCountsError");
+      valid = false;
+    }
 
-    const result = currentRecordId
-      ? await DemographicsAPIHandler.updateAttendance(currentRecordId, payload)
-      : await DemographicsAPIHandler.createAttendance(payload);
+    if (!valid) {
+      Toast.warning("Please fix the highlighted fields");
+      return;
+    }
 
-    DemographicsUI.restoreButton(btn);
+    const modalEl = document.getElementById(MODAL_ID);
+    const isEdit = !!currentRecordId;
+    modalEl.classList.add("is-busy");
+
+    // Keep "Saving..." on screen long enough to read, even on a fast save.
+    const [result] = await Promise.all([
+      isEdit ? DemographicsAPIHandler.updateAttendance(currentRecordId, payload) : DemographicsAPIHandler.createAttendance(payload),
+      sleep(450),
+    ]);
 
     if (!result.success) {
+      modalEl.classList.remove("is-busy");
+      showBackendErrors(result.errors);
       Toast.error(result.message || "Failed to save attendance record");
       return;
     }
 
-    Toast.success(currentRecordId ? "Attendance updated" : "Attendance recorded");
-    bootstrap.Modal.getInstance(document.getElementById(MODAL_ID)).hide();
-
+    const summary = `${gatheringName}, ${formatLongDate(dateVal)} - ${total.toLocaleString()} ${total === 1 ? "person" : "people"}`;
     if (currentConfig.onSaved) currentConfig.onSaved(result.data);
+
+    if (isEdit) {
+      modalEl.classList.remove("is-busy");
+      bootstrap.Modal.getInstance(modalEl).hide();
+      Toast.success(`Updated - ${summary}`);
+      return;
+    }
+
+    // New entry: show a success view with a summary and "Add another".
+    document.getElementById("attendanceDoneTitle").textContent = "Attendance recorded";
+    document.getElementById("attendanceDoneFacts").innerHTML = [
+      DemographicsUI.pill(escapeHtml(gatheringName), "primary", "ri-calendar-check-line"),
+      DemographicsUI.pill(formatLongDate(dateVal), "purple", "ri-calendar-line"),
+      DemographicsUI.pill(`${total.toLocaleString()} attended`, "success", "ri-group-line"),
+    ].join("");
+    modalEl.classList.remove("is-busy");
+    modalEl.classList.add("is-done");
+    Toast.success(`Saved - ${summary}`);
   }
 
   function numOrNull(id) {

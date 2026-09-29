@@ -217,7 +217,10 @@ const AttendanceServices = (function () {
       territoryId: USER_TERRITORY.id,
       record,
       defaultDate,
-      onSaved: refreshCalendar,
+      onSaved: async (saved) => {
+        await refreshCalendar();
+        DemographicsUI.flashRow(saved?.id);
+      },
     });
   }
 
@@ -231,10 +234,11 @@ const AttendanceServices = (function () {
     }
 
     tbody.innerHTML = recent
-      .map((r) => {
+      .map((r, i) => {
         const date = new Date(r.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+        const older = recent[i + 1];
         return `
-          <tr style="cursor: pointer;" onclick="AttendanceServices.editRow(${r.id})">
+          <tr style="cursor: pointer;" data-row-id="${r.id}" onclick="AttendanceServices.editRow(${r.id})" title="Edit this Sunday">
             <td class="fw-semibold">
               <div class="d-flex align-items-center gap-2">
                 <span class="avatar avatar-sm avatar-rounded bg-primary">
@@ -243,7 +247,7 @@ const AttendanceServices = (function () {
                 ${date}
               </div>
             </td>
-            <td class="text-end">${totalFor(r)} <i class="ri-edit-line ms-1 text-primary"></i></td>
+            <td class="text-end text-nowrap"><span class="fw-bold">${totalFor(r)}</span>${DemographicsUI.changePill(totalFor(r), older ? totalFor(older) : null)}</td>
           </tr>`;
       })
       .join("");
