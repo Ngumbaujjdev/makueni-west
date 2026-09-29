@@ -86,29 +86,10 @@
     }
 
     /**
-     * getBoundingClientRect() returns post-zoom (visual) pixel values, but
-     * this app applies html { zoom: var(--app-zoom) } site-wide - writing
-     * a getBoundingClientRect() value straight into an inline style on an
-     * element inside that zoomed subtree double-applies the zoom. Anything
-     * measured this way must be divided by the zoom factor before being
-     * written back into a style property. Defaults to 1 (no-op) if the
-     * custom property is unset or unparseable.
-     */
-    function getAppZoomFactor() {
-        const raw = getComputedStyle(document.documentElement).getPropertyValue('--app-zoom').trim();
-        const parsed = parseFloat(raw) / 100;
-        return parsed > 0 ? parsed : 1;
-    }
-
-    /**
      * left/top are handled declaratively by #secondary-nav-bar's own CSS
      * (kept in lockstep with .app-header's height and .app-sidebar's width
-     * there, same pattern - and for the same double-zoom reason described
-     * above, this used to compute them here via getBoundingClientRect() and
-     * write them into inline style.left/top, which mispositioned the bar
-     * under the app's zoom). This function now only toggles visibility and
-     * pushes page content down to clear the bar's own (dynamic, tab-count
-     * dependent) height.
+     * there). This function only toggles visibility and pushes page content
+     * down to clear the bar's own (dynamic, tab-count dependent) height.
      */
     function positionSecondaryNav(container, visible) {
         const mainContent = document.querySelector('.main-content');
@@ -138,7 +119,7 @@
                 mainContent.dataset.baseTopOffset = getComputedStyle(mainContent).paddingBlockStart;
             }
             const baseOffset = parseFloat(mainContent.dataset.baseTopOffset) || 0;
-            const barHeight = container.getBoundingClientRect().height / getAppZoomFactor();
+            const barHeight = container.getBoundingClientRect().height;
             mainContent.style.paddingBlockStart = (baseOffset + barHeight) + 'px';
         }
     }

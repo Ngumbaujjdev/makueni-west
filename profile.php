@@ -1229,7 +1229,7 @@ $currentRole = getCurrentRole();
     <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
     <!-- toasts -->
     <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js"></script>"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/profile/profile.js"></script>
