@@ -67,13 +67,6 @@ typography
 /* Montserrat */
 @import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600&amp;display=swap");
 :root {
-  /* App-wide density (2026-09-17) - a single tunable knob rather than a
-     scattered set of shrunk font-sizes/paddings, so "make everything a bit
-     denser" stays a one-line change. zoom (not transform:scale) reflows
-     layout at the new size - tables/cards/sidebar all actually get more
-     compact, not just visually shrunk inside their old, now-oversized
-     boxes. */
-  --app-zoom: 90%;
 
   /* .app-sidebar's own base rule (search "width: 15rem" further down)
      references --primary-bordered-bg, which is never actually defined
@@ -170,10 +163,6 @@ typography
   --black-7: rgba(0, 0, 0, 0.7);
   --black-8: rgba(0, 0, 0, 0.8);
   --black-9: rgba(0, 0, 0, 0.9);
-}
-
-html {
-  zoom: var(--app-zoom);
 }
 
 /*Font Family*/
@@ -28590,12 +28579,9 @@ a:hover {
     margin-block: 1rem !important;
 }
 
-/* Positioned declaratively (not via secondary-nav.js measuring
-   getBoundingClientRect() and writing the raw pixels into inline
-   style.left/top) because this app applies html { zoom: var(--app-zoom) }
-   site-wide - getBoundingClientRect() already returns post-zoom values,
-   so writing them straight into an inline style on an element inside the
-   zoomed subtree double-applies the zoom and mispositions the bar. */
+/* Positioned declaratively in CSS (kept in lockstep with .app-header's
+   height and .app-sidebar's width) rather than measured and written as
+   inline style.left/top by secondary-nav.js. */
 #secondary-nav-bar:not(:empty) {
     background-color: var(--custom-white, #fff);
     border-block-end: 1px solid var(--default-border, #e9edf4);
@@ -28767,12 +28753,6 @@ a:hover {
    module pill (the group header above already says which group it is,
    and the title needs the width). */
 @media (max-width: 575.98px) {
-    /* modal-fullscreen sizes the dialog 100vw, which the html zoom
-       shrinks to 90% (same bug as .modal-backdrop below) - size it
-       against .modal (already full-size) instead. */
-    #searchModal .modal-dialog {
-        width: 100%;
-    }
     .global-search-panel {
         border-radius: 0;
     }
@@ -28984,22 +28964,6 @@ a:hover {
     #appearanceTextSizeGroup .btn {
         border-radius: 0.375rem !important;
     }
-}
-
-/* ==========================================================================
-   Modal backdrop vs. the html { zoom: var(--app-zoom) } hack (2026-09-29)
-   Bootstrap sizes .modal-backdrop as 100vw x 100vh. Under the site-wide
-   90% zoom those vw/vh units get zoomed too, so the backdrop only covered
-   90% of the screen - a bright, undimmed strip down the right edge (over
-   the header profile) and along the bottom whenever any modal was open,
-   on desktop and phones alike. inset:0 + 100% sizes it against the
-   fixed-position containing block instead, which zoom doesn't shrink.
-   Same root cause as the secondary-nav fix (PR #102).
-   ========================================================================== */
-.modal-backdrop {
-    inset: 0;
-    width: 100%;
-    height: 100%;
 }
 
 /* ==========================================================================
@@ -29215,4 +29179,414 @@ a:hover {
    nav row can always scroll clear of it. */
 .app-sidebar .main-sidebar {
     padding-block-end: 7rem;
+}
+
+/* ==========================================================================
+   DESIGN SYSTEM v2 (2026-09-29)
+   One central pass that lifts every page at once, modeled on the Kusoya
+   Academy admin screens: real 14px type (no more html zoom), solid readable
+   secondary text, clean white cards with a crisp border instead of a
+   gradient title bar, solid icon tiles instead of pale tints, one tab
+   style, real-size switches, pill segmented controls and quieter table
+   headers. Everything below overrides the YNEX template rules above;
+   light-mode token overrides are scoped with :not([data-theme-mode="dark"])
+   so the template's own dark palette keeps working.
+   ========================================================================== */
+
+:root:not([data-theme-mode="dark"]) {
+  --default-text-color: #1f2533;
+  /* Was #8c9097 - light grey that read as washed out across ~470 uses. */
+  --text-muted: #5b6474;
+  --default-border: #e6e9ef;
+  --bootstrap-card-border: #e6e9ef;
+  --input-border: #dfe3ea;
+  --v2-heading: #0f172a;
+}
+
+[data-theme-mode="dark"] {
+  --v2-heading: #f1f5f9;
+}
+
+:root {
+  --v2-radius: 0.75rem;
+  --v2-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+}
+
+/* --- Type scale -------------------------------------------------------- */
+body {
+  font-size: 0.875rem;
+}
+
+.page-header-breadcrumb .page-title {
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  color: var(--v2-heading);
+}
+
+/* --- Cards ------------------------------------------------------------- */
+.card.custom-card {
+  border: 1px solid var(--default-border);
+  border-radius: var(--v2-radius);
+  box-shadow: var(--v2-shadow);
+}
+
+.card.custom-card .card-header {
+  padding: 1.1rem 1.5rem;
+}
+
+.card.custom-card .card-header:first-child {
+  border-radius: var(--v2-radius) var(--v2-radius) 0 0;
+}
+
+/* The teal/gold gradient bar before every card title was decoration
+   (and a gradient) - titles now carry the weight on their own. */
+.card.custom-card .card-header .card-title:before {
+  content: none;
+}
+
+.card.custom-card .card-header .card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--v2-heading);
+}
+
+/* Grey helper line under a card title ("Applies to this browser"). */
+.card-subtitle-text {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+/* Pale tinted card headers become plain white like every other card. */
+.card-header.bg-primary-transparent,
+.card-header.bg-secondary-transparent,
+.card-header.bg-success-transparent,
+.card-header.bg-danger-transparent,
+.card-header.bg-warning-transparent,
+.card-header.bg-info-transparent {
+  background-color: var(--custom-white) !important;
+  color: var(--default-text-color) !important;
+}
+
+/* --- Solid icon tiles and avatars (no pale tints) ----------------------- */
+.avatar.bg-primary-transparent,
+.avatar.bg-info-transparent,
+.rounded.p-3.bg-primary-transparent,
+.rounded.p-3.bg-info-transparent {
+  background-color: rgb(var(--primary-rgb)) !important;
+  color: #fff !important;
+}
+.avatar.bg-secondary-transparent,
+.avatar.bg-warning-transparent,
+.rounded.p-3.bg-secondary-transparent,
+.rounded.p-3.bg-warning-transparent {
+  background-color: rgb(var(--secondary-rgb)) !important;
+  color: #0D0D0D !important;
+}
+.avatar.bg-success-transparent,
+.rounded.p-3.bg-success-transparent {
+  background-color: rgb(var(--success-rgb)) !important;
+  color: #fff !important;
+}
+.avatar.bg-danger-transparent,
+.rounded.p-3.bg-danger-transparent {
+  background-color: rgb(var(--danger-rgb)) !important;
+  color: #fff !important;
+}
+.avatar.bg-purple-transparent {
+  background-color: rgb(var(--purple-rgb)) !important;
+  color: #fff !important;
+}
+.avatar.bg-pink-transparent {
+  background-color: rgb(var(--pink-rgb)) !important;
+  color: #0D0D0D !important;
+}
+/* Icons inside a now-solid tile inherit its text colour, not their own
+   text-primary/text-success etc. (which would vanish on the same colour). */
+.avatar[class*="-transparent"] i,
+.rounded.p-3[class*="-transparent"] i,
+.rounded.p-3[class*="-transparent"] svg {
+  color: inherit !important;
+  fill: currentColor;
+}
+
+/* Callouts keep a light tint (like Kusoya's info callout) but read clearly. */
+.alert[class*="-transparent"] {
+  border-width: 1px;
+  border-style: solid;
+  color: var(--default-text-color) !important;
+}
+.alert.bg-primary-transparent,
+.alert.bg-info-transparent { border-color: rgba(var(--primary-rgb), 0.35); }
+.alert.bg-secondary-transparent,
+.alert.bg-warning-transparent { border-color: rgba(var(--secondary-rgb), 0.5); }
+.alert.bg-success-transparent { border-color: rgba(var(--success-rgb), 0.4); }
+.alert.bg-danger-transparent { border-color: rgba(var(--danger-rgb), 0.4); }
+
+/* --- Buttons ------------------------------------------------------------ */
+.btn {
+  border-radius: 0.5rem;
+  font-weight: 600;
+}
+
+/* Kusoya's "Secondary" button: white with a border, not a grey slab. */
+.btn-light {
+  background-color: var(--custom-white);
+  border-color: var(--default-border);
+  color: var(--default-text-color);
+}
+.btn-light:hover,
+.btn-light:focus {
+  background-color: var(--custom-white);
+  border-color: rgb(var(--primary-rgb));
+  color: rgb(var(--primary-rgb));
+}
+
+/* Soft "-light" buttons were pale tints - render them solid. */
+.btn.btn-primary-light,
+.btn.btn-info-light {
+  background-color: rgb(var(--primary-rgb));
+  border-color: rgb(var(--primary-rgb));
+  color: #fff;
+}
+.btn.btn-secondary-light,
+.btn.btn-warning-light {
+  background-color: rgb(var(--secondary-rgb));
+  border-color: rgb(var(--secondary-rgb));
+  color: #0D0D0D;
+}
+.btn.btn-success-light {
+  background-color: rgb(var(--success-rgb));
+  border-color: rgb(var(--success-rgb));
+  color: #fff;
+}
+.btn.btn-danger-light {
+  background-color: rgb(var(--danger-rgb));
+  border-color: rgb(var(--danger-rgb));
+  color: #fff;
+}
+.btn.btn-primary-light:hover,
+.btn.btn-info-light:hover,
+.btn.btn-secondary-light:hover,
+.btn.btn-warning-light:hover,
+.btn.btn-success-light:hover,
+.btn.btn-danger-light:hover {
+  filter: brightness(0.92);
+}
+
+/* --- Tabs: one style everywhere ----------------------------------------- */
+/* tab-style-6, nav-tabs-header and nav-tabs-pill all render as a row of
+   bold labels with a solid pill for the active tab (same as the
+   secondary nav bar). */
+.tab-style-6,
+.nav-tabs-header,
+.nav-tabs.nav-tabs-pill {
+  gap: 0.35rem;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+.tab-style-6 .nav-item,
+.nav-tabs-header .nav-item {
+  margin-inline-end: 0;
+}
+.tab-style-6 .nav-link,
+.nav-tabs-header .nav-link,
+.nav-tabs.nav-tabs-pill .nav-link {
+  padding: 0.55rem 1rem;
+  border: 0 !important;
+  border-radius: 0.5rem;
+  color: var(--default-text-color) !important;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: transparent;
+}
+.tab-style-6 .nav-link:hover,
+.nav-tabs-header .nav-link:hover,
+.nav-tabs.nav-tabs-pill .nav-link:hover {
+  background: rgba(var(--primary-rgb), 0.08);
+}
+.tab-style-6 .nav-link.active,
+.nav-tabs-header .nav-link.active,
+.nav-tabs.nav-tabs-pill .nav-link.active,
+#secondary-nav-bar .nav-link.active {
+  background-color: rgb(var(--primary-rgb)) !important;
+  color: #fff !important;
+  box-shadow: none;
+}
+.tab-style-6 .nav-link.active i,
+.nav-tabs-header .nav-link.active i,
+.nav-tabs.nav-tabs-pill .nav-link.active i {
+  color: #fff !important;
+}
+
+/* --- Switches: real size, solid green when on --------------------------- */
+.form-switch {
+  padding-left: 3.1em;
+  min-height: 1.5em;
+}
+.form-switch .form-check-input {
+  width: 2.6em;
+  height: 1.45em;
+  margin-left: -3.1em;
+  margin-top: 0.05em;
+  cursor: pointer;
+  background-color: #d3d8e0;
+  border-color: #d3d8e0;
+  --bs-form-switch-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
+}
+.form-switch .form-check-input:focus {
+  --bs-form-switch-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
+  box-shadow: 0 0 0 3px rgba(var(--success-rgb), 0.2);
+}
+.form-switch .form-check-input:checked {
+  background-color: rgb(var(--success-rgb));
+  border-color: rgb(var(--success-rgb));
+}
+/* form-switch-lg is used on 10 switches but was never defined. */
+.form-switch.form-switch-lg .form-check-input {
+  width: 3em;
+  height: 1.65em;
+}
+.form-switch.form-switch-lg {
+  padding-left: 3.5em;
+}
+.form-switch.form-switch-lg .form-check-input {
+  margin-left: -3.5em;
+}
+/* Plain checkboxes/radios were shrunk to 1.1em - back to a clickable size. */
+.form-check:not(.form-switch) .form-check-input {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+/* --- Segmented controls (btn-group of radio btn-checks) ----------------- */
+.btn-group:has(> .btn-check) {
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.btn-group:has(> .btn-check) > .btn {
+  flex: 0 0 auto;
+  margin-left: 0 !important;
+  padding: 0.4rem 1rem;
+  border: 1px solid var(--default-border) !important;
+  border-radius: 999px !important;
+  background: var(--custom-white);
+  color: var(--default-text-color);
+  font-weight: 500;
+}
+.btn-group:has(> .btn-check) > .btn:hover {
+  border-color: rgb(var(--primary-rgb)) !important;
+  color: rgb(var(--primary-rgb));
+}
+.btn-group:has(> .btn-check) > .btn-check:checked + .btn {
+  background: rgb(var(--primary-rgb));
+  border-color: rgb(var(--primary-rgb)) !important;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* --- Tables ------------------------------------------------------------- */
+/* Quiet white header with small uppercase labels instead of a grey band. */
+.app-content .table > thead,
+.app-content .table > thead.table-light,
+.app-content .table > thead.bg-light {
+  --bs-table-bg: var(--custom-white);
+  background-color: var(--custom-white) !important;
+}
+.app-content .table > thead > tr > th {
+  background-color: var(--custom-white) !important;
+  color: var(--text-muted) !important;
+  font-size: 0.7rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--default-border) !important;
+  padding-block: 0.85rem;
+}
+.app-content .table > tbody > tr > td {
+  padding-block: 0.85rem;
+  border-color: var(--default-border);
+}
+.app-content .table-hover > tbody > tr:hover > * {
+  --bs-table-bg-state: rgba(var(--primary-rgb), 0.04);
+}
+
+/* --- Form controls ------------------------------------------------------ */
+.form-control,
+.form-select {
+  border-radius: 0.5rem;
+  border-color: var(--input-border);
+}
+.form-control:focus,
+.form-select:focus {
+  border-color: rgb(var(--primary-rgb));
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.12);
+}
+.form-label {
+  font-weight: 600;
+  color: var(--default-text-color);
+}
+
+/* Icons inside a now-solid soft button follow the button's text colour
+   (their own text-primary/text-success would vanish on the same fill). */
+.btn[class*="-light"]:not(.btn-light) i {
+  color: inherit !important;
+}
+
+/* Inside tables, the soft buttons are small per-row icon actions (view /
+   edit / reset / toggle). Solid fills there turned every row into a strip
+   of colour blocks - instead: white, bordered, coloured icon, solid on
+   hover. Clear, not pale. */
+.app-content .table .btn.btn-primary-light,
+.app-content .table .btn.btn-info-light { --v2-act: var(--primary-rgb); }
+.app-content .table .btn.btn-secondary-light,
+.app-content .table .btn.btn-warning-light { --v2-act: var(--secondary-rgb); }
+.app-content .table .btn.btn-success-light { --v2-act: var(--success-rgb); }
+.app-content .table .btn.btn-danger-light { --v2-act: var(--danger-rgb); }
+.app-content .table .btn[class*="-light"]:not(.btn-light) {
+  background-color: var(--custom-white);
+  border: 1px solid var(--default-border);
+  color: rgb(var(--v2-act, var(--primary-rgb)));
+  border-radius: 0.45rem !important;
+  filter: none;
+}
+.app-content .table .btn[class*="-light"]:not(.btn-light):hover {
+  background-color: rgb(var(--v2-act, var(--primary-rgb)));
+  border-color: rgb(var(--v2-act, var(--primary-rgb)));
+  color: #fff;
+}
+.app-content .table .btn-group:has(> .btn[class*="-light"]) {
+  gap: 0.3rem;
+}
+.app-content .table .btn-group > .btn[class*="-light"] {
+  margin-left: 0 !important;
+}
+
+/* Profile hero/contact tiles: long emails and the name + Edit button row
+   used to overflow the narrow left column at the real 14px type. */
+.main-profile-info {
+  min-width: 0;
+}
+.main-profile-info > .d-flex {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.main-profile-info p,
+.list-group-item .flex-fill {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Keep common admin tables (e.g. 7-column Users) inside a 1440px screen at
+   the real 14px type: slightly tighter side padding, compact icon actions. */
+.app-content .table > :not(caption) > * > * {
+  padding-inline: 0.65rem;
+}
+.app-content .table .btn-group-sm > .btn[class*="-light"],
+.app-content .table .btn-sm[class*="-light"] {
+  padding: 0.3rem 0.45rem;
+  line-height: 1;
 }
