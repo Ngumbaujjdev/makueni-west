@@ -30654,3 +30654,244 @@ tr.list-row-flash > td {
   color: #fff;
   font-size: 0.72rem;
 }
+
+/* ==========================================================================
+   Select2 (2026-09-29) - every enhanced <select> (UI.enhanceSelect): same
+   height/radius/border as .form-control, teal focus ring, Remix chevron,
+   rounded dropdown with a soft shadow, tinted search box, soft-teal hover,
+   bold selected option with a check. Options can show a colour dot or an
+   icon tile (.s2-option-dot / .s2-option-icon).
+   ========================================================================== */
+.select2-container--default .select2-selection--single {
+  display: flex !important;
+  align-items: center;
+  height: auto !important;
+  min-height: 2.35rem;
+  border: 1px solid var(--input-border) !important;
+  border-radius: 0.5rem !important;
+  background-color: var(--custom-white) !important;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.3rem 2.2rem 0.3rem 0.8rem !important;
+  border: 0 !important;
+  line-height: 1.5 !important;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--default-text-color) !important;
+}
+.select2-container--default .select2-selection--single .select2-selection__placeholder {
+  color: var(--text-muted);
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+  top: 50% !important;
+  right: 0.6rem !important;
+  width: 1.2rem !important;
+  height: 1.2rem !important;
+  transform: translateY(-50%);
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+  display: none;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow::after {
+  content: "\ea4e"; /* ri-arrow-down-s-line */
+  font-family: "remixicon";
+  font-size: 1.15rem;
+  line-height: 1.2rem;
+  color: var(--text-muted);
+  transition: transform 0.15s;
+  display: block;
+}
+.select2-container--open .select2-selection--single .select2-selection__arrow::after {
+  transform: rotate(180deg);
+  color: rgb(var(--primary-rgb));
+}
+.select2-container--focus .select2-selection--single,
+.select2-container--open .select2-selection--single {
+  border-color: rgb(var(--primary-rgb)) !important;
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.12);
+}
+/* A filter that's set gets the same accent as .list-filter.is-set */
+.select2-container.is-set .select2-selection--single {
+  border-color: rgb(var(--primary-rgb)) !important;
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.15);
+}
+.select2-container.is-set .select2-selection__rendered {
+  font-weight: 600;
+}
+
+/* Dropdown panel */
+.select2-dropdown {
+  border: 1px solid var(--default-border) !important;
+  border-radius: 0.6rem !important;
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.12), 0 2px 6px rgba(16, 24, 40, 0.06);
+  overflow: hidden;
+  z-index: 1060;
+}
+.select2-container--open .select2-dropdown--below {
+  margin-top: 0.3rem;
+}
+.select2-container--open .select2-dropdown--above {
+  margin-top: -0.3rem;
+}
+.select2-search--dropdown {
+  padding: 0.5rem !important;
+  background: rgba(var(--primary-rgb), 0.04);
+  border-bottom: 1px solid var(--default-border);
+}
+.select2-container--default .select2-search--dropdown .select2-search__field {
+  min-height: 2.1rem;
+  padding: 0.3rem 0.7rem;
+  border-color: var(--input-border) !important;
+  font-size: 0.85rem;
+}
+.select2-container--default .select2-search--dropdown .select2-search__field:focus {
+  border-color: rgb(var(--primary-rgb)) !important;
+}
+.select2-results > .select2-results__options {
+  max-height: 280px !important;
+  padding: 0.3rem;
+}
+.select2-container--default .select2-results__option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 2.3rem;
+  padding: 0.4rem 2rem 0.4rem 0.65rem;
+  border-radius: 0.4rem;
+  font-size: 0.86rem;
+  color: var(--default-text-color);
+}
+.select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
+  background-color: rgba(var(--primary-rgb), 0.1) !important;
+  color: rgb(var(--primary-rgb)) !important;
+}
+.select2-container--default .select2-results__option--selected,
+.select2-container--default .select2-results__option--selected.select2-results__option--highlighted {
+  background-color: rgba(var(--primary-rgb), 0.14) !important;
+  color: rgb(var(--primary-rgb)) !important;
+  font-weight: 600;
+}
+.select2-container--default .select2-results__option--selected::after {
+  content: "\eb7b"; /* ri-check-line */
+  font-family: "remixicon";
+  position: absolute;
+  right: 0.65rem;
+  font-size: 1rem;
+}
+.select2-container--default .select2-results__option--disabled {
+  color: var(--text-muted) !important;
+}
+
+/* Option content: colour dot or icon tile + label */
+.s2-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+.s2-option-dot {
+  flex: 0 0 auto;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+}
+.s2-option-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 0.4rem;
+  font-size: 0.9rem;
+}
+.select2-selection__rendered .s2-option-icon {
+  width: 1.45rem;
+  height: 1.45rem;
+  font-size: 0.82rem;
+}
+
+/* Filter bar: the Select2 box sizes like the old .list-filter */
+.list-filterbar .select2-container {
+  flex: 0 0 auto;
+  width: auto !important;
+  min-width: 170px;
+  max-width: 240px;
+}
+@media (max-width: 575.98px) {
+  .list-filterbar .select2-container {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+  .select2-container--default .select2-results__option {
+    min-height: 2.6rem;
+  }
+}
+
+/* Dark mode */
+[data-theme-mode="dark"] .select2-dropdown {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+[data-theme-mode="dark"] .select2-search--dropdown {
+  background: rgba(255, 255, 255, 0.03);
+}
+[data-theme-mode="dark"] .select2-container--default .select2-search--dropdown .select2-search__field {
+  background-color: transparent !important;
+}
+/* Metric page picker */
+.metric-switch {
+  width: 250px;
+  max-width: 100%;
+}
+@media (max-width: 575.98px) {
+  .metric-switch {
+    width: 100%;
+  }
+}
+
+/* Spiritual Activities - chart card with activity tabs */
+.activity-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.activity-tabs {
+  flex-wrap: nowrap;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.activity-tabs::-webkit-scrollbar {
+  display: none;
+}
+.activity-tabs .nav-link {
+  white-space: nowrap;
+  padding: 0.45rem 0.85rem;
+}
+.activity-history-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgb(var(--primary-rgb));
+}
+.ring-donut-item {
+  transition: opacity 0.15s;
+}
+.ring-donut.has-focus .ring-donut-item:not(.is-focus) {
+  opacity: 0.4;
+}
+.ring-donut.has-focus .ring-donut-item.is-focus .ring-donut-name {
+  font-weight: 700;
+}
+@media (max-width: 575.98px) {
+  .activity-history-link {
+    margin-inline-start: 0 !important;
+  }
+}

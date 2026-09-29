@@ -142,6 +142,12 @@ These are already mapped onto the YNEX template's Bootstrap variables (`--primar
   - a meaningful sub-line
   Not just a bare number. Cards in a row use different colours from the category palette, not one colour repeated.
 - **Loading states:** skeletons for a page's first load; spinners only inside a button while an action runs.
+- **Dropdowns use Select2 (2026-09-29), not the browser's native menu.**
+  - Call `UI.enhanceSelect(el)` from `ui-helpers.js`. Filter-bar selects get it automatically.
+  - Load `assets/libs/select2/select2.min.css` (before `styles.min.css`) and `select2.min.js` (after jQuery).
+  - Options can carry `data-color` (a dot) or `data-icon` + `data-color` (an icon tile).
+  - After setting `select.value` in code, call `UI.syncSelect(el)`.
+  - Year and range switches with 3–5 choices stay segmented button groups.
 - Match existing page structure (`includes/header.php` / `sidebar.php` / `footer.php` includes, `requirePermission()` call at the top of every protected page) rather than inventing a new page-layout pattern.
 - **Sidebar category icon colors are an explicit, scoped exception to "brand tokens only."** `includes/sidebar.php`'s per-module-group icon color cycle (`ICON_COLOR_CYCLE`) uses 6 colors, not just the 4 real diocese brand semantics (teal/gold/green/red) — a 4-way cycle over a tier's 5 module groups read as flat/repetitive. The extra 2 (`--purple-rgb`/`--pink-rgb`) are unused-elsewhere Bootstrap semantic variables already sitting in `styles.css`'s `:root`, not new hex values. This is sidebar information-coding (which category is which), not brand identity — brand tokens still govern buttons/links/primary UI everywhere else, including this same sidebar's active-state teal.
 

@@ -34,6 +34,7 @@ $breadcrumbs = [
 
     <script src="<?= SITE_URL ?>/assets/js/main.js"></script>
     <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/select2/select2.min.css" />
     <link href="<?= SITE_URL ?>/assets/css/styles.min.css<?= assetVersion('assets/css/styles.min.css') ?>" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
@@ -63,7 +64,7 @@ $breadcrumbs = [
 
                 <?php include __DIR__ . '/../../includes/page-header.php' ?>
 
-<div class="page-toolbar">
+                <div class="page-toolbar">
                     <div class="page-toolbar-sub" id="activitySubtitle">Baptisms, communion, conversions and departures</div>
                     <div class="page-toolbar-controls">
                         <div id="yearSwitchWrap"></div>
@@ -75,14 +76,15 @@ $breadcrumbs = [
                 <div class="row">
                     <div class="col-xl-8">
                         <div class="card custom-card">
-                            <div class="card-header">
+                            <div class="card-header activity-card-header">
                                 <div>
-                                    <div class="card-title">Per period</div>
-                                    <span class="card-subtitle-text">Tap an activity to show or hide it</span>
+                                    <div class="card-title" id="activityChartTitle">Per period</div>
+                                    <span class="card-subtitle-text" id="activityChartSubtitle">Tap an activity to show or hide it</span>
                                 </div>
+                                <ul class="nav nav-tabs-header activity-tabs mb-0" id="activityTabs" role="tablist" aria-label="Activity"></ul>
                             </div>
                             <div class="card-body">
-                                <div class="d-flex flex-wrap gap-2 mb-2" id="activityChips"></div>
+                                <div class="d-flex flex-wrap align-items-center gap-2 mb-2" id="activityChips"></div>
                                 <div id="activityChart"></div>
                             </div>
                         </div>
@@ -153,6 +155,7 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/libs/apexcharts/apexcharts.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/select2/select2.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/jquery.dataTables.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js"></script>
 

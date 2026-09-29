@@ -33,9 +33,12 @@ const DemographicsMetric = (function () {
     key = M[METRIC_KEY] ? METRIC_KEY : "total_members";
 
     document.getElementById("metricSwitchWrap").innerHTML = `
-      <select class="form-select" id="metricSwitch" aria-label="Metric" style="min-width: 220px;">
-        ${Object.entries(M).map(([k, m]) => `<option value="${k}"${k === key ? " selected" : ""}>${m.label}</option>`).join("")}
+      <select class="form-select" id="metricSwitch" aria-label="Metric">
+        ${Object.entries(M)
+          .map(([k, m]) => `<option value="${k}" data-icon="${m.icon}" data-color="${m.color}"${k === key ? " selected" : ""}>${m.label}</option>`)
+          .join("")}
       </select>`;
+    UI.enhanceSelect("metricSwitch", { search: true });
     document.getElementById("metricSwitch").addEventListener("change", (e) => {
       key = e.target.value;
       history.replaceState(null, "", `${window.location.pathname}?key=${encodeURIComponent(key)}`);
