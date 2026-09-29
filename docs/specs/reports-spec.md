@@ -46,11 +46,17 @@ Churches need printable, trustworthy reports of what they record. The design fol
 | `demographics.spiritual` | Spiritual activities, all four (fiscal year) | `sum` |
 | `demographics.baptisms` / `.holy_communion` / `.conversions` / `.departures` | One activity on its own - the report behind each Spiritual Activities tab | by period `sum`; membership comparison none |
 | `demographics.growth` | Growth analytics (1/3/5 years or all) | none |
+| `demographics.metric` | One metric (`metric`: the metric page's keys, e.g. `sunday_school`), all time by default. Metrics recorded by gender show both parts plus the total. `lockedOnly`: reached from its metric page, not listed in the full report list. | headcounts `latest`, flows `sum` |
 
 Fiscal-year reports also take `fiscal_year_id: "all"`, which means **All time**: every approved submission, labelled "All time (2024-2026)". There are no "not reported" gaps for all time, because gaps only make sense within one year.
 
 Spiritual activities and its four activity reports share `group: "Spiritual activities"`, so the modal shows them together.
 | `demographics.submission` | Submission report (one submission) | none |
+
+### Page-aware export
+Export on a page opens the modal **locked to that page's report**: only the period and the format are chosen, and "Choose a different report" unlocks the full list. The Reports page shows the full list.
+
+Each report names itself in the line above its title (`subject()`), e.g. "CHURCH HOLY COMMUNION REPORT" or "CHURCH SUNDAY SCHOOL REPORT", so a report never reads as a generic demographics report. The PDF header names the church body as **Christian Church International**.
 
 ## Insights (`app/Support/Reports/Insights`)
 - `Insight {tone: good|watch|concern, title, detail, recommendation?}`
