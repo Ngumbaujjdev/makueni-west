@@ -120,7 +120,7 @@
         filteredItems.forEach((item, index) => {
             if (item.groupName !== currentGroup) {
                 currentGroup = item.groupName;
-                html += `<div class="fw-semibold text-dark text-uppercase fs-11 px-3 pt-2 pb-1">${escapeHtml(currentGroup)}</div>`;
+                html += `<div class="fw-semibold text-dark text-uppercase fs-11 px-4 pt-3 pb-1">${escapeHtml(currentGroup)}</div>`;
             }
 
             html += `
