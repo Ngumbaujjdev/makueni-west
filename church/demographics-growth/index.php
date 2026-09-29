@@ -39,6 +39,7 @@ $breadcrumbs = [
     <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css" />
 
     <script>
         const USER_TERRITORY = {
@@ -64,110 +65,108 @@ $breadcrumbs = [
 
                 <?php include __DIR__ . '/../../includes/page-header.php' ?>
 
-                <!-- Segmented control -->
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="btn-group" role="group" aria-label="View toggle">
-                        <button type="button" class="btn btn-primary active" id="segmentOverviewBtn">
-                            <i class="ri-dashboard-line me-1"></i>Overview
-                        </button>
-                        <button type="button" class="btn btn-outline-primary" id="segmentHistoryBtn">
-                            <i class="ri-history-line me-1"></i>History
-                        </button>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <select class="form-select form-select-sm" style="max-width: 140px;" id="reportFiscalYear">
-                            <option value="">Loading years...</option>
-                        </select>
+                <!-- Toolbar: what this page is + its controls -->
+                <div class="page-toolbar">
+                    <div class="page-toolbar-sub" id="overviewSubtitle">Membership snapshot for <?= htmlspecialchars($userTerritoryName) ?></div>
+                    <div class="page-toolbar-controls">
+                        <div class="seg-control" id="viewSwitch" role="tablist" aria-label="View">
+                            <button type="button" class="seg-btn active" data-value="overview"><i class="ri-dashboard-line me-1"></i>Overview</button>
+                            <button type="button" class="seg-btn" data-value="history"><i class="ri-history-line me-1"></i>History</button>
+                        </div>
+                        <div id="yearSwitchWrap"></div>
                         <?php if ($canEnter): ?>
-                        <a href="<?= SITE_URL ?>/church/demographics-growth/demographics-tracking.php" class="btn btn-primary btn-wave">
-                            <i class="ri-edit-line me-1"></i>Update This <span id="updateDataBtnLabel">Month</span>'s Data
+                        <a href="<?= SITE_URL ?>/church/demographics-growth/demographics-tracking.php" class="btn btn-primary">
+                            <i class="ri-edit-line me-1"></i>Update this <span id="updateDataBtnLabel">month</span>'s data
                         </a>
                         <?php endif; ?>
                     </div>
                 </div>
 
-                <!-- OVERVIEW segment -->
+                <!-- OVERVIEW -->
                 <div id="segmentOverview">
-                    <div class="row g-3 mb-3" id="statCardsRow">
-                        <!-- Stat cards injected by index.js -->
-                    </div>
+                    <div class="row" id="statCardsRow"></div>
 
-                    <div class="card custom-card mb-3">
-                        <div class="card-header">
-                            <div class="card-title"><i class="ri-line-chart-line me-2 text-primary"></i>Membership Growth</div>
-                        </div>
-                        <div class="card-body">
-                            <div id="growthChartLegend"></div>
-                            <div id="growthTrendChart"></div>
-                            <div class="border-top pt-3 mt-3" id="growthStatColumns"></div>
-                        </div>
-                    </div>
-
-                    <div class="row g-3">
-                        <div class="col-xl-4">
+                    <div class="row">
+                        <div class="col-xl-8">
                             <div class="card custom-card">
-                                <div class="card-header">
-                                    <div class="card-title"><i class="ri-pie-chart-line me-2 text-primary"></i>Gender Split</div>
+                                <div class="card-header justify-content-between">
+                                    <div>
+                                        <div class="card-title">Membership growth</div>
+                                        <span class="card-subtitle-text">Total members at each approved submission</span>
+                                    </div>
+                                    <div id="growthChips"></div>
                                 </div>
                                 <div class="card-body">
-                                    <div id="genderDonutChart"></div>
+                                    <div id="growthTrendChart"></div>
                                 </div>
                             </div>
                         </div>
                         <div class="col-xl-4">
                             <div class="card custom-card">
                                 <div class="card-header">
-                                    <div class="card-title"><i class="ri-shield-check-line me-2 text-primary"></i>Compliance Status</div>
-                                </div>
-                                <div class="card-body" id="complianceCard">
-                                    <div class="text-center py-4">
-                                        <div class="spinner-border text-primary" role="status">
-                                            <span class="visually-hidden">Loading...</span>
-                                        </div>
+                                    <div>
+                                        <div class="card-title">Gender split</div>
+                                        <span class="card-subtitle-text" id="genderSubtitle">Latest submission</span>
                                     </div>
+                                </div>
+                                <div class="card-body">
+                                    <div id="genderDonut"></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-xl-4">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-xl-6">
                             <div class="card custom-card">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <div class="card-title"><i class="ri-settings-3-line me-2 text-primary"></i>Recording Cadence</div>
-                                    <a href="<?= SITE_URL ?>/church/settings/demographics-settings/recording-cadence.php" class="fs-12">
-                                        Manage in Settings <i class="ri-arrow-right-line ms-1"></i>
-                                    </a>
-                                </div>
-                                <div class="card-body" id="demographicsModeCard">
-                                    <div class="text-center py-4">
-                                        <div class="spinner-border text-primary" role="status">
-                                            <span class="visually-hidden">Loading...</span>
-                                        </div>
+                                <div class="card-header">
+                                    <div>
+                                        <div class="card-title">Membership breakdown</div>
+                                        <span class="card-subtitle-text">Who makes up the congregation</span>
                                     </div>
                                 </div>
+                                <div class="card-body" id="compositionCard"></div>
+                            </div>
+                        </div>
+                        <div class="col-xl-6">
+                            <div class="card custom-card">
+                                <div class="card-header justify-content-between">
+                                    <div>
+                                        <div class="card-title">Reporting status</div>
+                                        <span class="card-subtitle-text" id="cadenceLabel">Recording cadence</span>
+                                    </div>
+                                    <a href="<?= SITE_URL ?>/church/settings/demographics-settings/recording-cadence.php" class="fs-12 fw-semibold">
+                                        Cadence settings <i class="ri-arrow-right-line ms-1"></i>
+                                    </a>
+                                </div>
+                                <div class="card-body" id="reportingCard"></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- HISTORY segment -->
+                <!-- HISTORY -->
                 <div id="segmentHistory" style="display: none;">
                     <div class="card custom-card">
                         <div class="card-header">
-                            <div class="card-title"><i class="ri-file-list-3-line me-2 text-primary"></i>Submission History</div>
+                            <div>
+                                <div class="card-title">Submission history</div>
+                                <span class="card-subtitle-text">Every period this church has recorded</span>
+                            </div>
                         </div>
                         <div class="card-body p-0">
+                            <div id="historyFilterToolbar" class="list-filterbar-wrap"></div>
                             <div class="table-responsive">
-                                <table class="table table-hover mb-0">
-                                    <thead class="table-light">
+                                <table class="table table-hover mb-0" id="historyTable">
+                                    <thead>
                                         <tr>
-                                            <th class="fw-semibold text-dark">Period</th>
-                                            <th class="fw-semibold text-dark">Total Members</th>
-                                            <th class="fw-semibold text-dark">Status</th>
-                                            <th class="fw-semibold text-dark text-end">Action</th>
+                                            <th>Period</th>
+                                            <th>Total members</th>
+                                            <th>Status</th>
+                                            <th class="text-end">Action</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="historyTableBody">
-                                        <!-- Rows injected by index.js -->
-                                    </tbody>
+                                    <tbody id="historyTableBody"></tbody>
                                 </table>
                             </div>
                         </div>
@@ -196,6 +195,9 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/libs/apexcharts/apexcharts.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/jquery.dataTables.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js"></script>
 
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js<?= assetVersion('assets/js/pages/demographics/api-handler.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js<?= assetVersion('assets/js/pages/demographics/ui-helpers.js') ?>"></script>
