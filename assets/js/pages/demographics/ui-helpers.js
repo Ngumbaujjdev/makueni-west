@@ -831,9 +831,26 @@ const DemographicsUI = (function () {
       return null;
     }
 
+    const tableEl = document.getElementById(tableId);
+    const tbody = tableEl ? tableEl.tBodies[0] : null;
+
+    // Callers write the new rows into <tbody>, then call this. Destroying the
+    // previous DataTable puts back the rows it had cached (DataTables 1.12
+    // re-appends its stored row nodes), which silently replaced the fresh
+    // rows with stale ones after every save/toggle. Capture the new rows
+    // first, destroy, then restore them.
+    const freshRows = tbody ? tbody.innerHTML : "";
     if ($.fn.DataTable.isDataTable(`#${tableId}`)) {
       $(`#${tableId}`).DataTable().destroy();
       delete _dataTables[tableId];
+      if (tbody) tbody.innerHTML = freshRows;
+    }
+
+    // A single full-width loading/empty row isn't table data - initialising
+    // DataTables over it triggers its "incorrect column count" warning.
+    const firstRow = tbody ? tbody.rows[0] : null;
+    if (!firstRow || (tbody.rows.length === 1 && firstRow.cells.length === 1 && firstRow.cells[0].colSpan > 1)) {
+      return null;
     }
 
     const {
@@ -842,13 +859,13 @@ const DemographicsUI = (function () {
       order = [[0, "asc"]],
       nonSortableColumns = [],
       hideDefaultSearch = false,
+      noun = "records",
     } = options;
 
-    const dom = hideDefaultSearch
-      ? '<"row"<"col-sm-12"tr>>' + '<"row"<"col-sm-12 col-md-3"l><"col-sm-12 col-md-4"i><"col-sm-12 col-md-5"p>>'
-      : '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
-        '<"row"<"col-sm-12"tr>>' +
-        '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>';
+    // Footer: rows-per-page + "Showing x-y of z" on the left, pages on the
+    // right (same arrangement as the v1-events-backend list pages).
+    const footer = '<"list-footer"<"list-footer-start"li>p>';
+    const dom = hideDefaultSearch ? `t${footer}` : `<"list-footer list-footer-top"lf>t${footer}`;
 
     const instance = $(`#${tableId}`).DataTable({
       responsive: true,
@@ -862,11 +879,16 @@ const DemographicsUI = (function () {
       language: {
         search: "_INPUT_",
         searchPlaceholder,
-        lengthMenu: "Show _MENU_ entries",
-        info: "Showing _START_ to _END_ of _TOTAL_ entries",
-        infoEmpty: "No entries available",
-        infoFiltered: "(filtered from _MAX_ total entries)",
-        zeroRecords: "No matching records found",
+        lengthMenu: "Rows _MENU_",
+        info: `Showing <b>_START_–_END_</b> of <b>_TOTAL_</b> ${noun}`,
+        infoEmpty: `No ${noun}`,
+        infoFiltered: "",
+        zeroRecords: `
+          <div class="list-empty">
+            <span class="list-empty-icon bg-primary text-white"><i class="ri-search-eye-line"></i></span>
+            <div class="fw-semibold mt-2">No ${noun} match your filters</div>
+            <div class="fs-12 text-muted">Try a different search, or reset the filters.</div>
+          </div>`,
         paginate: {
           first: '<i class="ri-skip-back-mini-line"></i>',
           last: '<i class="ri-skip-forward-mini-line"></i>',
@@ -876,18 +898,11 @@ const DemographicsUI = (function () {
       },
       dom,
       initComplete: function () {
-        $(`#${tableId}_wrapper .dataTables_filter input`)
-          .addClass("form-control form-control-sm")
-          .attr("placeholder", searchPlaceholder);
+        $(`#${tableId}_wrapper .dataTables_filter input`).addClass("form-control form-control-sm").attr("placeholder", searchPlaceholder);
         $(`#${tableId}_wrapper .dataTables_length select`).addClass("form-select form-select-sm");
-        $(`#${tableId}_wrapper .dataTables_filter label`).prepend('<i class="ri-search-line me-2 text-primary"></i>');
       },
       drawCallback: function () {
-        $(`#${tableId}_wrapper .dataTables_filter input`).addClass("form-control form-control-sm");
         $(`#${tableId}_wrapper .dataTables_length select`).addClass("form-select form-select-sm");
-        $(`#${tableId}_wrapper .paginate_button`).addClass("btn btn-sm");
-        $(`#${tableId}_wrapper .paginate_button.current`).addClass("btn-primary");
-        $(`#${tableId}_wrapper .paginate_button:not(.current)`).addClass("btn-light border");
       },
     });
 
@@ -904,66 +919,186 @@ const DemographicsUI = (function () {
   // filter row.
   // ==========================================================================
 
+  const DATE_RANGES = [
+    { value: "", label: "All time" },
+    { value: "this", label: "This month" },
+    { value: "last", label: "Last month" },
+    { value: "3m", label: "Last 3 months" },
+  ];
+
   /**
+   * Filter bar above a list table (same arrangement as the v1-events-backend
+   * list pages): search with an icon, dropdown filters, optional date-range
+   * pills, a live result count and a Reset that only shows once something
+   * is filtered.
    * @param {string} containerId - id of an empty container element to render into
    * @param {object} config
    *   searchPlaceholder: string
    *   filters: [{ id, label (shown as the "All X" default option), options: [{value,label}] }]
+   *   dateRange: boolean - show "All time / This month / Last month / Last 3 months" pills
+   *     (rows need a data-date="YYYY-MM-DD" attribute)
    */
-  function renderFilterToolbar(containerId, { searchPlaceholder = "Search...", filters = [] } = {}) {
+  function renderFilterToolbar(containerId, { searchPlaceholder = "Search...", filters = [], dateRange = false } = {}) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
     const selects = filters
       .map(
         (f) => `
-        <select class="form-select" id="${f.id}" style="max-width: 200px;">
+        <select class="form-select list-filter" id="${f.id}" aria-label="${f.label}">
           <option value="">${f.label}</option>
           ${f.options.map((o) => `<option value="${o.value}">${o.label}</option>`).join("")}
         </select>`,
       )
       .join("");
 
+    const ranges = dateRange
+      ? `<div class="list-range" role="group" aria-label="Date range">
+          ${DATE_RANGES.map((r) => `<button type="button" class="list-range-btn${r.value === "" ? " active" : ""}" data-range="${r.value}">${r.label}</button>`).join("")}
+        </div>`
+      : "";
+
     container.innerHTML = `
-      <div class="d-flex flex-wrap gap-2 align-items-center">
-        <div class="flex-grow-1" style="min-width: 220px;">
-          <input type="text" class="form-control" id="${containerId}Search" placeholder="${searchPlaceholder}">
+      <div class="list-filterbar">
+        <div class="list-search">
+          <i class="ri-search-line"></i>
+          <input type="search" class="form-control" id="${containerId}Search" placeholder="${searchPlaceholder}" autocomplete="off">
         </div>
         ${selects}
-        <button type="button" class="btn btn-light border" id="${containerId}Clear" title="Clear filters">
-          <i class="ri-close-line"></i>
-        </button>
+        ${ranges}
+        <div class="list-filterbar-end">
+          <span class="list-count" id="${containerId}Count"></span>
+          <button type="button" class="list-reset d-none" id="${containerId}Clear">
+            <i class="ri-refresh-line"></i><span>Reset</span>
+          </button>
+        </div>
       </div>`;
   }
 
-  /**
-   * Wires a renderFilterToolbar() container to a DataTables instance -
-   * global text search plus per-column dropdown filters.
-   * @param {string} containerId - same id passed to renderFilterToolbar()
-   * @param {object} table - the DataTables API instance (initListDataTable()'s return value)
-   * @param {object[]} filters - same array passed to renderFilterToolbar(), each with a columnIndex
-   */
-  function wireFilterToolbar(containerId, table, filters = []) {
-    if (!table) return;
+  // Active date range per table, read by one shared DataTables row filter.
+  const _dateRanges = {};
+  let _dateFilterRegistered = false;
 
+  function rowInRange(dateStr, range, now = new Date()) {
+    if (!range) return true;
+    const d = new Date(dateStr);
+    if (isNaN(d)) return true;
+    const diff = monthIndex(now) - monthIndex(d);
+    if (range === "this") return diff === 0;
+    if (range === "last") return diff === 1;
+    if (range === "3m") return diff >= 0 && diff <= 2;
+    return true;
+  }
+
+  function registerDateFilter() {
+    if (_dateFilterRegistered || typeof $ === "undefined" || !$.fn.dataTable) return;
+    _dateFilterRegistered = true;
+    $.fn.dataTable.ext.search.push((settings, data, dataIndex) => {
+      const range = _dateRanges[settings.nTable.id];
+      if (!range) return true;
+      const tr = settings.aoData[dataIndex] && settings.aoData[dataIndex].nTr;
+      return tr && tr.dataset.date ? rowInRange(tr.dataset.date, range) : true;
+    });
+  }
+
+  /**
+   * Wires a renderFilterToolbar() container to a DataTables instance. All
+   * filtering happens in place - nothing reloads the page. Filter state is
+   * mirrored into the URL (history.replaceState) so a refresh or a shared
+   * link keeps it.
+   * @param {string} containerId - same id passed to renderFilterToolbar()
+   * @param {object|null} table - initListDataTable()'s return value (null when the list is empty)
+   * @param {object[]} filters - each {id, columnIndex, exact} (matches the cell's data-search, if set)
+   * @param {object} opts {noun: "records", urlSync: true - set false when a page has several toolbars}
+   */
+  function wireFilterToolbar(containerId, table, filters = [], { noun = "records", urlSync = true } = {}) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
     const searchInput = document.getElementById(`${containerId}Search`);
-    if (searchInput) {
-      searchInput.addEventListener("input", () => table.search(searchInput.value).draw());
+    const clearBtn = document.getElementById(`${containerId}Clear`);
+    const countEl = document.getElementById(`${containerId}Count`);
+    const rangeBtns = [...container.querySelectorAll(".list-range-btn")];
+    const tableId = table ? table.table().node().id : null;
+
+    const currentRange = () => (rangeBtns.find((b) => b.classList.contains("active")) || {}).dataset?.range || "";
+
+    function updateUi() {
+      let active = !!(searchInput && searchInput.value.trim()) || !!currentRange();
+      filters.forEach((f) => {
+        const select = document.getElementById(f.id);
+        if (!select) return;
+        select.classList.toggle("is-set", !!select.value);
+        if (select.value) active = true;
+      });
+      if (clearBtn) clearBtn.classList.toggle("d-none", !active);
+      if (countEl) {
+        const shown = table ? table.page.info().recordsDisplay : 0;
+        const total = table ? table.page.info().recordsTotal : 0;
+        countEl.textContent = active ? `${shown} of ${total} ${noun}` : `${total} ${noun}`;
+      }
     }
 
+    function syncUrl() {
+      if (!urlSync) return;
+      const params = new URLSearchParams(window.location.search);
+      const set = (key, value) => (value ? params.set(key, value) : params.delete(key));
+      set("q", searchInput ? searchInput.value.trim() : "");
+      filters.forEach((f) => set(f.id, document.getElementById(f.id)?.value || ""));
+      set("range", currentRange());
+      const qs = params.toString();
+      history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+    }
+
+    function applyColumnFilter(f) {
+      const select = document.getElementById(f.id);
+      if (!select || !table) return;
+      // exact: true anchors the search as a regex (^value$) - needed for
+      // columns like Status where "Active" would otherwise also match
+      // "Inactive" as a plain substring.
+      const escaped = select.value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const value = f.exact && select.value ? `^${escaped}$` : select.value;
+      table.column(f.columnIndex).search(value, !!f.exact, false);
+    }
+
+    function apply() {
+      if (table) {
+        table.search(searchInput ? searchInput.value : "");
+        filters.forEach(applyColumnFilter);
+        if (tableId) _dateRanges[tableId] = currentRange();
+        table.draw();
+      }
+      updateUi();
+      syncUrl();
+    }
+
+    // Restore state from the URL (e.g. after a refresh).
+    const params = new URLSearchParams(urlSync ? window.location.search : "");
+    if (searchInput && params.get("q")) searchInput.value = params.get("q");
     filters.forEach((f) => {
       const select = document.getElementById(f.id);
-      if (!select) return;
-      select.addEventListener("change", () => {
-        // exact: true anchors the search as a regex (^value$) - needed for
-        // columns like Status where "Active" would otherwise also match
-        // "Inactive" as a plain substring.
-        const value = f.exact && select.value ? `^${select.value}$` : select.value;
-        table.column(f.columnIndex).search(value, !!f.exact, false).draw();
-      });
+      const value = params.get(f.id);
+      if (select && value && [...select.options].some((o) => o.value === value)) select.value = value;
     });
+    if (params.get("range")) {
+      rangeBtns.forEach((b) => b.classList.toggle("active", b.dataset.range === params.get("range")));
+    }
 
-    const clearBtn = document.getElementById(`${containerId}Clear`);
+    registerDateFilter();
+
+    let debounce = null;
+    if (searchInput) {
+      searchInput.addEventListener("input", () => {
+        clearTimeout(debounce);
+        debounce = setTimeout(apply, 250);
+      });
+    }
+    filters.forEach((f) => document.getElementById(f.id)?.addEventListener("change", apply));
+    rangeBtns.forEach((btn) =>
+      btn.addEventListener("click", () => {
+        rangeBtns.forEach((b) => b.classList.toggle("active", b === btn));
+        apply();
+      }),
+    );
     if (clearBtn) {
       clearBtn.addEventListener("click", () => {
         if (searchInput) searchInput.value = "";
@@ -971,9 +1106,42 @@ const DemographicsUI = (function () {
           const select = document.getElementById(f.id);
           if (select) select.value = "";
         });
-        table.search("").columns().search("").draw();
+        rangeBtns.forEach((b) => b.classList.toggle("active", b.dataset.range === ""));
+        if (table) table.columns().search("");
+        apply();
       });
     }
+
+    apply();
+  }
+
+  // ==========================================================================
+  // LIST ROW HELPERS - a stable colour per name (so "Tuesday Fellowship" is
+  // always the same colour), avatar tiles and solid pills.
+  // ==========================================================================
+
+  const ROW_COLORS = ["primary", "success", "purple", "secondary", "danger", "pink", "info"];
+
+  function colorFor(key) {
+    const str = String(key || "");
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+    return ROW_COLORS[hash % ROW_COLORS.length];
+  }
+
+  function avatarTile(icon, color) {
+    return `<span class="avatar avatar-sm avatar-rounded bg-${color} ${iconTextClass(color)} flex-shrink-0"><i class="${icon}"></i></span>`;
+  }
+
+  function pill(text, color = "primary", icon = "") {
+    return `<span class="badge bg-${color} ${iconTextClass(color)} list-pill">${icon ? `<i class="${icon} me-1"></i>` : ""}${text}</span>`;
+  }
+
+  /** Small solid change pill for table cells, e.g. [▲ 4] (blank when no change/no previous). */
+  function changePill(current, previous) {
+    if (previous == null || current == null || current === previous) return "";
+    const up = current > previous;
+    return `<span class="stat-delta is-${up ? "up" : "down"} ms-2" title="vs previous"><i class="ri-arrow-${up ? "up" : "down"}-s-fill"></i>${Math.abs(current - previous)}</span>`;
   }
 
   // ==========================================================================
@@ -1034,15 +1202,7 @@ const DemographicsUI = (function () {
   function renderMembersTrend(rows, index) {
     const current = rows[index].total_members;
     const previous = rows[index + 1] ? rows[index + 1].total_members : null;
-    if (current == null || previous == null) return "";
-
-    const diff = current - previous;
-    if (diff === 0) return "";
-
-    const color = diff > 0 ? "success" : "danger";
-    const icon = diff > 0 ? "ri-arrow-up-line" : "ri-arrow-down-line";
-    const sign = diff > 0 ? "+" : "-";
-    return `<span class="badge bg-${color}-transparent text-${color} fs-11 ms-2"><i class="${icon}"></i> ${sign}${Math.abs(diff)}</span>`;
+    return changePill(current, previous);
   }
 
   function renderSubmissionsRows(rows, { onEdit = null, onView = null } = {}) {
@@ -1081,8 +1241,8 @@ const DemographicsUI = (function () {
                 </div>
               </div>
             </td>
-            <td><span class="fw-semibold fs-15">${row.total_members ?? "-"}</span>${renderMembersTrend(rows, index)}</td>
-            <td>${renderStatusBadge(row.status)}</td>
+            <td data-order="${row.total_members ?? 0}"><span class="fw-bold fs-15">${row.total_members ?? "-"}</span>${renderMembersTrend(rows, index)}</td>
+            <td data-search="${meta.label}">${renderStatusBadge(row.status)}</td>
             <td class="text-end"><div class="d-flex justify-content-end gap-1">${viewBtn}${editBtn}</div></td>
           </tr>`;
       })
@@ -1117,6 +1277,10 @@ const DemographicsUI = (function () {
     brandHex,
     renderCompactCard,
     renderTileCard,
+    colorFor,
+    avatarTile,
+    pill,
+    changePill,
     renderSparkCard,
     mountSparklines,
     monthlySeries,

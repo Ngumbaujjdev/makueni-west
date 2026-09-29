@@ -599,19 +599,19 @@ include __DIR__ . '/../../../includes/page-header.php';
 
     <!-- Toast JS -->
     <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
 
     <!-- Constants -->
     <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
 
     <!-- Auth Helpers -->
-    <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js<?= assetVersion('assets/js/utils/auth-helpers.js') ?>"></script>
 
     <!-- Logout Handler -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js<?= assetVersion('assets/js/pages/authentication/logout.js') ?>"></script>
 
     <!-- Budget Lines Management JS -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/budget-settings/budget-line.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/budget-settings/budget-line.js<?= assetVersion('assets/js/pages/budget-settings/budget-line.js') ?>"></script>
 
     <!-- Initialize Budget Lines Page -->
     <script>

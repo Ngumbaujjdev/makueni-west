@@ -600,7 +600,7 @@ if ($budgetId <= 0) {
 
     <!-- Toast JS -->
     <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
 
     <!-- Flatpickr JS -->
     <script src="<?= SITE_URL ?>/assets/libs/flatpickr/flatpickr.min.js"></script>
@@ -609,10 +609,10 @@ if ($budgetId <= 0) {
     <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
 
     <!-- Budget API Handler -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/budget-management/api-handler.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/budget-management/api-handler.js<?= assetVersion('assets/js/pages/budget-management/api-handler.js') ?>"></script>
 
     <!-- Edit Budget JS -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/budget-management/edit-budget.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/budget-management/edit-budget.js<?= assetVersion('assets/js/pages/budget-management/edit-budget.js') ?>"></script>
 </body>
 
 </html>

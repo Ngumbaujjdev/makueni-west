@@ -679,6 +679,7 @@ const DemographicsTracking = (function () {
           label: "All Statuses",
           options: [
             { value: "Draft", label: "Draft" },
+            { value: "Submitted", label: "Submitted" },
             { value: "Approved", label: "Approved" },
             { value: "Flagged", label: "Flagged" },
             { value: "Changes Requested", label: "Changes Requested" },
@@ -692,11 +693,12 @@ const DemographicsTracking = (function () {
       order: [], // rows are already sorted newest-first - don't let DataTables re-sort column 0 alphabetically
       nonSortableColumns: [3],
       hideDefaultSearch: true,
+      noun: "submissions",
     });
 
     DemographicsUI.wireFilterToolbar("submissionsFilterToolbar", table, [
       { id: "submissionsStatusFilter", columnIndex: 2, exact: true },
-    ]);
+    ], { noun: "submissions" });
   }
 
   async function loadForEdit(id) {

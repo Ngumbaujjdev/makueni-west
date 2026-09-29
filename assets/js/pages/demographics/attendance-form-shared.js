@@ -285,28 +285,66 @@ const AttendanceFormShared = (function () {
   // LIST TABLE (ministries.php / events.php)
   // ==========================================================================
 
+  /**
+   * Rows for a gathering list (Ministries / Special Events). `rows` must be
+   * newest-first - each row's change pill compares it with the previous
+   * gathering of the same ministry/event further down the list.
+   * Cells carry data-order/data-search so sorting and the Ministry filter
+   * work on the raw value, not the decorated markup.
+   */
   function renderListRows(rows, { onEdit } = {}) {
+    const UI = DemographicsUI;
     if (!rows || rows.length === 0) {
-      return DemographicsUI.renderTableEmpty(5, "No records yet", "ri-calendar-line");
+      return UI.renderTableEmpty(5, "No records yet - add your first entry", "ri-calendar-line");
     }
 
     return rows
-      .map((row) => {
-        const date = new Date(row.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-        const total = (row.adults_count || 0) + (row.youth_count || 0) + (row.children_male_count || 0) + (row.children_female_count || 0);
+      .map((row, index) => {
+        const d = new Date(row.service_date);
+        const date = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+        const weekday = d.toLocaleDateString("en-GB", { weekday: "long" });
+        const iso = String(row.service_date).substring(0, 10);
+        const total = recordTotal(row);
         const icon = row.gathering_type?.icon || row.gathering_category?.icon || "ri-calendar-event-line";
         const label = row.gathering_type?.name || row.event_name || "-";
+        const color = UI.colorFor(label);
+
+        const sameKey = (r) => (r.gathering_type_id || r.event_name) === (row.gathering_type_id || row.event_name);
+        const previous = rows.slice(index + 1).find(sameKey);
+        const children = (row.children_male_count || 0) + (row.children_female_count || 0);
+        const breakdown = [
+          row.adults_count ? `${row.adults_count} adults` : "",
+          row.youth_count ? `${row.youth_count} youth` : "",
+          children ? `${children} children` : "",
+        ]
+          .filter(Boolean)
+          .join(" · ");
+
+        const notes = row.notes ? escapeHtml(row.notes) : "";
+        const editBtn = onEdit
+          ? `<button type="button" class="btn btn-sm btn-primary-light" onclick="${onEdit}(${row.id})" title="Edit entry" aria-label="Edit entry">
+               <i class="ri-edit-line"></i>
+             </button>`
+          : "";
+
         return `
-          <tr>
-            <td class="fw-semibold">${date}</td>
-            <td><i class="${icon} me-1 text-primary"></i>${escapeHtml(label)}</td>
-            <td>${total}</td>
-            <td>${row.notes || "-"}</td>
-            <td class="text-end">
-              <button type="button" class="btn btn-sm btn-primary" onclick="${onEdit}(${row.id})">
-                <i class="ri-edit-line me-1"></i>Edit
-              </button>
+          <tr data-date="${iso}" data-row-id="${row.id}">
+            <td data-order="${iso}">
+              <div class="fw-semibold">${date}</div>
+              <div class="fs-12 text-muted">${weekday}</div>
             </td>
+            <td data-search="${escapeHtml(label)}">
+              <div class="d-flex align-items-center gap-2">
+                ${UI.avatarTile(icon, color)}
+                <span class="fw-semibold">${escapeHtml(label)}</span>
+              </div>
+            </td>
+            <td data-order="${total}">
+              <span class="fw-bold fs-15">${total.toLocaleString()}</span>${UI.changePill(total, previous ? recordTotal(previous) : null)}
+              ${breakdown ? `<div class="fs-12 text-muted">${breakdown}</div>` : ""}
+            </td>
+            <td class="list-notes">${notes ? `<span title="${notes}">${notes}</span>` : '<span class="text-muted">-</span>'}</td>
+            <td class="text-end">${editBtn}</td>
           </tr>`;
       })
       .join("");

@@ -152,7 +152,7 @@ $userEmail = $currentUser['email'] ?? '';
      declarations only, so redeclaring is a no-op, not a SyntaxError (unlike
      config/constants.js's `const Constants = {...}`, a real bug fixed
      earlier). -->
-<script src="<?= $baseUrl ?>/assets/js/utils/auth-helpers.js"></script>
+<script src="<?= $baseUrl ?>/assets/js/utils/auth-helpers.js<?= assetVersion('assets/js/utils/auth-helpers.js') ?>"></script>
 
 <script>
 /**

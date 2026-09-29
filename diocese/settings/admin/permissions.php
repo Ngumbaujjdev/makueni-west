@@ -273,39 +273,39 @@ include __DIR__ . '/../../../includes/page-header.php';
     <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
     <!-- Logout Handler -->
     <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
 
     <!-- Constants (IMPORTANT - Add this!) -->
     <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
 
     <!-- Auth Helpers -->
-    <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js<?= assetVersion('assets/js/utils/auth-helpers.js') ?>"></script>
 
     <!-- Logout Handler -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js<?= assetVersion('assets/js/pages/authentication/logout.js') ?>"></script>
 
     <!-- Dependencies (existing files) -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/api-handler.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/permission-matrix.js">
+    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/api-handler.js<?= assetVersion('assets/js/pages/system-administration/api-handler.js') ?>"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/permission-matrix.js<?= assetVersion('assets/js/pages/system-administration/permission-matrix.js') ?>">
     </script>
 
     <!-- ============================================================================ -->
     <!-- USER MANAGEMENT MODULES (Load in this exact order!) -->
     <!-- ============================================================================ -->
     <script
-        src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management-utils.js">
+        src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management-utils.js<?= assetVersion('assets/js/pages/system-administration/user-management/user-management-utils.js') ?>">
     </script>
     <script
-        src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management-table.js">
+        src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management-table.js<?= assetVersion('assets/js/pages/system-administration/user-management/user-management-table.js') ?>">
     </script>
     <script
-        src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management-actions.js">
+        src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management-actions.js<?= assetVersion('assets/js/pages/system-administration/user-management/user-management-actions.js') ?>">
     </script>
     <script
-        src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management-modals.js">
+        src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management-modals.js<?= assetVersion('assets/js/pages/system-administration/user-management/user-management-modals.js') ?>">
     </script>
     <script
-        src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management.js">
+        src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management.js<?= assetVersion('assets/js/pages/system-administration/user-management/user-management.js') ?>">
     </script>
 
     <!-- Initialize Permissions Page -->

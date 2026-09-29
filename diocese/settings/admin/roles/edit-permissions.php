@@ -313,20 +313,20 @@ include __DIR__ . '/../../../../includes/page-header.php';
 
     <!-- Toast JS -->
     <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
 
     <!-- Constants -->
     <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
 
     <!-- API Handler -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/api-handler.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/api-handler.js<?= assetVersion('assets/js/pages/system-administration/api-handler.js') ?>"></script>
 
     <!-- Edit Permissions Page -->
     <script>
         // Pass role ID to JavaScript
         const ROLE_ID = <?php echo $roleId; ?>;
     </script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/role-management/edit-permissions.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/role-management/edit-permissions.js<?= assetVersion('assets/js/pages/system-administration/role-management/edit-permissions.js') ?>"></script>
 </body>
 
 </html>

@@ -29870,3 +29870,246 @@ body {
   --fc-page-bg-color: var(--custom-white);
   --fc-border-color: var(--default-border);
 }
+
+/* ==========================================================================
+   List pages (2026-09-29) - filter bar, table rows, footer and pagination,
+   ported from the v1-events-backend list pages' patterns. Rendered by
+   DemographicsUI.renderFilterToolbar()/wireFilterToolbar()/
+   initListDataTable() and the page row renderers.
+   ========================================================================== */
+
+/* Filter bar */
+.list-filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+.list-search {
+  position: relative;
+  flex: 1 1 240px;
+  min-width: 200px;
+}
+.list-search > i {
+  position: absolute;
+  top: 50%;
+  inset-inline-start: 0.85rem;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 1rem;
+  pointer-events: none;
+}
+.list-search .form-control {
+  padding-inline-start: 2.4rem;
+}
+.list-filter {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 170px;
+  max-width: 240px;
+}
+/* A filter that's set gets an accent outline, so it's obvious what's on. */
+.list-filter.is-set {
+  border-color: rgb(var(--primary-rgb));
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.15);
+  font-weight: 600;
+}
+.list-range {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.list-range-btn {
+  padding: 0.38rem 0.8rem;
+  border: 1px solid var(--default-border);
+  border-radius: 999px;
+  background: var(--custom-white);
+  color: var(--default-text-color);
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.list-range-btn:hover {
+  border-color: rgb(var(--primary-rgb));
+  color: rgb(var(--primary-rgb));
+}
+.list-range-btn.active {
+  background: rgb(var(--primary-rgb));
+  border-color: rgb(var(--primary-rgb));
+  color: #fff;
+  font-weight: 600;
+}
+.list-filterbar-end {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-inline-start: auto;
+}
+.list-count {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.list-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.7rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: rgb(var(--danger-rgb));
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.list-reset:hover {
+  background: rgba(var(--danger-rgb), 0.08);
+}
+
+/* Tables sitting flush in a card (card-body p-0): give the first and last
+   columns - and the footer - real side padding instead of starting at the
+   card edge. */
+.card-body.p-0 .table > :not(caption) > * > *:first-child {
+  padding-inline-start: 1.25rem;
+}
+.card-body.p-0 .table > :not(caption) > * > *:last-child {
+  padding-inline-end: 1.25rem;
+}
+.list-filterbar-wrap,
+#filterToolbar,
+#submissionsFilterToolbar {
+  padding: 1rem 1.25rem !important;
+  border-bottom: 1px solid var(--default-border);
+}
+
+/* Rows */
+.list-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.32rem 0.6rem;
+  border-radius: 999px;
+}
+.list-notes {
+  max-width: 260px;
+}
+.list-notes > span {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.list-kebab {
+  padding: 0.3rem 0.45rem;
+  line-height: 1;
+}
+/* A row that was just added or edited flashes briefly. */
+@keyframes list-row-flash {
+  from { background-color: rgba(var(--success-rgb), 0.22); }
+  to { background-color: transparent; }
+}
+tr.list-row-flash > td {
+  animation: list-row-flash 1.6s ease-out;
+}
+.app-reduce-motion tr.list-row-flash > td {
+  animation: none;
+}
+
+/* No-results state (DataTables zeroRecords) */
+.list-empty {
+  padding: 2.25rem 1rem;
+  text-align: center;
+}
+.list-empty-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  font-size: 1.35rem;
+}
+
+/* Footer: rows-per-page + "Showing x-y of z" left, pages right */
+.list-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1.25rem;
+  border-top: 1px solid var(--default-border);
+}
+.list-footer-start {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem;
+}
+.list-footer .dataTables_info {
+  display: block;
+}
+.list-footer .dataTables_length label,
+.list-footer .dataTables_info {
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0 !important;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.list-footer .dataTables_length label {
+  display: flex;
+}
+.list-footer .dataTables_length select {
+  width: auto;
+}
+.list-footer .dataTables_info b {
+  color: var(--default-text-color);
+}
+.list-footer .dataTables_paginate {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.list-footer .pagination {
+  gap: 0.3rem;
+  margin: 0;
+}
+.list-footer .page-link {
+  display: grid;
+  place-items: center;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0 0.6rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.55rem !important;
+  background: var(--custom-white);
+  color: var(--default-text-color);
+  font-weight: 600;
+}
+.list-footer .page-link:hover {
+  border-color: rgb(var(--primary-rgb));
+  color: rgb(var(--primary-rgb));
+}
+.list-footer .page-item.active .page-link {
+  background: rgb(var(--primary-rgb));
+  border-color: rgb(var(--primary-rgb));
+  color: #fff;
+}
+.list-footer .page-item.disabled .page-link {
+  opacity: 0.45;
+}
+@media (max-width: 575.98px) {
+  .list-footer {
+    justify-content: center;
+  }
+  .list-filterbar-end {
+    margin-inline-start: 0;
+  }
+  .list-filter {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+}

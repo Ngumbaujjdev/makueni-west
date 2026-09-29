@@ -141,15 +141,15 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/js/simplebar.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/custom-switcher.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/libs/fullcalendar/main.min.js"></script>
 
     <script src="<?= SITE_URL ?>/assets/libs/apexcharts/apexcharts.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js<?= assetVersion('assets/js/pages/demographics/api-handler.js') ?>"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js<?= assetVersion('assets/js/pages/demographics/ui-helpers.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/scripts/choices.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-form-shared.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-services.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-form-shared.js<?= assetVersion('assets/js/pages/demographics/attendance-form-shared.js') ?>"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-services.js<?= assetVersion('assets/js/pages/demographics/attendance-services.js') ?>"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => window.AttendanceServices.init());
     </script>

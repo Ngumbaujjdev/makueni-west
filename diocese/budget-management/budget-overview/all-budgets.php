@@ -306,13 +306,13 @@ include __DIR__ . '/../../../includes/page-header.php';
 
     <!-- Toast JS -->
     <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
 
     <!-- Constants -->
     <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
 
     <!-- Budget API Handler -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/budget-management/api-handler.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/budget-management/api-handler.js<?= assetVersion('assets/js/pages/budget-management/api-handler.js') ?>"></script>
 
     <!-- Define Base URL for JavaScript -->
     <script>
@@ -320,7 +320,7 @@ include __DIR__ . '/../../../includes/page-header.php';
     </script>
 
     <!-- Budget List JS V2 - NEW FILE -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/budget-management/budget-list-v2.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/budget-management/budget-list-v2.js<?= assetVersion('assets/js/pages/budget-management/budget-list-v2.js') ?>"></script>
 
     <!-- Initialize -->
     <script>

@@ -538,31 +538,31 @@ include __DIR__ . '/../../../includes/page-header.php';
 
     <!-- Toast JS -->
     <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
 
     <!-- Constants -->
     <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
 
     <!-- Auth Helpers -->
-    <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js<?= assetVersion('assets/js/utils/auth-helpers.js') ?>"></script>
 
     <!-- Logout Handler -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js<?= assetVersion('assets/js/pages/authentication/logout.js') ?>"></script>
 
     <!-- API Handler -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/api-handler.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/api-handler.js<?= assetVersion('assets/js/pages/system-administration/api-handler.js') ?>"></script>
 
     <!-- ============================================================================ -->
     <!-- USER MANAGEMENT MODULES (Reusing from Users Page) -->
     <!-- ============================================================================ -->
     <script
-        src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management-utils.js">
+        src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management-utils.js<?= assetVersion('assets/js/pages/system-administration/user-management/user-management-utils.js') ?>">
     </script>
     <script
-        src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management-table.js">
+        src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management-table.js<?= assetVersion('assets/js/pages/system-administration/user-management/user-management-table.js') ?>">
     </script>
     <script
-        src="<?= SITE_URL ?>/assets/js/pages/system-administration/role-management/role-modals.js">
+        src="<?= SITE_URL ?>/assets/js/pages/system-administration/role-management/role-modals.js<?= assetVersion('assets/js/pages/system-administration/role-management/role-modals.js') ?>">
     </script>
 
     <!-- Initialize Role Management -->
