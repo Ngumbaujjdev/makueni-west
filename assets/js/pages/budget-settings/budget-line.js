@@ -283,8 +283,8 @@
       console.log(`⚠️ No categories to display for type "${type}"`);
       container.innerHTML = `
                 <div class="text-center py-5">
-                    <i class="ri-list-check fs-48 text-muted mb-3 d-block"></i>
-                    <p class="text-muted mb-0">No ${type} budget lines found</p>
+                    <i class="ri-list-check fs-30 text-primary mb-2 d-block"></i>
+                    <p class="text-body fw-semibold mb-0">No ${type} budget lines found</p>
                 </div>`;
       return;
     }
@@ -319,7 +319,7 @@
       if (lines.length === 0) {
         html += `
                     <div class="text-center py-4">
-                        <p class="text-muted mb-0">No lines in this category</p>
+                        <p class="text-body fw-semibold mb-0">No lines in this category</p>
                     </div>`;
       } else {
         html += `
@@ -762,8 +762,8 @@
     if (!audits || audits.length === 0) {
       auditContainer.innerHTML = `
                 <div class="text-center py-5">
-                    <i class="ri-history-line fs-48 text-muted mb-3 d-block"></i>
-                    <p class="text-muted mb-0">No audit trail available</p>
+                    <i class="ri-history-line fs-30 text-primary mb-2 d-block"></i>
+                    <p class="text-body fw-semibold mb-0">No audit trail available</p>
                 </div>`;
       return;
     }

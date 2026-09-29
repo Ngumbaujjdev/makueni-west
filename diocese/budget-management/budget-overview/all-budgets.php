@@ -73,24 +73,16 @@ $currentRole = getCurrentRole();
             <div class="container-fluid">
 
                 <!-- Page Header -->
-                <div class="d-md-flex d-block align-items-center justify-content-between my-4 page-header-breadcrumb">
-                    <h1 class="page-title fw-semibold fs-18 mb-0">
-                        <i class="ri-file-list-3-line me-2"></i>All Budgets
-                    </h1>
-                    <div class="ms-md-1 ms-0">
-                        <nav>
-                            <ol class="breadcrumb mb-0">
-                                <li class="breadcrumb-item">
-                                    <a href="<?= SITE_URL ?>/diocese/dashboard"><i class="ri-home-4-line"></i> Home</a>
-                                </li>
-                                <li class="breadcrumb-item">
-                                    <a href="javascript:void(0);">Budget Management</a>
-                                </li>
-                                <li class="breadcrumb-item active" aria-current="page">All Budgets</li>
-                            </ol>
-                        </nav>
-                    </div>
-                </div>
+                <?php
+$pageTitle = 'All Budgets';
+$pageIcon = 'ri-file-list-3-line';
+$breadcrumbs = [
+    'Home' => SITE_URL . '/diocese/dashboard',
+    'Budget Management' => null,
+    'All Budgets' => null,
+];
+include __DIR__ . '/../../../includes/page-header.php';
+?>
 
                 <!-- Filters & Actions -->
                 <div class="row">
@@ -148,80 +140,72 @@ $currentRole = getCurrentRole();
 
                 <!-- Statistics Cards -->
                 <div class="row">
-                    <!-- Total Budgets -->
+                    <!-- Total Budgets (compact stat card - template html/index-3.html) -->
                     <div class="col-xl-3 col-lg-6 col-md-6">
                         <div class="card custom-card">
                             <div class="card-body">
-                                <div class="d-flex align-items-start justify-content-between">
-                                    <div>
-                                        <span class="d-block mb-1">Total Budgets</span>
-                                        <h3 class="fw-semibold mb-1" id="totalBudgetsCount">0</h3>
-                                        <span class="fs-12 text-muted" id="totalBudgetsTrend">+0% this month</span>
+                                <div class="d-flex align-items-top">
+                                    <div class="me-3">
+                                        <span class="avatar avatar-md bg-primary text-white"><i class="ri-file-list-3-line fs-20"></i></span>
                                     </div>
-                                    <div class="ms-2">
-                                        <span class="avatar avatar-md avatar-rounded bg-primary-transparent">
-                                            <i class="ri-file-list-3-line fs-20"></i>
-                                        </span>
+                                    <div class="flex-fill" style="min-width: 0;">
+                                        <h5 class="fw-semibold mb-1 lh-1 fs-20 text-break" id="totalBudgetsCount">0</h5>
+                                        <p class="mb-0 fs-11 text-muted fw-semibold text-uppercase">Total Budgets</p>
+                                        <p class="mb-0 mt-1 fs-12 text-muted" id="totalBudgetsTrend">+0% this month</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Active Budgets -->
+                    <!-- Active Budgets (compact stat card - template html/index-3.html) -->
                     <div class="col-xl-3 col-lg-6 col-md-6">
                         <div class="card custom-card">
                             <div class="card-body">
-                                <div class="d-flex align-items-start justify-content-between">
-                                    <div>
-                                        <span class="d-block mb-1">Active Budgets</span>
-                                        <h3 class="fw-semibold mb-1" id="activeBudgetsCount">0</h3>
-                                        <span class="fs-12 text-muted" id="activeBudgetsTrend">+0% this month</span>
+                                <div class="d-flex align-items-top">
+                                    <div class="me-3">
+                                        <span class="avatar avatar-md bg-success text-white"><i class="ri-play-circle-line fs-20"></i></span>
                                     </div>
-                                    <div class="ms-2">
-                                        <span class="avatar avatar-md avatar-rounded bg-success-transparent">
-                                            <i class="ri-play-circle-line fs-20"></i>
-                                        </span>
+                                    <div class="flex-fill" style="min-width: 0;">
+                                        <h5 class="fw-semibold mb-1 lh-1 fs-20 text-break" id="activeBudgetsCount">0</h5>
+                                        <p class="mb-0 fs-11 text-muted fw-semibold text-uppercase">Active Budgets</p>
+                                        <p class="mb-0 mt-1 fs-12 text-muted" id="activeBudgetsTrend">+0% this month</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Pending Approval -->
+                    <!-- Pending Approval (compact stat card - template html/index-3.html) -->
                     <div class="col-xl-3 col-lg-6 col-md-6">
                         <div class="card custom-card">
                             <div class="card-body">
-                                <div class="d-flex align-items-start justify-content-between">
-                                    <div>
-                                        <span class="d-block mb-1">Pending Approval</span>
-                                        <h3 class="fw-semibold mb-1" id="pendingApprovalCount">0</h3>
-                                        <span class="fs-12 text-muted">Needs review</span>
+                                <div class="d-flex align-items-top">
+                                    <div class="me-3">
+                                        <span class="avatar avatar-md bg-secondary text-dark"><i class="ri-time-line fs-20"></i></span>
                                     </div>
-                                    <div class="ms-2">
-                                        <span class="avatar avatar-md avatar-rounded bg-warning-transparent">
-                                            <i class="ri-time-line fs-20"></i>
-                                        </span>
+                                    <div class="flex-fill" style="min-width: 0;">
+                                        <h5 class="fw-semibold mb-1 lh-1 fs-20 text-break" id="pendingApprovalCount">0</h5>
+                                        <p class="mb-0 fs-11 text-muted fw-semibold text-uppercase">Pending Approval</p>
+                                        <p class="mb-0 mt-1 fs-12 text-muted">Needs review</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Total Amount -->
+                    <!-- Total Amount (compact stat card - template html/index-3.html) -->
                     <div class="col-xl-3 col-lg-6 col-md-6">
                         <div class="card custom-card">
                             <div class="card-body">
-                                <div class="d-flex align-items-start justify-content-between">
-                                    <div>
-                                        <span class="d-block mb-1">Total Amount</span>
-                                        <h3 class="fw-semibold mb-1" id="totalAmountValue">KES 0</h3>
-                                        <span class="fs-12 text-muted">All budgets combined</span>
+                                <div class="d-flex align-items-top">
+                                    <div class="me-3">
+                                        <span class="avatar avatar-md bg-primary text-white"><i class="ri-money-dollar-circle-line fs-20"></i></span>
                                     </div>
-                                    <div class="ms-2">
-                                        <span class="avatar avatar-md avatar-rounded bg-info-transparent">
-                                            <i class="ri-money-dollar-circle-line fs-20"></i>
-                                        </span>
+                                    <div class="flex-fill" style="min-width: 0;">
+                                        <h5 class="fw-semibold mb-1 lh-1 fs-20 text-break" id="totalAmountValue">KES 0</h5>
+                                        <p class="mb-0 fs-11 text-muted fw-semibold text-uppercase">Total Amount</p>
+                                        <p class="mb-0 mt-1 fs-12 text-muted">All budgets combined</p>
                                     </div>
                                 </div>
                             </div>

@@ -149,8 +149,8 @@
       tbody.innerHTML = `
         <tr>
           <td colspan="7" class="text-center py-5">
-            <i class="ri-user-line fs-48 text-muted mb-3 d-block"></i>
-            <p class="text-muted mb-0">No users found</p>
+            <i class="ri-user-line fs-30 text-primary mb-2 d-block"></i>
+            <p class="text-body fw-semibold mb-0">No users found</p>
           </td>
         </tr>`;
       return;
@@ -337,8 +337,8 @@
       tbody.innerHTML = `
         <tr>
           <td colspan="8" class="text-center py-5">
-            <i class="ri-shield-user-line fs-48 text-muted mb-3 d-block"></i>
-            <p class="text-muted mb-0">No roles found</p>
+            <i class="ri-shield-user-line fs-30 text-primary mb-2 d-block"></i>
+            <p class="text-body fw-semibold mb-0">No roles found</p>
           </td>
         </tr>`;
       return;
@@ -494,8 +494,8 @@
       tbody.innerHTML = `
         <tr>
           <td colspan="7" class="text-center py-5">
-            <i class="ri-key-2-line fs-48 text-muted mb-3 d-block"></i>
-            <p class="text-muted mb-0">No permissions found</p>
+            <i class="ri-key-2-line fs-30 text-primary mb-2 d-block"></i>
+            <p class="text-body fw-semibold mb-0">No permissions found</p>
           </td>
         </tr>`;
       return;
@@ -597,8 +597,8 @@
     if (!module_groups || module_groups.length === 0) {
       container.innerHTML = `
         <div class="text-center py-5">
-          <i class="ri-folder-line fs-48 text-muted mb-3 d-block"></i>
-          <p class="text-muted mb-0">No modules found</p>
+          <i class="ri-folder-line fs-30 text-primary mb-2 d-block"></i>
+          <p class="text-body fw-semibold mb-0">No modules found</p>
         </div>`;
       return;
     }
@@ -644,7 +644,7 @@
    */
   function renderModules(modules) {
     if (!modules || modules.length === 0) {
-      return '<p class="text-muted mb-0">No modules</p>';
+      return '<p class="text-body fw-semibold mb-0">No modules</p>';
     }
 
     let html = '<ul class="list-unstyled ms-3">';

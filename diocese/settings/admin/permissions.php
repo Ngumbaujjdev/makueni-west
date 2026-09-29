@@ -20,9 +20,7 @@ $currentRole = getCurrentRole();
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>
-        Permission Management - YNEX
-    </title>
+    <title>Permission Management - Makueni West Diocese</title>
     <meta name="Description" content="Bootstrap Responsive Admin Web Dashboard Template" />
     <meta name="Author" content="Spruko Technologies Private Limited" />
     <meta name="keywords"
@@ -90,21 +88,17 @@ $currentRole = getCurrentRole();
             <div class="container-fluid">
 
                 <!-- Page Header -->
-                <div class="d-md-flex d-block align-items-center justify-content-between my-4 page-header-breadcrumb">
-                    <h1 class="page-title fw-semibold fs-18 mb-0">
-                        <i class="ri-key-2-line me-2"></i>Permission Management
-                    </h1>
-                    <div class="ms-md-1 ms-0">
-                        <nav>
-                            <ol class="breadcrumb mb-0">
-                                <li class="breadcrumb-item"><a href="<?= SITE_URL ?>/diocese">Home</a></li>
-                                <li class="breadcrumb-item"><a href="#">Settings</a></li>
-                                <li class="breadcrumb-item"><a href="#">System Administration</a></li>
-                                <li class="breadcrumb-item active" aria-current="page">Permissions</li>
-                            </ol>
-                        </nav>
-                    </div>
-                </div>
+                <?php
+$pageTitle = 'Permission Management';
+$pageIcon = 'ri-key-2-line';
+$breadcrumbs = [
+    'Home' => SITE_URL . '/diocese/dashboard',
+    'Settings' => null,
+    'System Administration' => null,
+    'Permissions' => null,
+];
+include __DIR__ . '/../../../includes/page-header.php';
+?>
                 <!-- Page Header Close -->
 
                 <!-- Start::row-1 -->

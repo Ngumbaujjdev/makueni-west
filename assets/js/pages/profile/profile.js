@@ -578,8 +578,8 @@
       } else {
         activeContainer.innerHTML = `
           <div class="text-center py-5">
-              <i class="ri-briefcase-line fs-48 text-muted mb-3 d-block"></i>
-              <p class="text-muted mb-0">No active assignments</p>
+              <i class="ri-briefcase-line fs-30 text-primary mb-2 d-block"></i>
+              <p class="text-body fw-semibold mb-0">No active assignments</p>
           </div>`;
       }
     }
@@ -628,8 +628,8 @@
       } else {
         historyContainer.innerHTML = `
           <div class="text-center py-5">
-              <i class="ri-history-line fs-48 text-muted mb-3 d-block"></i>
-              <p class="text-muted mb-0">No assignment history</p>
+              <i class="ri-history-line fs-30 text-primary mb-2 d-block"></i>
+              <p class="text-body fw-semibold mb-0">No assignment history</p>
           </div>`;
       }
     }
@@ -665,8 +665,8 @@
     if (!passwordChanges || passwordChanges.length === 0) {
       container.innerHTML = `
         <div class="text-center py-5">
-            <i class="ri-key-2-line fs-48 text-muted mb-3 d-block"></i>
-            <p class="text-muted mb-0">No password changes found</p>
+            <i class="ri-key-2-line fs-30 text-primary mb-2 d-block"></i>
+            <p class="text-body fw-semibold mb-0">No password changes found</p>
         </div>`;
       return;
     }
@@ -756,8 +756,8 @@
       container.innerHTML = `
         <li>
             <div class="text-center py-5">
-                <i class="ri-history-line fs-48 text-muted mb-3 d-block"></i>
-                <p class="text-muted mb-0">No activity found</p>
+                <i class="ri-history-line fs-30 text-primary mb-2 d-block"></i>
+                <p class="text-body fw-semibold mb-0">No activity found</p>
             </div>
         </li>`;
       return;
@@ -1046,8 +1046,8 @@
     if (!loginData || loginData.length === 0) {
       container.innerHTML = `
         <div class="text-center py-5">
-            <i class="ri-login-box-line fs-48 text-muted mb-3 d-block"></i>
-            <p class="text-muted mb-0">No login history found</p>
+            <i class="ri-login-box-line fs-30 text-primary mb-2 d-block"></i>
+            <p class="text-body fw-semibold mb-0">No login history found</p>
         </div>`;
       return;
     }

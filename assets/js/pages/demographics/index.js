@@ -148,7 +148,7 @@ const DemographicsOverview = (function () {
       { icon: "ri-user-star-line", label: "Youth (13-35)", field: "youth_count", color: "success" },
       { icon: "ri-women-line", label: "Women's Fellowship", field: "womens_fellowship_count", color: "warning" },
       { icon: "ri-men-line", label: "Men's Fellowship", field: "mens_fellowship_count", color: "secondary" },
-      { icon: "ri-graduation-cap-line", label: "Sunday School", field: null, color: "primary" },
+      { icon: "ri-book-read-line", label: "Sunday School", field: null, color: "primary" },
       { icon: "ri-user-heart-line", label: "Seniors", field: "seniors_count", color: "success" },
     ];
 
@@ -178,6 +178,8 @@ const DemographicsOverview = (function () {
           color: c.color,
           trend: rawValue != null ? DemographicsUI.trendFor(rawValue, prevValue) : null,
           sublabel: isSundaySchool ? sundaySchoolSublabel(latest) : "",
+          // Same "View all ->" affordance as the template's Courses tiles.
+          link: { href: `${window.mwdBaseUrl || ""}/church/demographics-growth/growth-analytics`, text: "View trend" },
         };
         return `<div class="col-xl-4 col-lg-6 col-md-6">${DemographicsUI.renderSolidStatCard(opts)}</div>`;
       })

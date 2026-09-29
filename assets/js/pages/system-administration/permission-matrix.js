@@ -177,8 +177,8 @@
     if (!moduleGroups || moduleGroups.length === 0) {
       container.innerHTML = `
                 <div class="text-center py-5">
-                    <i class="ri-folder-line fs-48 text-muted mb-3 d-block"></i>
-                    <p class="text-muted mb-0">No modules available</p>
+                    <i class="ri-folder-line fs-30 text-primary mb-2 d-block"></i>
+                    <p class="text-body fw-semibold mb-0">No modules available</p>
                 </div>`;
       return;
     }

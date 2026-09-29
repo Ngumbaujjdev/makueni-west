@@ -92,27 +92,17 @@ if ($roleId <= 0) {
             <div class="container-fluid">
 
                 <!-- Page Header -->
-                <div class="d-md-flex d-block align-items-center justify-content-between my-4 page-header-breadcrumb">
-                    <h1 class="page-title fw-semibold fs-18 mb-0">
-                        <i class="ri-shield-keyhole-line me-2"></i>Edit Role Permissions
-                    </h1>
-                    <div class="ms-md-1 ms-0">
-                        <nav>
-                            <ol class="breadcrumb mb-0">
-                                <li class="breadcrumb-item">
-                                    <a href="<?= SITE_URL ?>/diocese/dashboard"><i class="ri-home-4-line"></i> Home</a>
-                                </li>
-                                <li class="breadcrumb-item">
-                                    <a href="javascript:void(0);">System Administration</a>
-                                </li>
-                                <li class="breadcrumb-item">
-                                    <a href="../users#roles-tab">Roles</a>
-                                </li>
-                                <li class="breadcrumb-item active" aria-current="page">Edit Permissions</li>
-                            </ol>
-                        </nav>
-                    </div>
-                </div>
+                <?php
+$pageTitle = 'Edit Role Permissions';
+$pageIcon = 'ri-shield-keyhole-line';
+$breadcrumbs = [
+    'Home' => SITE_URL . '/diocese/dashboard',
+    'System Administration' => null,
+    'Roles' => SITE_URL . '/diocese/settings/admin/users#roles-tab',
+    'Edit Permissions' => null,
+];
+include __DIR__ . '/../../../../includes/page-header.php';
+?>
 
                 <!-- Main Content Row -->
                 <div class="row">
