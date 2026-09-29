@@ -22,6 +22,15 @@ if (isset($_COOKIE[session_name()])) {
     setcookie(session_name(), '', time() - 3600, '/');
 }
 
+// Appearance cookies are per-user settings - clear them so the next person
+// to sign in on this browser doesn't inherit this user's theme/accent
+// (appearance-sync.js re-fetches the next user's own settings).
+foreach (['mwd_appearance_classes', 'mwd_appearance_theme', 'mwd_appearance_accent_rgb'] as $appearanceCookie) {
+    if (isset($_COOKIE[$appearanceCookie])) {
+        setcookie($appearanceCookie, '', time() - 3600, '/');
+    }
+}
+
 // If we have a token, try to invalidate it on backend (optional - doesn't block logout)
 if ($authToken) {
     try {

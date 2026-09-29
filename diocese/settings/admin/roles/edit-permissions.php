@@ -19,7 +19,7 @@ if ($roleId <= 0) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en" dir="ltr" class="<?= appearanceHtmlClasses() ?>" data-nav-layout="vertical" data-theme-mode="light" data-header-styles="light"
+<html lang="en" dir="ltr" class="<?= appearanceHtmlClasses() ?>" data-nav-layout="vertical" <?= appearanceThemeAttributes() ?>
     data-menu-styles="dark" data-toggled="close">
 
 <head>

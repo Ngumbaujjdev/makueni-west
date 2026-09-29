@@ -28379,9 +28379,9 @@ a:hover {
 /* Sidebar Active State - solid background pill, not just a tinted/underlined
    link, so the current item reads clearly at a glance. */
 .side-menu__item.active {
-    background-color: rgba(44, 164, 191, 0.18);
+    background-color: rgba(var(--primary-rgb), 0.18);
     border-radius: 0.375rem;
-    color: #2CA4BF !important;
+    color: rgb(var(--primary-rgb)) !important;
     font-weight: 600;
 }
 
@@ -28393,12 +28393,12 @@ a:hover {
    that dark-mode rule's specificity, same as the flyout's own text-color
    overrides. */
 #dynamic-modules-container > li[data-module-id] > .side-menu__item:hover {
-    background-color: rgba(44, 164, 191, 0.12) !important;
+    background-color: rgba(var(--primary-rgb), 0.12) !important;
     border-radius: 0.375rem;
 }
 
 .side-menu__item.active .side-menu__icon {
-    color: #2CA4BF !important;
+    color: rgb(var(--primary-rgb)) !important;
 }
 
 /* Hover effects - Main modules (Account section items - Profile/Support/
@@ -28410,13 +28410,13 @@ a:hover {
 
 /* Hover effects - Submodules (lighter blue) */
 .side-menu__item.submodule-item:hover {
-    background-color: rgba(44, 164, 191, 0.15);
-    color: #2CA4BF;
+    background-color: rgba(var(--primary-rgb), 0.15);
+    color: rgb(var(--primary-rgb));
 }
 
 /* Hover effects - Sub-submodules (brighter blue) */
 .side-menu__item.sub-submodule-item:hover {
-    background-color: rgba(44, 164, 191, 0.25);
+    background-color: rgba(var(--primary-rgb), 0.25);
     color: #1a7a8f;
 }
 
@@ -28533,8 +28533,8 @@ a:hover {
 }
 
 #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item:hover {
-    color: #2CA4BF !important;
-    background-color: rgba(44, 164, 191, 0.14) !important;
+    color: rgb(var(--primary-rgb)) !important;
+    background-color: rgba(var(--primary-rgb), 0.14) !important;
 }
 
 /* Active submodule/sub-submodule: a fully solid fill (not a tint), same
@@ -28542,7 +28542,7 @@ a:hover {
    are" reads unambiguously rather than as a faint highlight. */
 #dynamic-modules-container > li[data-module-id] > .slide-menu.child1 .side-menu__item.active {
     color: #fff !important;
-    background-color: #2CA4BF !important;
+    background-color: rgb(var(--primary-rgb)) !important;
 }
 
 /* A has-sub row that's itself the active one sits on the solid teal fill
@@ -28632,7 +28632,7 @@ a:hover {
 #secondary-nav-bar .nav-link.active {
     color: #fff;
     font-weight: 600;
-    background-color: #2CA4BF;
+    background-color: rgb(var(--primary-rgb));
 }
 
 /* Global command-palette search (#searchModal, includes/global-search.php +
@@ -28788,7 +28788,7 @@ a:hover {
 .nav-tabs-pill .nav-link.active {
     color: #fff;
     font-weight: 600;
-    background-color: #2CA4BF;
+    background-color: rgb(var(--primary-rgb));
 }
 
 /* ==========================================================================
@@ -28903,7 +28903,7 @@ a:hover {
 }
 
 .app-focus-outlines *:focus-visible {
-    outline: 2px solid #2CA4BF !important;
+    outline: 2px solid rgb(var(--primary-rgb)) !important;
     outline-offset: 2px !important;
 }
 
@@ -28947,24 +28947,7 @@ a:hover {
     min-height: 44px;
 }
 
-/* Mobile check: the accessibility toggle rows use the existing
-   .row/.col-md-6 grid, which already stacks to one column below the md
-   breakpoint - no extra rule needed there. The Density/Text Size
-   segmented controls are a different story: Bootstrap's .btn-group is
-   display:inline-flex with no flex-wrap, so 3 buttons in a .w-100 group
-   just shrink to fit rather than wrap - on a narrow phone, labels like
-   "Comfortable" get uncomfortably cramped. Stack them into a
-   full-width vertical group below Bootstrap's own sm breakpoint. */
-@media (max-width: 575.98px) {
-    #appearanceDensityGroup,
-    #appearanceTextSizeGroup {
-        flex-direction: column;
-    }
-    #appearanceDensityGroup .btn,
-    #appearanceTextSizeGroup .btn {
-        border-radius: 0.375rem !important;
-    }
-}
+
 
 /* ==========================================================================
    Solid badges, site-wide (2026-09-29)
@@ -29589,4 +29572,208 @@ body {
 .app-content .table .btn-sm[class*="-light"] {
   padding: 0.3rem 0.45rem;
   line-height: 1;
+}
+
+/* ==========================================================================
+   Appearance page (appearance.php) - Kusoya-style theme tiles, accent
+   swatches with a live preview, and toggle rows.
+   ========================================================================== */
+.appearance-card {
+  height: calc(100% - 1.5rem);
+}
+
+.theme-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  height: 100%;
+  padding: 0.75rem 0.75rem 0.9rem;
+  border: 1.5px solid var(--default-border);
+  border-radius: 0.75rem;
+  background: var(--custom-white);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.theme-tile:hover {
+  border-color: rgba(var(--primary-rgb), 0.5);
+}
+.btn-check:checked + .theme-tile {
+  border-color: rgb(var(--primary-rgb));
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.15);
+}
+.btn-check:focus-visible + .theme-tile {
+  outline: 2px solid rgb(var(--primary-rgb));
+  outline-offset: 2px;
+}
+.theme-tile-preview {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 4.25rem;
+  margin-bottom: 0.5rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  font-size: 1.35rem;
+}
+.theme-tile-preview i {
+  position: relative;
+}
+.theme-tile-preview-light {
+  background: #ffffff;
+  border: 1px solid #e6e9ef;
+  color: #1f2533;
+}
+.theme-tile-preview-dark {
+  background: #111827;
+  color: #f1f5f9;
+}
+/* System: light left half, dark right half (two solid halves, no gradient). */
+.theme-tile-preview-system {
+  background: #ffffff;
+  border: 1px solid #e6e9ef;
+  color: #1f2533;
+}
+.theme-tile-half {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: 50%;
+  background: #111827;
+}
+.theme-tile-preview-system i {
+  mix-blend-mode: difference;
+  color: #ffffff;
+}
+.theme-tile-label {
+  font-weight: 700;
+  color: var(--v2-heading);
+}
+.theme-tile-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.accent-swatch {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.6rem;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+.accent-swatch i {
+  font-size: 1.15rem;
+  opacity: 0;
+}
+.accent-swatch:hover {
+  transform: translateY(-1px);
+}
+.accent-swatch.is-selected {
+  box-shadow: 0 0 0 2px var(--custom-white), 0 0 0 4px var(--v2-heading);
+}
+.accent-swatch.is-selected i {
+  opacity: 1;
+}
+
+.accent-preview {
+  border: 1px solid var(--default-border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+.accent-preview-head {
+  padding: 0.85rem 1.25rem;
+  background: rgb(var(--primary-rgb));
+  color: #fff;
+  font-weight: 700;
+}
+.accent-preview-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem;
+}
+
+.appearance-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-block: 0.9rem;
+  border-bottom: 1px solid var(--default-border);
+}
+.appearance-toggle-row:last-child {
+  border-bottom: 0;
+}
+.appearance-toggle-row label {
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   Dark theme pass for the custom sections (2026-09-29). The template ships
+   its own dark palette under [data-theme-mode="dark"]; these cover the
+   pieces this app added on top that hardcoded light-only colours.
+   ========================================================================== */
+.footer-company-link { color: #064C4F; }
+.footer-author-link { color: #B8844A; }
+[data-theme-mode="dark"] .footer-company-link { color: rgb(var(--primary-rgb)); }
+[data-theme-mode="dark"] .footer-author-link { color: #e0b27a; }
+
+[data-theme-mode="dark"] .header-search-bar {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.75);
+}
+[data-theme-mode="dark"] .header-search-bar:hover,
+[data-theme-mode="dark"] .header-search-bar:focus-visible {
+  background: rgba(255, 255, 255, 0.1);
+}
+[data-theme-mode="dark"] .header-search-bar-key {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+[data-theme-mode="dark"] .theme-tile-preview-dark {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+[data-theme-mode="dark"] .form-switch .form-check-input:not(:checked) {
+  background-color: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+[data-theme-mode="dark"] .btn-light {
+  background-color: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--default-text-color);
+}
+
+/* --diocese-black is only ever used as a text colour (search results,
+   secondary nav, card helpers, and High-contrast mode's --text-muted) -
+   in dark mode it becomes a light ink so all of those stay readable. */
+[data-theme-mode="dark"] {
+  --diocese-black: #e9ecf1;
+  --diocese-black-rgb: 233, 236, 241;
+}
+
+/* Bootstrap's own text utilities (.text-body, .text-body-emphasis,
+   .text-body-secondary) read --bs-body-color*, which Bootstrap only flips
+   for its own data-bs-theme="dark" - not the template's data-theme-mode.
+   Map them here so .text-body labels (stat cards, compliance labels,
+   helper text) don't render dark-on-dark. */
+[data-theme-mode="dark"] {
+  --bs-body-color: #e3e6eb;
+  --bs-body-color-rgb: 227, 230, 235;
+  --bs-emphasis-color: #f5f7fa;
+  --bs-emphasis-color-rgb: 245, 247, 250;
+  --bs-secondary-color: rgba(227, 230, 235, 0.75);
+  --bs-secondary-color-rgb: 227, 230, 235;
+  --bs-heading-color: #f1f5f9;
 }
