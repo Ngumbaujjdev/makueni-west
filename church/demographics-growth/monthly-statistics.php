@@ -38,6 +38,7 @@ $breadcrumbs = [
     <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css" />
 
     <script>
         const USER_TERRITORY = {
@@ -62,45 +63,54 @@ $breadcrumbs = [
 
                 <?php include __DIR__ . '/../../includes/page-header.php' ?>
 
-                <!-- Fiscal year filter -->
-                <div class="d-flex justify-content-end mb-3">
-                    <select class="form-select form-select-sm" style="max-width: 160px;" id="reportFiscalYear">
-                        <option value="">Loading years...</option>
-                    </select>
+                <div class="page-toolbar">
+                    <div class="page-toolbar-sub" id="statsSubtitle">Period-by-period figures for <?= htmlspecialchars($userTerritoryName ?? 'your church') ?></div>
+                    <div class="page-toolbar-controls">
+                        <div id="yearSwitchWrap"></div>
+                    </div>
                 </div>
 
-                <div class="row g-3 mb-3" id="statCardsRow"></div>
+                <div class="row" id="statCardsRow"></div>
 
                 <div class="card custom-card">
                     <div class="card-header">
-                        <div class="card-title"><i class="ri-table-line me-2 text-primary"></i>Period Breakdown</div>
+                        <div>
+                            <div class="card-title">Period breakdown</div>
+                            <span class="card-subtitle-text">Every figure recorded this year, one row per period</span>
+                        </div>
                     </div>
                     <div class="card-body p-0">
+                        <div id="statsFilterToolbar" class="list-filterbar-wrap"></div>
                         <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light">
+                            <table class="table table-hover mb-0 stats-table" id="monthlyStatsTable">
+                                <thead>
+                                    <tr class="stats-group-row">
+                                        <th colspan="2"></th>
+                                        <th colspan="5" class="stats-group soft-primary">Membership</th>
+                                        <th colspan="4" class="stats-group soft-purple">Fellowships &amp; Sunday school</th>
+                                        <th colspan="5" class="stats-group soft-success">Changes &amp; sacraments</th>
+                                    </tr>
                                     <tr>
-                                        <th class="fw-semibold text-dark">Period</th>
-                                        <th class="fw-semibold text-dark">Status</th>
-                                        <th class="fw-semibold text-dark text-end">Total Members</th>
-                                        <th class="fw-semibold text-dark text-end">Male</th>
-                                        <th class="fw-semibold text-dark text-end">Female</th>
-                                        <th class="fw-semibold text-dark text-end">Youth</th>
-                                        <th class="fw-semibold text-dark text-end">Men's Fellowship</th>
-                                        <th class="fw-semibold text-dark text-end">Women's Fellowship</th>
-                                        <th class="fw-semibold text-dark text-end">Sunday School (M)</th>
-                                        <th class="fw-semibold text-dark text-end">Sunday School (F)</th>
-                                        <th class="fw-semibold text-dark text-end">Seniors</th>
-                                        <th class="fw-semibold text-dark text-end">New Members</th>
-                                        <th class="fw-semibold text-dark text-end">Departed</th>
-                                        <th class="fw-semibold text-dark text-end">Baptisms</th>
-                                        <th class="fw-semibold text-dark text-end">Communion</th>
-                                        <th class="fw-semibold text-dark text-end">Conversions</th>
+                                        <th class="stats-sticky">Period</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Total</th>
+                                        <th class="text-end">Male</th>
+                                        <th class="text-end">Female</th>
+                                        <th class="text-end">Youth</th>
+                                        <th class="text-end">Seniors</th>
+                                        <th class="text-end">Men's</th>
+                                        <th class="text-end">Women's</th>
+                                        <th class="text-end">SS boys</th>
+                                        <th class="text-end">SS girls</th>
+                                        <th class="text-end">New</th>
+                                        <th class="text-end">Departed</th>
+                                        <th class="text-end">Baptisms</th>
+                                        <th class="text-end">Communion</th>
+                                        <th class="text-end">Conversions</th>
                                     </tr>
                                 </thead>
-                                <tbody id="monthlyStatsBody">
-                                    <!-- Rows injected by monthly-statistics.js -->
-                                </tbody>
+                                <tbody id="monthlyStatsBody"></tbody>
+                                <tfoot id="monthlyStatsFoot"></tfoot>
                             </table>
                         </div>
                     </div>
@@ -128,6 +138,9 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/libs/apexcharts/apexcharts.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/jquery.dataTables.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js"></script>
 
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js<?= assetVersion('assets/js/pages/demographics/api-handler.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js<?= assetVersion('assets/js/pages/demographics/ui-helpers.js') ?>"></script>

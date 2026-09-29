@@ -30442,7 +30442,7 @@ tr.list-row-flash > td {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   border-top: 1px solid var(--default-border);
-  margin: 0.75rem -1.25rem -1.25rem;
+  margin-top: 0.75rem;
 }
 .ring-donut-item {
   padding: 0.85rem 1rem;
@@ -30602,3 +30602,38 @@ tr.list-row-flash > td {
     min-height: 2.5rem;
   }
 }
+
+/* Monthly Statistics table - grouped headers, sticky Period column, summary row */
+.stats-table .stats-group-row th {
+  padding-block: 0.45rem !important;
+  border-bottom: 0 !important;
+  font-size: 0.68rem !important;
+  text-align: center;
+}
+.stats-table .stats-group {
+  border-radius: 0.4rem 0.4rem 0 0;
+}
+.stats-table th,
+.stats-table td {
+  white-space: nowrap;
+}
+.stats-table .stats-sticky {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  background: var(--custom-white) !important;
+  box-shadow: 1px 0 0 var(--default-border);
+}
+.stats-table .stats-foot td {
+  border-top: 2px solid var(--default-border);
+  background: rgba(var(--primary-rgb), 0.05) !important;
+  font-weight: 700;
+  color: var(--v2-heading);
+}
+.stats-table .stats-foot .stats-sticky {
+  background: rgba(var(--primary-rgb), 0.05) !important;
+}
+/* Group header tints (beats the white table-header rule above). */
+.app-content .stats-table > thead > tr.stats-group-row > th.soft-primary { background-color: rgba(var(--primary-rgb), 0.12) !important; color: rgb(var(--primary-rgb)) !important; }
+.app-content .stats-table > thead > tr.stats-group-row > th.soft-purple { background-color: rgba(var(--purple-rgb), 0.12) !important; color: rgb(var(--purple-rgb)) !important; }
+.app-content .stats-table > thead > tr.stats-group-row > th.soft-success { background-color: rgba(var(--success-rgb), 0.14) !important; color: #138a69 !important; }
