@@ -9,6 +9,7 @@ use App\Reports\Demographics\DemographicsSummaryReport;
 use App\Reports\Demographics\DeparturesReport;
 use App\Reports\Demographics\GrowthAnalyticsReport;
 use App\Reports\Demographics\HolyCommunionReport;
+use App\Reports\Demographics\MetricReport;
 use App\Reports\Demographics\MonthlyStatisticsReport;
 use App\Reports\Demographics\SpiritualActivitiesReport;
 use App\Reports\Demographics\SubmissionReport;
@@ -26,6 +27,7 @@ final class ReportRegistry
         DeparturesReport::class,
         GrowthAnalyticsReport::class,
         SubmissionReport::class,
+        MetricReport::class,
     ];
 
     /** @return Report[] */

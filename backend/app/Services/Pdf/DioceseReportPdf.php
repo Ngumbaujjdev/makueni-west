@@ -122,7 +122,7 @@ class DioceseReportPdf extends TCPDF
         $this->Cell(90, 5, 'Makueni West Diocese', 0, 2, 'L');
         $this->SetFont('helvetica', '', 7.2);
         $this->SetTextColor(...self::MUTE);
-        $this->Cell(90, 4, 'Christian Community International Church', 0, 0, 'L');
+        $this->Cell(90, 4, 'Christian Church International', 0, 0, 'L');
 
         $this->SetXY($w / 2, 10.5);
         $this->SetFont('helvetica', 'B', 9);
@@ -312,10 +312,16 @@ class DioceseReportPdf extends TCPDF
             $inner = $colW - ($i ? 5 : 0) - 2;
             $this->SetXY($x + ($i ? 5 : 0), $y + 1.5);
             $this->eyebrow($tile['label'], $inner, 6.4, self::MUTE, 'L', 0.25);
+            // A long figure gets smaller type (down to 9pt) before it's ever shortened.
+            $size = 13;
+            $this->SetFont('helvetica', 'B', $size);
+            while ($size > 9 && $this->GetStringWidth((string) $tile['value']) > $inner - 2 * self::CELL_INSET) {
+                $size -= 0.5;
+                $this->SetFont('helvetica', 'B', $size);
+            }
             $this->SetX($x + ($i ? 5 : 0));
-            $this->SetFont('helvetica', 'B', 13);
             $this->SetTextColor(...(self::TONES[$tile['tone'] ?? 'primary'] ?? $this->teal));
-            $this->Cell($inner, 7, $this->fit((string) $tile['value'], $inner + 2, 'B', 13), 0, 1, 'L');
+            $this->Cell($inner, 7, $this->fit((string) $tile['value'], $inner + 2, 'B', $size), 0, 1, 'L');
         }
 
         $this->SetY($y + 20);

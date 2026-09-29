@@ -36,6 +36,11 @@ final class GrowthAnalyticsReport extends Report
         return 'Growth analytics';
     }
 
+    public function subject(): string
+    {
+        return 'Growth analytics report';
+    }
+
     public function description(): string
     {
         return 'How each group has changed year over year, across 1, 3 or 5 years.';
@@ -91,7 +96,7 @@ final class GrowthAnalyticsReport extends Report
         };
 
         return new ReportData(
-            kicker: $context->kicker('demographics'),
+            kicker: $context->kicker($this->subject()),
             title: $this->title(),
             periodLabel: $years === [] ? $rangeLabel : $rangeLabel.' ('.$years[0].($years[0] !== end($years) ? '-'.end($years) : '').')',
             scopeLabel: $context->scopeLabel(),

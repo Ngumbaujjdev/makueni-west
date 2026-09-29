@@ -56,14 +56,14 @@ abstract class ActivityReport extends FiscalYearReport
         $share = fn ($p) => $p[$field] === null || ! $p['total_members'] ? null : round($p[$field] / $p['total_members'] * 100, 1).'%';
 
         return new ReportData(
-            kicker: $context->kicker('demographics'),
+            kicker: $context->kicker($this->subject()),
             title: $name,
             periodLabel: $periodLabel,
             scopeLabel: $context->scopeLabel(),
             tiles: [
                 ['label' => 'Total', 'value' => number_format($total), 'tone' => $this->tone()],
                 ['label' => "Best {$noun}", 'value' => $best && $best[$field] > 0 ? "{$best['label']} (".number_format($best[$field]).')' : '-', 'tone' => 'success'],
-                ['label' => 'Average', 'value' => $average === null ? '-' : "{$average} per {$noun}", 'tone' => 'purple'],
+                ['label' => "Avg per {$noun}", 'value' => $average === null ? '-' : (string) $average, 'tone' => 'purple'],
                 ['label' => ucfirst($noun).'s with any', 'value' => $withAny.' of '.count($periods), 'tone' => 'warning'],
             ],
             meta: $this->meta($context, $periodLabel, $mode, $periods),
