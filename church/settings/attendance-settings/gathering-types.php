@@ -114,41 +114,57 @@ $breadcrumbs = [
     </div>
 
     <!-- Create/Edit Gathering Type Modal -->
-    <div class="modal fade" id="gatheringTypeModal" tabindex="-1" data-bs-backdrop="static">
-        <div class="modal-dialog">
+    <div class="modal fade app-modal" id="gatheringTypeModal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="gatheringTypeModalTitle">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-semibold" id="gatheringTypeModalTitle">Add Gathering Type</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <span class="app-modal-icon" id="gatheringTypeModalIcon"><i class="ri-calendar-event-line"></i></span>
+                    <div class="flex-fill" style="min-width: 0;">
+                        <h5 class="modal-title" id="gatheringTypeModalTitle">Add gathering type</h5>
+                        <div class="app-modal-subtitle">Shows up as a choice when recording attendance</div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="gatheringTypeId">
-                    <div class="mb-3">
-                        <label for="gatheringTypeName" class="form-label">Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="gatheringTypeName" placeholder="e.g. Kesha (All-Night Prayer)" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="gatheringTypeCategory" class="form-label">Category <span class="text-danger">*</span></label>
-                        <select class="form-select" id="gatheringTypeCategory" required>
-                            <option value="">Loading categories...</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="gatheringTypeIcon" class="form-label">Icon <span class="fs-12 text-body">(optional, Remix Icon class - browse icons at remixicon.com)</span></label>
-                        <div class="input-group">
-                            <span class="input-group-text" id="gatheringTypeIconPreview"><i class="ri-calendar-event-line"></i></span>
-                            <input type="text" class="form-control" id="gatheringTypeIcon" placeholder="e.g. ri-moon-line">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="gatheringTypeName" class="form-label">Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="gatheringTypeName" placeholder="e.g. Kesha (All-Night Prayer)" required>
+                            <div class="invalid-feedback">Give this gathering a name.</div>
                         </div>
-                    </div>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" role="switch" id="gatheringTypeActive" checked>
-                        <label class="form-check-label" for="gatheringTypeActive">Active</label>
+                        <div class="col-md-6">
+                            <label for="gatheringTypeCategory" class="form-label">Category <span class="text-danger">*</span></label>
+                            <select class="form-select" id="gatheringTypeCategory" required>
+                                <option value="">Loading categories...</option>
+                            </select>
+                            <div class="invalid-feedback">Choose a category.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="gatheringTypeIcon" class="form-label">Icon <span class="fw-normal text-muted">(optional)</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text" id="gatheringTypeIconPreview"><i class="ri-calendar-event-line"></i></span>
+                                <input type="text" class="form-control" id="gatheringTypeIcon" placeholder="e.g. ri-moon-line">
+                            </div>
+                            <div class="field-hint mt-1">A Remix Icon class - browse at remixicon.com</div>
+                        </div>
+                        <div class="col-12">
+                            <div class="appearance-toggle-row border rounded-3 px-3">
+                                <label class="flex-fill mb-0" for="gatheringTypeActive">
+                                    <span class="d-block fw-semibold">Active</span>
+                                    <span class="d-block fs-12 text-muted">Inactive types are hidden from the attendance form</span>
+                                </label>
+                                <div class="form-check form-switch form-switch-lg mb-0">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="gatheringTypeActive" checked>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-primary" id="saveGatheringTypeBtn">
-                        <i class="ri-save-line me-1"></i>Save
+                        <i class="ri-check-line me-1"></i>Save
                     </button>
                 </div>
             </div>

@@ -204,7 +204,8 @@ const AttendanceGatheringTypes = (function () {
 
   function openCreateModal() {
     editingId = null;
-    document.getElementById("gatheringTypeModalTitle").textContent = "Add Gathering Type";
+    document.getElementById("gatheringTypeModalTitle").textContent = "Add gathering type";
+    document.querySelectorAll("#gatheringTypeModal .is-invalid").forEach((el) => el.classList.remove("is-invalid"));
     document.getElementById("gatheringTypeId").value = "";
     document.getElementById("gatheringTypeName").value = "";
     document.getElementById("gatheringTypeCategory").value = categories[0]?.id || "";
@@ -223,7 +224,8 @@ const AttendanceGatheringTypes = (function () {
     }
 
     editingId = id;
-    document.getElementById("gatheringTypeModalTitle").textContent = "Edit Gathering Type";
+    document.getElementById("gatheringTypeModalTitle").textContent = "Edit gathering type";
+    document.querySelectorAll("#gatheringTypeModal .is-invalid").forEach((el) => el.classList.remove("is-invalid"));
     document.getElementById("gatheringTypeId").value = type.id;
     document.getElementById("gatheringTypeName").value = type.name || "";
     document.getElementById("gatheringTypeCategory").value = type.gathering_category_id;
@@ -246,12 +248,12 @@ const AttendanceGatheringTypes = (function () {
     const name = document.getElementById("gatheringTypeName").value.trim();
     const gatheringCategoryId = document.getElementById("gatheringTypeCategory").value;
 
-    if (!name) {
-      Toast.warning("Please enter a name");
-      return;
-    }
-    if (!gatheringCategoryId) {
-      Toast.warning("Please select a category");
+    const nameInput = document.getElementById("gatheringTypeName");
+    const categoryInput = document.getElementById("gatheringTypeCategory");
+    nameInput.classList.toggle("is-invalid", !name);
+    categoryInput.classList.toggle("is-invalid", !gatheringCategoryId);
+    if (!name || !gatheringCategoryId) {
+      Toast.warning("Please fix the highlighted fields");
       return;
     }
 
@@ -276,28 +278,46 @@ const AttendanceGatheringTypes = (function () {
     DemographicsUI.restoreButton(btn);
 
     if (!result.success) {
+      // Show the backend's field errors inline too, not only as a toast.
+      if (result.errors?.name) {
+        nameInput.classList.add("is-invalid");
+        nameInput.nextElementSibling.textContent = [].concat(result.errors.name)[0];
+      }
       Toast.error(result.message || "Failed to save gathering type");
       return;
     }
 
-    Toast.success(editingId ? "Gathering type updated" : "Gathering type created");
+    Toast.success(`${editingId ? "Updated" : "Added"} - ${name}`);
     bootstrap.Modal.getInstance(document.getElementById("gatheringTypeModal")).hide();
-    loadList();
+    await loadList();
+    DemographicsUI.flashRow(editingId || result.data?.id);
   }
 
   async function toggleActive(id) {
     const type = allTypes.find((t) => t.id === id);
     if (!type) return;
 
-    const result = await DemographicsAPIHandler.updateGatheringType(id, { is_active: !type.is_active });
+    const apply = async () => {
+      const result = await DemographicsAPIHandler.updateGatheringType(id, { is_active: !type.is_active });
+      if (!result.success) {
+        Toast.error(result.message || "Failed to update gathering type");
+        return;
+      }
+      Toast.success(`${type.is_active ? "Deactivated" : "Activated"} - ${type.name}`);
+      await loadList();
+      DemographicsUI.flashRow(id);
+    };
 
-    if (!result.success) {
-      Toast.error(result.message || "Failed to update gathering type");
+    // Deactivating hides it from the attendance form - confirm first.
+    if (type.is_active) {
+      Toast.confirm(`Deactivate "${type.name}"? It will be hidden from the attendance form (past records stay).`, apply, null, {
+        title: "Deactivate gathering type",
+        confirmText: "Deactivate",
+        type: "warning",
+      });
       return;
     }
-
-    Toast.success(type.is_active ? "Gathering type deactivated" : "Gathering type activated");
-    loadList();
+    apply();
   }
 
   async function openAuditModal(id) {

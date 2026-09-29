@@ -89,7 +89,12 @@ const AttendanceMinistries = (function () {
       isWeekly: false,
       territoryId: USER_TERRITORY.id,
       record,
-      onSaved: loadList,
+      categoryLabel: "Ministry gathering",
+      // Refresh the list in place, then highlight the saved row.
+      onSaved: async (saved) => {
+        await loadList();
+        DemographicsUI.flashRow(saved?.id);
+      },
     });
   }
 
