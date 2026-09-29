@@ -323,7 +323,68 @@ const AttendanceFormShared = (function () {
       .replace(/'/g, "&#039;");
   }
 
-  return { openEntryModal, renderListRows };
+  function recordTotal(row) {
+    return (row.adults_count || 0) + (row.youth_count || 0) + (row.children_male_count || 0) + (row.children_female_count || 0);
+  }
+
+  /**
+   * Stat cards for a gathering list page (Ministries / Special Events), each
+   * with a this-month vs last-month comparison computed from `rows` (every
+   * record for this category, already loaded). Mixed colours on purpose.
+   * @param {string} containerId
+   * @param {object[]} rows
+   * @param {object} labels {noun: "Ministry"|"Event", plural: "gatherings"|"events"}
+   */
+  function renderGatheringStats(containerId, rows, { noun = "Ministry", plural = "gatherings" } = {}) {
+    const UI = DemographicsUI;
+    const thisMonth = UI.rowsInMonth(rows, 0);
+    const lastMonth = UI.rowsInMonth(rows, 1);
+    const prevLabel = UI.monthLabel(1);
+    const sum = (list) => list.reduce((acc, r) => acc + recordTotal(r), 0);
+    const avg = (list) => (list.length ? Math.round(sum(list) / list.length) : 0);
+
+    // Most active type this month (by attendance), falling back to all-time.
+    const byType = {};
+    (thisMonth.length ? thisMonth : rows).forEach((r) => {
+      const name = r.gathering_type?.name || r.event_name || "Other";
+      byType[name] = (byType[name] || 0) + recordTotal(r);
+    });
+    const top = Object.entries(byType).sort((a, b) => b[1] - a[1])[0];
+
+    UI.renderStatCardsRow(containerId, [
+      {
+        icon: "ri-group-line",
+        label: `Attendance This Month`,
+        value: sum(thisMonth).toLocaleString(),
+        color: "primary",
+        delta: UI.periodDelta(sum(thisMonth), sum(lastMonth), { prevLabel }),
+        series: UI.monthlySeries(rows, { value: recordTotal }),
+      },
+      {
+        icon: "ri-calendar-check-line",
+        label: `${plural.charAt(0).toUpperCase() + plural.slice(1)} This Month`,
+        value: thisMonth.length,
+        color: "success",
+        delta: UI.periodDelta(thisMonth.length, lastMonth.length, { percent: false, prevLabel }),
+      },
+      {
+        icon: "ri-bar-chart-2-line",
+        label: `Avg per ${noun === "Ministry" ? "Gathering" : "Event"}`,
+        value: avg(thisMonth),
+        color: "purple",
+        delta: UI.periodDelta(avg(thisMonth), avg(lastMonth), { prevLabel }),
+      },
+      {
+        icon: "ri-trophy-line",
+        label: `Most Active ${noun}`,
+        value: top ? escapeHtml(top[0]) : "-",
+        color: "secondary",
+        trend: top ? `${top[1].toLocaleString()} attended${thisMonth.length ? " this month" : ""}` : `No ${plural} yet`,
+      },
+    ]);
+  }
+
+  return { openEntryModal, renderListRows, renderGatheringStats, recordTotal };
 })();
 
 window.AttendanceFormShared = AttendanceFormShared;

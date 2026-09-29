@@ -131,6 +131,7 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/data-tables/responsive/2.3.0/js/dataTables.responsive.min.js"></script>
 
+    <script src="<?= SITE_URL ?>/assets/libs/apexcharts/apexcharts.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js"></script>
     <script src="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/scripts/choices.min.js"></script>
