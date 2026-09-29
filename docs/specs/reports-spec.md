@@ -43,8 +43,13 @@ Churches need printable, trustworthy reports of what they record. The design fol
 |---|---|---|
 | `demographics.summary` | Demographics summary (fiscal year) | headcounts `latest`, changes `sum` |
 | `demographics.monthly` | Monthly statistics (fiscal year) | per column: `latest` / `sum` |
-| `demographics.spiritual` | Spiritual activities (fiscal year) | `sum` |
+| `demographics.spiritual` | Spiritual activities, all four (fiscal year) | `sum` |
+| `demographics.baptisms` / `.holy_communion` / `.conversions` / `.departures` | One activity on its own - the report behind each Spiritual Activities tab | by period `sum`; membership comparison none |
 | `demographics.growth` | Growth analytics (1/3/5 years or all) | none |
+
+Fiscal-year reports also take `fiscal_year_id: "all"`, which means **All time**: every approved submission, labelled "All time (2024-2026)". There are no "not reported" gaps for all time, because gaps only make sense within one year.
+
+Spiritual activities and its four activity reports share `group: "Spiritual activities"`, so the modal shows them together.
 | `demographics.submission` | Submission report (one submission) | none |
 
 ## Insights (`app/Support/Reports/Insights`)
@@ -58,7 +63,7 @@ Churches need printable, trustworthy reports of what they record. The design fol
   - a scope heading above the title ("CHURCH REPORT"), then the title with an underline and "period · territory path"
   - a KPI strip and a details panel
   - tables with a teal heading band and totals only where declared
-  - **Automatic orientation per table:** portrait if the columns fit, landscape if not. A table on a different orientation starts a new page.
+  - **One orientation per report, chosen automatically:** portrait when every table fits, landscape when any table doesn't. Every page of a report shares it; mixing portrait and landscape pages in one report was tried and rejected.
   - Insights ("What we noticed") and Recommendations come last, and only when there are any.
   - Footer: authenticity QR · "Generated … by …" · the verification code · page n / N.
 - **Excel** (`App\Exports\ReportWorkbook`):
@@ -74,7 +79,7 @@ Churches need printable, trustworthy reports of what they record. The design fol
 | POST | `/reports` | queues a run and returns `{uuid, status}` |
 | GET | `/reports/runs` | the user's 20 most recent runs |
 | GET | `/reports/runs/{uuid}` | status, progress, stage, file info |
-| GET | `/reports/runs/{uuid}/download` | the file (only while `ready`) |
+| GET | `/reports/runs/{uuid}/download` | the file (only while `ready`), with `Content-Length` so the browser can show real download progress |
 | GET | `/reports/verify/{code}` | **public**, throttled to 30/min: `genuine` + title, scope, period, generated at/by, file hash. Never any figures. |
 
 Body for preview and store: `{report_key, territory_id, format?, fiscal_year_id?, years?, demographic_id?}`.
@@ -85,12 +90,13 @@ Body for preview and store: `{report_key, territory_id, format?, fiscal_year_id?
 - Runs are private to the user who created them. Another user's uuid returns 404.
 
 ## Acceptance criteria
-1. The catalogue for a church lists the five Demographics reports; a territory level no report supports gets an empty list.
+1. The catalogue for a church lists the nine Demographics reports; a territory level no report supports gets an empty list.
+9. `fiscal_year_id: "all"` covers every approved submission. Each activity report holds just its own column.
 2. A report with no totals has no totals row. `latest` shows the last reported value, not the sum.
 3. A report with no insights produces no insights part in either the PDF or the Excel file.
-4. A narrow table lays out portrait and a wide one landscape (the test uses a 17-column table).
-   - Monthly statistics is split into two tables in the PDF: "Membership & groups" and "Changes & sacraments". All 16 columns in one table wouldn't fit even in landscape without cutting numbers.
-   - In practice the 10-column "Membership & groups" table comes out landscape, and "Changes & sacraments" returns to portrait on its own page.
+4. A narrow table lays out portrait and a wide one landscape (the test uses a 17-column table). A report containing any wide table is landscape on every page.
+   - Monthly statistics is split into two tables in the PDF: "Membership & groups" and "Changes & Holy Communion". All 16 columns in one table wouldn't fit even in landscape without cutting numbers.
+   - The whole Monthly statistics report is landscape.
 5. `POST /reports` (sync queue in tests) produces a real PDF (`%PDF`) or xlsx, marks the run `ready`, and stores its size, SHA-256 and verification code.
 6. Download works for the owner and returns 404 for anyone else. A user from another church gets 403 on preview and store.
 7. Verify returns `genuine` with the details for a real code, and `not recognised` for an unknown one. It never includes figures.
