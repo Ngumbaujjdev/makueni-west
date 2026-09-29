@@ -75,6 +75,9 @@ $breadcrumbs = [
                             <button type="button" class="seg-btn" data-value="history"><i class="ri-history-line me-1"></i>History</button>
                         </div>
                         <div id="yearSwitchWrap"></div>
+                        <?php if (canExportDemographicsReports()): ?>
+                            <button type="button" class="btn btn-outline-primary" id="exportReportBtn" data-report-key="demographics.summary"><i class="ri-download-2-line me-1"></i>Export</button>
+                        <?php endif ?>
                         <?php if ($canEnter): ?>
                         <a href="<?= SITE_URL ?>/church/demographics-growth/demographics-tracking.php" class="btn btn-primary">
                             <i class="ri-edit-line me-1"></i>Update this <span id="updateDataBtnLabel">month</span>'s data

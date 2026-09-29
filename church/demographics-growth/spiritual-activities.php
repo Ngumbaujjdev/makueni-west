@@ -68,6 +68,9 @@ $breadcrumbs = [
                     <div class="page-toolbar-sub" id="activitySubtitle">Baptisms, Holy Communion, conversions and departures</div>
                     <div class="page-toolbar-controls">
                         <div id="yearSwitchWrap"></div>
+                        <?php if (canExportDemographicsReports()): ?>
+                            <button type="button" class="btn btn-outline-primary" id="exportReportBtn" data-report-key="demographics.spiritual"><i class="ri-download-2-line me-1"></i>Export</button>
+                        <?php endif ?>
                     </div>
                 </div>
 

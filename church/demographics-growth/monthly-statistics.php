@@ -68,6 +68,9 @@ $breadcrumbs = [
                     <div class="page-toolbar-sub" id="statsSubtitle">Period-by-period figures for <?= htmlspecialchars($userTerritoryName ?? 'your church') ?></div>
                     <div class="page-toolbar-controls">
                         <div id="yearSwitchWrap"></div>
+                        <?php if (canExportDemographicsReports()): ?>
+                            <button type="button" class="btn btn-outline-primary" id="exportReportBtn" data-report-key="demographics.monthly"><i class="ri-download-2-line me-1"></i>Export</button>
+                        <?php endif ?>
                     </div>
                 </div>
 

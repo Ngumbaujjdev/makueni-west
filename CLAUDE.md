@@ -26,6 +26,7 @@ Target setup (see `docs/ROADMAP.md` — port change not yet applied):
 cd backend && cp .env.example .env && php artisan key:generate
 php artisan migrate --seed
 php artisan serve --port=8004
+php artisan queue:work --queue=reports,default   # PDF/Excel reports are built in the background (docs/specs/reports-spec.md)
 
 # Frontend
 # Served via MAMP/Apache at the existing document root (no build step — plain PHP + JS)

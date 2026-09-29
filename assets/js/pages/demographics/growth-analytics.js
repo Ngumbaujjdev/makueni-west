@@ -45,6 +45,7 @@ const GrowthAnalytics = (function () {
 
     UI.wireSegmented("rangeSwitch", (value) => {
       range = value;
+      UI.syncExportButton({ years: value });
       render();
     });
     render();

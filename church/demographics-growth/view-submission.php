@@ -53,6 +53,7 @@ $breadcrumbs = [
             name: '<?= addslashes($userTerritoryName) ?>'
         };
         const DEMOGRAPHIC_ID = <?= json_encode($demographicId) ?>;
+        const CAN_EXPORT_REPORTS = <?= json_encode(canExportDemographicsReports()) ?>;
     </script>
 </head>
 

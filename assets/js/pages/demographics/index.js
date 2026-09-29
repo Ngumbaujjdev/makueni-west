@@ -112,8 +112,10 @@ const DemographicsOverview = (function () {
       selectedYearId,
       { ariaLabel: "Fiscal year" },
     );
+    UI.syncExportButton({ fiscalYearId: selectedYearId });
     UI.wireSegmented("yearSwitch", (value) => {
       selectedYearId = value;
+      UI.syncExportButton({ fiscalYearId: value });
       renderOverview();
     });
   }

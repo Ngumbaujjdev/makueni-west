@@ -191,7 +191,7 @@ $steps = [
                                                 <div class="row g-3 mb-4">
                                                     <div class="col-sm-6 col-xl-4"><?= renderNumberTile('sunday_school_male_count', ['label' => 'Boys', 'icon' => 'ri-book-read-line', 'color' => 'purple']) ?></div>
                                                     <div class="col-sm-6 col-xl-4"><?= renderNumberTile('sunday_school_female_count', ['label' => 'Girls', 'icon' => 'ri-book-read-line', 'color' => 'purple']) ?></div>
-                                                    <div class="col-sm-6 col-xl-4"><?= renderNumberTile('sunday_school_teachers_count', ['label' => 'Teachers', 'icon' => 'ri-presentation-line', 'color' => 'primary']) ?></div>
+                                                    <div class="col-sm-6 col-xl-4"><?= renderNumberTile('sunday_school_teachers_count', ['label' => 'Teachers', 'icon' => 'ri-user-voice-line', 'color' => 'primary']) ?></div>
                                                 </div>
                                                 <div class="intake-group-head">
                                                     <h6>Pastors</h6>
