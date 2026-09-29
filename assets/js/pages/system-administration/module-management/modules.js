@@ -606,8 +606,8 @@
     if (!moduleGroups || moduleGroups.length === 0) {
       container.innerHTML = `
                 <div class="text-center py-5">
-                    <i class="ri-folder-line fs-48 text-muted mb-3 d-block"></i>
-                    <p class="text-muted mb-0">No modules found for this territory</p>
+                    <i class="ri-folder-line fs-30 text-primary mb-2 d-block"></i>
+                    <p class="text-body fw-semibold mb-0">No modules found for this territory</p>
                 </div>`;
       return;
     }
@@ -646,7 +646,7 @@
 
   function renderModules(modules, groupId) {
     if (!modules || modules.length === 0) {
-      return '<p class="text-muted mb-0">No modules in this group</p>';
+      return '<p class="text-body fw-semibold mb-0">No modules in this group</p>';
     }
 
     let html = `<ul class="list-unstyled ms-3 module-list" data-group-id="${groupId}">`;

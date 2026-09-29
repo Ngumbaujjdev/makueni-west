@@ -288,7 +288,7 @@
         <tr>
           <td colspan="8" class="text-center py-5">
             <i class="ri-file-list-line fs-3 d-block mb-2 text-muted"></i>
-            <p class="text-muted mb-0">No budgets found</p>
+            <p class="text-body fw-semibold mb-0">No budgets found</p>
           </td>
         </tr>
       `;

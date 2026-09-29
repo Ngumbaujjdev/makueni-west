@@ -160,8 +160,8 @@
         if (!groups || groups.length === 0) {
             container.innerHTML = `
                 <div class="text-center py-5">
-                    <i class="ri-stack-line fs-48 text-muted mb-3 d-block"></i>
-                    <p class="text-muted mb-0">No module groups found for this territory</p>
+                    <i class="ri-stack-line fs-30 text-primary mb-2 d-block"></i>
+                    <p class="text-body fw-semibold mb-0">No module groups found for this territory</p>
                 </div>`;
             return;
         }
@@ -262,7 +262,7 @@
 
             // Church & Ministry
             'church': 'ri-community-line',
-            'ministry': 'ri-church-line',
+            'ministry': 'ri-home-heart-line',
             'worship': 'ri-music-line',
             'prayer': 'ri-hand-heart-line',
             'spiritual': 'ri-lightbulb-line',
@@ -298,7 +298,7 @@
 
             // Education & Training
             'education': 'ri-book-line',
-            'training': 'ri-graduation-cap-line',
+            'training': 'ri-book-read-line',
             'learning': 'ri-booklet-line',
 
             // Compliance

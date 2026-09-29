@@ -101,24 +101,16 @@ $userTerritoryName = $currentRole['territory']['name'] ?? 'Diocese';
             <div class="container-fluid">
 
                 <!-- Page Header -->
-                <div class="d-md-flex d-block align-items-center justify-content-between my-4 page-header-breadcrumb">
-                    <h1 class="page-title fw-semibold fs-18 mb-0">
-                        <i class="ri-add-box-line me-2"></i>Create New Budget
-                    </h1>
-                    <div class="ms-md-1 ms-0">
-                        <nav>
-                            <ol class="breadcrumb mb-0">
-                                <li class="breadcrumb-item">
-                                    <a href="<?= SITE_URL ?>/diocese/dashboard"><i class="ri-home-4-line"></i> Home</a>
-                                </li>
-                                <li class="breadcrumb-item">
-                                    <a href="javascript:void(0);">Budget Management</a>
-                                </li>
-                                <li class="breadcrumb-item active" aria-current="page">Create Budget</li>
-                            </ol>
-                        </nav>
-                    </div>
-                </div>
+                <?php
+$pageTitle = 'Create New Budget';
+$pageIcon = 'ri-add-box-line';
+$breadcrumbs = [
+    'Home' => SITE_URL . '/diocese/dashboard',
+    'Budget Management' => null,
+    'Create Budget' => null,
+];
+include __DIR__ . '/../../../includes/page-header.php';
+?>
 
                 <!-- Budget Form Card -->
                 <div class="row">

@@ -20,9 +20,7 @@ $currentRole = getCurrentRole();
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>
-        YNEX - Blazor Server Bootstrap 5 Premium Admin & Dashboard Template
-    </title>
+    <title>User Management - Makueni West Diocese</title>
     <meta name="Description" content="Bootstrap Responsive Admin Web Dashboard Template" />
     <meta name="Author" content="Spruko Technologies Private Limited" />
     <meta name="keywords"
@@ -92,24 +90,16 @@ $currentRole = getCurrentRole();
             <div class="container-fluid">
 
                 <!-- Page Header -->
-                <div class="d-md-flex d-block align-items-center justify-content-between my-4 page-header-breadcrumb">
-                    <h1 class="page-title fw-semibold fs-18 mb-0">
-                        <i class="ri-settings-3-line me-2"></i>System Administration
-                    </h1>
-                    <div class="ms-md-1 ms-0">
-                        <nav>
-                            <ol class="breadcrumb mb-0">
-                                <li class="breadcrumb-item">
-                                    <a href="dashboard"><i class="ri-home-4-line"></i> Home</a>
-                                </li>
-                                <li class="breadcrumb-item">
-                                    <a href="javascript:void(0);">System Administration</a>
-                                </li>
-                                <li class="breadcrumb-item active" aria-current="page">User Management</li>
-                            </ol>
-                        </nav>
-                    </div>
-                </div>
+                <?php
+$pageTitle = 'System Administration';
+$pageIcon = 'ri-settings-3-line';
+$breadcrumbs = [
+    'Home' => SITE_URL . '/diocese/dashboard',
+    'System Administration' => null,
+    'User Management' => null,
+];
+include __DIR__ . '/../../../includes/page-header.php';
+?>
 
                 <!-- Main Card with Tabs -->
                 <div class="row">

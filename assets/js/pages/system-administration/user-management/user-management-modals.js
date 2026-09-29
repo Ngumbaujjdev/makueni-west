@@ -728,8 +728,8 @@
     if (!Array.isArray(auditTrail) || auditTrail.length === 0) {
       container.innerHTML = `
         <div class="text-center py-5">
-          <i class="ri-history-line fs-48 text-muted mb-3 d-block"></i>
-          <p class="text-muted mb-0">No audit trail available</p>
+          <i class="ri-history-line fs-30 text-primary mb-2 d-block"></i>
+          <p class="text-body fw-semibold mb-0">No audit trail available</p>
         </div>`;
       return;
     }

@@ -20,7 +20,7 @@ $currentRole = getCurrentRole();
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>Module Groups Management - YNEX</title>
+    <title>Module Groups - Makueni West Diocese</title>
     <meta name="Description" content="Bootstrap Responsive Admin Web Dashboard Template" />
     <meta name="Author" content="Spruko Technologies Private Limited" />
     <meta name="keywords"
@@ -88,27 +88,17 @@ $currentRole = getCurrentRole();
             <div class="container-fluid">
 
                 <!-- Page Header -->
-                <div class="d-md-flex d-block align-items-center justify-content-between my-4 page-header-breadcrumb">
-                    <h1 class="page-title fw-semibold fs-18 mb-0">
-                        <i class="ri-stack-line me-2"></i>Module Groups Management
-                    </h1>
-                    <div class="ms-md-1 ms-0">
-                        <nav>
-                            <ol class="breadcrumb mb-0">
-                                <li class="breadcrumb-item">
-                                    <a href="<?= SITE_URL ?>/diocese/dashboard"><i class="ri-home-4-line"></i> Home</a>
-                                </li>
-                                <li class="breadcrumb-item">
-                                    <a href="javascript:void(0);">Settings</a>
-                                </li>
-                                <li class="breadcrumb-item">
-                                    <a href="javascript:void(0);">System Administration</a>
-                                </li>
-                                <li class="breadcrumb-item active" aria-current="page">Module Groups</li>
-                            </ol>
-                        </nav>
-                    </div>
-                </div>
+                <?php
+$pageTitle = 'Module Groups Management';
+$pageIcon = 'ri-stack-line';
+$breadcrumbs = [
+    'Home' => SITE_URL . '/diocese/dashboard',
+    'Settings' => null,
+    'System Administration' => null,
+    'Module Groups' => null,
+];
+include __DIR__ . '/../../../includes/page-header.php';
+?>
 
                 <!-- Module Groups Management Card -->
                 <div class="row">
@@ -189,7 +179,7 @@ $currentRole = getCurrentRole();
                 <div class="modal-content">
                     <div class="modal-header bg-success text-white">
                         <h5 class="modal-title fw-semibold text-white">
-                            <i class="ri-stack-add-line me-2"></i><span id="groupModalTitle">Create Module Group</span>
+                            <i class="ri-add-box-line me-2"></i><span id="groupModalTitle">Create Module Group</span>
                         </h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>

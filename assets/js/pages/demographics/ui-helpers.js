@@ -84,34 +84,77 @@ const DemographicsUI = (function () {
   // STAT CARDS
   // ==========================================================================
 
-  /**
-   * @param {object} opts {icon, label, value, trend, color}
-   *   color: bootstrap color name (primary/success/warning/danger/secondary) -
-   *   used as a solid icon background, not the washed-out `-transparent`
-   *   variant (root CLAUDE.md's no-muted-color rule explicitly covers stat
-   *   cards).
-   */
-  function renderStatCard({ icon, label, value, trend = null, color = "primary" }) {
-    const trendHtml = trend
-      ? `<span class="fs-12 text-body fw-semibold">${trend}</span>`
-      : "";
+  // Stat cards use two designs taken from the YNEX template's own
+  // dashboards (the template is this app's markup source - see CLAUDE.md):
+  //   - compact card: Jobs dashboard (html/index-3.html "TOTAL EMPLOYERS"):
+  //     solid icon tile left, value + uppercase label, trend top-right.
+  //   - tile card: Courses dashboard (html/index-10.html "YTD Earnings"):
+  //     larger icon tile, value, label + trend on one line, optional link.
+  // Icons are RemixIcon (the template demos use SVG/Tabler), and the
+  // label drops the template's op-7 fade (CLAUDE.md: no washed-out text).
+
+  function iconTextClass(color) {
+    return color === "secondary" || color === "warning" ? "text-dark" : "text-white";
+  }
+
+  /** {diff}|{direction, percent}|null -> the template's coloured trend text. */
+  function trendMarkup(trend) {
+    if (!trend) return "";
+    if (trend.text) {
+      return `<span class="fw-semibold text-${trend.color} text-nowrap"><i class="${trend.icon} me-1 align-middle"></i>${trend.text}</span>`;
+    }
+    return "";
+  }
+
+  function renderCompactCard({ icon, label, value, color = "primary", trend = null, caption = "" }) {
     return `
       <div class="card custom-card">
         <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between">
-            <div>
-              <span class="d-block mb-1 text-body fw-semibold">${label}</span>
-              <h3 class="fw-semibold mb-1">${value}</h3>
-              ${trendHtml}
+          <div class="d-flex align-items-top">
+            <div class="me-3">
+              <span class="avatar avatar-md bg-${color} ${iconTextClass(color)}"><i class="${icon} fs-20"></i></span>
             </div>
-            <div class="ms-2">
-              <span class="avatar avatar-md avatar-rounded bg-${color} text-white">
-                <i class="${icon} fs-20"></i>
-              </span>
+            <div class="flex-fill" style="min-width: 0;">
+              <div class="d-flex mb-1 align-items-top justify-content-between gap-2">
+                <h5 class="fw-semibold mb-0 lh-1 fs-20 text-break">${value}</h5>
+                ${trendMarkup(trend)}
+              </div>
+              <p class="mb-0 fs-11 text-muted fw-semibold text-uppercase">${label}</p>
+              ${caption ? `<p class="mb-0 mt-1 fs-12 text-muted">${caption}</p>` : ""}
             </div>
           </div>
         </div>
       </div>`;
+  }
+
+  function renderTileCard({ icon, label, value, color = "primary", trend = null, sublabel = "", link = null }) {
+    return `
+      <div class="card custom-card">
+        <div class="card-body">
+          <div class="d-flex flex-wrap align-items-top gap-2">
+            <div class="me-1">
+              <span class="avatar avatar-lg bg-${color} ${iconTextClass(color)}"><i class="${icon} fs-20"></i></span>
+            </div>
+            <div class="flex-fill" style="min-width: 0;">
+              <h5 class="d-block fw-semibold fs-18 mb-1">${value}</h5>
+              <div class="d-flex justify-content-between align-items-center gap-2">
+                <div class="text-muted fs-12">${label}</div>
+                ${trendMarkup(trend)}
+              </div>
+              ${sublabel ? `<div class="fs-12 fw-semibold mt-1">${sublabel}</div>` : ""}
+              ${link ? `<a href="${link.href}" class="text-primary fs-12 fw-semibold">${link.text}<i class="ri-arrow-right-line ms-1 align-middle"></i></a>` : ""}
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  /**
+   * @param {object} opts {icon, label, value, trend, color}
+   *   trend: optional plain-text caption (e.g. "12 this month").
+   */
+  function renderStatCard({ icon, label, value, trend = null, color = "primary" }) {
+    return renderCompactCard({ icon, label, value, color, caption: trend || "" });
   }
 
   /**
@@ -175,41 +218,18 @@ const DemographicsUI = (function () {
 
   /**
    * @param {object} opts {icon, label, value, trend, color}
-   *   Literal index-1.html "Total Sales" card structure: icon column with
-   *   the pale `bg-{color}-transparent` tint (not solid, not a border-top -
-   *   round 5 tried both and got corrected back to this exact reference),
-   *   value column with a period-over-period trend badge when one is given.
    * @param {object|null} [opts.trend] {direction: 'up'|'down', percent, label}
+   *   Rendered as green/red "+N%" top-right, with its label as a caption.
    */
   function renderWidgetCard({ icon, label, value, trend = null, color = "primary" }) {
-    const trendHtml = trend
-      ? (() => {
-          const badgeColor = trend.direction === "up" ? "success" : "danger";
-          const verb = trend.direction === "up" ? "Increased" : "Decreased";
-          const sign = trend.direction === "up" ? "+" : "-";
-          return `<div><span class="fs-12 mb-0">${verb} by <span class="badge bg-${badgeColor}-transparent text-${badgeColor} mx-1">${sign}${trend.percent}%</span> ${trend.label}</span></div>`;
-        })()
-      : "";
-
-    return `
-      <div class="card custom-card">
-        <div class="card-body">
-          <div class="row">
-            <div class="col-xxl-3 col-xl-2 col-lg-3 col-md-3 col-sm-4 col-4 d-flex align-items-center justify-content-center ecommerce-icon px-0">
-              <span class="rounded p-3 bg-${color}-transparent">
-                <i class="${icon} fs-20 text-${color}"></i>
-              </span>
-            </div>
-            <div class="col-xxl-9 col-xl-10 col-lg-9 col-md-9 col-sm-8 col-8 px-0">
-              <div class="mb-2">${label}</div>
-              <div class="mb-1 fs-12">
-                <span class="text-dark fw-semibold fs-20 lh-1 vertical-bottom">${value}</span>
-              </div>
-              ${trendHtml}
-            </div>
-          </div>
-        </div>
-      </div>`;
+    const t = trend
+      ? {
+          text: `${trend.direction === "up" ? "+" : "-"}${trend.percent}%`,
+          color: trend.direction === "up" ? "success" : "danger",
+          icon: trend.direction === "up" ? "ri-arrow-up-s-fill" : "ri-arrow-down-s-fill",
+        }
+      : null;
+    return renderCompactCard({ icon, label, value, color, trend: t, caption: trend ? trend.label : "" });
   }
 
   /**
@@ -248,45 +268,26 @@ const DemographicsUI = (function () {
   }
 
   /**
-   * @param {object} opts {icon, label, value, sublabel, color, trend}
-   *   Label + solid bg-${color} icon avatar (top row), a large bold value,
-   *   then either a green/red trend badge (`trend: {diff}` - same
-   *   bg-${color}-transparent arrow-pill convention as renderWidgetCard()/
-   *   the Recent Submissions table) or a plain sublabel when there's no
-   *   period to compare against.
+   * @param {object} opts {icon, label, value, sublabel, color, trend, link}
+   *   trend: {diff} from trendFor() - green/red "+N" beside the label (or a
+   *   neutral "No change"). sublabel renders alongside it when given (e.g.
+   *   Sunday School's "N Male · N Female"). link: optional {href, text}.
    */
-  function renderSolidStatCard({ icon, label, value, sublabel = "", color = "primary", trend = null }) {
-    let trendHtml = "";
+  function renderSolidStatCard({ icon, label, value, sublabel = "", color = "primary", trend = null, link = null }) {
+    let t = null;
     if (trend) {
       if (trend.diff === 0) {
-        trendHtml = `<span class="badge bg-primary-transparent text-primary fs-12"><i class="ri-subtract-line"></i> No change vs last period</span>`;
+        t = { text: "No change", color: "primary", icon: "ri-subtract-line" };
       } else {
-        const trendColor = trend.diff > 0 ? "success" : "danger";
-        const arrow = trend.diff > 0 ? "ri-arrow-up-line" : "ri-arrow-down-line";
-        const sign = trend.diff > 0 ? "+" : "-";
-        trendHtml = `<span class="badge bg-${trendColor}-transparent text-${trendColor} fs-11"><i class="${arrow}"></i> ${sign}${Math.abs(trend.diff)} vs last period</span>`;
+        const up = trend.diff > 0;
+        t = {
+          text: `${up ? "+" : "-"}${Math.abs(trend.diff)}`,
+          color: up ? "success" : "danger",
+          icon: up ? "ri-arrow-up-s-fill" : "ri-arrow-down-s-fill",
+        };
       }
     }
-    // Sublabel renders whenever given, alongside the trend badge (not
-    // instead of it) - e.g. Sunday School shows both its trend and a
-    // "N Male · N Female" breakdown. Every current caller only ever passes
-    // one or the other, so this is additive, not a behavior change.
-    const sublabelHtml = sublabel ? `<span class="d-block fs-12 text-body fw-semibold mt-1">${sublabel}</span>` : "";
-
-    return `
-      <div class="card custom-card">
-        <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between mb-2">
-            <span class="fs-13 fw-semibold text-body">${label}</span>
-            <span class="avatar avatar-sm avatar-rounded bg-${color} text-white flex-shrink-0">
-              <i class="${icon} fs-16"></i>
-            </span>
-          </div>
-          <h2 class="fw-bold mb-1">${value}</h2>
-          ${trendHtml}
-          ${sublabelHtml}
-        </div>
-      </div>`;
+    return renderTileCard({ icon, label, value, color, trend: t, sublabel, link });
   }
 
   /**
@@ -960,6 +961,8 @@ const DemographicsUI = (function () {
     resolveUserTerritory,
     renderStatusBadge,
     brandHex,
+    renderCompactCard,
+    renderTileCard,
     renderStatCard,
     renderStatCardsRow,
     renderWidgetCard,
