@@ -287,10 +287,27 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
         }
 
         let html = '';
+        // Only counts groups that actually render a module - a group with
+        // no modules for this role (e.g. Finance/Programs are often empty
+        // at church tier) still occupies a slot in moduleGroups but prints
+        // nothing, so cycling by the raw loop index let it silently eat a
+        // color: the next *visible* group reused whichever color the empty
+        // one would have gotten, and modulo wraparound made two visible
+        // groups land on the same color more often than not.
+        let visibleGroupIndex = 0;
 
         // Loop through each group
-        moduleGroups.forEach((group, groupIndex) => {
-            const colorClass = ICON_COLOR_CYCLE[groupIndex % ICON_COLOR_CYCLE.length];
+        moduleGroups.forEach((group) => {
+            const modulesArray = Array.isArray(group.modules)
+                ? group.modules
+                : Object.values(group.modules);
+
+            if (modulesArray.length === 0) {
+                return;
+            }
+
+            const colorClass = ICON_COLOR_CYCLE[visibleGroupIndex % ICON_COLOR_CYCLE.length];
+            visibleGroupIndex++;
 
             // Add group header
             html += `
@@ -300,12 +317,6 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
                     ${escapeHtml(group.name)}
                 </span>
             </li>`;
-
-            // Render modules in this group
-            // Convert modules object to array if needed
-            const modulesArray = Array.isArray(group.modules)
-                ? group.modules
-                : Object.values(group.modules);
 
             modulesArray.forEach((module, moduleIndex) => {
                 const hasSubmodules = module.submodules && module.submodules.length > 0;
@@ -317,7 +328,7 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
                         <a href="javascript:void(0);" class="side-menu__item" data-toggle-submenu>
                             <i class="${iconClass} side-menu__icon"></i>
                             <span class="side-menu__label">${escapeHtml(module.name)}</span>
-                            <i class="fe fe-chevron-right side-menu__angle"></i>
+                            <i class="ri-arrow-right-s-line side-menu__angle"></i>
                         </a>
                         <ul class="slide-menu child1">
                             <li class="slide side-menu__label1">
@@ -369,7 +380,7 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
                     <a href="javascript:void(0);" class="side-menu__item" data-toggle-submenu>
                         <i class="${iconClass} side-menu__icon"></i>
                         <span class="side-menu__label">${escapeHtml(module.name)}</span>
-                        <i class="fe fe-chevron-right side-menu__angle"></i>
+                        <i class="ri-arrow-right-s-line side-menu__angle"></i>
                     </a>
                     <ul class="slide-menu child1" style="${isFirst ? 'display: block;' : 'display: none;'}">
                         <li class="slide side-menu__label1">
@@ -411,7 +422,7 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
                 <li class="slide has-sub">
                     <a href="javascript:void(0);" class="side-menu__item submodule-item" data-toggle-submenu>
                         ${escapeHtml(submodule.title)}
-                        <i class="fe fe-chevron-right side-menu__angle"></i>
+                        <i class="ri-arrow-right-s-line side-menu__angle"></i>
                     </a>
                     <ul class="slide-menu child2" style="display: none;">`;
 
