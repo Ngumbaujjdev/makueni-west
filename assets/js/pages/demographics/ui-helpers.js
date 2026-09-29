@@ -313,7 +313,10 @@ const DemographicsUI = (function () {
 
   function cssColor(name, alpha = 1) {
     const rgb = getComputedStyle(document.documentElement).getPropertyValue(`--${name}-rgb`).trim();
-    return rgb ? `rgba(${rgb}, ${alpha})` : name;
+    // Plain rgb() at full opacity - an rgba() colour makes ApexCharts ignore
+    // its own fill opacity (area/sparkline fills rendered fully solid).
+    if (!rgb) return name;
+    return alpha === 1 ? `rgb(${rgb})` : `rgba(${rgb}, ${alpha})`;
   }
 
   /** Renders every not-yet-mounted [data-spark] element inside root. */
@@ -486,6 +489,37 @@ const DemographicsUI = (function () {
   }
 
   // ==========================================================================
+  // DEMOGRAPHIC METRICS - one registry for every figure a submission holds,
+  // shared by Growth Analytics, the metric detail page and "View trend" links.
+  // ==========================================================================
+
+  const num0 = (v) => Number(v) || 0;
+  const DEMOGRAPHIC_METRICS = {
+    total_members: { label: "Total members", icon: "ri-team-line", color: "primary", get: (r) => r.total_members },
+    youth: { label: "Youth (13-35)", icon: "ri-user-star-line", color: "success", get: (r) => r.youth_count },
+    womens_fellowship: { label: "Women's fellowship", icon: "ri-women-line", color: "pink", get: (r) => r.womens_fellowship_count },
+    mens_fellowship: { label: "Men's fellowship", icon: "ri-men-line", color: "info", get: (r) => r.mens_fellowship_count },
+    sunday_school: { label: "Sunday school", icon: "ri-book-read-line", color: "purple", get: (r) => (r.sunday_school_male_count == null && r.sunday_school_female_count == null ? null : num0(r.sunday_school_male_count) + num0(r.sunday_school_female_count)) },
+    seniors: { label: "Seniors", icon: "ri-user-heart-line", color: "secondary", get: (r) => r.seniors_count },
+    new_members: { label: "New members", icon: "ri-user-add-line", color: "success", get: (r) => r.new_members_count, flow: true },
+    departures: { label: "Departures", icon: "ri-user-unfollow-line", color: "danger", get: (r) => r.transferred_out_count, flow: true },
+    baptisms: { label: "Baptisms", icon: "ri-drop-line", color: "primary", get: (r) => r.baptisms_count, flow: true },
+    communion: { label: "Communion", icon: "ri-cup-line", color: "secondary", get: (r) => r.communion_participants_count, flow: true },
+    conversions: { label: "Conversions", icon: "ri-heart-line", color: "purple", get: (r) => r.conversions_count, flow: true },
+  };
+
+  /** Link to a metric's detail page. */
+  function metricUrl(key) {
+    return `${window.mwdBaseUrl || ""}/church/demographics-growth/metric?key=${encodeURIComponent(key)}`;
+  }
+
+  /** Short period label for chart axes ("Jan 2026", "H1 2026", "Year 2026"). */
+  function shortPeriodLabel(row) {
+    if (row.fiscal_month) return `${row.fiscal_month.short_name || row.fiscal_month.name} ${row.fiscal_year?.year || ""}`.trim();
+    return demographicPeriodLabel(row);
+  }
+
+  // ==========================================================================
   // WIDGET DASHBOARD COMPONENTS (Attendance Reports tabbed dashboard)
   //
   // Cards + a small chart-type library modeled literally on index-1.html's
@@ -643,9 +677,11 @@ const DemographicsUI = (function () {
         // foreColor above is a legible-enough mid-gray for most chart
         // text, but the year/category labels specifically read as too
         // faint against this app's own no-muted-text Design Rule.
-        labels: { style: { colors: BRAND_COLORS.dark, fontWeight: 600 } },
+        labels: { style: { colors: chartTextColor(), fontWeight: 600 } },
       },
       colors: colors || [hex],
+      // People and events are whole numbers - no "0.7" axis ticks.
+      yaxis: { forceNiceScale: true, labels: { formatter: (v) => (v == null ? v : Math.round(v).toLocaleString()) } },
       dataLabels: { enabled: false },
       grid: { borderColor: hexToRgba(hex, 0.05) },
       legend: { show: series.length > 1, position: "bottom" },
@@ -1509,10 +1545,14 @@ const DemographicsUI = (function () {
     renderSparkCard,
     mountSparklines,
     chartTextColor,
+    cssColor,
     renderSegmented,
     wireSegmented,
     renderRingDonut,
     renderCompositionCard,
+    DEMOGRAPHIC_METRICS,
+    metricUrl,
+    shortPeriodLabel,
     monthlySeries,
     rowsInMonth,
     monthLabel,

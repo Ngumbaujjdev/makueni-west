@@ -30440,12 +30440,13 @@ tr.list-row-flash > td {
 /* Ring donut (CRM "Leads By Source") */
 .ring-donut-legend {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
   border-top: 1px solid var(--default-border);
   margin-top: 0.75rem;
 }
 .ring-donut-item {
-  padding: 0.85rem 1rem;
+  min-width: 0;
+  padding: 0.85rem 0.6rem;
   border-inline-end: 1px solid var(--default-border);
   text-align: center;
 }
@@ -30454,8 +30455,8 @@ tr.list-row-flash > td {
 }
 .ring-donut-name {
   font-size: 0.78rem;
+  line-height: 1.25;
   color: var(--text-muted);
-  white-space: nowrap;
 }
 .ring-donut-value {
   margin-top: 0.2rem;
@@ -30637,3 +30638,13 @@ tr.list-row-flash > td {
 .app-content .stats-table > thead > tr.stats-group-row > th.soft-primary { background-color: rgba(var(--primary-rgb), 0.12) !important; color: rgb(var(--primary-rgb)) !important; }
 .app-content .stats-table > thead > tr.stats-group-row > th.soft-purple { background-color: rgba(var(--purple-rgb), 0.12) !important; color: rgb(var(--purple-rgb)) !important; }
 .app-content .stats-table > thead > tr.stats-group-row > th.soft-success { background-color: rgba(var(--success-rgb), 0.14) !important; color: #138a69 !important; }
+
+/* Category toggle chips (Growth Analytics) - dimmed when the series is hidden */
+.chip-toggle {
+  border: 0;
+  cursor: pointer;
+}
+.chip-toggle:not(.is-on) {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
