@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AppearanceController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AttendanceReportController;
 use App\Http\Controllers\Api\AuthController;
@@ -68,6 +69,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('password-reset')->group(function () {
         Route::post('change-password', [PasswordResetController::class, 'changeOwnPassword']);           // User changes own password
         Route::post('change-employee-code', [PasswordResetController::class, 'changeOwnEmployeeCode']); // User changes own employee code
+    });
+
+    // Appearance Settings - self-scoped personal preferences, no territory/permission gate
+    Route::prefix('appearance')->group(function () {
+        Route::get('/', [AppearanceController::class, 'show']);
+        Route::put('/', [AppearanceController::class, 'update']);
+        Route::delete('/', [AppearanceController::class, 'destroy']);
     });
 
     // Admin Password Management (require admin permissions)
