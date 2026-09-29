@@ -29,6 +29,9 @@ if (strlen($initials) < 2) {
 $userId = $currentUser['id'] ?? 1;
 $avatarColors = ['primary', 'secondary', 'success', 'info', 'warning', 'danger'];
 $avatarColor = $avatarColors[$userId % count($avatarColors)];
+// secondary/warning are both the diocese gold - white text on gold is too
+// low-contrast, so those two get dark text on the (now solid) avatar/badge.
+$avatarTextClass = in_array($avatarColor, ['secondary', 'warning'], true) ? 'text-dark' : 'text-white';
 
 $baseUrl = '/makueni-west';
 ?>
@@ -64,21 +67,35 @@ $baseUrl = '/makueni-west';
         </div>
         <!-- End::header-content-left -->
 
+        <!-- Start::header-search-bar - a real search bar on tablet/desktop
+             (same pattern as v1-events-backend's navbar command-palette bar);
+             on phones it's hidden and the search icon below opens the
+             palette instead. -->
+        <div class="header-search-bar-wrap d-none d-md-flex">
+            <button type="button" class="header-search-bar" data-bs-toggle="modal" data-bs-target="#searchModal" aria-label="Search pages">
+                <i class="ri-search-line"></i>
+                <span class="header-search-bar-text">Search pages, reports, settings...</span>
+                <kbd class="header-search-bar-key" data-gs-key>&#8984;K</kbd>
+            </button>
+        </div>
+        <!-- End::header-search-bar -->
+
         <!-- Start::header-content-right -->
         <div class="header-content-right">
             <!-- Start::header-element - Locale indicator (decorative - this app has no
                  i18n/language switching, matching how the YNEX template's own reference
                  demo's flag+"EN" indicator isn't real language switching either) -->
             <div class="header-element d-none d-md-flex align-items-center">
-                <span class="fs-16" aria-hidden="true">🇰🇪</span>
+                <img src="<?= $baseUrl ?>/assets/images/flags/kenya.png" alt="Kenya" title="Kenya" class="header-flag" />
                 <span class="fs-12 fw-semibold text-dark ms-1">EN</span>
             </div>
             <!-- End::header-element -->
 
             <!-- Start::header-element -->
-            <div class="header-element header-search">
+            <!-- Phones only - tablet/desktop use the header search bar above. -->
+            <div class="header-element header-search d-flex d-md-none">
                 <!-- Start::header-link -->
-                <a href="javascript:void(0);" class="header-link" data-bs-toggle="modal" data-bs-target="#searchModal">
+                <a href="javascript:void(0);" class="header-link" data-bs-toggle="modal" data-bs-target="#searchModal" aria-label="Search pages">
                     <i class="bx bx-search-alt-2 header-link-icon"></i>
                 </a>
                 <!-- End::header-link -->
@@ -147,8 +164,8 @@ $baseUrl = '/makueni-west';
                 <a href="javascript:void(0);" class="header-link dropdown-toggle" id="mainHeaderProfile" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                     <div class="d-flex align-items-center">
                         <div class="me-sm-2 me-0">
-                            <!-- Dynamic Avatar with Initials -->
-                            <span class="avatar avatar-sm rounded-circle bg-<?= $avatarColor ?>-transparent text-<?= $avatarColor ?>">
+                            <!-- Dynamic Avatar with Initials (solid, not a pale -transparent tint) -->
+                            <span class="avatar avatar-sm rounded-circle bg-<?= $avatarColor ?> <?= $avatarTextClass ?> fw-semibold">
                                 <?= $initials ?>
                             </span>
                         </div>
@@ -161,28 +178,34 @@ $baseUrl = '/makueni-west';
                 <!-- End::header-link|dropdown-toggle -->
                 <ul class="main-header-dropdown dropdown-menu pt-0 overflow-hidden header-profile-dropdown dropdown-menu-end" aria-labelledby="mainHeaderProfile">
                     <!-- User Info Header -->
-                    <li class="dropdown-header bg-light">
+                    <li class="dropdown-header">
                         <div class="d-flex align-items-center p-2">
-                            <span class="avatar avatar-md rounded-circle bg-<?= $avatarColor ?>-transparent text-<?= $avatarColor ?>">
+                            <span class="avatar avatar-md rounded-circle bg-<?= $avatarColor ?> <?= $avatarTextClass ?> fw-semibold">
                                 <?= $initials ?>
                             </span>
-                            <div class="ms-3">
-                                <p class="mb-0 fw-semibold"><?= htmlspecialchars($userFullName) ?></p>
-                                <small class="text-muted"><?= htmlspecialchars($userEmail) ?></small>
-                                <br>
-                                <small class="badge bg-<?= $avatarColor ?>-transparent"><?= htmlspecialchars($roleName) ?></small>
+                            <div class="ms-3" style="min-width: 0;">
+                                <p class="mb-0 fw-semibold text-dark"><?= htmlspecialchars($userFullName) ?></p>
+                                <small class="d-block text-body text-truncate"><?= htmlspecialchars($userEmail) ?></small>
+                                <span class="badge bg-<?= $avatarColor ?> <?= $avatarTextClass ?> mt-1"><?= htmlspecialchars($roleName) ?></span>
                             </div>
                         </div>
                     </li>
                     <li><hr class="dropdown-divider"></li>
-                    
+
                     <!-- Profile -->
                     <li>
                         <a class="dropdown-item d-flex" href="<?= $baseUrl ?>/profile">
                             <i class="ti ti-user-circle fs-18 me-2 op-7"></i>My Profile
                         </a>
                     </li>
-                    
+
+                    <!-- Appearance (profile.php opens its Appearance tab from the #appearance hash) -->
+                    <li>
+                        <a class="dropdown-item d-flex" href="<?= $baseUrl ?>/profile#appearance">
+                            <i class="ri-palette-line fs-18 me-2 op-7"></i>Appearance
+                        </a>
+                    </li>
+
                     <!-- Help & Support -->
                     <li>
                         <a class="dropdown-item d-flex border-block-end" href="<?= $baseUrl ?>/support">

@@ -211,6 +211,19 @@
     appearanceTabBtn.addEventListener("shown.bs.tab", loadAndPopulate);
     saveBtn.addEventListener("click", handleSave);
     resetBtn.addEventListener("click", handleReset);
+
+    // The header/sidebar account menus link here as /profile#appearance -
+    // open this tab directly (its shown.bs.tab handler above then loads
+    // the saved settings as usual).
+    // hashchange covers clicking that link while already on /profile,
+    // where the browser only changes the hash and doesn't reload.
+    const openFromHash = () => {
+      if (window.location.hash === "#appearance") {
+        bootstrap.Tab.getOrCreateInstance(appearanceTabBtn).show();
+      }
+    };
+    openFromHash();
+    window.addEventListener("hashchange", openFromHash);
   }
 
   document.addEventListener("DOMContentLoaded", init);
