@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\GenerateReportJob;
+use App\Models\FiscalYear;
 use App\Models\ReportRun;
 use App\Models\Territory;
 use App\Reports\Report;
@@ -115,7 +116,11 @@ class ReportController extends Controller
             ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             : 'application/pdf';
 
-        return Storage::disk('local')->download($run->file_path, $run->file_name, ['Content-Type' => $mime]);
+        // Content-Length lets the browser show real download progress.
+        return Storage::disk('local')->download($run->file_path, $run->file_name, [
+            'Content-Type' => $mime,
+            'Content-Length' => Storage::disk('local')->size($run->file_path),
+        ]);
     }
 
     /** GET /reports/verify/{code} - public. Who made it and when; never any figures. */
@@ -161,7 +166,12 @@ class ReportController extends Controller
             'report_key' => 'required|string',
             'territory_id' => 'required|integer',
             'format' => ($requireFormat ? 'required' : 'nullable').'|in:pdf,xlsx',
-            'fiscal_year_id' => 'nullable|integer|exists:fiscal_years,id',
+            // A fiscal year id, or "all" for every approved submission.
+            'fiscal_year_id' => ['nullable', function ($attribute, $value, $fail) {
+                if ($value !== 'all' && ! (ctype_digit((string) $value) && FiscalYear::whereKey($value)->exists())) {
+                    $fail('Choose a fiscal year, or all time.');
+                }
+            }],
             'years' => 'nullable|in:1,3,5,all',
             'demographic_id' => 'nullable|integer',
         ]);

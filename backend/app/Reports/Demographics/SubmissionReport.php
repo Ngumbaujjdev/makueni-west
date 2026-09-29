@@ -22,7 +22,7 @@ final class SubmissionReport extends Report
     private const GROUPS = [
         'Membership' => ['total_members', 'male_count', 'female_count', 'youth_count', 'seniors_count'],
         'Groups' => ['womens_fellowship_count', 'mens_fellowship_count', 'sunday_school_male_count', 'sunday_school_female_count', 'sunday_school_teachers_count'],
-        'Changes & sacraments' => DemographicsData::FLOWS,
+        'Changes & Holy Communion' => DemographicsData::FLOWS,
     ];
 
     public function __construct(private DemographicsData $data) {}

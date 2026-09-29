@@ -3,8 +3,12 @@
 namespace App\Reports;
 
 use App\Enums\TerritoryType;
+use App\Reports\Demographics\BaptismsReport;
+use App\Reports\Demographics\ConversionsReport;
 use App\Reports\Demographics\DemographicsSummaryReport;
+use App\Reports\Demographics\DeparturesReport;
 use App\Reports\Demographics\GrowthAnalyticsReport;
+use App\Reports\Demographics\HolyCommunionReport;
 use App\Reports\Demographics\MonthlyStatisticsReport;
 use App\Reports\Demographics\SpiritualActivitiesReport;
 use App\Reports\Demographics\SubmissionReport;
@@ -16,6 +20,10 @@ final class ReportRegistry
         DemographicsSummaryReport::class,
         MonthlyStatisticsReport::class,
         SpiritualActivitiesReport::class,
+        BaptismsReport::class,
+        HolyCommunionReport::class,
+        ConversionsReport::class,
+        DeparturesReport::class,
         GrowthAnalyticsReport::class,
         SubmissionReport::class,
     ];

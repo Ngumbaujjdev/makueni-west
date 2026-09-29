@@ -107,6 +107,22 @@ final class DemographicsData
     }
 
     /**
+     * Every approved submission, oldest first, in the same shape as
+     * yearPeriods() - what the fiscal-year reports use for "All time".
+     */
+    public function allTimePeriods(ReportContext $context): array
+    {
+        return $this->approvedRows($context)->map(function (ChurchDemographic $r) {
+            $row = ['label' => self::label($r), 'month' => self::label($r), 'status' => 'approved', 'year' => (int) $r->fiscalYear?->year];
+            foreach ([...self::HEADCOUNTS, ...self::FLOWS] as $field) {
+                $row[$field] = $r->{$field};
+            }
+
+            return $row;
+        })->values()->all();
+    }
+
+    /**
      * Approved submissions for the report's churches, oldest first, ordered by
      * the month each period ends in so mixed cadences still line up.
      *

@@ -47,6 +47,12 @@ abstract class Report
         return ['fiscal_year'];
     }
 
+    /** Reports sharing a group are shown together in the export modal. */
+    public function group(): ?string
+    {
+        return null;
+    }
+
     public function supports(TerritoryType $type): bool
     {
         return in_array($type, $this->scopes(), true);
@@ -59,6 +65,7 @@ abstract class Report
             'title' => $this->title(),
             'description' => $this->description(),
             'icon' => $this->icon(),
+            'group' => $this->group(),
             'inputs' => $this->inputs(),
             'formats' => ['pdf', 'xlsx'],
         ];

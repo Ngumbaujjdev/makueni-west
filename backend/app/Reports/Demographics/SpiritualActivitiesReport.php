@@ -36,6 +36,11 @@ final class SpiritualActivitiesReport extends FiscalYearReport
         return 'Baptisms, Holy Communion, conversions and departures for each period of the year.';
     }
 
+    public function group(): ?string
+    {
+        return 'Spiritual activities';
+    }
+
     public function icon(): string
     {
         return 'ri-hand-heart-line';
@@ -43,9 +48,8 @@ final class SpiritualActivitiesReport extends FiscalYearReport
 
     public function build(ReportContext $context): ReportData
     {
-        $year = $this->year($context);
+        [$periods, $periodLabel] = $this->scope($context);
         $mode = $this->data->mode($context);
-        $periods = $this->data->yearPeriods($context, $year);
         $missing = $this->missingLabels($periods);
         $reported = array_values(array_filter($periods, fn ($p) => $p['status'] === 'approved'));
 
@@ -75,7 +79,7 @@ final class SpiritualActivitiesReport extends FiscalYearReport
         return new ReportData(
             kicker: $context->kicker('demographics'),
             title: $this->title(),
-            periodLabel: 'Fiscal year '.$year->year,
+            periodLabel: $periodLabel,
             scopeLabel: $context->scopeLabel(),
             tiles: [
                 ['label' => 'Baptisms', 'value' => number_format($totals['baptisms_count']), 'tone' => 'primary'],
@@ -83,7 +87,7 @@ final class SpiritualActivitiesReport extends FiscalYearReport
                 ['label' => 'Conversions', 'value' => number_format($totals['conversions_count']), 'tone' => 'purple'],
                 ['label' => 'Departures', 'value' => number_format($totals['transferred_out_count']), 'tone' => 'danger'],
             ],
-            meta: $this->meta($context, $year, $mode, $periods),
+            meta: $this->meta($context, $periodLabel, $mode, $periods),
             sections: [
                 new ReportSection(
                     'By period',
