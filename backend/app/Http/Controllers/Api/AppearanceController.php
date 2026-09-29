@@ -81,7 +81,10 @@ class AppearanceController extends Controller
             'success' => true,
             'status' => 200,
             'message' => 'Appearance settings retrieved successfully',
-            'data' => array_merge($effective, ['classes' => Appearance::classesFor($effective)]),
+            'data' => array_merge($effective, [
+                'classes' => Appearance::classesFor($effective),
+                'accent_rgb' => Appearance::ACCENT_RGB[$effective['accent']],
+            ]),
         ]);
     }
 }

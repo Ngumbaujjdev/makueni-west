@@ -7,8 +7,13 @@ namespace App\Support;
  * their allowed values/defaults, and the CSS class each value maps to.
  * Ported from the pattern in the sibling project v1-events-backend
  * (App\Support\Appearance there) - see
- * docs/specs/appearance-settings-spec.md for the full contract and for
- * why this ships without a `theme` (light/dark/system) key.
+ * docs/specs/appearance-settings-spec.md for the full contract.
+ *
+ * `theme` and `accent` don't map to CSS classes (their `classes` entries
+ * are all null) - the frontend renders them as <html data-theme-mode>
+ * and an inline --primary-rgb instead. ACCENT_RGB is the curated accent
+ * palette; keys, not free hex, so every accent is one that's been checked
+ * against white button text.
  *
  * Not tied to Eloquent/a User instance on purpose - every method here
  * is a pure function over plain arrays, so AppearanceController and the
@@ -18,7 +23,26 @@ namespace App\Support;
  */
 class Appearance
 {
+    public const ACCENT_RGB = [
+        'teal' => '44, 164, 191',
+        'navy' => '30, 64, 138',
+        'green' => '22, 128, 84',
+        'purple' => '124, 58, 237',
+        'orange' => '217, 104, 30',
+        'red' => '206, 54, 45',
+    ];
+
     public const OPTIONS = [
+        'theme' => [
+            'choices' => ['light', 'dark', 'system'],
+            'default' => 'light',
+            'classes' => ['light' => null, 'dark' => null, 'system' => null],
+        ],
+        'accent' => [
+            'choices' => ['teal', 'navy', 'green', 'purple', 'orange', 'red'],
+            'default' => 'teal',
+            'classes' => ['teal' => null, 'navy' => null, 'green' => null, 'purple' => null, 'orange' => null, 'red' => null],
+        ],
         'density' => [
             'choices' => ['compact', 'comfortable', 'spacious'],
             'default' => 'comfortable',

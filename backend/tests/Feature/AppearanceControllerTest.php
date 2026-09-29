@@ -51,7 +51,45 @@ class AppearanceControllerTest extends TestCase
             ->assertJsonPath('data.focus_outlines', false)
             ->assertJsonPath('data.underline_links', false)
             ->assertJsonPath('data.big_targets', false)
+            ->assertJsonPath('data.theme', 'light')
+            ->assertJsonPath('data.accent', 'teal')
+            ->assertJsonPath('data.accent_rgb', '44, 164, 191')
             ->assertJsonPath('data.classes', []);
+    }
+
+    public function test_update_persists_theme_and_accent_without_adding_classes(): void
+    {
+        Sanctum::actingAs($this->user);
+
+        $response = $this->putJson('/api/appearance', ['theme' => 'dark', 'accent' => 'purple']);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.theme', 'dark')
+            ->assertJsonPath('data.accent', 'purple')
+            ->assertJsonPath('data.accent_rgb', '124, 58, 237')
+            ->assertJsonPath('data.classes', []);
+        $this->assertDatabaseHas('user_preferences', ['user_id' => $this->user->id, 'key' => 'theme', 'value' => 'dark']);
+        $this->assertDatabaseHas('user_preferences', ['user_id' => $this->user->id, 'key' => 'accent', 'value' => 'purple']);
+    }
+
+    public function test_system_theme_is_accepted_and_default_theme_deletes_row(): void
+    {
+        Sanctum::actingAs($this->user);
+
+        $this->putJson('/api/appearance', ['theme' => 'system'])->assertJsonPath('data.theme', 'system');
+        $this->putJson('/api/appearance', ['theme' => 'light'])->assertJsonPath('data.theme', 'light');
+
+        $this->assertDatabaseMissing('user_preferences', ['user_id' => $this->user->id, 'key' => 'theme']);
+    }
+
+    public function test_invalid_theme_or_accent_is_rejected(): void
+    {
+        Sanctum::actingAs($this->user);
+
+        $this->putJson('/api/appearance', ['theme' => 'sepia'])->assertStatus(422);
+        $this->putJson('/api/appearance', ['accent' => '#ff0000'])->assertStatus(422);
+
+        $this->assertDatabaseMissing('user_preferences', ['user_id' => $this->user->id]);
     }
 
     public function test_update_persists_a_non_default_value(): void
