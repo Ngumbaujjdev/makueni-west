@@ -32824,3 +32824,42 @@ tr.list-row-flash > td {
   border-color: rgb(var(--success-rgb));
   background: rgb(var(--success-rgb));
 }
+/* Export opened from a page: that page's report, locked */
+.rp-locked {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 0.9rem;
+  border: 1.5px solid rgb(var(--primary-rgb));
+  border-radius: 0.75rem;
+  background: rgba(var(--primary-rgb), 0.05);
+}
+.rp-locked[hidden],
+#rpReportsWrap[hidden] {
+  display: none;
+}
+.rp-locked .rp-report-text {
+  flex: 1 1 auto;
+}
+.rp-locked .rp-report-text strong {
+  font-size: 1rem;
+}
+.rp-locked-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(var(--primary-rgb));
+}
+.rp-locked .rp-edit {
+  flex: 0 0 auto;
+  border: 1px solid var(--default-border);
+}
+@media (max-width: 575.98px) {
+  .rp-locked {
+    flex-wrap: wrap;
+  }
+  .rp-locked .rp-edit {
+    width: 100%;
+  }
+}

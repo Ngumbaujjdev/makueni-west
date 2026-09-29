@@ -29,6 +29,11 @@ final class DemographicsSummaryReport extends FiscalYearReport
         return 'Demographics summary';
     }
 
+    public function subject(): string
+    {
+        return 'Demographics report';
+    }
+
     public function description(): string
     {
         return 'Membership, groups, changes and Holy Communion for the year or all time, with insights and recommendations.';
@@ -101,7 +106,7 @@ final class DemographicsSummaryReport extends FiscalYearReport
         ], DemographicsData::facts($periods, $missing, $mode));
 
         return new ReportData(
-            kicker: $context->kicker('demographics'),
+            kicker: $context->kicker($this->subject()),
             title: $this->title(),
             periodLabel: $periodLabel,
             scopeLabel: $context->scopeLabel(),

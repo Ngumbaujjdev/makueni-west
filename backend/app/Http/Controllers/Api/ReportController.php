@@ -7,6 +7,7 @@ use App\Jobs\GenerateReportJob;
 use App\Models\FiscalYear;
 use App\Models\ReportRun;
 use App\Models\Territory;
+use App\Reports\Demographics\MetricReport;
 use App\Reports\Report;
 use App\Reports\ReportContext;
 use App\Reports\ReportRegistry;
@@ -76,7 +77,7 @@ class ReportController extends Controller
             'params' => $context->params,
             'status' => ReportRun::STATUS_QUEUED,
             'stage' => 'Waiting in the queue',
-            'title' => $report->title(),
+            'title' => $report->titleFor($context->params),
             'scope_label' => $context->territory->name,
         ]);
 
@@ -174,6 +175,7 @@ class ReportController extends Controller
             }],
             'years' => 'nullable|in:1,3,5,all',
             'demographic_id' => 'nullable|integer',
+            'metric' => 'nullable|string|max:40',
         ]);
         if ($validator->fails()) {
             return $this->fail(422, $validator->errors()->first(), $validator->errors()->toArray());
@@ -195,7 +197,11 @@ class ReportController extends Controller
             return $this->fail(422, 'Choose the submission to report on.', ['demographic_id' => ['Required for this report.']]);
         }
 
-        $params = array_filter($request->only(['fiscal_year_id', 'years', 'demographic_id']), fn ($v) => $v !== null && $v !== '');
+        if (in_array('metric', $report->inputs(), true) && ! MetricReport::has($request->input('metric'))) {
+            return $this->fail(422, 'Choose a metric to report on.', ['metric' => ['Unknown metric.']]);
+        }
+
+        $params = array_filter($request->only(['fiscal_year_id', 'years', 'demographic_id', 'metric']), fn ($v) => $v !== null && $v !== '');
 
         return [$report, new ReportContext($territory, $request->user(), $params)];
     }

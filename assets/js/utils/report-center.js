@@ -6,7 +6,11 @@
  *
  * The frontend for docs/specs/reports-spec.md, used by any module:
  *
- *   ReportCenter.open({ territoryId, reportKey, params: { fiscal_year_id, years, demographic_id } })
+ *   ReportCenter.open({ territoryId, reportKey, params: { fiscal_year_id, years, demographic_id, metric }, locked, title })
+ *
+ * From a page's Export button (data-lock="1") the modal is locked to that
+ * page's report: only the period and format are chosen, with a "Choose a
+ * different report" link. The Reports page opens it unlocked.
  *
  * Modal (includes/report-modal.php), with a Choose / Preview / Download step
  * indicator in its header:
@@ -55,6 +59,7 @@ const ReportCenter = (function () {
     "demographics.departures": "danger",
     "demographics.growth": "info",
     "demographics.submission": "pink",
+    "demographics.metric": "primary",
   };
   const GROUP_SHORT = { "demographics.spiritual": "All four" };
   const STAGES = [
@@ -73,6 +78,8 @@ const ReportCenter = (function () {
     catalogueFor: null,
     years: null,
     reportKey: null,
+    locked: false,
+    lockedTitle: null,
     params: {},
     format: "pdf",
     run: null,
@@ -282,10 +289,13 @@ const ReportCenter = (function () {
   async function open(opts = {}) {
     state.territoryId = opts.territoryId;
     state.reportKey = opts.reportKey || null;
+    state.locked = !!opts.locked && !!opts.reportKey;
+    state.lockedTitle = opts.title || null;
     state.params = { ...(opts.params || {}) };
     state.format = opts.format || "pdf";
     setFormat(state.format);
     $("reportModalScope").textContent = "PDF or Excel, with insights and recommendations";
+    $("reportModalTitle").textContent = state.locked && state.lockedTitle ? `Export · ${state.lockedTitle}` : "Export a report";
 
     $("rpReports").innerHTML = '<span class="skel" style="height: 4rem;"></span><span class="skel" style="height: 4rem;"></span><span class="skel" style="height: 4rem;"></span>';
     $("rpPeriod").innerHTML = "";
@@ -315,6 +325,11 @@ const ReportCenter = (function () {
     return state.catalogue.find((r) => r.key === state.reportKey);
   }
 
+  /** The chosen report's title - a metric report is named after the page's metric. */
+  function reportTitle(report) {
+    return state.locked && state.lockedTitle && report.key === state.reportKey ? state.lockedTitle : report.title;
+  }
+
   function setFormat(format) {
     state.format = format;
     document.querySelectorAll('#reportModal input[name="rp_format"]').forEach((r) => {
@@ -330,12 +345,39 @@ const ReportCenter = (function () {
   }
 
   function renderChoose() {
+    const lockedBox = $("rpLocked");
+    const listWrap = $("rpReportsWrap");
+    const report = current();
+    if (state.locked && report) {
+      // Opened from a page's Export: that page's report, just period + format.
+      lockedBox.innerHTML = `
+        ${iconTile(report.key, report.icon)}
+        <span class="rp-report-text">
+          <span class="rp-locked-label">You're exporting</span>
+          <strong>${esc(reportTitle(report))}</strong>
+          <small>${esc(report.key === "demographics.metric" ? "This figure over time, from this page." : report.description)}</small>
+        </span>
+        <button type="button" class="rp-edit" id="rpUnlock"><i class="ri-list-check me-1"></i>Choose a different report</button>`;
+      lockedBox.hidden = false;
+      listWrap.hidden = true;
+      $("rpUnlock").addEventListener("click", () => {
+        state.locked = false;
+        if (report.key === "demographics.metric") state.reportKey = state.catalogue.find((r) => !r.locked_only)?.key;
+        $("reportModalTitle").textContent = "Export a report";
+        renderChoose();
+      });
+      renderPeriod();
+      return;
+    }
+    lockedBox.hidden = true;
+    listWrap.hidden = false;
     const needsSubmission = (r) => r.inputs.includes("submission") && !state.params.demographic_id;
     // Grouped reports (Spiritual activities + its four activity reports)
     // render as one card with pills; the rest as rows.
     const groups = [];
     const cards = [];
     state.catalogue.forEach((r) => {
+      if (r.locked_only) return; // reached from its own page (e.g. a metric's report)
       if (r.group) {
         let g = groups.find((x) => x.name === r.group);
         if (!g) {
@@ -453,7 +495,7 @@ const ReportCenter = (function () {
     const report = state.catalogue && current();
     const el = $("rpSummary");
     if (!el || !report) return;
-    el.innerHTML = `${iconTile(report.key, report.icon, "is-sm")}<span><b>${esc(report.title)}</b> · ${esc(periodText())} · ${FORMAT_LABEL[state.format]}</span>`;
+    el.innerHTML = `${iconTile(report.key, report.icon, "is-sm")}<span><b>${esc(reportTitle(report))}</b> · ${esc(periodText())} · ${FORMAT_LABEL[state.format]}</span>`;
   }
 
   function requestBody() {
@@ -462,6 +504,7 @@ const ReportCenter = (function () {
     if (report.inputs.includes("fiscal_year")) body.fiscal_year_id = state.params.fiscal_year_id;
     if (report.inputs.includes("years")) body.years = state.params.years;
     if (report.inputs.includes("submission")) body.demographic_id = state.params.demographic_id;
+    if (report.inputs.includes("metric")) body.metric = state.params.metric;
     return body;
   }
 
@@ -767,12 +810,12 @@ const ReportCenter = (function () {
       if (!trigger) return;
       e.preventDefault();
       const params = {};
-      ["fiscal_year_id", "years", "demographic_id", "submission_label"].forEach((k) => {
+      ["fiscal_year_id", "years", "demographic_id", "submission_label", "metric"].forEach((k) => {
         const v = trigger.dataset[k.replace(/_([a-z])/g, (_, c) => c.toUpperCase())];
         if (v) params[k] = /^\d+$/.test(v) ? Number(v) : v;
       });
       const territoryId = trigger.dataset.territoryId || (typeof USER_TERRITORY !== "undefined" ? USER_TERRITORY.id : null);
-      open({ territoryId, reportKey: trigger.dataset.reportKey, params });
+      open({ territoryId, reportKey: trigger.dataset.reportKey, params, locked: trigger.dataset.lock === "1", title: trigger.dataset.reportTitle });
     });
   }
 

@@ -33,8 +33,8 @@ final class ReportContext
         return $this->type() === TerritoryType::CHURCH;
     }
 
-    /** "CHURCH REPORT", "REGIONAL REPORT"... - the line above the title. */
-    public function kicker(string $module): string
+    /** "Church Holy Communion report", "Regional demographics report"... - the line above the title. */
+    public function kicker(string $subject): string
     {
         $scope = match ($this->type()) {
             TerritoryType::CHURCH => 'Church',
@@ -44,7 +44,7 @@ final class ReportContext
             default => 'Diocesan',
         };
 
-        return "{$scope} {$module} report";
+        return "{$scope} {$subject}";
     }
 
     /** "St Paul's · Kathonzweni Subregion · Makueni Region" - nearest first, stopping before the diocese. */

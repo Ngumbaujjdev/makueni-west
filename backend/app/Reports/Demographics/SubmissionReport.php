@@ -37,6 +37,11 @@ final class SubmissionReport extends Report
         return 'Submission report';
     }
 
+    public function subject(): string
+    {
+        return 'Submission report';
+    }
+
     public function description(): string
     {
         return 'One submission, figure by figure, compared with the approved submission before it.';
@@ -88,7 +93,7 @@ final class SubmissionReport extends Report
         $status = ucwords(str_replace('_', ' ', (string) $record->status));
 
         return new ReportData(
-            kicker: $context->kicker('demographics'),
+            kicker: $context->kicker($this->subject()),
             title: $this->title(),
             periodLabel: $label,
             scopeLabel: $context->scopeLabel(),

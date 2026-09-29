@@ -112,7 +112,7 @@ class ReportsTest extends TestCase
 
     // 1. Catalogue per level --------------------------------------------------
 
-    public function test_catalogue_lists_the_nine_demographics_reports_for_a_church(): void
+    public function test_catalogue_lists_the_demographics_reports_for_a_church(): void
     {
         Sanctum::actingAs($this->pastor);
 
@@ -120,7 +120,7 @@ class ReportsTest extends TestCase
 
         $this->assertEqualsCanonicalizing(
             ['demographics.summary', 'demographics.monthly', 'demographics.spiritual', 'demographics.baptisms', 'demographics.holy_communion',
-                'demographics.conversions', 'demographics.departures', 'demographics.growth', 'demographics.submission'],
+                'demographics.conversions', 'demographics.departures', 'demographics.growth', 'demographics.submission', 'demographics.metric'],
             $keys->all(),
         );
     }
@@ -270,6 +270,56 @@ class ReportsTest extends TestCase
         $this->assertSame(['Period', 'Baptisms'], array_column($byPeriod['columns'], 'header'));
         $this->assertTrue($byPeriod['has_totals']);
         $this->assertFalse($data['sections'][1]['has_totals'], 'The membership comparison has no totals');
+    }
+
+    // Page-aware export: a metric's own report ---------------------------------
+
+    public function test_the_sunday_school_report_splits_boys_and_girls(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $data = $this->postJson('/api/reports/preview', ['report_key' => 'demographics.metric', 'territory_id' => $this->myChurch->id, 'metric' => 'sunday_school'])
+            ->assertOk()->json('data');
+
+        $this->assertSame('Sunday school', $data['title']);
+        $this->assertSame('Church Sunday school report', $data['kicker']);
+        $this->assertStringStartsWith('All time', $data['period_label'], 'A metric report defaults to all time, like its page');
+        $section = $data['sections'][0];
+        $this->assertSame(['Period', 'Boys', 'Girls', 'Total', 'Change'], array_column($section['columns'], 'header'));
+        $this->assertSame(['Latest', '60', '70', '130', ''], array_map(fn ($v) => $v === '-' ? '' : $v, $section['totals']), 'Headcounts total to the latest value');
+    }
+
+    public function test_a_flow_metric_report_sums_and_unknown_metrics_are_rejected(): void
+    {
+        Sanctum::actingAs($this->pastor);
+        $body = ['report_key' => 'demographics.metric', 'territory_id' => $this->myChurch->id, 'fiscal_year_id' => $this->year->id];
+
+        $data = $this->postJson('/api/reports/preview', $body + ['metric' => 'baptisms'])->assertOk()->json('data');
+        $this->assertSame('Church Baptisms report', $data['kicker']);
+        $this->assertSame('6', $data['sections'][0]['totals'][1], '2 baptisms in each of 3 months');
+
+        $this->postJson('/api/reports/preview', $body + ['metric' => 'nope'])->assertStatus(422);
+        $this->postJson('/api/reports/preview', $body)->assertStatus(422);
+    }
+
+    public function test_each_report_is_labelled_for_what_it_is(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $kicker = fn (string $key) => $this->postJson('/api/reports/preview', $this->body(['report_key' => $key]))->json('data.kicker');
+        $this->assertSame('Church Holy Communion report', $kicker('demographics.holy_communion'));
+        $this->assertSame('Church Demographics report', $kicker('demographics.summary'));
+        $this->assertSame('Church Spiritual activities report', $kicker('demographics.spiritual'));
+    }
+
+    public function test_the_pdf_names_the_church_correctly(): void
+    {
+        $pdf = new DioceseReportPdf(new ReportData('k', 't', 'p', 's'));
+        $pdf->setCompression(false);
+        $text = $pdf->build()->toPdfString();
+
+        $this->assertStringContainsString('Christian Church International', $text);
+        $this->assertStringNotContainsString('Christian Community', $text);
     }
 
     // 5. Queued generation ------------------------------------------------------

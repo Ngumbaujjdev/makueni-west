@@ -75,6 +75,8 @@ const DemographicsReports = (function () {
         </div>`;
       return;
     }
+    // A metric's report is reached from that metric's page, not listed here.
+    catalogue = catalogue.filter((r) => !r.locked_only);
     wrap.innerHTML = catalogue
       .map((r) => {
         const inside = INSIDE[r.key] || { color: "primary", chips: [] };

@@ -40,6 +40,11 @@ final class MonthlyStatisticsReport extends FiscalYearReport
         return 'Monthly statistics';
     }
 
+    public function subject(): string
+    {
+        return 'Monthly statistics';
+    }
+
     public function description(): string
     {
         return 'Every figure for every period of the year in one table, with a year summary.';
@@ -67,7 +72,7 @@ final class MonthlyStatisticsReport extends FiscalYearReport
         $reported = count($periods) - count($missing);
 
         return new ReportData(
-            kicker: $context->kicker('demographics'),
+            kicker: $context->kicker($this->subject()),
             title: $this->title(),
             periodLabel: $periodLabel,
             scopeLabel: $context->scopeLabel(),

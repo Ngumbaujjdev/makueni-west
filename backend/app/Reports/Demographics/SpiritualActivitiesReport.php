@@ -31,6 +31,11 @@ final class SpiritualActivitiesReport extends FiscalYearReport
         return 'Spiritual activities';
     }
 
+    public function subject(): string
+    {
+        return 'Spiritual activities report';
+    }
+
     public function description(): string
     {
         return 'Baptisms, Holy Communion, conversions and departures for each period of the year.';
@@ -77,7 +82,7 @@ final class SpiritualActivitiesReport extends FiscalYearReport
         }
 
         return new ReportData(
-            kicker: $context->kicker('demographics'),
+            kicker: $context->kicker($this->subject()),
             title: $this->title(),
             periodLabel: $periodLabel,
             scopeLabel: $context->scopeLabel(),

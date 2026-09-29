@@ -63,6 +63,8 @@ const DemographicsMetric = (function () {
     const values = rows.map((r) => Number(m.get(r)));
 
     document.getElementById("metricTitle").textContent = m.label;
+    // Export on this page is this metric's report.
+    UI.syncExportButton({ metric: key, reportTitle: m.label });
     const icon = document.getElementById("metricIcon");
     icon.className = `kpi-icon bg-${m.color} ${m.color === "secondary" ? "text-dark" : "text-white"}`;
     icon.innerHTML = `<i class="${m.icon}"></i>`;
