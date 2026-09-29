@@ -64,6 +64,7 @@ const MonthlyStatistics = (function () {
   }
 
   async function load(fiscalYearId) {
+    UI.syncExportButton({ fiscalYearId });
     document.getElementById("statCardsRow").innerHTML = UI.skeletonCards(4);
     document.getElementById("monthlyStatsBody").innerHTML = UI.renderTableLoading(16);
     document.getElementById("monthlyStatsFoot").innerHTML = "";

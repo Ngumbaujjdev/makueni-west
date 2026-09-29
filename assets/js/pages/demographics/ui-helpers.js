@@ -550,6 +550,19 @@ const DemographicsUI = (function () {
     conversions: { label: "Conversions", icon: "ri-heart-line", color: "purple", get: (r) => r.conversions_count, flow: true },
   };
 
+  /**
+   * Keeps the page's Export button (#exportReportBtn, read by
+   * assets/js/utils/report-center.js) on the period the page is showing,
+   * e.g. syncExportButton({ fiscalYearId: 3 }) or ({ years: "5" }).
+   */
+  function syncExportButton(data) {
+    const btn = document.getElementById("exportReportBtn");
+    if (!btn) return;
+    Object.entries(data).forEach(([key, value]) => {
+      btn.dataset[key] = value;
+    });
+  }
+
   /** Link to a metric's detail page. */
   function metricUrl(key) {
     return `${window.mwdBaseUrl || ""}/church/demographics-growth/metric?key=${encodeURIComponent(key)}`;
@@ -1674,6 +1687,7 @@ const DemographicsUI = (function () {
     renderCompositionCard,
     DEMOGRAPHIC_METRICS,
     metricUrl,
+    syncExportButton,
     shortPeriodLabel,
     monthlySeries,
     rowsInMonth,

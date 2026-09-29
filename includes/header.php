@@ -117,6 +117,26 @@ $baseUrl = '/makueni-west';
             </div>
             <!-- End::header-element -->
 
+            <!-- Start::header-element - Reports monitor (assets/js/utils/report-center.js) -->
+            <div class="header-element report-tray">
+                <a href="javascript:void(0);" class="header-link dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" id="reportTrayToggle" aria-expanded="false" title="Reports">
+                    <i class="ri-file-download-line header-link-icon"></i>
+                    <span class="badge bg-primary rounded-pill header-icon-badge" id="reportTrayBadge" hidden>0</span>
+                </a>
+                <div class="main-header-dropdown dropdown-menu dropdown-menu-end report-tray-menu">
+                    <div class="report-tray-head">
+                        <p class="mb-0 fs-16 fw-semibold">Reports</p>
+                        <?php if ((getCurrentRole()['territory']['territory_type'] ?? null) === 'church') : ?>
+                            <a href="<?= SITE_URL ?>/church/demographics-growth/reports" class="report-tray-all">All reports <i class="ri-arrow-right-line"></i></a>
+                        <?php endif ?>
+                    </div>
+                    <div class="report-tray-list" id="reportTrayList">
+                        <div class="report-tray-empty">Reports you generate show up here.</div>
+                    </div>
+                </div>
+            </div>
+            <!-- End::header-element -->
+
             <!-- Start::header-element - Notifications -->
             <div class="header-element notifications-dropdown">
                 <!-- Start::header-link|dropdown-toggle -->
@@ -235,6 +255,7 @@ $baseUrl = '/makueni-west';
 <div id="secondary-nav-bar"></div>
 
 <?php include __DIR__ . '/global-search.php' ?>
+<?php include __DIR__ . '/report-modal.php' ?>
 
 <script>
     // Shared base URL for secondary-nav.js/global-search.js (both static
@@ -245,4 +266,5 @@ $baseUrl = '/makueni-west';
 <script src="<?= $baseUrl ?>/assets/js/utils/appearance-sync.js<?= assetVersion('assets/js/utils/appearance-sync.js') ?>"></script>
 <script src="<?= $baseUrl ?>/assets/js/utils/secondary-nav.js<?= assetVersion('assets/js/utils/secondary-nav.js') ?>"></script>
 <script src="<?= $baseUrl ?>/assets/js/utils/global-search.js<?= assetVersion('assets/js/utils/global-search.js') ?>"></script>
+<script src="<?= $baseUrl ?>/assets/js/utils/report-center.js<?= assetVersion('assets/js/utils/report-center.js') ?>"></script>
 

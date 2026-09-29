@@ -71,6 +71,7 @@ const SpiritualActivities = (function () {
   const num = (v) => (v == null || v === "" ? null : Number(v));
 
   async function load(fiscalYearId) {
+    UI.syncExportButton({ fiscalYearId });
     document.getElementById("statCardsRow").innerHTML = UI.skeletonCards(4);
     const result = await DemographicsAPIHandler.getDemographicsReportWidgets(USER_TERRITORY.id, { fiscal_year_id: fiscalYearId });
     if (!result.success) Toast.error(result.message || "Could not load activities");

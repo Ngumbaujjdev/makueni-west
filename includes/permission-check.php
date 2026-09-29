@@ -177,3 +177,16 @@ function canAccessTerritoryLevel($requiredLevel) {
     // User can access their level and below
     return $userIndex >= $requiredIndex;
 }
+/**
+ * Whether to show the Demographics "Export" buttons (docs/specs/reports-spec.md).
+ * The export permissions are per submodule, so any one of them is enough -
+ * the reports API then checks the user can see the church itself.
+ */
+function canExportDemographicsReports() {
+    return hasGlobalAccess() || hasAnyPermission([
+        'churchdemographicsgrowth.growthanalytics.export',
+        'churchdemographicsgrowth.monthlystatistics.export',
+        'churchdemographicsgrowth.demographicstracking.sundayschoolenrollment.export',
+        'churchdemographicsgrowth.spiritualactivities.baptismrecords.export',
+    ]);
+}

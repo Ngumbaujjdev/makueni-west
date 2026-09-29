@@ -442,6 +442,32 @@
   // dependency.
   // ==========================================================================
 
+  /** Reports this user can run for a territory (docs/specs/reports-spec.md). */
+  async function getReportCatalogue(territoryId) {
+    try {
+      const response = await fetch(`${API_BASE}/reports/catalogue?territory_id=${encodeURIComponent(territoryId)}`, {
+        method: Constants.HTTP_METHODS.GET,
+        headers: getHeaders(),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
+  /** The user's 20 most recent report runs. */
+  async function getReportRuns() {
+    try {
+      const response = await fetch(`${API_BASE}/reports/runs`, {
+        method: Constants.HTTP_METHODS.GET,
+        headers: getHeaders(),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
   async function getFiscalYears() {
     try {
       const response = await fetch(`${API_BASE}/fiscal-years`, {
@@ -517,6 +543,8 @@
   window.DemographicsAPIHandler = {
     getDemographics,
     getDemographic,
+    getReportCatalogue,
+    getReportRuns,
     createDemographic,
     updateDemographic,
     submitDemographic,

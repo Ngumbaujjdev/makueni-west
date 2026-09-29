@@ -73,6 +73,9 @@ $breadcrumbs = [
                             <button type="button" class="seg-btn" data-value="5">5Y</button>
                             <button type="button" class="seg-btn" data-value="all">All</button>
                         </div>
+                        <?php if (canExportDemographicsReports()): ?>
+                            <button type="button" class="btn btn-outline-primary" id="exportReportBtn" data-report-key="demographics.growth" data-years="3"><i class="ri-download-2-line me-1"></i>Export</button>
+                        <?php endif ?>
                     </div>
                 </div>
 

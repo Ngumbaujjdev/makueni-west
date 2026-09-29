@@ -3,7 +3,13 @@ require_once __DIR__ . '/../../includes/session-manager.php';
 require_once __DIR__ . '/../../includes/auth-check.php';
 require_once __DIR__ . '/../../includes/permission-check.php';
 
-requirePermission('churchdemographicsgrowth.growthanalytics.read');
+requirePermission('churchdemographicsgrowth.overview.read');
+
+// The page exists to export, so it needs an export permission too.
+if (!canExportDemographicsReports()) {
+    header('Location: ' . SITE_URL . '/errors/403');
+    exit;
+}
 
 $user = getAuthUser();
 $currentRole = getCurrentRole();
@@ -11,18 +17,12 @@ $currentRole = getCurrentRole();
 $userTerritoryId = $currentRole['territory_id'] ?? null;
 $userTerritoryName = $currentRole['territory']['name'] ?? 'Your Church';
 
-// One metric's full history - where every "View trend" / "Full history"
-// link on the Demographics pages lands. ?key= is one of
-// DemographicsUI.DEMOGRAPHIC_METRICS (validated again in metric.js).
-$metricKey = preg_replace('/[^a-z_]/', '', $_GET['key'] ?? 'total_members');
-
-$pageTitle = 'Metric Trend';
-$pageIcon = 'ri-line-chart-line';
+$pageTitle = 'Reports';
+$pageIcon = 'ri-file-download-line';
 $breadcrumbs = [
     'Home' => SITE_URL . '/church/dashboard',
     'Demographics & Growth' => SITE_URL . '/church/demographics-growth',
-    'Growth Analytics' => SITE_URL . '/church/demographics-growth/growth-analytics',
-    'Metric' => null,
+    'Reports' => null,
 ];
 ?>
 <!DOCTYPE html>
@@ -33,8 +33,8 @@ $breadcrumbs = [
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>Metric Trend - Makueni West Diocese</title>
-    <meta name="Description" content="How this church's membership has grown over the years" />
+    <title>Reports - Makueni West Diocese</title>
+    <meta name="Description" content="PDF and Excel demographics reports with insights and recommendations" />
 
     <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico" type="image/x-icon" />
 
@@ -48,7 +48,6 @@ $breadcrumbs = [
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css" />
 
     <script>
-        const METRIC_KEY = <?= json_encode($metricKey) ?>;
         const USER_TERRITORY = {
             id: <?= json_encode($userTerritoryId) ?>,
             name: '<?= addslashes($userTerritoryName) ?>'
@@ -72,56 +71,40 @@ $breadcrumbs = [
                 <?php include __DIR__ . '/../../includes/page-header.php' ?>
 
                 <div class="page-toolbar">
-                    <div class="d-flex align-items-center gap-3">
-                        <span class="kpi-icon bg-primary text-white" id="metricIcon" style="width: 2.6rem; height: 2.6rem; font-size: 1.25rem;"><i class="ri-line-chart-line"></i></span>
-                        <div>
-                            <div class="fw-bold fs-5" id="metricTitle">Metric</div>
-                            <div class="page-toolbar-sub" id="metricSubtitle">Full history across every approved submission</div>
-                        </div>
-                    </div>
+                    <div class="page-toolbar-sub">PDF and Excel reports for <?= htmlspecialchars($userTerritoryName) ?>, with insights and recommendations</div>
                     <div class="page-toolbar-controls">
-                        <div id="metricSwitchWrap" class="metric-switch"></div>
-                        <?php if (canExportDemographicsReports()): ?>
-                            <button type="button" class="btn btn-outline-primary" id="exportReportBtn" data-report-key="demographics.summary"><i class="ri-download-2-line me-1"></i>Export</button>
-                        <?php endif ?>
+                        <a href="<?= SITE_URL ?>/verify-report" target="_blank" rel="noopener" class="btn btn-light"><i class="ri-shield-check-line me-1"></i>Verify a report</a>
                     </div>
                 </div>
 
-                <div class="row" id="statCardsRow"></div>
-
-                <div class="card custom-card">
-                    <div class="card-header">
-                        <div>
-                            <div class="card-title">Trend</div>
-                            <span class="card-subtitle-text" id="trendSubtitle">Every approved submission</span>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2" id="metricChips"></div>
-                        <div id="metricTrendChart"></div>
-                    </div>
+                <div class="row g-3 mb-4" id="reportCatalogue">
+                    <?php for ($i = 0; $i < 3; $i++) : ?>
+                        <div class="col-md-6 col-xl-4"><div class="skel" style="height: 11rem; border-radius: var(--v2-radius);"></div></div>
+                    <?php endfor ?>
                 </div>
 
                 <div class="card custom-card">
                     <div class="card-header">
                         <div>
-                            <div class="card-title">By period</div>
-                            <span class="card-subtitle-text">With the change from the period before</span>
+                            <div class="card-title">Your recent reports</div>
+                            <span class="card-subtitle-text">Files are kept for 7 days. Their verification codes keep working after that.</span>
                         </div>
                     </div>
                     <div class="card-body p-0">
-                        <div id="metricFilterToolbar" class="list-filterbar-wrap"></div>
+                        <div id="runsFilterToolbar" class="list-filterbar-wrap"></div>
                         <div class="table-responsive">
-                            <table class="table table-hover mb-0" id="metricTable">
-                                <thead id="metricTableHead">
+                            <table class="table table-hover mb-0" id="runsTable">
+                                <thead>
                                     <tr>
-                                        <th>Period</th>
-                                        <th>Year</th>
-                                        <th class="text-end">Value</th>
-                                        <th class="text-end">Change</th>
+                                        <th>Report</th>
+                                        <th>Format</th>
+                                        <th>Status</th>
+                                        <th>Generated</th>
+                                        <th>Verification code</th>
+                                        <th class="text-end">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody id="metricTableBody"></tbody>
+                                <tbody id="runsBody"></tbody>
                             </table>
                         </div>
                     </div>
@@ -148,7 +131,6 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/js/custom-switcher.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
-    <script src="<?= SITE_URL ?>/assets/libs/apexcharts/apexcharts.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <script src="<?= SITE_URL ?>/assets/libs/select2/select2.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/jquery.dataTables.min.js"></script>
@@ -156,9 +138,9 @@ $breadcrumbs = [
 
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js<?= assetVersion('assets/js/pages/demographics/api-handler.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js<?= assetVersion('assets/js/pages/demographics/ui-helpers.js') ?>"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/metric.js<?= assetVersion('assets/js/pages/demographics/metric.js') ?>"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/reports.js<?= assetVersion('assets/js/pages/demographics/reports.js') ?>"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => window.DemographicsMetric.init());
+        document.addEventListener('DOMContentLoaded', () => window.DemographicsReports.init());
     </script>
 </body>
 
