@@ -49,6 +49,7 @@ if (strlen($sidebarInitials) < 2) {
     $sidebarInitials = strtoupper(substr($userName, 0, 2));
 }
 $userFullName = trim($userName . ' ' . $userLastName);
+$userEmail = $currentUser['email'] ?? '';
 ?>
 
 <!-- Font Awesome CDN -->
@@ -87,37 +88,6 @@ $userFullName = trim($userName . ' ' . $userLastName);
 
                 <!-- Dynamic Modules Container -->
                 <div id="dynamic-modules-container"></div>
-
-                <!-- Account Section -->
-                <li class="slide__category">
-                    <span class="category-name">Account</span>
-                </li>
-
-                <li class="slide">
-                    <a href="<?= $baseUrl ?>/profile" class="side-menu__item sidebar-profile-row">
-                        <span class="avatar avatar-sm rounded-circle bg-primary-transparent text-primary fw-semibold flex-shrink-0">
-                            <?= htmlspecialchars($sidebarInitials) ?>
-                        </span>
-                        <span class="d-flex flex-column ms-2" style="min-width: 0;">
-                            <span class="side-menu__label fw-semibold text-truncate"><?= htmlspecialchars($userFullName) ?></span>
-                            <span class="fs-11 text-truncate" style="color: var(--menu-prime-color);"><?= htmlspecialchars($userRole) ?></span>
-                        </span>
-                    </a>
-                </li>
-
-                <li class="slide">
-                    <a href="<?= $baseUrl ?>/support" class="side-menu__item">
-                        <i class="ri-customer-service-2-line side-menu__icon"></i>
-                        <span class="side-menu__label">Help & Support</span>
-                    </a>
-                </li>
-
-                <li class="slide">
-                    <a href="javascript:void(0);" onclick="handleLogout()" class="side-menu__item">
-                        <i class="ri-logout-box-r-line side-menu__icon"></i>
-                        <span class="side-menu__label">Logout</span>
-                    </a>
-                </li>
             </ul>
 
             <div class="slide-right" id="slide-right">
@@ -128,6 +98,48 @@ $userFullName = trim($userName . ' ' . $userLastName);
         </nav>
     </div>
     <!-- END: Main Sidebar -->
+
+    <!-- START: Sidebar profile footer - pinned to the bottom of the sidebar
+         (outside the scrolling .main-sidebar, so it never scrolls away or
+         gets clipped by its overflow). Clicking it opens an account menu
+         upward; Help & Support and Logout live here instead of as their own
+         nav rows. -->
+    <div class="sidebar-profile-footer dropup">
+        <button type="button" class="sidebar-profile-toggle" data-bs-toggle="dropdown" data-bs-offset="0,8" aria-expanded="false" aria-label="Account menu">
+            <span class="avatar avatar-sm rounded-circle bg-primary text-white fw-semibold flex-shrink-0">
+                <?= htmlspecialchars($sidebarInitials) ?>
+            </span>
+            <span class="sidebar-profile-text">
+                <span class="sidebar-profile-name"><?= htmlspecialchars($userFullName) ?></span>
+                <span class="sidebar-profile-role"><?= htmlspecialchars($userRole) ?></span>
+            </span>
+            <i class="ri-more-2-fill sidebar-profile-kebab"></i>
+        </button>
+        <div class="dropdown-menu sidebar-profile-menu">
+            <div class="px-3 pt-2 pb-2">
+                <div class="fw-semibold text-dark text-truncate"><?= htmlspecialchars($userFullName) ?></div>
+                <?php if ($userEmail !== ''): ?>
+                    <div class="fs-12 text-body text-truncate"><?= htmlspecialchars($userEmail) ?></div>
+                <?php endif; ?>
+                <span class="badge bg-primary mt-2"><?= htmlspecialchars($userRole) ?></span>
+            </div>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item d-flex align-items-center" href="<?= $baseUrl ?>/profile">
+                <i class="ri-user-3-line fs-16 me-2"></i>My Profile
+            </a>
+            <a class="dropdown-item d-flex align-items-center" href="<?= $baseUrl ?>/profile#appearance">
+                <i class="ri-palette-line fs-16 me-2"></i>Appearance
+            </a>
+            <a class="dropdown-item d-flex align-items-center" href="<?= $baseUrl ?>/support">
+                <i class="ri-customer-service-2-line fs-16 me-2"></i>Help & Support
+            </a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item d-flex align-items-center text-danger" href="javascript:void(0);" onclick="handleLogout()">
+                <i class="ri-logout-box-r-line fs-16 me-2"></i>Log Out
+            </a>
+        </div>
+    </div>
+    <!-- END: Sidebar profile footer -->
 </aside>
 <!-- END: Sidebar -->
 

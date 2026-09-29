@@ -22,6 +22,10 @@
     let selectedIndex = -1;
     let modalInstance = null;
 
+    // Must match the length of sidebar.php's ICON_COLOR_CYCLE (and the
+    // gs-cat-N rules in styles.css).
+    const CATEGORY_COUNT = 6;
+
     function getCachedModules() {
         try {
             const cached = localStorage.getItem('mwd_current_modules');
@@ -61,9 +65,16 @@
     function flattenModules(cachedModules) {
         if (!cachedModules || !cachedModules.module_groups) return [];
         const items = [];
+        // Same "count only groups that actually render" indexing as
+        // sidebar.php's renderModuleGroups(), so a group gets the same
+        // category color here as its icons do in the sidebar.
+        let visibleGroupIndex = 0;
 
         cachedModules.module_groups.forEach((group) => {
             const modulesArray = Array.isArray(group.modules) ? group.modules : Object.values(group.modules || {});
+            if (modulesArray.length === 0) return;
+            const cat = (visibleGroupIndex % CATEGORY_COUNT) + 1;
+            visibleGroupIndex++;
 
             modulesArray.forEach((module) => {
                 (module.submodules || []).forEach((submodule) => {
@@ -78,6 +89,7 @@
                                 icon: module.icon,
                                 groupName: group.name,
                                 moduleName: module.name,
+                                cat,
                             });
                         });
                         return;
@@ -90,6 +102,7 @@
                         icon: module.icon,
                         groupName: group.name,
                         moduleName: module.name,
+                        cat,
                     });
                 });
             });
@@ -120,14 +133,14 @@
         filteredItems.forEach((item, index) => {
             if (item.groupName !== currentGroup) {
                 currentGroup = item.groupName;
-                html += `<div class="fw-semibold text-dark text-uppercase fs-11 px-4 pt-3 pb-1">${escapeHtml(currentGroup)}</div>`;
+                html += `<div class="global-search-group gs-cat-${item.cat}">${escapeHtml(currentGroup)}</div>`;
             }
 
             html += `
-            <a href="${item.path}" class="global-search-result${index === selectedIndex ? ' active' : ''}" data-index="${index}">
-                <i class="${getIconClass(item.icon)} me-2"></i>
-                <span>${escapeHtml(item.title)}</span>
-                <span class="fs-11 text-body ms-auto">${escapeHtml(item.moduleName)}</span>
+            <a href="${item.path}" class="global-search-result gs-cat-${item.cat}${index === selectedIndex ? ' active' : ''}" data-index="${index}">
+                <span class="global-search-icon"><i class="${getIconClass(item.icon)}"></i></span>
+                <span class="global-search-title">${escapeHtml(item.title)}</span>
+                <span class="global-search-pill">${escapeHtml(item.moduleName)}</span>
             </a>`;
         });
 
@@ -166,6 +179,13 @@
         const input = document.getElementById('globalSearchInput');
         const results = document.getElementById('globalSearchResults');
         if (!modalEl || !input || !results) return;
+
+        // Header search bar's shortcut hint - show the key Windows/Linux
+        // users actually press, not a Mac-only glyph.
+        const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+        document.querySelectorAll('[data-gs-key]').forEach((el) => {
+            el.textContent = isMac ? '⌘K' : 'Ctrl K';
+        });
 
         modalEl.addEventListener('shown.bs.modal', () => {
             allItems = flattenModules(getCachedModules());
