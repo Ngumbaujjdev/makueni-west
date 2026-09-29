@@ -1,10 +1,10 @@
 <?php
-session_start();
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header("Location: <?= SITE_URL ?>/auth/login.php");
-    exit();
-}
+// Same session/auth bootstrap as every other page (also defines the
+// appearance helpers used on <html> below). Replaces a bare
+// session_start() whose login redirect pointed at an unrendered
+// short-echo tag inside a plain PHP string (a broken URL).
+require_once __DIR__ . '/../../../includes/session-manager.php';
+require_once __DIR__ . '/../../../includes/auth-check.php';
 
 // Get budget ID from URL (can be null if accessing from sidebar)
 $budgetId = isset($_GET['id']) ? intval($_GET['id']) : null;
@@ -14,7 +14,7 @@ $printMode = isset($_GET['print']) ? $_GET['print'] === 'true' : false;
 // If no budget ID is provided, the JavaScript will load the current year's budget
 ?>
 <!DOCTYPE html>
-<html lang="en" dir="ltr" data-nav-layout="vertical" data-theme-mode="light" data-header-styles="light"
+<html lang="en" dir="ltr" class="<?= appearanceHtmlClasses() ?>" data-nav-layout="vertical" <?= appearanceThemeAttributes() ?>
     data-menu-styles="dark" data-toggled="close">
 
 <head>

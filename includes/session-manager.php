@@ -47,7 +47,7 @@ if (!function_exists('assetVersion')) {
  * backend App\Support\Appearance, docs/specs/appearance-settings-spec.md)
  * are printed on every page's <html class="..."> tag server-side, so
  * there's no flash of unstyled content on first paint. Reads a cookie
- * (not a session/API round-trip) that assets/js/pages/profile/appearance.js
+ * (not a session/API round-trip) that assets/js/pages/appearance/appearance.js
  * keeps in sync with the saved backend state whenever settings change -
  * a user who's never touched the Appearance tab has no cookie, which
  * correctly resolves to "no extra classes" (all-default settings need
@@ -62,6 +62,37 @@ if (!function_exists('appearanceHtmlClasses')) {
     {
         $raw = $_COOKIE['mwd_appearance_classes'] ?? '';
         return preg_replace('/[^a-z0-9\- ]/', '', $raw);
+    }
+}
+
+/*
+ * Theme (light/dark/system) and accent colour from the same saved
+ * Appearance settings, printed on every page's <html> tag in place of the
+ * old hardcoded data-theme-mode="light" data-header-styles="light". Same
+ * cookie approach as appearanceHtmlClasses() above, written by
+ * assets/js/pages/appearance/appearance.js (and by
+ * assets/js/utils/appearance-sync.js on a browser that has no cookie yet).
+ * "system" is printed as light plus data-theme-pref="system" - PHP can't
+ * see the OS setting, so assets/js/main.js resolves it before first paint.
+ * Both cookies are strictly validated before being echoed.
+ */
+if (!function_exists('appearanceThemeAttributes')) {
+    function appearanceThemeAttributes(): string
+    {
+        $theme = $_COOKIE['mwd_appearance_theme'] ?? 'light';
+        if (!in_array($theme, ['light', 'dark', 'system'], true)) {
+            $theme = 'light';
+        }
+        $mode = $theme === 'dark' ? 'dark' : 'light';
+
+        $attrs = 'data-theme-mode="' . $mode . '" data-header-styles="' . $mode . '" data-theme-pref="' . $theme . '"';
+
+        $rgb = $_COOKIE['mwd_appearance_accent_rgb'] ?? '';
+        if (preg_match('/^\d{1,3}, ?\d{1,3}, ?\d{1,3}$/', $rgb)) {
+            $attrs .= ' style="--primary-rgb: ' . $rgb . ';"';
+        }
+
+        return $attrs;
     }
 }
 

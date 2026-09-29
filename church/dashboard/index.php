@@ -12,7 +12,7 @@ $user = getAuthUser();
 $currentRole = getCurrentRole();
 ?>
 <!DOCTYPE html>
-<html lang="en" dir="ltr" class="<?= appearanceHtmlClasses() ?>" data-nav-layout="vertical" data-theme-mode="light" data-header-styles="light"
+<html lang="en" dir="ltr" class="<?= appearanceHtmlClasses() ?>" data-nav-layout="vertical" <?= appearanceThemeAttributes() ?>
     data-menu-styles="dark" data-toggled="close">
 
 <head>
@@ -1811,7 +1811,7 @@ $currentRole = getCurrentRole();
     <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
     <!-- Logout Handler -->
     <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js"></script>"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
     <!-- pforile js -->

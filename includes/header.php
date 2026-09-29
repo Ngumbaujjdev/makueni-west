@@ -199,9 +199,9 @@ $baseUrl = '/makueni-west';
                         </a>
                     </li>
 
-                    <!-- Appearance (profile.php opens its Appearance tab from the #appearance hash) -->
+                    <!-- Appearance (standalone page) -->
                     <li>
-                        <a class="dropdown-item d-flex" href="<?= $baseUrl ?>/profile#appearance">
+                        <a class="dropdown-item d-flex" href="<?= $baseUrl ?>/appearance">
                             <i class="ri-palette-line fs-18 me-2 op-7"></i>Appearance
                         </a>
                     </li>
@@ -242,6 +242,7 @@ $baseUrl = '/makueni-west';
     // sidebar.php's inline script does).
     window.mwdBaseUrl = '<?= $baseUrl ?>';
 </script>
+<script src="<?= $baseUrl ?>/assets/js/utils/appearance-sync.js"></script>
 <script src="<?= $baseUrl ?>/assets/js/utils/secondary-nav.js"></script>
 <script src="<?= $baseUrl ?>/assets/js/utils/global-search.js"></script>
 

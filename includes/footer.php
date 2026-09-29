@@ -2,12 +2,11 @@
     <div class="container">
         <span class="text-muted">
             Copyright © <span id="year"></span>
-            <a href="javascript:void(0);" class=" fw-semibold" style="color:#064C4F!important;">Techifinity
+            <a href="javascript:void(0);" class="fw-semibold footer-company-link">Techifinity
                 Softwares</a>. Designed with
             <span class="bi bi-heart-fill text-danger"></span> by
             <a href="javascript:void(0);">
-                <span class="fw-semibold text-primary text-decoration-underline"
-                    style="color:#B8844A!important;">Ngumbau Joshua</span>
+                <span class="fw-semibold text-decoration-underline footer-author-link">Ngumbau Joshua</span>
             </a>
             All rights reserved
         </span>

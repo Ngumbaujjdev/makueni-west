@@ -127,7 +127,7 @@ $userEmail = $currentUser['email'] ?? '';
             <a class="dropdown-item d-flex align-items-center" href="<?= $baseUrl ?>/profile">
                 <i class="ri-user-3-line fs-16 me-2"></i>My Profile
             </a>
-            <a class="dropdown-item d-flex align-items-center" href="<?= $baseUrl ?>/profile#appearance">
+            <a class="dropdown-item d-flex align-items-center" href="<?= $baseUrl ?>/appearance">
                 <i class="ri-palette-line fs-16 me-2"></i>Appearance
             </a>
             <a class="dropdown-item d-flex align-items-center" href="<?= $baseUrl ?>/support">

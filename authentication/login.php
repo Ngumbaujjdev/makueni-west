@@ -1,7 +1,6 @@
 <?php require_once __DIR__ . '/../includes/session-manager.php'; ?>
 <!DOCTYPE html>
-<html lang="en" dir="ltr" class="<?= appearanceHtmlClasses() ?>" data-nav-layout="vertical" data-vertical-style="overlay" data-theme-mode="light"
-    data-header-styles="light" data-menu-styles="light" data-toggled="close">
+<html lang="en" dir="ltr" class="<?= appearanceHtmlClasses() ?>" data-nav-layout="vertical" data-vertical-style="overlay" <?= appearanceThemeAttributes() ?> data-menu-styles="light" data-toggled="close">
 
 <head>
     <!-- Meta Data -->
