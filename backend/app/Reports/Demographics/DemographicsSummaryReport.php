@@ -16,7 +16,7 @@ use App\Support\Reports\Insights\Rules\SacramentsRule;
 use App\Support\Reports\Insights\Rules\SundaySchoolTeachersRule;
 use App\Support\Reports\Insights\Rules\YouthShareRule;
 
-/** The year at a glance: membership, groups, changes and sacraments, with insights. */
+/** The year at a glance: membership, groups, changes and Holy Communion, with insights. */
 final class DemographicsSummaryReport extends FiscalYearReport
 {
     public function key(): string
@@ -31,7 +31,7 @@ final class DemographicsSummaryReport extends FiscalYearReport
 
     public function description(): string
     {
-        return 'Membership, groups, changes and sacraments for the year, with insights and recommendations.';
+        return 'Membership, groups, changes and Holy Communion for the year or all time, with insights and recommendations.';
     }
 
     public function icon(): string
@@ -41,9 +41,8 @@ final class DemographicsSummaryReport extends FiscalYearReport
 
     public function build(ReportContext $context): ReportData
     {
-        $year = $this->year($context);
+        [$periods, $periodLabel] = $this->scope($context);
         $mode = $this->data->mode($context);
-        $periods = $this->data->yearPeriods($context, $year);
         $missing = $this->missingLabels($periods);
         $reported = array_values(array_filter($periods, fn ($p) => $p['status'] === 'approved'));
         $ssLatest = $this->latest($periods, 'sunday_school_male_count') === null && $this->latest($periods, 'sunday_school_female_count') === null
@@ -81,7 +80,7 @@ final class DemographicsSummaryReport extends FiscalYearReport
                 'Latest',
             ),
             new ReportSection(
-                'Changes & sacraments',
+                'Changes & Holy Communion',
                 [ReportColumn::text('Period', true), ...array_map(fn ($f) => ReportColumn::number(DemographicsData::LABELS[$f], 'sum'), $changeFields)],
                 array_map(fn ($p) => $row($p, $changeFields), $periods),
                 null,
@@ -104,10 +103,10 @@ final class DemographicsSummaryReport extends FiscalYearReport
         return new ReportData(
             kicker: $context->kicker('demographics'),
             title: $this->title(),
-            periodLabel: 'Fiscal year '.$year->year,
+            periodLabel: $periodLabel,
             scopeLabel: $context->scopeLabel(),
             tiles: $tiles,
-            meta: $this->meta($context, $year, $mode, $periods),
+            meta: $this->meta($context, $periodLabel, $mode, $periods),
             sections: $sections,
             insights: $insights,
         );

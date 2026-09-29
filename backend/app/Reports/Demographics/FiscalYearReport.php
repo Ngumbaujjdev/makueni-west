@@ -20,16 +20,41 @@ abstract class FiscalYearReport extends Report
             ?? FiscalYear::orderByDesc('year')->firstOrFail();
     }
 
-    /** The standard details panel for a fiscal-year report. */
-    protected function meta(ReportContext $context, FiscalYear $year, string $mode, array $periods): array
+    protected function isAllTime(ReportContext $context): bool
+    {
+        return $context->param('fiscal_year_id') === 'all';
+    }
+
+    /**
+     * The periods a report covers: one fiscal year's due periods, or - for
+     * "All time" - every approved submission.
+     *
+     * @return array{0: array, 1: string, 2: ?FiscalYear} periods, period label, the year (null for all time)
+     */
+    protected function scope(ReportContext $context): array
+    {
+        if ($this->isAllTime($context)) {
+            $periods = $this->data->allTimePeriods($context);
+            $years = array_values(array_unique(array_column($periods, 'year')));
+            $label = 'All time'.($years ? ' ('.min($years).(min($years) !== max($years) ? '-'.max($years) : '').')' : '');
+
+            return [$periods, $label, null];
+        }
+        $year = $this->year($context);
+
+        return [$this->data->yearPeriods($context, $year), 'Fiscal year '.$year->year, $year];
+    }
+
+    /** The standard details panel for a fiscal-year (or all-time) report. */
+    protected function meta(ReportContext $context, string $periodLabel, string $mode, array $periods): array
     {
         $reported = count(array_filter($periods, fn ($p) => $p['status'] === 'approved'));
 
         return [
             'Church' => $context->territory->name,
-            'Fiscal year' => (string) $year->year,
+            'Period' => $periodLabel,
             'Reporting' => DemographicsData::cadenceLabel($mode),
-            'Periods reported' => "{$reported} of ".count($periods).' due',
+            'Periods reported' => $this->isAllTime($context) ? "{$reported} approved" : "{$reported} of ".count($periods).' due',
             'Prepared by' => $context->preparedBy(),
             'Prepared' => now()->format('j M Y, H:i'),
         ];

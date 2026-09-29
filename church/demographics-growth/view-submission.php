@@ -114,7 +114,7 @@ $breadcrumbs = [
                         <div class="card custom-card">
                             <div class="card-header">
                                 <div>
-                                    <div class="card-title">Changes &amp; sacraments</div>
+                                    <div class="card-title">Changes &amp; Holy Communion</div>
                                     <span class="card-subtitle-text" id="changesSubtitle">Recorded this period</span>
                                 </div>
                             </div>

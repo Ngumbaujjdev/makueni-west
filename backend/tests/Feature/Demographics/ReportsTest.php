@@ -112,14 +112,15 @@ class ReportsTest extends TestCase
 
     // 1. Catalogue per level --------------------------------------------------
 
-    public function test_catalogue_lists_the_five_demographics_reports_for_a_church(): void
+    public function test_catalogue_lists_the_nine_demographics_reports_for_a_church(): void
     {
         Sanctum::actingAs($this->pastor);
 
         $keys = collect($this->getJson('/api/reports/catalogue?territory_id='.$this->myChurch->id)->assertOk()->json('data'))->pluck('key');
 
         $this->assertEqualsCanonicalizing(
-            ['demographics.summary', 'demographics.monthly', 'demographics.spiritual', 'demographics.growth', 'demographics.submission'],
+            ['demographics.summary', 'demographics.monthly', 'demographics.spiritual', 'demographics.baptisms', 'demographics.holy_communion',
+                'demographics.conversions', 'demographics.departures', 'demographics.growth', 'demographics.submission'],
             $keys->all(),
         );
     }
@@ -218,6 +219,59 @@ class ReportsTest extends TestCase
         $this->assertSame('L', $pdf->chooseOrientation($wide, [['January 2025', ...array_fill(0, 16, '12,345')]]));
     }
 
+    public function test_a_whole_report_has_one_orientation(): void
+    {
+        $wide = new ReportSection('Wide', [ReportColumn::text('Period'), ...array_map(fn ($i) => ReportColumn::number("Measurement {$i}"), range(1, 16))],
+            [['January 2025', ...array_fill(0, 16, '12,345')]]);
+        $narrow = new ReportSection('Narrow', [ReportColumn::text('Period'), ReportColumn::number('Members')], [['January 2025', 600]]);
+        $pdf = new DioceseReportPdf(new ReportData('k', 't', 'p', 's'));
+
+        $this->assertSame('L', $pdf->orientationFor([$narrow, $wide]), 'Any wide table makes the whole report landscape');
+        $this->assertSame('P', $pdf->orientationFor([$narrow, $narrow]));
+
+        // Every page of the built document uses that one orientation.
+        $built = new DioceseReportPdf(new ReportData('k', 't', 'p', 's', sections: [$narrow, $wide, $narrow]));
+        $built->build();
+        foreach (range(1, $built->getNumPages()) as $page) {
+            $built->setPage($page);
+            $this->assertGreaterThan($built->getPageHeight(), $built->getPageWidth(), "Page {$page} should be landscape");
+        }
+    }
+
+    // All time + activity reports -----------------------------------------------
+
+    public function test_all_time_covers_every_approved_submission(): void
+    {
+        Sanctum::actingAs($this->pastor);
+        $older = FiscalYear::create(['year' => 2024, 'start_date' => '2024-01-01', 'end_date' => '2024-12-31']);
+        ChurchDemographic::create([
+            'territory_type' => 'church', 'territory_id' => $this->myChurch->id, 'fiscal_year_id' => $older->id,
+            'fiscal_month_id' => FiscalMonth::where('number', 6)->value('id'), 'total_members' => 500, 'new_members_count' => 10, 'status' => 'approved',
+        ]);
+
+        $data = $this->postJson('/api/reports/preview', $this->body(['fiscal_year_id' => 'all']))->assertOk()->json('data');
+
+        $this->assertSame('All time (2024-2025)', $data['period_label']);
+        $changes = collect($data['sections'])->firstWhere('heading', 'Changes & Holy Communion');
+        $this->assertSame(4, $changes['row_count']);
+        $this->assertSame('21', $changes['totals'][1], 'New members summed across every approved submission (10 + 4 + 6 + 1)');
+        $this->postJson('/api/reports/preview', $this->body(['fiscal_year_id' => 'nope']))->assertStatus(422);
+    }
+
+    public function test_an_activity_report_covers_just_that_activity(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $data = $this->postJson('/api/reports/preview', $this->body(['report_key' => 'demographics.baptisms']))->assertOk()->json('data');
+
+        $this->assertSame('Baptisms', $data['title']);
+        $this->assertSame('6', $data['tiles'][0]['value'], '2 baptisms in each of 3 reported months');
+        $byPeriod = $data['sections'][0];
+        $this->assertSame(['Period', 'Baptisms'], array_column($byPeriod['columns'], 'header'));
+        $this->assertTrue($byPeriod['has_totals']);
+        $this->assertFalse($data['sections'][1]['has_totals'], 'The membership comparison has no totals');
+    }
+
     // 5. Queued generation ------------------------------------------------------
 
     public function test_a_queued_pdf_is_generated_with_a_fingerprint_and_verification_code(): void
@@ -270,7 +324,10 @@ class ReportsTest extends TestCase
     {
         Sanctum::actingAs($this->pastor);
         $uuid = $this->postJson('/api/reports', $this->body())->json('data.uuid');
-        $this->get("/api/reports/runs/{$uuid}/download")->assertOk()->assertHeader('content-type', 'application/pdf');
+        $run = ReportRun::where('uuid', $uuid)->first();
+        $this->get("/api/reports/runs/{$uuid}/download")->assertOk()
+            ->assertHeader('content-type', 'application/pdf')
+            ->assertHeader('content-length', (string) $run->file_size);
 
         Sanctum::actingAs($this->otherPastor);
         $this->getJson("/api/reports/runs/{$uuid}")->assertNotFound();

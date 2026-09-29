@@ -20,9 +20,9 @@ use TCPDF;
  * Layout rules kept from TuqioReportPdf:
  *   - Columns are measured from their content. Number columns get what their
  *     widest value needs and are never cut; text columns share the rest.
- *   - Orientation is automatic, per table: portrait when the columns fit,
- *     landscape when they don't. A table that needs the other orientation
- *     starts a new page.
+ *   - Orientation is automatic and decided once for the whole report:
+ *     portrait when every table fits, landscape when any table doesn't
+ *     (TuqioReportPdf's orientationFor()). One report, one orientation.
  *   - One type size per role; a value too wide for a text column is
  *     ellipsized, never shrunk. Long headings wrap onto two lines.
  * Insights and recommendations are the last part, and only when the report
@@ -191,8 +191,7 @@ class DioceseReportPdf extends TCPDF
         $this->SetAutoPageBreak(true, 30);
 
         $sections = array_values(array_filter($this->data->sections, fn (ReportSection $s) => $s->rows !== [] || $s->note));
-        $first = $sections[0] ?? null;
-        $this->AddPage($first && $first->rows !== [] ? $this->chooseOrientation($first->columns, $first->displayRows()) : 'P');
+        $this->AddPage($this->orientationFor($sections));
 
         $cw = $this->contentWidth();
         $this->titleBlock($cw);
@@ -219,13 +218,10 @@ class DioceseReportPdf extends TCPDF
     private function section(ReportSection $section, bool $first): void
     {
         $rows = $section->displayRows();
-        $orientation = $rows === [] ? $this->CurOrientation : $this->chooseOrientation($section->columns, $rows);
 
-        // A table that needs the other orientation gets its own page.
-        if (! $first && $orientation !== $this->CurOrientation) {
-            $this->AddPage($orientation);
-        } elseif (! $first && $this->GetY() + 40 > $this->getPageHeight() - $this->getBreakMargin()) {
-            $this->AddPage($orientation);
+        // Don't strand a heading at the foot of a page.
+        if (! $first && $this->GetY() + 40 > $this->getPageHeight() - $this->getBreakMargin()) {
+            $this->AddPage($this->CurOrientation);
         }
 
         $cw = $this->contentWidth();
@@ -506,6 +502,22 @@ class DioceseReportPdf extends TCPDF
         }
         $this->Cell($w, 4.4, $cut ? rtrim($label).'…' : $label, 0, 1, $align);
         $this->SetFontSpacing(0);
+    }
+
+    /**
+     * The whole report's orientation: landscape if any table needs it.
+     *
+     * @param  ReportSection[]  $sections
+     */
+    public function orientationFor(array $sections): string
+    {
+        foreach ($sections as $section) {
+            if ($section->rows !== [] && $this->chooseOrientation($section->columns, $section->displayRows()) === 'L') {
+                return 'L';
+            }
+        }
+
+        return 'P';
     }
 
     /** What each column needs, in mm. A heading only has to fit its longest word - long headings wrap. */

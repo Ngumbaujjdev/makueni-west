@@ -8,15 +8,20 @@
  *
  *   ReportCenter.open({ territoryId, reportKey, params: { fiscal_year_id, years, demographic_id } })
  *
- * Modal (includes/report-modal.php): choose (report, period, PDF/Excel) ->
- * preview (what will be in the file: tiles, each table's rows and whether it
- * has totals, the insights) -> working (a queued run, polled for its stage
- * and progress) -> done (download / open) | error (retry).
+ * Modal (includes/report-modal.php), with a Choose / Preview / Download step
+ * indicator in its header:
+ *   choose  - report (grouped reports show as one card with option pills),
+ *             period (years + All time, or 1/3/5/All), PDF/Excel toggle
+ *   preview - what will be in the file: figures, each table's first rows and
+ *             whether it has totals, the insights
+ *   working - a progress ring and a checklist of build stages. Each stage
+ *             stays visible for a moment even when the build takes under a
+ *             second, so you can see what happened.
+ *   done    - the file, with real download progress (streamed, Content-Length)
  *
  * Monitor (the Reports icon in includes/header.php): recent runs with live
- * status. It only polls while a run is queued or running, and it keeps
- * polling on other pages (a localStorage flag), so a report started here
- * shows up as ready wherever you are.
+ * status and downloads. It only polls while something is building, and
+ * carries on across pages (a localStorage flag).
  *
  * Loaded from header.php, before Bootstrap and Toast - everything that
  * needs them waits for DOMContentLoaded.
@@ -30,11 +35,37 @@ const ReportCenter = (function () {
 
   const ACTIVE_FLAG = "mwd_reports_active";
   const FORMAT_LABEL = { pdf: "PDF", xlsx: "Excel" };
+  const FORMAT_HINT = {
+    pdf: "For printing and sharing, with a QR code that proves it's genuine.",
+    xlsx: "For working with the numbers - one sheet per table.",
+  };
   const TONE = {
     good: { cls: "success", label: "Going well", icon: "ri-checkbox-circle-line" },
     watch: { cls: "secondary", label: "Keep an eye on", icon: "ri-eye-line" },
     concern: { cls: "danger", label: "Needs attention", icon: "ri-error-warning-line" },
   };
+  /** Icon tile colour per report, from the category palette. */
+  const COLORS = {
+    "demographics.summary": "primary",
+    "demographics.monthly": "purple",
+    "demographics.spiritual": "success",
+    "demographics.baptisms": "primary",
+    "demographics.holy_communion": "secondary",
+    "demographics.conversions": "purple",
+    "demographics.departures": "danger",
+    "demographics.growth": "info",
+    "demographics.submission": "pink",
+  };
+  const GROUP_SHORT = { "demographics.spiritual": "All four" };
+  const STAGES = [
+    { key: "queued", label: "Waiting in the queue", at: 0 },
+    { key: "collect", label: "Collecting approved submissions", at: 15 },
+    { key: "insights", label: "Working out insights", at: 45 },
+    { key: "draw", label: "Drawing the PDF", xlsx: "Building the workbook", at: 70 },
+    { key: "ready", label: "Ready", at: 100 },
+  ];
+  const STAGE_DWELL = 420; // ms each stage stays on screen at least
+  const RING = 2 * Math.PI * 52;
 
   const state = {
     territoryId: null,
@@ -49,11 +80,16 @@ const ReportCenter = (function () {
     pollTimer: null,
     trayTimer: null,
     lastRuns: {},
+    shownStage: 0,
+    targetStage: 0,
+    stageTimer: null,
+    finished: null,
   };
 
   const $ = (id) => document.getElementById(id);
   const esc = (s) =>
     String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const textOn = (color) => (color === "secondary" || color === "warning" ? "text-dark" : "text-white");
 
   // ==========================================================================
   // API
@@ -75,43 +111,114 @@ const ReportCenter = (function () {
     }
   }
 
-  async function fetchFile(run) {
+  /**
+   * Downloads a run's file with real progress (the API sends Content-Length;
+   * without it onProgress gets null and callers show a spinner instead).
+   */
+  async function fetchFile(run, onProgress = () => {}) {
     const res = await fetch(`${AppConfig.API_BASE_URL}/reports/runs/${run.uuid}/download`, { headers: headers(false) });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       throw new Error(data.message || "Couldn't download the file.");
     }
-    return res.blob();
+    const total = Number(res.headers.get("Content-Length")) || run.file_size || 0;
+    if (!res.body || !res.body.getReader) {
+      onProgress(null);
+      return res.blob();
+    }
+    const reader = res.body.getReader();
+    const chunks = [];
+    let received = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+      onProgress(total ? Math.min(100, Math.round((received / total) * 100)) : null);
+    }
+    onProgress(100);
+    return new Blob(chunks, { type: run.format === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   }
 
-  async function download(run) {
+  function saveBlob(blob, name) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+
+  /** Download with progress shown on `button` (a Download button, or a tray icon button). */
+  async function download(run, button = null, { compact = false } = {}) {
+    if (!run) return;
+    const original = button ? button.innerHTML : null;
+    const paint = (pct) => {
+      if (!button) return;
+      if (compact) {
+        button.innerHTML = miniRing(pct);
+      } else {
+        button.classList.add("is-downloading");
+        button.innerHTML = `<span class="rp-btn-fill" style="width: ${pct ?? 100}%"></span><span class="rp-btn-label">${pct == null ? '<span class="spinner-border spinner-border-sm me-1"></span>Downloading' : `Downloading ${pct}%`}</span>`;
+      }
+      const bar = $("rpDlBar");
+      if (bar && !compact) {
+        bar.hidden = false;
+        bar.querySelector("i").style.width = `${pct ?? 100}%`;
+      }
+    };
     try {
-      const blob = await fetchFile(run);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = run.file_name || `report.${run.format}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      if (button) button.disabled = true;
+      paint(0);
+      const blob = await fetchFile(run, paint);
+      saveBlob(blob, run.file_name || `report.${run.format}`);
+      if (button) {
+        button.classList.remove("is-downloading");
+        button.classList.add("is-saved");
+        button.innerHTML = compact ? '<i class="ri-check-line"></i>' : '<i class="ri-check-line me-1"></i>Saved';
+      }
     } catch (e) {
       toast("error", e.message);
+    } finally {
+      if (button) {
+        setTimeout(() => {
+          button.disabled = false;
+          button.classList.remove("is-saved", "is-downloading");
+          button.innerHTML = original;
+        }, 2200);
+      }
     }
   }
 
-  async function openPdf(run) {
+  async function openPdf(run, button) {
     // Open the tab first (a popup opened after an await gets blocked).
     const tab = window.open("", "_blank");
+    const original = button?.innerHTML;
     try {
-      const blob = await fetchFile(run);
+      if (button) button.disabled = true;
+      const blob = await fetchFile(run, (pct) => {
+        if (button) button.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${pct == null ? "Opening" : `${pct}%`}`;
+      });
       const url = URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
       if (tab) tab.location.href = url;
       else window.location.href = url;
     } catch (e) {
       if (tab) tab.close();
       toast("error", e.message);
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.innerHTML = original;
+      }
     }
+  }
+
+  function miniRing(pct) {
+    const c = 2 * Math.PI * 8;
+    const offset = pct == null ? c * 0.75 : c - (c * pct) / 100;
+    return `<svg class="rp-mini-ring${pct == null ? " is-spinning" : ""}" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" class="rp-ring-track"></circle><circle cx="10" cy="10" r="8" class="rp-ring-bar" style="stroke-dasharray: ${c}; stroke-dashoffset: ${offset}"></circle></svg>`;
   }
 
   function toast(type, message) {
@@ -130,31 +237,42 @@ const ReportCenter = (function () {
     document.querySelectorAll("#reportModal .rp-step").forEach((el) => {
       el.hidden = el.dataset.rpStep !== step;
     });
-    const footer = $("rpFooter");
+    const dot = { choose: "choose", preview: "preview", working: "download", done: "download", error: "download" }[step];
+    const order = ["choose", "preview", "download"];
+    document.querySelectorAll("#rpStepper [data-step-dot]").forEach((li) => {
+      const i = order.indexOf(li.dataset.stepDot);
+      li.classList.toggle("is-on", li.dataset.stepDot === dot);
+      li.classList.toggle("is-done", i < order.indexOf(dot) || (step === "done" && li.dataset.stepDot === "download"));
+    });
+
     const buttons = {
       choose: `
         <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" id="rpToPreview"><i class="ri-eye-line me-1"></i>Preview</button>`,
+        <button type="button" class="btn btn-primary" id="rpToPreview">Preview<i class="ri-arrow-right-line ms-1"></i></button>`,
       preview: `
-        <button type="button" class="btn btn-light me-auto" id="rpBack"><i class="ri-arrow-left-line me-1"></i>Back</button>
+        <button type="button" class="btn btn-light" id="rpBack"><i class="ri-arrow-left-line me-1"></i>Back</button>
         <button type="button" class="btn btn-success" id="rpGenerate"><i class="ri-file-download-line me-1"></i>Generate ${FORMAT_LABEL[state.format]}</button>`,
       working: `<button type="button" class="btn btn-light" data-bs-dismiss="modal">Keep working</button>`,
       done: `
-        <button type="button" class="btn btn-light me-auto" id="rpAnother"><i class="ri-add-line me-1"></i>Make another</button>
+        <button type="button" class="btn btn-light" id="rpAnother"><i class="ri-add-line me-1"></i>Make another</button>
         ${state.run?.format === "pdf" ? '<button type="button" class="btn btn-outline-primary" id="rpOpen"><i class="ri-external-link-line me-1"></i>Open</button>' : ""}
-        <button type="button" class="btn btn-primary" id="rpDownload"><i class="ri-download-2-line me-1"></i>Download</button>`,
+        <button type="button" class="btn btn-primary rp-dl-btn" id="rpDownload"><i class="ri-download-2-line me-1"></i>Download</button>`,
       error: `
-        <button type="button" class="btn btn-light me-auto" id="rpBack"><i class="ri-arrow-left-line me-1"></i>Back</button>
+        <button type="button" class="btn btn-light" id="rpBack"><i class="ri-arrow-left-line me-1"></i>Back</button>
         <button type="button" class="btn btn-primary" id="rpRetry"><i class="ri-refresh-line me-1"></i>Try again</button>`,
     };
-    footer.innerHTML = buttons[step];
+    $("rpFooter").innerHTML = buttons[step];
+    $("rpSummary").hidden = step !== "choose";
     $("rpToPreview")?.addEventListener("click", preview);
     $("rpBack")?.addEventListener("click", () => showStep("choose"));
     $("rpGenerate")?.addEventListener("click", generate);
     $("rpRetry")?.addEventListener("click", generate);
-    $("rpAnother")?.addEventListener("click", () => showStep("choose"));
-    $("rpDownload")?.addEventListener("click", () => download(state.run));
-    $("rpOpen")?.addEventListener("click", () => openPdf(state.run));
+    $("rpAnother")?.addEventListener("click", () => {
+      $("reportModalScope").textContent = "PDF or Excel, with insights and recommendations";
+      showStep("choose");
+    });
+    $("rpDownload")?.addEventListener("click", (e) => download(state.run, e.currentTarget));
+    $("rpOpen")?.addEventListener("click", (e) => openPdf(state.run, e.currentTarget));
   }
 
   /**
@@ -166,11 +284,10 @@ const ReportCenter = (function () {
     state.reportKey = opts.reportKey || null;
     state.params = { ...(opts.params || {}) };
     state.format = opts.format || "pdf";
-    document.querySelectorAll('#reportModal input[name="rp_format"]').forEach((r) => {
-      r.checked = r.value === state.format;
-    });
+    setFormat(state.format);
+    $("reportModalScope").textContent = "PDF or Excel, with insights and recommendations";
 
-    $("rpReports").innerHTML = '<span class="skel" style="height: 4.2rem;"></span><span class="skel" style="height: 4.2rem;"></span>';
+    $("rpReports").innerHTML = '<span class="skel" style="height: 4rem;"></span><span class="skel" style="height: 4rem;"></span><span class="skel" style="height: 4rem;"></span>';
     $("rpPeriod").innerHTML = "";
     showStep("choose");
     modal().show();
@@ -198,22 +315,82 @@ const ReportCenter = (function () {
     return state.catalogue.find((r) => r.key === state.reportKey);
   }
 
+  function setFormat(format) {
+    state.format = format;
+    document.querySelectorAll('#reportModal input[name="rp_format"]').forEach((r) => {
+      r.checked = r.value === format;
+    });
+    $("rpFormatHint").textContent = FORMAT_HINT[format];
+    updateSummary();
+  }
+
+  function iconTile(key, icon, size = "") {
+    const color = COLORS[key] || "primary";
+    return `<span class="rp-tile-icon ${size} bg-${color} ${textOn(color)}"><i class="${esc(icon)}"></i></span>`;
+  }
+
   function renderChoose() {
-    $("rpReports").innerHTML = state.catalogue
-      .map((r) => {
-        const needsSubmission = r.inputs.includes("submission") && !state.params.demographic_id;
+    const needsSubmission = (r) => r.inputs.includes("submission") && !state.params.demographic_id;
+    // Grouped reports (Spiritual activities + its four activity reports)
+    // render as one card with pills; the rest as rows.
+    const groups = [];
+    const cards = [];
+    state.catalogue.forEach((r) => {
+      if (r.group) {
+        let g = groups.find((x) => x.name === r.group);
+        if (!g) {
+          g = { name: r.group, reports: [] };
+          groups.push(g);
+          cards.push({ group: g });
+        }
+        g.reports.push(r);
+      } else {
+        cards.push({ report: r });
+      }
+    });
+
+    $("rpReports").innerHTML = cards
+      .map(({ report: r, group: g }) => {
+        if (r) {
+          const off = needsSubmission(r);
+          return `
+            <label class="rp-report${off ? " is-disabled" : ""}${r.key === state.reportKey ? " is-on" : ""}" title="${off ? "Open a submission to export it" : ""}">
+              <input type="radio" name="rp_report" value="${r.key}" ${r.key === state.reportKey ? "checked" : ""} ${off ? "disabled" : ""}>
+              ${iconTile(r.key, r.icon)}
+              <span class="rp-report-text"><strong>${esc(r.title)}</strong><small>${off ? "Open a submission, then export it from there." : esc(r.description)}</small></span>
+              <i class="ri-checkbox-circle-fill rp-report-tick"></i>
+            </label>`;
+        }
+        const active = g.reports.some((x) => x.key === state.reportKey);
+        const lead = g.reports[0];
         return `
-          <label class="rp-report${needsSubmission ? " is-disabled" : ""}" title="${needsSubmission ? "Open a submission to export it" : ""}">
-            <input type="radio" name="rp_report" value="${r.key}" ${r.key === state.reportKey ? "checked" : ""} ${needsSubmission ? "disabled" : ""}>
-            <span class="rp-report-icon"><i class="${esc(r.icon)}"></i></span>
-            <span class="rp-report-text"><strong>${esc(r.title)}</strong><small>${needsSubmission ? "Open a submission, then export it from there." : esc(r.description)}</small></span>
-            <i class="ri-check-line rp-report-tick"></i>
-          </label>`;
+          <div class="rp-report rp-group${active ? " is-on" : ""}">
+            ${iconTile(lead.key, lead.icon)}
+            <span class="rp-report-text">
+              <strong>${esc(g.name)}</strong>
+              <small>All four together, or one activity on its own.</small>
+              <span class="rp-pills">
+                ${g.reports
+                  .map(
+                    (x) => `
+                  <label class="rp-pill${x.key === state.reportKey ? " is-on" : ""}">
+                    <input type="radio" name="rp_report" value="${x.key}" ${x.key === state.reportKey ? "checked" : ""}>
+                    <span><span class="count-dot bg-${COLORS[x.key] || "primary"}"></span>${esc(GROUP_SHORT[x.key] || x.title)}</span>
+                  </label>`,
+                  )
+                  .join("")}
+              </span>
+            </span>
+            <i class="ri-checkbox-circle-fill rp-report-tick"></i>
+          </div>`;
       })
       .join("");
+
     $("rpReports").querySelectorAll('input[name="rp_report"]').forEach((input) =>
       input.addEventListener("change", () => {
         state.reportKey = input.value;
+        $("rpReports").querySelectorAll(".rp-report").forEach((card) => card.classList.toggle("is-on", !!card.querySelector("input:checked")));
+        $("rpReports").querySelectorAll(".rp-pill").forEach((pill) => pill.classList.toggle("is-on", !!pill.querySelector("input:checked")));
         renderPeriod();
       }),
     );
@@ -232,30 +409,51 @@ const ReportCenter = (function () {
     if (!report) return;
 
     if (report.inputs.includes("fiscal_year")) {
-      $("rpPeriodTitle").textContent = "Fiscal year";
+      $("rpPeriodTitle").textContent = "Period";
       const thisYear = new Date().getFullYear();
       if (!state.params.fiscal_year_id) state.params.fiscal_year_id = (state.years.find((y) => y.year === thisYear) || state.years[state.years.length - 1])?.id;
-      wrap.innerHTML = segmented("year", state.years.map((y) => ({ value: y.id, label: y.year })), state.params.fiscal_year_id);
+      wrap.innerHTML = segmented("year", [...state.years.map((y) => ({ value: y.id, label: y.year })), { value: "all", label: "All time" }], state.params.fiscal_year_id);
       wrap.querySelectorAll("[data-year]").forEach((btn) =>
         btn.addEventListener("click", () => {
-          state.params.fiscal_year_id = Number(btn.dataset.year);
+          state.params.fiscal_year_id = btn.dataset.year === "all" ? "all" : Number(btn.dataset.year);
           wrap.querySelectorAll("[data-year]").forEach((b) => b.classList.toggle("active", b === btn));
+          updateSummary();
         }),
       );
     } else if (report.inputs.includes("years")) {
       $("rpPeriodTitle").textContent = "Range";
       state.params.years = state.params.years || "3";
-      wrap.innerHTML = segmented("range", [{ value: "1", label: "1 year" }, { value: "3", label: "3 years" }, { value: "5", label: "5 years" }, { value: "all", label: "All" }], state.params.years);
+      wrap.innerHTML = segmented("range", [{ value: "1", label: "1 year" }, { value: "3", label: "3 years" }, { value: "5", label: "5 years" }, { value: "all", label: "All time" }], state.params.years);
       wrap.querySelectorAll("[data-range]").forEach((btn) =>
         btn.addEventListener("click", () => {
           state.params.years = btn.dataset.range;
           wrap.querySelectorAll("[data-range]").forEach((b) => b.classList.toggle("active", b === btn));
+          updateSummary();
         }),
       );
     } else {
       $("rpPeriodTitle").textContent = "Submission";
-      wrap.innerHTML = `<span class="soft-chip soft-primary"><i class="ri-file-list-3-line"></i>${esc(state.params.submission_label || "The submission you're viewing")}</span>`;
+      wrap.innerHTML = `<span class="soft-chip soft-primary rp-period-chip"><i class="ri-file-list-3-line"></i>${esc(state.params.submission_label || "The submission you're viewing")}</span>`;
     }
+    updateSummary();
+  }
+
+  function periodText() {
+    const report = current();
+    if (!report) return "";
+    if (report.inputs.includes("fiscal_year")) {
+      if (state.params.fiscal_year_id === "all") return "All time";
+      return String(state.years?.find((y) => String(y.id) === String(state.params.fiscal_year_id))?.year || "");
+    }
+    if (report.inputs.includes("years")) return state.params.years === "all" ? "All time" : `Last ${state.params.years} year${state.params.years === "1" ? "" : "s"}`;
+    return state.params.submission_label || "This submission";
+  }
+
+  function updateSummary() {
+    const report = state.catalogue && current();
+    const el = $("rpSummary");
+    if (!el || !report) return;
+    el.innerHTML = `${iconTile(report.key, report.icon, "is-sm")}<span><b>${esc(report.title)}</b> · ${esc(periodText())} · ${FORMAT_LABEL[state.format]}</span>`;
   }
 
   function requestBody() {
@@ -270,7 +468,6 @@ const ReportCenter = (function () {
   // --------------------------------------------------------------- preview
 
   async function preview() {
-    state.format = document.querySelector('#reportModal input[name="rp_format"]:checked')?.value || "pdf";
     const btn = $("rpToPreview");
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Preparing preview';
@@ -281,25 +478,26 @@ const ReportCenter = (function () {
       showStep("error");
       return;
     }
+    const report = current();
+    $("rpSummaryBar").innerHTML = `
+      ${iconTile(report.key, report.icon, "is-sm")}
+      <span class="rp-summarybar-text"><b>${esc(res.data.title)}</b><span>${esc(res.data.period_label)} · ${FORMAT_LABEL[state.format]}</span></span>
+      <button type="button" class="rp-edit" id="rpEdit"><i class="ri-pencil-line me-1"></i>Change</button>`;
+    $("rpEdit").addEventListener("click", () => showStep("choose"));
     $("rpPreview").innerHTML = renderPreview(res.data);
-    $("reportModalScope").textContent = `${res.data.period_label} · ${res.data.scope_label}`;
+    $("reportModalScope").textContent = res.data.scope_label;
     showStep("preview");
   }
 
   function renderPreview(d) {
-    const tiles = d.tiles
-      .map((t) => `<div class="rp-tile"><span>${esc(t.label)}</span><strong>${esc(t.value)}</strong></div>`)
-      .join("");
+    const tiles = d.tiles.map((t) => `<div class="rp-tile"><span>${esc(t.label)}</span><strong>${esc(t.value)}</strong></div>`).join("");
 
     const sections = d.sections
       .map((s) => {
-        const head = s.columns.map((c) => `<th class="${c.align === "R" ? "text-end" : ""}">${esc(c.header)}</th>`).join("");
-        const rows = s.rows
-          .map((r) => `<tr>${r.map((v, i) => `<td class="${s.columns[i]?.align === "R" ? "text-end" : ""}">${esc(v)}</td>`).join("")}</tr>`)
-          .join("");
-        const totals = s.has_totals
-          ? `<tr class="rp-totals">${s.totals.map((v, i) => `<td class="${s.columns[i]?.align === "R" ? "text-end" : ""}">${i > 0 && v === "-" ? "" : esc(v)}</td>`).join("")}</tr>`
-          : "";
+        const align = (i) => (s.columns[i]?.align === "R" ? "text-end" : "");
+        const head = s.columns.map((c, i) => `<th class="${align(i)}">${esc(c.header)}</th>`).join("");
+        const rows = s.rows.map((r) => `<tr>${r.map((v, i) => `<td class="${align(i)}">${esc(v)}</td>`).join("")}</tr>`).join("");
+        const totals = s.has_totals ? `<tr class="rp-totals">${s.totals.map((v, i) => `<td class="${align(i)}">${i > 0 && v === "-" ? "" : esc(v)}</td>`).join("")}</tr>` : "";
         const more = s.row_count > s.rows.length ? `<div class="rp-more">+ ${s.row_count - s.rows.length} more row${s.row_count - s.rows.length === 1 ? "" : "s"} in the file</div>` : "";
         return `
           <div class="rp-section">
@@ -325,25 +523,20 @@ const ReportCenter = (function () {
           <ul class="rp-insights">${d.insights
             .map((i) => {
               const t = TONE[i.tone] || TONE.watch;
-              return `<li><span class="soft-chip soft-${t.cls}"><i class="${t.icon}"></i>${t.label}</span><span>${esc(i.title)}</span></li>`;
+              return `<li class="is-${i.tone}"><i class="${t.icon}"></i><span><b>${esc(i.title)}</b><small>${esc(t.label)}</small></span></li>`;
             })
             .join("")}</ul>
         </div>`
-      : `<div class="rp-more mt-2">This report has no insights for this period, so the file won't have an insights part.</div>`;
+      : `<div class="rp-note"><i class="ri-information-line"></i>No insights for this period, so the file won't have an insights part.</div>`;
 
     return `
-      <div class="rp-preview-head">
-        <span class="rp-kicker">${esc(d.kicker)}</span>
-        <h5>${esc(d.title)}</h5>
-        <span class="rp-scope">${esc(d.period_label)} · ${esc(d.scope_label)}</span>
-      </div>
       ${tiles ? `<div class="rp-tiles">${tiles}</div>` : ""}
       ${sections}
       ${insights}
-      <div class="rp-format-note"><i class="${state.format === "pdf" ? "ri-qr-code-line" : "ri-file-excel-2-line"}"></i>${
+      <div class="rp-note"><i class="${state.format === "pdf" ? "ri-qr-code-line" : "ri-file-excel-2-line"}"></i>${
         state.format === "pdf"
-          ? "The PDF lays out each table portrait or landscape to fit, and every page carries a QR code that proves it's genuine."
-          : "The Excel file has a Summary sheet, one sheet per table (totals as real formulas) and an Insights sheet."
+          ? "One orientation for the whole report - landscape when a table needs the width - and a QR code on every page that proves it's genuine."
+          : "A Summary sheet, one sheet per table (totals as real formulas) and an Insights sheet."
       }</div>`;
   }
 
@@ -363,20 +556,67 @@ const ReportCenter = (function () {
     }
     state.run = res.data;
     state.queuedSince = Date.now();
+    state.shownStage = 0;
+    state.targetStage = 0;
+    state.finished = null;
+    renderStages();
+    setRing(0);
+    $("rpWorkingTitle").textContent = `Building ${res.data.title || "your report"}`;
     setActive(true);
-    showWorking(res.data);
     showStep("working");
     pollRun();
     refreshTray();
   }
 
-  function showWorking(run) {
-    const pct = Math.max(4, run.progress || 0);
-    $("rpBar").style.width = `${pct}%`;
-    $("rpPct").textContent = `${run.progress || 0}%`;
-    $("rpWorkingTitle").textContent = `Building ${run.title || "your report"}`;
-    const waiting = run.status === "queued" && Date.now() - state.queuedSince > 20000;
-    $("rpStage").textContent = waiting ? "Waiting for the report worker to pick this up…" : run.stage || "Working";
+  function stageIndex(run) {
+    if (run.status === "ready") return STAGES.length - 1;
+    if (run.status === "queued") return 0;
+    let index = 1;
+    STAGES.forEach((s, i) => {
+      if (i > 0 && i < STAGES.length - 1 && (run.progress || 0) >= s.at) index = i;
+    });
+    return index;
+  }
+
+  function renderStages() {
+    const waiting = state.shownStage === 0 && Date.now() - state.queuedSince > 20000;
+    $("rpStages").innerHTML = STAGES.map((s, i) => {
+      const label = i === 0 && waiting ? "Waiting for the report worker…" : state.format === "xlsx" && s.xlsx ? s.xlsx : s.label;
+      const cls = i < state.shownStage || (i === state.shownStage && i === STAGES.length - 1) ? "is-done" : i === state.shownStage ? "is-active" : "";
+      const icon = cls === "is-done" ? "ri-checkbox-circle-fill" : cls === "is-active" ? "ri-loader-4-line" : "ri-checkbox-blank-circle-line";
+      return `<li class="${cls}"><i class="${icon}"></i>${label}</li>`;
+    }).join("");
+  }
+
+  function setRing(pct) {
+    const bar = $("rpRingBar");
+    bar.style.strokeDasharray = RING;
+    bar.style.strokeDashoffset = RING - (RING * pct) / 100;
+    $("rpPct").textContent = `${pct}%`;
+  }
+
+  /**
+   * Walks the checklist one stage at a time towards the run's real stage,
+   * so a build that finishes in under a second still shows each step.
+   */
+  function advanceStages() {
+    if (state.stageTimer) return;
+    const step = () => {
+      if (state.shownStage < state.targetStage) {
+        state.shownStage += 1;
+        renderStages();
+        setRing(STAGES[state.shownStage].at);
+        state.stageTimer = setTimeout(step, STAGE_DWELL);
+        return;
+      }
+      state.stageTimer = null;
+      if (state.finished && state.shownStage === STAGES.length - 1) {
+        const run = state.finished;
+        state.finished = null;
+        setTimeout(() => showDone(run), 350);
+      }
+    };
+    state.stageTimer = setTimeout(step, STAGE_DWELL);
   }
 
   function pollRun() {
@@ -386,16 +626,18 @@ const ReportCenter = (function () {
       const res = await api("GET", `/reports/runs/${state.run.uuid}`);
       if (!res.ok) return pollRun();
       state.run = res.data;
-      if (res.data.status === "ready") return showDone(res.data);
       if (res.data.status === "failed") {
         $("rpError").textContent = res.data.error || "The report couldn't be built.";
         showStep("error");
         refreshTray();
         return;
       }
-      showWorking(res.data);
-      pollRun();
-    }, state.run.status === "queued" ? 1500 : 800);
+      state.targetStage = Math.max(state.targetStage, stageIndex(res.data));
+      if (res.data.status === "ready") state.finished = res.data;
+      else pollRun();
+      if (state.shownStage === 0) renderStages(); // refresh the "waiting for the worker" hint
+      advanceStages();
+    }, state.run.status === "queued" ? 900 : 500);
   }
 
   function showDone(run) {
@@ -410,10 +652,11 @@ const ReportCenter = (function () {
     const pdf = run.format === "pdf";
     return `
       <div class="rp-file-card">
-        <span class="rp-format-icon bg-${pdf ? "danger" : "success"} text-white"><i class="${pdf ? "ri-file-pdf-line" : "ri-file-excel-2-line"}"></i></span>
+        <span class="rp-tile-icon bg-${pdf ? "danger" : "success"} text-white"><i class="${pdf ? "ri-file-pdf-line" : "ri-file-excel-2-line"}"></i></span>
         <span class="rp-file-text">
           <strong>${esc(run.file_name)}</strong>
-          <small>${FORMAT_LABEL[run.format]} · ${size(run.file_size)}${run.verification_code ? ` · Code <b>${esc(run.verification_code)}</b>` : ""}</small>
+          <small>${FORMAT_LABEL[run.format]} · ${size(run.file_size)}${run.verification_code ? ` · Code <b class="rp-code">${esc(run.verification_code)}</b>` : ""}</small>
+          <span class="rp-progress rp-progress-sm" id="rpDlBar" hidden><i style="width: 0%"></i></span>
         </span>
       </div>`;
   }
@@ -481,21 +724,18 @@ const ReportCenter = (function () {
           .map((r) => {
             const s = STATUS[r.status] || STATUS.queued;
             const pdf = r.format === "pdf";
+            const building = r.status === "running" || r.status === "queued";
             const actions =
               r.status === "ready" && !r.expired
                 ? `<button type="button" class="report-tray-btn" data-tray-download="${r.uuid}" title="Download"><i class="ri-download-2-line"></i></button>`
                 : "";
             return `
               <div class="report-tray-item">
-                <span class="rp-format-icon bg-${pdf ? "danger" : "success"} text-white"><i class="${pdf ? "ri-file-pdf-line" : "ri-file-excel-2-line"}"></i></span>
+                <span class="rp-tile-icon is-sm bg-${pdf ? "danger" : "success"} text-white"><i class="${pdf ? "ri-file-pdf-line" : "ri-file-excel-2-line"}"></i></span>
                 <span class="report-tray-text">
                   <strong>${esc(r.title || "Report")}</strong>
                   <small>${esc(r.period_label || r.scope_label || "")}</small>
-                  ${
-                    r.status === "running" || r.status === "queued"
-                      ? `<span class="rp-progress rp-progress-sm"><i style="width: ${Math.max(4, r.progress)}%"></i></span>`
-                      : ""
-                  }
+                  ${building ? `<span class="rp-progress rp-progress-sm"><i style="width: ${Math.max(4, r.progress)}%"></i></span>` : ""}
                 </span>
                 <span class="badge bg-${s.cls}${s.cls === "secondary" ? " text-dark" : ""}">${r.expired ? "Expired" : s.label}</span>
                 ${actions}
@@ -505,7 +745,7 @@ const ReportCenter = (function () {
       : '<div class="report-tray-empty">Reports you generate show up here.</div>';
 
     list.querySelectorAll("[data-tray-download]").forEach((btn) =>
-      btn.addEventListener("click", () => download(runs.find((r) => r.uuid === btn.dataset.trayDownload))),
+      btn.addEventListener("click", () => download(runs.find((r) => r.uuid === btn.dataset.trayDownload), btn, { compact: true })),
     );
 
     if (active > 0) state.trayTimer = setTimeout(refreshTray, 2500);
@@ -513,14 +753,9 @@ const ReportCenter = (function () {
 
   function init() {
     if (!$("reportModal")) return;
-    document.querySelectorAll('#reportModal input[name="rp_format"]').forEach((r) =>
-      r.addEventListener("change", () => {
-        state.format = r.value;
-      }),
-    );
+    document.querySelectorAll('#reportModal input[name="rp_format"]').forEach((r) => r.addEventListener("change", () => setFormat(r.value)));
     $("reportModal").addEventListener("hidden.bs.modal", () => {
       clearTimeout(state.pollTimer);
-      $("reportModalScope").textContent = "PDF or Excel, with insights and recommendations";
       if (state.run && (state.run.status === "queued" || state.run.status === "running")) refreshTray();
     });
     $("reportTrayToggle")?.addEventListener("show.bs.dropdown", refreshTray);
@@ -536,7 +771,7 @@ const ReportCenter = (function () {
         const v = trigger.dataset[k.replace(/_([a-z])/g, (_, c) => c.toUpperCase())];
         if (v) params[k] = /^\d+$/.test(v) ? Number(v) : v;
       });
-      const territoryId = trigger.dataset.territoryId || window.USER_TERRITORY?.id || (typeof USER_TERRITORY !== "undefined" ? USER_TERRITORY.id : null);
+      const territoryId = trigger.dataset.territoryId || (typeof USER_TERRITORY !== "undefined" ? USER_TERRITORY.id : null);
       open({ territoryId, reportKey: trigger.dataset.reportKey, params });
     });
   }

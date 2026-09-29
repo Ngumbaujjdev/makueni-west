@@ -14,7 +14,7 @@ use App\Support\Reports\Insights\Rules\ReportingGapsRule;
 /**
  * Every figure for every period of the year - the on-screen Monthly
  * Statistics table as two tables (membership & groups, then changes &
- * sacraments), because 16 columns side by side won't fit even landscape
+ * Holy Communion), because 16 columns side by side won't fit even landscape
  * without cutting the numbers.
  */
 final class MonthlyStatisticsReport extends FiscalYearReport
@@ -52,9 +52,8 @@ final class MonthlyStatisticsReport extends FiscalYearReport
 
     public function build(ReportContext $context): ReportData
     {
-        $year = $this->year($context);
+        [$periods, $periodLabel] = $this->scope($context);
         $mode = $this->data->mode($context);
-        $periods = $this->data->yearPeriods($context, $year);
         $missing = $this->missingLabels($periods);
 
         $table = fn (array $fields, string $total) => [
@@ -70,7 +69,7 @@ final class MonthlyStatisticsReport extends FiscalYearReport
         return new ReportData(
             kicker: $context->kicker('demographics'),
             title: $this->title(),
-            periodLabel: 'Fiscal year '.$year->year,
+            periodLabel: $periodLabel,
             scopeLabel: $context->scopeLabel(),
             tiles: [
                 ['label' => 'Members', 'value' => number_format((int) $this->latest($periods, 'total_members')), 'tone' => 'primary'],
@@ -78,10 +77,10 @@ final class MonthlyStatisticsReport extends FiscalYearReport
                 ['label' => 'Departures', 'value' => number_format((int) $this->sum($periods, 'transferred_out_count')), 'tone' => 'danger'],
                 ['label' => 'Reported', 'value' => "{$reported} of ".count($periods), 'tone' => $missing === [] ? 'success' : 'warning'],
             ],
-            meta: $this->meta($context, $year, $mode, $periods),
+            meta: $this->meta($context, $periodLabel, $mode, $periods),
             sections: [
                 new ReportSection('Membership & groups', $headCols, $headRows, trim(($notReported ?? '').' The last row is the latest reported headcount.'), 'Latest'),
-                new ReportSection('Changes & sacraments', $flowCols, $flowRows, null, 'Year total'),
+                new ReportSection('Changes & Holy Communion', $flowCols, $flowRows, null, 'Year total'),
             ],
             insights: InsightEngine::run([
                 new ReportingGapsRule,

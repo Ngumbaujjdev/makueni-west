@@ -6,7 +6,7 @@
  *
  * The intake form, in the same shape as v1-events-backend's Create Event:
  * step bar -> one step at a time (Period, Membership, Groups, Changes &
- * sacraments, Review) with a live preview beside it -> a finish screen.
+ * Holy Communion, Review) with a live preview beside it -> a finish screen.
  *
  * - Period: fiscal year (Select2) + a grid of period chips showing each
  *   period's status. A draft chip opens that draft; a submitted/approved
@@ -26,7 +26,7 @@ const DemographicsTracking = (function () {
 
   const UI = DemographicsUI;
 
-  const STEP_NAMES = ["Period", "Membership", "Groups", "Changes & sacraments", "Review"];
+  const STEP_NAMES = ["Period", "Membership", "Groups", "Changes & Holy Communion", "Review"];
   const STEP_FIELDS = {
     2: ["total_members", "male_count", "female_count", "youth_count", "seniors_count"],
     3: ["womens_fellowship_count", "mens_fellowship_count", "sunday_school_male_count", "sunday_school_female_count", "sunday_school_teachers_count"],
@@ -816,7 +816,7 @@ const DemographicsTracking = (function () {
       { step: 1, title: "Period", icon: "ri-calendar-2-line", rows: [["Period", periodLabel() || "Not picked"], ["Reporting", (CADENCE[state.mode] || CADENCE.monthly).label]] },
       { step: 2, title: "Membership", icon: "ri-team-line", fields: STEP_FIELDS[2] },
       { step: 3, title: "Groups", icon: "ri-group-line", fields: STEP_FIELDS[3] },
-      { step: 4, title: "Changes & sacraments", icon: "ri-hand-heart-line", fields: STEP_FIELDS[4] },
+      { step: 4, title: "Changes & Holy Communion", icon: "ri-hand-heart-line", fields: STEP_FIELDS[4] },
     ];
     $id("reviewGroups").innerHTML = `
       ${prev ? `<div class="mb-3"><span class="soft-chip soft-primary"><i class="ri-arrow-left-right-line"></i>Changes shown against ${UI.demographicPeriodLabel(prev)}</span></div>` : ""}
