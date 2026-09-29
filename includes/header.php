@@ -202,10 +202,14 @@ $baseUrl = '/makueni-west';
      No new API calls; shows the active module's submodules as tabs. -->
 <div id="secondary-nav-bar"></div>
 
+<?php include __DIR__ . '/global-search.php' ?>
+
 <script>
-    // Shared base URL for secondary-nav.js (a static file, so it can't use
-    // PHP interpolation directly the way sidebar.php's inline script does).
+    // Shared base URL for secondary-nav.js/global-search.js (both static
+    // files, so they can't use PHP interpolation directly the way
+    // sidebar.php's inline script does).
     window.mwdBaseUrl = '<?= $baseUrl ?>';
 </script>
 <script src="<?= $baseUrl ?>/assets/js/utils/secondary-nav.js"></script>
+<script src="<?= $baseUrl ?>/assets/js/utils/global-search.js"></script>
 

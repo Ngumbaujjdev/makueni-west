@@ -28633,6 +28633,39 @@ a:hover {
     background-color: #2CA4BF;
 }
 
+/* Global command-palette search (#searchModal, includes/global-search.php +
+   assets/js/utils/global-search.js) - the result rows/keyboard hints are
+   custom because Bootstrap's own list-group has no "active via keyboard
+   arrow, not just :hover/click" state to key off. */
+.global-search-results {
+    max-height: 55vh;
+    overflow-y: auto;
+    padding-block: 0.25rem;
+}
+
+.global-search-result {
+    display: flex;
+    align-items: center;
+    padding: 0.55rem 1rem;
+    color: var(--diocese-black, #0D0D0D);
+    text-decoration: none;
+}
+
+.global-search-result:hover,
+.global-search-result.active {
+    background-color: rgba(44, 164, 191, 0.1);
+    color: #2CA4BF;
+}
+
+#searchModal kbd {
+    padding: 0.1rem 0.4rem;
+    font-size: 0.7rem;
+    color: var(--diocese-black, #0D0D0D);
+    background-color: var(--light, #f1f4f9);
+    border: 1px solid var(--default-border, #e9edf4);
+    border-radius: 0.25rem;
+}
+
 /* Reusable solid-pill tab style - same "whole background, not an
    underline" treatment as #secondary-nav-bar above, just as a class any
    other nav-tabs bar in the app can opt into (e.g. the Attendance Reports
