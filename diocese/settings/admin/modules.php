@@ -1170,31 +1170,31 @@ include __DIR__ . '/../../../includes/page-header.php';
 
     <!-- Toast JS -->
     <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
 
     <!-- Constants -->
     <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
 
     <!-- Auth Helpers -->
-    <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js<?= assetVersion('assets/js/utils/auth-helpers.js') ?>"></script>
 
     <!-- Logout Handler -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js<?= assetVersion('assets/js/pages/authentication/logout.js') ?>"></script>
 
     <!-- API Handler -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/api-handler.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/api-handler.js<?= assetVersion('assets/js/pages/system-administration/api-handler.js') ?>"></script>
 
     <!-- Dragula JS for drag-and-drop -->
     <script src="<?= SITE_URL ?>/assets/libs/dragula/dragula.min.js"></script>
 
     <!-- Module Management JS -->
     <script
-        src="<?= SITE_URL ?>/assets/js/pages/system-administration/module-management/modules.js">
+        src="<?= SITE_URL ?>/assets/js/pages/system-administration/module-management/modules.js<?= assetVersion('assets/js/pages/system-administration/module-management/modules.js') ?>">
     </script>
 
     <!-- Delete Modals JS -->
     <script
-        src="<?= SITE_URL ?>/assets/js/pages/system-administration/module-management/delete-modals.js">
+        src="<?= SITE_URL ?>/assets/js/pages/system-administration/module-management/delete-modals.js<?= assetVersion('assets/js/pages/system-administration/module-management/delete-modals.js') ?>">
     </script>
 
     <!-- Initialize Modules Page -->

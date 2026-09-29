@@ -58,6 +58,7 @@ const AttendanceMinistries = (function () {
 
     DemographicsUI.renderFilterToolbar("filterToolbar", {
       searchPlaceholder: "Search by ministry or notes...",
+      dateRange: true,
       filters: [
         {
           id: "ministryTypeFilter",
@@ -72,9 +73,10 @@ const AttendanceMinistries = (function () {
       order: [[0, "desc"]],
       nonSortableColumns: [4],
       hideDefaultSearch: true,
+      noun: "gatherings",
     });
 
-    DemographicsUI.wireFilterToolbar("filterToolbar", table, [{ id: "ministryTypeFilter", columnIndex: 1, exact: true }]);
+    DemographicsUI.wireFilterToolbar("filterToolbar", table, [{ id: "ministryTypeFilter", columnIndex: 1, exact: true }], { noun: "gatherings" });
   }
 
   function renderStats(rows) {

@@ -184,7 +184,7 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/js/simplebar.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/custom-switcher.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
 
     <!-- jQuery + DataTables (search/filter/pagination) -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
@@ -192,9 +192,9 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/data-tables/responsive/2.3.0/js/dataTables.responsive.min.js"></script>
 
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-gathering-types.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js<?= assetVersion('assets/js/pages/demographics/api-handler.js') ?>"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js<?= assetVersion('assets/js/pages/demographics/ui-helpers.js') ?>"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-gathering-types.js<?= assetVersion('assets/js/pages/demographics/attendance-gathering-types.js') ?>"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => window.AttendanceGatheringTypes.init());
     </script>

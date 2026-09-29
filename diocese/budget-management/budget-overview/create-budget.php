@@ -427,7 +427,7 @@ include __DIR__ . '/../../../includes/page-header.php';
 
     <!-- Toast JS -->
     <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
 
     <!-- Flatpickr JS -->
     <script src="<?= SITE_URL ?>/assets/libs/flatpickr/flatpickr.min.js"></script>
@@ -436,10 +436,10 @@ include __DIR__ . '/../../../includes/page-header.php';
     <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
 
     <!-- Budget API Handler -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/budget-management/api-handler.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/budget-management/api-handler.js<?= assetVersion('assets/js/pages/budget-management/api-handler.js') ?>"></script>
 
     <!-- Create Budget JS -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/budget-management/create-budget.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/budget-management/create-budget.js<?= assetVersion('assets/js/pages/budget-management/create-budget.js') ?>"></script>
 </body>
 
 </html>

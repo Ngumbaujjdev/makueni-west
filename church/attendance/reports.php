@@ -467,7 +467,7 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/js/simplebar.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/custom-switcher.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/libs/apexcharts/apexcharts.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/libs/fullcalendar/main.min.js"></script>
 
@@ -477,9 +477,9 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/data-tables/responsive/2.3.0/js/dataTables.responsive.min.js"></script>
 
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-reports.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js<?= assetVersion('assets/js/pages/demographics/api-handler.js') ?>"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js<?= assetVersion('assets/js/pages/demographics/ui-helpers.js') ?>"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-reports.js<?= assetVersion('assets/js/pages/demographics/attendance-reports.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-pdf-export.js<?= assetVersion('assets/js/pages/demographics/attendance-pdf-export.js') ?>"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => window.AttendanceReports.init());

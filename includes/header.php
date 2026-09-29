@@ -242,7 +242,7 @@ $baseUrl = '/makueni-west';
     // sidebar.php's inline script does).
     window.mwdBaseUrl = '<?= $baseUrl ?>';
 </script>
-<script src="<?= $baseUrl ?>/assets/js/utils/appearance-sync.js"></script>
-<script src="<?= $baseUrl ?>/assets/js/utils/secondary-nav.js"></script>
-<script src="<?= $baseUrl ?>/assets/js/utils/global-search.js"></script>
+<script src="<?= $baseUrl ?>/assets/js/utils/appearance-sync.js<?= assetVersion('assets/js/utils/appearance-sync.js') ?>"></script>
+<script src="<?= $baseUrl ?>/assets/js/utils/secondary-nav.js<?= assetVersion('assets/js/utils/secondary-nav.js') ?>"></script>
+<script src="<?= $baseUrl ?>/assets/js/utils/global-search.js<?= assetVersion('assets/js/utils/global-search.js') ?>"></script>
 

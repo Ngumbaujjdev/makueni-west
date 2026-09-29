@@ -408,13 +408,13 @@ $printMode = isset($_GET['print']) ? $_GET['print'] === 'true' : false;
 
     <!-- Toast JS -->
     <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
 
     <!-- Constants -->
     <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
 
     <!-- Budget Details JS -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/budget-management/budget-details.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/budget-management/budget-details.js<?= assetVersion('assets/js/pages/budget-management/budget-details.js') ?>"></script>
 
     <script>
         // Initialize budget details with ID from URL

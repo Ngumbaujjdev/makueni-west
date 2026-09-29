@@ -222,7 +222,7 @@ $toggles = [
     <script src="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/simplebar.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/appearance/appearance.js<?= assetVersion('assets/js/pages/appearance/appearance.js') ?>"></script>
 </body>
 

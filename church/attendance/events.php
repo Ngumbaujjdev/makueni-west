@@ -123,7 +123,7 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/js/simplebar.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/custom-switcher.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
 
     <!-- jQuery + DataTables (search/filter/pagination) -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
@@ -132,11 +132,11 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/data-tables/responsive/2.3.0/js/dataTables.responsive.min.js"></script>
 
     <script src="<?= SITE_URL ?>/assets/libs/apexcharts/apexcharts.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js<?= assetVersion('assets/js/pages/demographics/api-handler.js') ?>"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js<?= assetVersion('assets/js/pages/demographics/ui-helpers.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/scripts/choices.min.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-form-shared.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-events.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-form-shared.js<?= assetVersion('assets/js/pages/demographics/attendance-form-shared.js') ?>"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-events.js<?= assetVersion('assets/js/pages/demographics/attendance-events.js') ?>"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => window.AttendanceEvents.init());
     </script>

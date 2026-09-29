@@ -58,6 +58,7 @@ const AttendanceEvents = (function () {
 
     DemographicsUI.renderFilterToolbar("filterToolbar", {
       searchPlaceholder: "Search by event or notes...",
+      dateRange: true,
       filters: [
         {
           id: "eventTypeFilter",
@@ -72,9 +73,10 @@ const AttendanceEvents = (function () {
       order: [[0, "desc"]],
       nonSortableColumns: [4],
       hideDefaultSearch: true,
+      noun: "events",
     });
 
-    DemographicsUI.wireFilterToolbar("filterToolbar", table, [{ id: "eventTypeFilter", columnIndex: 1, exact: true }]);
+    DemographicsUI.wireFilterToolbar("filterToolbar", table, [{ id: "eventTypeFilter", columnIndex: 1, exact: true }], { noun: "events" });
   }
 
   function renderStats(rows) {

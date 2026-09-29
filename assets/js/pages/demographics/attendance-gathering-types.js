@@ -88,12 +88,13 @@ const AttendanceGatheringTypes = (function () {
       order: [[0, "asc"]],
       nonSortableColumns: [3],
       hideDefaultSearch: true,
+      noun: "types",
     });
 
     DemographicsUI.wireFilterToolbar("filterToolbar", table, [
       { id: "categoryFilter", columnIndex: 1, exact: true },
       { id: "statusFilter", columnIndex: 2, exact: true },
-    ]);
+    ], { noun: "types" });
   }
 
   function renderStats(types) {
@@ -149,37 +150,51 @@ const AttendanceGatheringTypes = (function () {
       return;
     }
 
+    const UI = DemographicsUI;
     tbody.innerHTML = allTypes
       .map((t) => {
         const icon = t.icon || t.category?.icon || "ri-calendar-event-line";
-        const statusBadge = t.is_active
-          ? '<span class="badge bg-success"><i class="ri-checkbox-circle-fill me-1"></i>Active</span>'
-          : '<span class="badge bg-secondary"><i class="ri-close-circle-fill me-1"></i>Inactive</span>';
+        const category = t.category?.name || "-";
+        const status = t.is_active ? "Active" : "Inactive";
+        const statusPill = t.is_active
+          ? UI.pill("Active", "success", "ri-checkbox-circle-fill")
+          : UI.pill("Inactive", "danger", "ri-close-circle-fill");
+
+        const editBtn = CAN_WRITE_GATHERING_TYPES
+          ? `<button type="button" class="btn btn-sm btn-primary-light" onclick="AttendanceGatheringTypes.openEditModal(${t.id})" title="Edit" aria-label="Edit">
+               <i class="ri-edit-line"></i>
+             </button>`
+          : "";
 
         return `
-          <tr>
-            <td class="fw-semibold"><i class="${icon} me-2 text-primary"></i>${escapeHtml(t.name)}</td>
-            <td><span class="badge bg-primary-transparent">${escapeHtml(t.category?.name || "-")}</span></td>
-            <td class="text-center">${statusBadge}</td>
+          <tr data-row-id="${t.id}">
+            <td data-search="${escapeHtml(t.name)}" data-order="${escapeHtml(t.name)}">
+              <div class="d-flex align-items-center gap-2">
+                ${UI.avatarTile(icon, t.is_active ? UI.colorFor(t.name) : "secondary")}
+                <span class="fw-semibold">${escapeHtml(t.name)}</span>
+              </div>
+            </td>
+            <td data-search="${escapeHtml(category)}">${UI.pill(escapeHtml(category), UI.colorFor(category))}</td>
+            <td data-search="${status}">${statusPill}</td>
             <td class="text-end">
-              <div class="btn-group">
-                <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown">
-                  <i class="ri-settings-3-line me-1"></i>Actions
-                </button>
-                <ul class="dropdown-menu">
-                  ${CAN_WRITE_GATHERING_TYPES ? `
-                  <li><a class="dropdown-item" href="javascript:void(0);" onclick="AttendanceGatheringTypes.openEditModal(${t.id})">
-                    <i class="ri-edit-line me-2 text-info"></i>Edit
-                  </a></li>
-                  <li><a class="dropdown-item" href="javascript:void(0);" onclick="AttendanceGatheringTypes.toggleActive(${t.id})">
-                    <i class="ri-toggle-line me-2 text-warning"></i>${t.is_active ? "Deactivate" : "Activate"}
-                  </a></li>
-                  <li><hr class="dropdown-divider"></li>
-                  ` : ""}
-                  <li><a class="dropdown-item" href="javascript:void(0);" onclick="AttendanceGatheringTypes.openAuditModal(${t.id})">
-                    <i class="ri-history-line me-2 text-secondary"></i>View Activity Log
-                  </a></li>
-                </ul>
+              <div class="d-inline-flex align-items-center gap-1">
+                ${editBtn}
+                <div class="dropdown">
+                  <button type="button" class="btn btn-sm btn-light list-kebab" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-label="More actions">
+                    <i class="ri-more-2-fill"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    ${CAN_WRITE_GATHERING_TYPES ? `
+                    <li><a class="dropdown-item" href="javascript:void(0);" onclick="AttendanceGatheringTypes.toggleActive(${t.id})">
+                      <i class="${t.is_active ? "ri-toggle-line text-danger" : "ri-toggle-fill text-success"} me-2"></i>${t.is_active ? "Deactivate" : "Activate"}
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    ` : ""}
+                    <li><a class="dropdown-item" href="javascript:void(0);" onclick="AttendanceGatheringTypes.openAuditModal(${t.id})">
+                      <i class="ri-history-line me-2 text-primary"></i>View activity log
+                    </a></li>
+                  </ul>
+                </div>
               </div>
             </td>
           </tr>`;

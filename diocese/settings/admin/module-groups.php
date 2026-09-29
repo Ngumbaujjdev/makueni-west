@@ -398,22 +398,22 @@ include __DIR__ . '/../../../includes/page-header.php';
 
     <!-- Toast JS -->
     <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
 
     <!-- Constants -->
     <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
 
     <!-- Auth Helpers -->
-    <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js<?= assetVersion('assets/js/utils/auth-helpers.js') ?>"></script>
 
     <!-- Logout Handler -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js<?= assetVersion('assets/js/pages/authentication/logout.js') ?>"></script>
 
     <!-- API Handler -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/api-handler.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/api-handler.js<?= assetVersion('assets/js/pages/system-administration/api-handler.js') ?>"></script>
 
     <!-- Module Groups Management JS -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/module-groups/module-groups.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/module-groups/module-groups.js<?= assetVersion('assets/js/pages/system-administration/module-groups/module-groups.js') ?>"></script>
 
     <!-- Initialize Module Groups Page -->
     <script>

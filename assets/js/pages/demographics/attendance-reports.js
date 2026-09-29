@@ -626,15 +626,16 @@ const AttendanceReports = (function () {
     }
 
     const tableId = `${prefix}RecordsTable`;
-    DemographicsUI.initListDataTable(tableId, {
+    const table = DemographicsUI.initListDataTable(tableId, {
       searchPlaceholder: "Search records...",
       order: [[0, "desc"]],
       hideDefaultSearch: true,
     });
 
-    const table = $(`#${tableId}`).DataTable();
     DemographicsUI.renderFilterToolbar(`${prefix}FilterToolbar`, { searchPlaceholder: "Search records..." });
-    DemographicsUI.wireFilterToolbar(`${prefix}FilterToolbar`, table, []);
+    // Several tabs each have their own toolbar on this page, so don't
+    // mirror them into the one shared URL.
+    DemographicsUI.wireFilterToolbar(`${prefix}FilterToolbar`, table, [], { urlSync: false });
     wireSortByDropdown(prefix, tableId, showGatheringColumn ? 2 : 1);
   }
 
@@ -653,6 +654,8 @@ const AttendanceReports = (function () {
 
     container.querySelectorAll("[data-sort]").forEach((item) => {
       item.addEventListener("click", () => {
+        // No DataTable when the list is empty (nothing to sort).
+        if (!$.fn.DataTable.isDataTable(`#${tableId}`)) return;
         const table = $(`#${tableId}`).DataTable();
         if (item.dataset.sort === "date-asc") table.order([0, "asc"]).draw();
         else if (item.dataset.sort === "total-desc") table.order([totalColumnIndex, "desc"]).draw();

@@ -499,23 +499,23 @@ include __DIR__ . '/../../../includes/page-header.php';
 
     <!-- Toast JS -->
     <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
 
     <!-- Constants -->
     <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
 
     <!-- Utils -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management-utils.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/user-management-utils.js<?= assetVersion('assets/js/pages/system-administration/user-management/user-management-utils.js') ?>"></script>
 
     <!-- API Handler -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/api-handler.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/api-handler.js<?= assetVersion('assets/js/pages/system-administration/api-handler.js') ?>"></script>
 
     <!-- Edit User Wizard -->
     <script>
         // Pass user ID to JavaScript
         const EDIT_USER_ID = <?php echo $editUserId; ?>;
     </script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/edit-user-wizard.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/user-management/edit-user-wizard.js<?= assetVersion('assets/js/pages/system-administration/user-management/edit-user-wizard.js') ?>"></script>
 </body>
 
 </html>

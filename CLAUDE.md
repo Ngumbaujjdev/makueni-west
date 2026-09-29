@@ -128,6 +128,16 @@ These are already mapped onto the YNEX template's Bootstrap variables (`--primar
 - **Stat/summary cards follow the same no-muted rule.** Solid backgrounds, full-contrast numbers and labels — even a "neutral" or "inactive" stat still reads as deliberate, not a faded/light variant standing in for "less important."
 - **Card accents carry data, not decoration.** Don't add a plain colored border/stripe to a card as a stand-in for content — it reads as decoration, not information. When a card needs visual distinction, use something that's actually informative instead: an icon avatar in the card's color, a trend badge, or a small sparkline.
 - **Semantic colors don't have to be brand colors.** Universal meanings — increase/decrease, success/failure, warning — should keep their conventional colors (green = increase/good, red = decrease/bad) even where that isn't a diocese brand token, because instant recognition matters more than palette purity for these signals. This is already why `success` stays the template's green instead of being remapped (see Brand Tokens above) — trend indicators and pass/fail states follow the same logic, not just success.
+- **List pages never reload the whole page.**
+  - Filters, search, paging, add/edit/toggle and their results update in place with `fetch`. No `location.reload()`, and no GET form submits for filtering.
+  - Filter state is mirrored into the URL with `history.replaceState`, so a refresh or a shared link keeps it.
+  - Use the shared helpers in `assets/js/pages/demographics/ui-helpers.js`: `renderFilterToolbar` + `wireFilterToolbar` for the filter bar, and `initListDataTable` for the table. The latter also handles the footer, pagination and no-results state.
+- **Stat cards carry analysis where the data allows:**
+  - a this-period vs last-period delta, via `periodDelta`
+  - a sparkline, via `renderSparkCard` + `monthlySeries`
+  - a meaningful sub-line
+  Not just a bare number. Cards in a row use different colours from the category palette, not one colour repeated.
+- **Loading states:** skeletons for a page's first load; spinners only inside a button while an action runs.
 - Match existing page structure (`includes/header.php` / `sidebar.php` / `footer.php` includes, `requirePermission()` call at the top of every protected page) rather than inventing a new page-layout pattern.
 - **Sidebar category icon colors are an explicit, scoped exception to "brand tokens only."** `includes/sidebar.php`'s per-module-group icon color cycle (`ICON_COLOR_CYCLE`) uses 6 colors, not just the 4 real diocese brand semantics (teal/gold/green/red) — a 4-way cycle over a tier's 5 module groups read as flat/repetitive. The extra 2 (`--purple-rgb`/`--pink-rgb`) are unused-elsewhere Bootstrap semantic variables already sitting in `styles.css`'s `:root`, not new hex values. This is sidebar information-coding (which category is which), not brand identity — brand tokens still govern buttons/links/primary UI everywhere else, including this same sidebar's active-state teal.
 
