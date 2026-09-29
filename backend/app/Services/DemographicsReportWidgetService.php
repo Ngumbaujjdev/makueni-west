@@ -43,7 +43,7 @@ class DemographicsReportWidgetService
 {
     private const SPIRITUAL_METRICS = [
         'baptisms_count' => ['label' => 'Baptisms', 'icon' => 'ri-drop-line', 'color' => 'primary'],
-        'communion_participants_count' => ['label' => 'Communion', 'icon' => 'ri-cup-line', 'color' => 'warning'],
+        'communion_participants_count' => ['label' => 'Holy Communion', 'icon' => 'ri-cup-line', 'color' => 'warning'],
         'conversions_count' => ['label' => 'New Converts', 'icon' => 'ri-user-add-line', 'color' => 'success'],
         'transferred_out_count' => ['label' => 'Departures', 'icon' => 'ri-user-unfollow-line', 'color' => 'danger'],
     ];
