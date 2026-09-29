@@ -212,7 +212,7 @@ $steps = [
                                                 </div>
                                                 <div class="row g-3">
                                                     <div class="col-sm-6 col-xl-4"><?= renderNumberTile('baptisms_count', ['label' => 'Baptisms', 'icon' => 'ri-drop-line', 'color' => 'primary']) ?></div>
-                                                    <div class="col-sm-6 col-xl-4"><?= renderNumberTile('communion_participants_count', ['label' => 'Communion', 'icon' => 'ri-cup-line', 'color' => 'secondary']) ?></div>
+                                                    <div class="col-sm-6 col-xl-4"><?= renderNumberTile('communion_participants_count', ['label' => 'Holy Communion', 'icon' => 'ri-cup-line', 'color' => 'secondary']) ?></div>
                                                     <div class="col-sm-6 col-xl-4"><?= renderNumberTile('conversions_count', ['label' => 'Conversions', 'icon' => 'ri-heart-line', 'color' => 'purple']) ?></div>
                                                 </div>
                                             <?php else : ?>

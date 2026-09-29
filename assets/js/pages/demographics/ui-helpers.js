@@ -319,6 +319,16 @@ const DemographicsUI = (function () {
     return alpha === 1 ? `rgb(${rgb})` : `rgba(${rgb}, ${alpha})`;
   }
 
+  /** Any rgb()/hex colour with the given alpha. */
+  function withAlpha(color, alpha) {
+    const c = String(color || "");
+    if (c.startsWith("#")) return hexToRgba(c, alpha);
+    const m = c.match(/rgba?\(([^)]+)\)/);
+    if (!m) return c;
+    const [r, g, b] = m[1].split(",").map((x) => x.trim());
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
   /** Renders every not-yet-mounted [data-spark] element inside root. */
   function mountSparklines(root = document) {
     if (typeof ApexCharts === "undefined") return;
@@ -340,9 +350,10 @@ const DemographicsUI = (function () {
         },
         series: [{ name: "", data: series.data }],
         labels: series.labels,
-        stroke: { width: 2, curve: "smooth" },
-        fill: { type: "solid", opacity: 0.16 },
-        colors: [color],
+        // Transparency lives in the fill colour - see renderTrendChart().
+        stroke: { width: 2, curve: "smooth", colors: [color] },
+        fill: { type: "solid" },
+        colors: [withAlpha(color, 0.16)],
         tooltip: { x: { show: true }, y: { title: { formatter: () => "" } }, marker: { show: false } },
       }).render();
     });
@@ -504,18 +515,38 @@ const DemographicsUI = (function () {
   // shared by Growth Analytics, the metric detail page and "View trend" links.
   // ==========================================================================
 
+  // `parts` - metrics recorded by gender. The metric page shows them as a
+  // stacked chart with a card and a table column per part.
   const num0 = (v) => Number(v) || 0;
   const DEMOGRAPHIC_METRICS = {
-    total_members: { label: "Total members", icon: "ri-team-line", color: "primary", get: (r) => r.total_members },
+    total_members: {
+      label: "Total members",
+      icon: "ri-team-line",
+      color: "primary",
+      get: (r) => r.total_members,
+      parts: [
+        { key: "male_count", label: "Male", icon: "ri-men-line", color: "info" },
+        { key: "female_count", label: "Female", icon: "ri-women-line", color: "pink" },
+      ],
+    },
     youth: { label: "Youth (13-35)", icon: "ri-user-star-line", color: "success", get: (r) => r.youth_count },
     womens_fellowship: { label: "Women's fellowship", icon: "ri-women-line", color: "pink", get: (r) => r.womens_fellowship_count },
     mens_fellowship: { label: "Men's fellowship", icon: "ri-men-line", color: "info", get: (r) => r.mens_fellowship_count },
-    sunday_school: { label: "Sunday school", icon: "ri-book-read-line", color: "purple", get: (r) => (r.sunday_school_male_count == null && r.sunday_school_female_count == null ? null : num0(r.sunday_school_male_count) + num0(r.sunday_school_female_count)) },
+    sunday_school: {
+      label: "Sunday school",
+      icon: "ri-book-read-line",
+      color: "purple",
+      get: (r) => (r.sunday_school_male_count == null && r.sunday_school_female_count == null ? null : num0(r.sunday_school_male_count) + num0(r.sunday_school_female_count)),
+      parts: [
+        { key: "sunday_school_male_count", label: "Boys", icon: "ri-men-line", color: "info" },
+        { key: "sunday_school_female_count", label: "Girls", icon: "ri-women-line", color: "pink" },
+      ],
+    },
     seniors: { label: "Seniors", icon: "ri-user-heart-line", color: "secondary", get: (r) => r.seniors_count },
     new_members: { label: "New members", icon: "ri-user-add-line", color: "success", get: (r) => r.new_members_count, flow: true },
     departures: { label: "Departures", icon: "ri-user-unfollow-line", color: "danger", get: (r) => r.transferred_out_count, flow: true },
     baptisms: { label: "Baptisms", icon: "ri-drop-line", color: "primary", get: (r) => r.baptisms_count, flow: true },
-    communion: { label: "Communion", icon: "ri-cup-line", color: "secondary", get: (r) => r.communion_participants_count, flow: true },
+    communion: { label: "Holy Communion", icon: "ri-cup-line", color: "secondary", get: (r) => r.communion_participants_count, flow: true },
     conversions: { label: "Conversions", icon: "ri-heart-line", color: "purple", get: (r) => r.conversions_count, flow: true },
   };
 
@@ -699,8 +730,14 @@ const DemographicsUI = (function () {
     };
 
     if (type === "area") {
-      options.stroke = { curve: "smooth", width: 2 };
-      options.fill = { type: "solid", opacity: 0.25 };
+      // ApexCharts 3.42 ignores fill.opacity on area charts (the fill came
+      // out fully solid), so the transparency goes into the fill colour and
+      // the line and markers keep the solid one.
+      const solid = options.colors;
+      options.colors = solid.map((c) => withAlpha(c, 0.18));
+      options.stroke = { curve: "smooth", width: 2.5, colors: solid };
+      options.markers = { size: 4, colors: solid, strokeWidth: 0 };
+      options.fill = { type: "solid" };
     } else if (type === "line") {
       // Real multi-line comparison (e.g. Male vs Female) - smooth strokes,
       // no fill, so two overlapping series stay readable instead of
