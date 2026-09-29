@@ -401,24 +401,28 @@ const DemographicsUI = (function () {
    * @param {object} opts {labels, series, colors: theme colour names, centerLabel}
    * @returns ApexCharts instance (or null)
    */
-  function renderRingDonut(containerId, { labels, series, colors = null, centerLabel = "Total" } = {}) {
+  function renderRingDonut(containerId, { labels, series, colors = null, centerLabel = "Total", focus = -1 } = {}) {
     const container = document.getElementById(containerId);
     if (!container || typeof ApexCharts === "undefined") return null;
     const names = colors || ["primary", "secondary", "success", "purple", "pink", "danger"];
     const total = series.reduce((a, b) => a + (Number(b) || 0), 0);
+    const pctText = (v) => {
+      const pct = total ? Math.round((v / total) * 100) : 0;
+      return pct === 0 && v > 0 ? "<1%" : `${pct}%`;
+    };
+    const focused = focus >= 0 && focus < labels.length;
 
     container.innerHTML = `
-      <div class="ring-donut">
+      <div class="ring-donut${focused ? " has-focus" : ""}">
         <div class="ring-donut-chart"></div>
         <div class="ring-donut-legend">
           ${labels
             .map((l, i) => {
               const v = Number(series[i]) || 0;
-              const pct = total ? Math.round((v / total) * 100) : 0;
               return `
-                <div class="ring-donut-item">
+                <div class="ring-donut-item${i === focus ? " is-focus" : ""}">
                   <div class="ring-donut-name"><span class="count-dot bg-${names[i % names.length]}"></span>${l}</div>
-                  <div class="ring-donut-value">${v.toLocaleString()} <span>${pct}%</span></div>
+                  <div class="ring-donut-value">${v.toLocaleString()} <span>${pctText(v)}</span></div>
                 </div>`;
             })
             .join("")}
@@ -443,7 +447,14 @@ const DemographicsUI = (function () {
               show: true,
               name: { show: true, fontSize: "13px", color: text, offsetY: -4 },
               value: { show: true, fontSize: "22px", fontWeight: 700, color: text, offsetY: 6 },
-              total: { show: true, showAlways: true, label: centerLabel, fontSize: "13px", color: text, formatter: () => total.toLocaleString() },
+              total: {
+                show: true,
+                showAlways: true,
+                label: focused ? `${labels[focus]} · ${pctText(Number(series[focus]) || 0)}` : centerLabel,
+                fontSize: "13px",
+                color: text,
+                formatter: () => (focused ? Number(series[focus]) || 0 : total).toLocaleString(),
+              },
             },
           },
         },
@@ -1194,7 +1205,7 @@ const DemographicsUI = (function () {
         (f) => `
         <select class="form-select list-filter" id="${f.id}" aria-label="${f.label}">
           <option value="">${f.label}</option>
-          ${f.options.map((o) => `<option value="${o.value}">${o.label}</option>`).join("")}
+          ${f.options.map((o) => `<option value="${o.value}" data-color="${o.color || optionColor(o.label)}">${o.label}</option>`).join("")}
         </select>`,
       )
       .join("");
@@ -1220,6 +1231,75 @@ const DemographicsUI = (function () {
           </button>
         </div>
       </div>`;
+  }
+
+  // ==========================================================================
+  // SELECT2
+  // ==========================================================================
+
+  const EXTRA_OPTION_COLORS = { active: "success", inactive: "danger", "not submitted": "secondary" };
+
+  /** Dot colour for a filter option: statuses keep their badge colour, anything else gets a stable colour from the palette. */
+  function optionColor(label) {
+    const key = String(label || "").toLowerCase();
+    const status = Object.values(STATUS_BADGES).find((s) => s.label.toLowerCase() === key);
+    return status ? status.color : EXTRA_OPTION_COLORS[key] || colorFor(label);
+  }
+
+  function selectOptionMarkup(option) {
+    const el = option.element;
+    if (!el || !option.id) return option.text;
+    const color = el.dataset.color;
+    const icon = el.dataset.icon;
+    const wrap = document.createElement("span");
+    wrap.className = "s2-option";
+    if (icon) wrap.innerHTML = `<span class="s2-option-icon bg-${color || "primary"} ${iconTextClass(color)}"><i class="${icon}"></i></span>`;
+    else if (color) wrap.innerHTML = `<span class="s2-option-dot bg-${color}"></span>`;
+    wrap.appendChild(document.createTextNode(option.text));
+    return wrap;
+  }
+
+  /**
+   * Turns a <select> into a styled Select2 dropdown (styles: "Select2" in the
+   * design system v2 section of styles.css). Options can carry data-color
+   * (a dot) or data-icon + data-color (an icon tile). Select2 only fires
+   * jQuery events, so a native "change" is re-dispatched and plain
+   * addEventListener("change") handlers keep working. Falls back to the plain
+   * select when Select2 isn't loaded on the page.
+   * @param {HTMLSelectElement|string} el - element or id
+   * @param {object} opts - any Select2 option, plus {search: bool} to force the search box on/off
+   */
+  function enhanceSelect(el, opts = {}) {
+    const select = typeof el === "string" ? document.getElementById(el) : el;
+    if (!select || typeof $ === "undefined" || !$.fn.select2) return select;
+    const $select = $(select);
+    if ($select.data("select2")) $select.select2("destroy");
+
+    const { search, ...rest } = opts;
+    const showSearch = search ?? select.options.length > 8;
+    const modal = select.closest(".modal");
+    $select.select2({
+      width: "100%",
+      minimumResultsForSearch: showSearch ? 0 : Infinity,
+      dropdownParent: modal ? $(modal) : $(document.body),
+      templateResult: selectOptionMarkup,
+      templateSelection: selectOptionMarkup,
+      ...rest,
+    });
+    $select.next(".select2-container").toggleClass("is-set", !!select.value);
+    $select.off(".mwd").on("select2:select.mwd select2:clear.mwd", () => {
+      $select.next(".select2-container").toggleClass("is-set", !!select.value);
+      select.dispatchEvent(new Event("change"));
+    });
+    return select;
+  }
+
+  /** After setting select.value in code, refresh the Select2 display (no-op for a plain select). */
+  function syncSelect(el) {
+    const select = typeof el === "string" ? document.getElementById(el) : el;
+    if (!select || typeof $ === "undefined" || !$(select).data("select2")) return;
+    $(select).trigger("change.select2");
+    $(select).next(".select2-container").toggleClass("is-set", !!select.value);
   }
 
   // Active date range per table, read by one shared DataTables row filter.
@@ -1329,6 +1409,7 @@ const DemographicsUI = (function () {
     if (params.get("range")) {
       rangeBtns.forEach((b) => b.classList.toggle("active", b.dataset.range === params.get("range")));
     }
+    filters.forEach((f) => enhanceSelect(f.id, { search: false, dropdownAutoWidth: true }));
 
     registerDateFilter();
 
@@ -1352,6 +1433,7 @@ const DemographicsUI = (function () {
         filters.forEach((f) => {
           const select = document.getElementById(f.id);
           if (select) select.value = "";
+          syncSelect(select);
         });
         rangeBtns.forEach((b) => b.classList.toggle("active", b.dataset.range === ""));
         if (table) table.columns().search("");
@@ -1577,6 +1659,8 @@ const DemographicsUI = (function () {
     initListDataTable,
     renderFilterToolbar,
     wireFilterToolbar,
+    enhanceSelect,
+    syncSelect,
     numberStepperHtml,
     initSteppers,
     renderSubmissionsRows,

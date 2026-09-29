@@ -4,10 +4,14 @@
  * ============================================================================
  * Diocese Management System - Makueni West
  *
- * One simple page (the old four tabs are gone): year switch -> 4 KPI cards
- * (year total, change vs the previous period, per-period sparkline) ->
- * grouped column chart with toggle chips + this year's mix donut -> a
- * period table with filters, sorting and a totals row.
+ * Year switch -> 4 KPI cards (year total, change vs the previous period,
+ * per-period sparkline) -> chart card with tabs (All | Baptisms | Communion
+ * | Conversions | Departures) + this year's mix donut -> a period table with
+ * filters, sorting and a totals row. "All" is the grouped column chart with
+ * toggle chips; an activity tab shows that activity alone with its year
+ * total / best period / average and highlights its slice in the donut.
+ * Tabs re-render only the chart card (no refetch); the tab is kept in the
+ * URL (?tab=baptisms).
  *
  * Data: GET /demographics-reports/widgets (`data.months`, one row per
  * period; null figures = nothing approved for that period).
@@ -31,6 +35,8 @@ const SpiritualActivities = (function () {
   let years = [];
   let chart = null;
   let donut = null;
+  let months = [];
+  let tab = "all";
 
   async function init() {
     Object.assign(USER_TERRITORY, UI.resolveUserTerritory(USER_TERRITORY));
@@ -46,6 +52,10 @@ const SpiritualActivities = (function () {
       document.getElementById("activityTableBody").innerHTML = UI.renderTableEmpty(6, "No fiscal years configured", "ri-calendar-line");
       return;
     }
+
+    const requested = new URLSearchParams(window.location.search).get("tab");
+    tab = ACTIVITIES.some((a) => a.metric === requested) ? requested : "all";
+    renderTabs();
 
     const current = years.find((y) => y.year === thisYear) || years[0];
     document.getElementById("yearSwitchWrap").innerHTML = UI.renderSegmented(
@@ -64,15 +74,51 @@ const SpiritualActivities = (function () {
     document.getElementById("statCardsRow").innerHTML = UI.skeletonCards(4);
     const result = await DemographicsAPIHandler.getDemographicsReportWidgets(USER_TERRITORY.id, { fiscal_year_id: fiscalYearId });
     if (!result.success) Toast.error(result.message || "Could not load activities");
-    const months = result.success ? result.data?.months || [] : [];
+    months = result.success ? result.data?.months || [] : [];
     const year = years.find((y) => String(y.id) === String(fiscalYearId))?.year;
     const reported = months.filter((m) => m.status === "approved");
     document.getElementById("activitySubtitle").textContent = `${year}: ${reported.length} of ${months.length} period${months.length === 1 ? "" : "s"} reported`;
 
     renderKpis(months);
-    renderChart(months);
-    renderDonut(months);
+    renderChart(months); // also draws the donut, focused on the open tab
     renderTable(months);
+  }
+
+  function renderTabs() {
+    const tabs = [{ metric: "all", label: "All", icon: "ri-apps-2-line" }, ...ACTIVITIES];
+    const el = document.getElementById("activityTabs");
+    el.innerHTML = tabs
+      .map(
+        (t) => `
+        <li class="nav-item" role="presentation">
+          <button type="button" class="nav-link${t.metric === tab ? " active" : ""}" role="tab" aria-selected="${t.metric === tab}" data-tab="${t.metric}">
+            ${t.icon ? `<i class="${t.icon} me-1"></i>` : ""}${t.label}
+          </button>
+        </li>`,
+      )
+      .join("");
+    // On narrow screens the strip scrolls - bring the open tab into view.
+    const active = el.querySelector(".nav-link.active");
+    if (active && el.scrollWidth > el.clientWidth) {
+      const offset = active.getBoundingClientRect().left - el.getBoundingClientRect().left;
+      el.scrollLeft = offset - (el.clientWidth - active.offsetWidth) / 2;
+    }
+    el.querySelectorAll("[data-tab]").forEach((btn) =>
+      btn.addEventListener("click", () => {
+        if (btn.dataset.tab === tab) return;
+        tab = btn.dataset.tab;
+        el.querySelectorAll("[data-tab]").forEach((b) => {
+          b.classList.toggle("active", b === btn);
+          b.setAttribute("aria-selected", b === btn);
+        });
+        const params = new URLSearchParams(window.location.search);
+        if (tab === "all") params.delete("tab");
+        else params.set("tab", tab);
+        const qs = params.toString();
+        history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+        renderChart(months);
+      }),
+    );
   }
 
   function renderKpis(months) {
@@ -96,11 +142,28 @@ const SpiritualActivities = (function () {
     );
   }
 
+  function chartBase(height = 320) {
+    return {
+      chart: { type: "bar", height, toolbar: { show: false }, foreColor: UI.chartTextColor(), animations: { enabled: !document.documentElement.classList.contains("app-reduce-motion") } },
+      xaxis: { categories: months.map((m) => m.month), labels: { rotate: 0, hideOverlappingLabels: true } },
+      yaxis: { forceNiceScale: true, labels: { formatter: (v) => Math.round(v) } },
+      dataLabels: { enabled: false },
+      legend: { show: false },
+      grid: { borderColor: "rgba(125,125,125,0.15)", strokeDashArray: 4 },
+      responsive: [{ breakpoint: 576, options: { chart: { height: 260 } } }],
+    };
+  }
+
   function renderChart(months) {
     const el = document.getElementById("activityChart");
     const chipsEl = document.getElementById("activityChips");
     if (chart) chart.destroy();
     chart = null;
+    const activity = ACTIVITIES.find((a) => a.metric === tab);
+    renderDonut(months);
+
+    document.getElementById("activityChartTitle").textContent = activity ? activity.label : "Per period";
+    document.getElementById("activityChartSubtitle").textContent = activity ? "Recorded in each period this year" : "Tap an activity to show or hide it";
 
     if (months.length === 0) {
       chipsEl.innerHTML = "";
@@ -109,18 +172,17 @@ const SpiritualActivities = (function () {
     }
 
     el.innerHTML = "";
+    if (activity) renderSingle(activity, el, chipsEl);
+    else renderAll(el, chipsEl);
+  }
+
+  function renderAll(el, chipsEl) {
     chart = new ApexCharts(el, {
-      chart: { type: "bar", height: 320, toolbar: { show: false }, foreColor: UI.chartTextColor(), animations: { enabled: !document.documentElement.classList.contains("app-reduce-motion") } },
+      ...chartBase(),
       series: ACTIVITIES.map((a) => ({ name: a.label, data: months.map((m) => num(m[a.field]) || 0) })),
       colors: ACTIVITIES.map((a) => UI.cssColor(a.color)),
-      xaxis: { categories: months.map((m) => m.month), labels: { rotate: 0, hideOverlappingLabels: true } },
-      yaxis: { forceNiceScale: true, labels: { formatter: (v) => Math.round(v) } },
       plotOptions: { bar: { columnWidth: "55%", borderRadius: 4 } },
-      dataLabels: { enabled: false },
-      legend: { show: false },
-      grid: { borderColor: "rgba(125,125,125,0.15)", strokeDashArray: 4 },
       tooltip: { shared: true, intersect: false },
-      responsive: [{ breakpoint: 576, options: { chart: { height: 260 } } }],
     });
     chart.render();
 
@@ -136,6 +198,30 @@ const SpiritualActivities = (function () {
         btn.setAttribute("aria-pressed", on);
       }),
     );
+  }
+
+  function renderSingle(activity, el, chipsEl) {
+    const values = months.map((m) => num(m[activity.field]));
+    const reported = months.map((m, i) => ({ month: m.month, v: values[i] })).filter((r) => r.v != null);
+    const total = reported.reduce((s, r) => s + r.v, 0);
+    const best = reported.reduce((b, r) => (b == null || r.v > b.v ? r : b), null);
+    const avg = reported.length ? Math.round((total / reported.length) * 10) / 10 : null;
+    const perLabel = months.length === 1 ? "year" : months.length === 2 ? "half" : "month";
+
+    chipsEl.innerHTML = `
+      <span class="soft-chip soft-${activity.color}">Year total · <b>${total.toLocaleString()}</b></span>
+      <span class="soft-chip soft-primary">Best period · <b>${best && best.v > 0 ? `${best.month} (${best.v.toLocaleString()})` : "-"}</b></span>
+      <span class="soft-chip soft-purple">Average per ${perLabel} · <b>${avg == null ? "-" : avg.toLocaleString()}</b></span>
+      <a href="${UI.metricUrl(activity.metric)}" class="activity-history-link ms-auto">Full history <i class="ri-arrow-right-line"></i></a>`;
+
+    chart = new ApexCharts(el, {
+      ...chartBase(),
+      series: [{ name: activity.label, data: values.map((v) => v || 0) }],
+      colors: [UI.cssColor(activity.color)],
+      plotOptions: { bar: { columnWidth: months.length > 6 ? "45%" : "30%", borderRadius: 5 } },
+      tooltip: { y: { formatter: (v, { dataPointIndex }) => (values[dataPointIndex] == null ? "Not reported" : v.toLocaleString()) } },
+    });
+    chart.render();
   }
 
   function renderDonut(months) {
@@ -156,6 +242,7 @@ const SpiritualActivities = (function () {
       series: totals,
       colors: ACTIVITIES.map((a) => a.color),
       centerLabel: "Recorded",
+      focus: ACTIVITIES.findIndex((a) => a.metric === tab),
     });
   }
 
