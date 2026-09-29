@@ -30290,3 +30290,43 @@ tr.list-row-flash > td {
   gap: 0.4rem;
   margin: 0.25rem 0 0.5rem;
 }
+
+/* ==========================================================================
+   Skeleton loading (2026-09-29) - solid blocks that gently pulse (no
+   gradient shimmer, per the Design Rules), in the shape of the content
+   that's coming. Filled in by DemographicsUI.fillLoadingSkeletons(),
+   renderTableLoading() and skeletonCards(). Off with "Reduce motion".
+   ========================================================================== */
+@keyframes skel-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.skel {
+  display: block;
+  border-radius: 0.4rem;
+  background: rgba(var(--dark-rgb), 0.08);
+  animation: skel-pulse 1.4s ease-in-out infinite;
+}
+.skel-line { height: 0.75rem; }
+.skel-line-sm { height: 0.55rem; }
+.skel-title { height: 1.6rem; width: 35%; }
+.skel-tile {
+  flex-shrink: 0;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.65rem;
+}
+.skel-row > td {
+  padding-block: 1rem !important;
+}
+/* A chart container is a skeleton block until the chart draws into it. */
+.skel-chart:empty {
+  min-height: 260px;
+  border-radius: 0.6rem;
+  background: rgba(var(--dark-rgb), 0.06);
+  animation: skel-pulse 1.4s ease-in-out infinite;
+}
+.app-reduce-motion .skel,
+.app-reduce-motion .skel-chart:empty {
+  animation: none;
+}

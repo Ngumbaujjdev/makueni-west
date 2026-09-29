@@ -742,17 +742,69 @@ const DemographicsUI = (function () {
   // TABLE LOADING / EMPTY STATES
   // ==========================================================================
 
-  function renderTableLoading(colspan, message = "Loading...") {
-    return `
-      <tr>
-        <td colspan="${colspan}" class="text-center py-5">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
-          <p class="mt-2 text-body fw-semibold mb-0">${message}</p>
-        </td>
+  /**
+   * Skeleton rows (the same column count as the table) instead of a lone
+   * spinner, so the table keeps its shape while data loads. `message` is
+   * kept for screen readers.
+   */
+  function renderTableLoading(colspan, message = "Loading...", rows = 5) {
+    const widths = ["70%", "55%", "40%", "60%", "30%", "50%"];
+    const row = (r) => `
+      <tr class="skel-row" aria-hidden="true">
+        ${Array.from({ length: colspan }, (_, c) => `<td><span class="skel skel-line" style="width: ${widths[(r + c) % widths.length]};"></span>${c === 0 ? '<span class="skel skel-line skel-line-sm mt-2" style="width: 40%;"></span>' : ""}</td>`).join("")}
       </tr>`;
+    return `<tr class="visually-hidden"><td colspan="${colspan}">${message}</td></tr>` + Array.from({ length: rows }, (_, r) => row(r)).join("");
   }
+
+  /** Skeleton stat cards - same outline as renderSparkCard, for a card row that's still loading. */
+  function skeletonCards(count = 4, colClass = "col-xl-3 col-lg-6 col-md-6") {
+    const card = `
+      <div class="${colClass}">
+        <div class="card custom-card" aria-hidden="true">
+          <div class="card-body">
+            <div class="d-flex justify-content-between gap-2">
+              <div class="flex-fill">
+                <span class="skel skel-line" style="width: 55%;"></span>
+                <span class="skel skel-title mt-2"></span>
+                <span class="skel skel-line skel-line-sm mt-3" style="width: 45%;"></span>
+              </div>
+              <span class="skel skel-tile"></span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    return Array.from({ length: count }, () => card).join("");
+  }
+
+  /**
+   * On page load, fill anything still empty with a skeleton - stat card
+   * rows (ids ending "CardsRow"), table bodies and chart containers - so a
+   * page never shows blank areas while its data loads. The page's own
+   * render replaces them. Runs before page scripts' DOMContentLoaded
+   * handlers (this file loads first), and only touches empty containers.
+   */
+  function fillLoadingSkeletons() {
+    const isEmpty = (el) => el.children.length === 0 && !el.textContent.trim();
+
+    document.querySelectorAll('[id$="CardsRow"]').forEach((row) => {
+      if (isEmpty(row)) {
+        const cols = row.id === "statCardsRow" && row.closest(".col-xl-8, .col-xl-9") ? 3 : 4;
+        row.innerHTML = skeletonCards(cols);
+      }
+    });
+
+    document.querySelectorAll(".app-content table tbody").forEach((tbody) => {
+      if (!isEmpty(tbody)) return;
+      const cols = tbody.closest("table")?.querySelectorAll("thead th").length || 4;
+      tbody.innerHTML = renderTableLoading(cols);
+    });
+
+    document.querySelectorAll('.app-content [id$="Chart"], .app-content [id$="Gauge"], .app-content [id$="Heatmap"]').forEach((el) => {
+      el.classList.add("skel-chart");
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", fillLoadingSkeletons);
 
   function renderTableEmpty(colspan, message = "No records found", icon = "ri-inbox-line") {
     return `
@@ -1294,6 +1346,7 @@ const DemographicsUI = (function () {
     pill,
     changePill,
     flashRow,
+    skeletonCards,
     renderSparkCard,
     mountSparklines,
     monthlySeries,
