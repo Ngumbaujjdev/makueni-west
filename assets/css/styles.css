@@ -29784,42 +29784,6 @@ body {
    delta pill (same solid-pill treatment as v1-events-backend's rv-delta).
    Rendered by DemographicsUI.renderSparkCard()/deltaBadge().
    ========================================================================== */
-.spark-card {
-  overflow: hidden;
-}
-.spark-card .card-body {
-  padding-bottom: 0;
-}
-.spark-card-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--default-text-color);
-}
-.spark-card-value {
-  margin-top: 0.35rem;
-  font-size: 1.6rem;
-  font-weight: 700;
-  line-height: 1.1;
-  color: var(--v2-heading);
-  overflow-wrap: anywhere;
-}
-.spark-card-foot {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
-  margin-top: 0.55rem;
-  min-height: 1.4rem;
-}
-/* Chart bleeds to the card's edges, like the template's crypto cards. */
-.spark-card-chart {
-  margin: 0.35rem -1.25rem 0;
-  min-height: 56px;
-}
-.spark-card:not(:has(.spark-card-chart)) .card-body {
-  padding-bottom: 1.25rem;
-}
-
 .stat-delta {
   display: inline-flex;
   align-items: center;
@@ -29844,24 +29808,12 @@ body {
   color: var(--text-muted);
 }
 
-/* Stat rows: every card the same height, sparkline pinned to the bottom. */
+/* Stat rows: every card in a row the same height. */
 .stat-cards-row > [class*="col"] {
   display: flex;
 }
 .stat-cards-row > [class*="col"] > .card {
   flex: 1 1 auto;
-}
-.stat-cards-row .spark-card .card-body {
-  display: flex;
-  flex-direction: column;
-}
-.stat-cards-row .spark-card-chart {
-  margin-top: auto;
-}
-/* Names (e.g. "Tuesday Fellowship") read smaller than numbers. */
-.spark-card-value.is-text {
-  font-size: 1.15rem;
-  line-height: 1.3;
 }
 
 /* FullCalendar paints its sticky header with its own --fc-page-bg-color
@@ -30329,4 +30281,324 @@ tr.list-row-flash > td {
 .app-reduce-motion .skel,
 .app-reduce-motion .skel-chart:empty {
   animation: none;
+}
+
+/* ==========================================================================
+   Demographics redesign building blocks (2026-09-29) - modelled on the
+   template's CRM dashboard (html/index.php): KPI card, ring donut,
+   composition card, segmented control, page toolbar, soft chips.
+
+   Colour balance (CLAUDE.md): SOLID for things that signal - KPI icon
+   tiles, status pills, delta pills, primary buttons. SOFT tints for
+   supporting facts - info/legend chips, table group headers, the filter
+   strip, modal panels. Not everything solid, not everything pale.
+   ========================================================================== */
+
+/* KPI card (CRM "Total Customers") */
+.kpi-card2 .card-body {
+  padding: 0.9rem 1.05rem;
+}
+.kpi-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+}
+.kpi-label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.kpi-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--v2-heading);
+  overflow-wrap: anywhere;
+}
+.kpi-value.is-text {
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+.kpi-label {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.kpi-spark {
+  flex: 0 1 100px;
+  min-width: 60px;
+  min-height: 36px;
+}
+.kpi-link {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.kpi-delta {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.kpi-delta i {
+  font-size: 1rem;
+}
+.kpi-delta.is-up { color: rgb(var(--success-rgb)); }
+.kpi-delta.is-down { color: rgb(var(--danger-rgb)); }
+.kpi-delta.is-flat { color: rgb(var(--primary-rgb)); }
+.kpi-caption {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+/* Soft chips - supporting facts, tinted (not solid) */
+.soft-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.soft-chip b {
+  font-weight: 700;
+}
+.soft-primary, .soft-info { background: rgba(var(--primary-rgb), 0.12); color: rgb(var(--primary-rgb)); }
+.soft-secondary, .soft-warning { background: rgba(var(--secondary-rgb), 0.2); color: #8a6a06; }
+.soft-success { background: rgba(var(--success-rgb), 0.14); color: #138a69; }
+.soft-danger { background: rgba(var(--danger-rgb), 0.12); color: #c42a2a; }
+.soft-purple { background: rgba(var(--purple-rgb), 0.12); color: rgb(var(--purple-rgb)); }
+.soft-pink { background: rgba(var(--pink-rgb), 0.2); color: #b3487e; }
+[data-theme-mode="dark"] .soft-secondary,
+[data-theme-mode="dark"] .soft-warning { color: rgb(var(--secondary-rgb)); }
+[data-theme-mode="dark"] .soft-success { color: rgb(var(--success-rgb)); }
+[data-theme-mode="dark"] .soft-danger { color: #ff7b7b; }
+[data-theme-mode="dark"] .soft-pink { color: rgb(var(--pink-rgb)); }
+
+/* Segmented control (year / range / view switch) */
+.seg-control {
+  display: inline-flex;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 0.2rem;
+  gap: 0.15rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.6rem;
+  background: var(--custom-white);
+  scrollbar-width: none;
+}
+.seg-control::-webkit-scrollbar {
+  display: none;
+}
+.seg-btn {
+  flex: 0 0 auto;
+  min-height: 2.1rem;
+  padding: 0.3rem 0.85rem;
+  border: 0;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: var(--default-text-color);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.seg-btn:hover {
+  background: rgba(var(--primary-rgb), 0.08);
+}
+.seg-btn.active {
+  background: rgb(var(--primary-rgb));
+  color: #fff;
+}
+
+/* Page toolbar - subtitle left, controls right */
+.page-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: -0.5rem 0 1.25rem;
+}
+.page-toolbar-sub {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+.page-toolbar-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* Ring donut (CRM "Leads By Source") */
+.ring-donut-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  border-top: 1px solid var(--default-border);
+  margin: 0.75rem -1.25rem -1.25rem;
+}
+.ring-donut-item {
+  padding: 0.85rem 1rem;
+  border-inline-end: 1px solid var(--default-border);
+  text-align: center;
+}
+.ring-donut-item:last-child {
+  border-inline-end: 0;
+}
+.ring-donut-name {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.ring-donut-value {
+  margin-top: 0.2rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--v2-heading);
+}
+.ring-donut-value span,
+.composition-value span {
+  margin-inline-start: 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* Composition card (CRM "Deals Status") */
+.composition-total {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v2-heading);
+}
+.composition-bar {
+  height: 0.55rem;
+  gap: 3px;
+  background: transparent;
+}
+.composition-bar > span {
+  border-radius: 999px;
+}
+.composition-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.composition-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed var(--default-border);
+  font-size: 0.85rem;
+}
+.composition-list li:last-child {
+  border-bottom: 0;
+}
+.composition-name {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 500;
+}
+.composition-value {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Filter bar refresh - a light tinted strip, range pills as one control */
+#filterToolbar,
+#submissionsFilterToolbar,
+.list-filterbar-wrap {
+  background: rgba(var(--primary-rgb), 0.035);
+}
+.list-range {
+  gap: 0.15rem;
+  padding: 0.2rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.6rem;
+  background: var(--custom-white);
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.list-range-btn {
+  border: 0;
+  border-radius: 0.45rem;
+  background: transparent;
+  padding: 0.3rem 0.75rem;
+}
+.list-range-btn:hover {
+  border-color: transparent;
+  background: rgba(var(--primary-rgb), 0.08);
+}
+.list-filterbar .form-control,
+.list-filterbar .form-select {
+  min-height: 2.35rem;
+  background-color: var(--custom-white);
+}
+
+/* Modal balance - soft tinted panels behind grouped content, tinted inputs */
+.app-modal .count-total,
+.app-modal .appearance-toggle-row.border {
+  background: rgba(var(--primary-rgb), 0.05);
+  border-color: rgba(var(--primary-rgb), 0.15) !important;
+}
+.app-modal .form-control,
+.app-modal .form-select,
+.app-modal .input-group-text {
+  background-color: rgb(var(--light-rgb));
+}
+.app-modal .form-control:focus,
+.app-modal .form-select:focus {
+  background-color: var(--custom-white);
+}
+
+/* Responsive */
+@media (max-width: 767.98px) {
+  .page-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .page-toolbar-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .page-toolbar-controls .btn {
+    width: 100%;
+  }
+  .seg-control {
+    width: 100%;
+  }
+  .seg-btn {
+    flex: 1 0 auto;
+  }
+  .ring-donut-legend {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .ring-donut-item:nth-child(2n) {
+    border-inline-end: 0;
+  }
+  .ring-donut-item {
+    border-bottom: 1px solid var(--default-border);
+  }
+  .list-range {
+    width: 100%;
+  }
+  .list-range-btn {
+    flex: 1 0 auto;
+  }
+}
+@media (pointer: coarse) {
+  .seg-btn,
+  .list-range-btn {
+    min-height: 2.5rem;
+  }
 }
