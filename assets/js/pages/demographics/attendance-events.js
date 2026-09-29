@@ -78,25 +78,7 @@ const AttendanceEvents = (function () {
   }
 
   function renderStats(rows) {
-    const now = new Date();
-    const thisMonth = rows.filter((r) => {
-      const d = new Date(r.service_date);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    });
-    const distinctTypes = new Set(rows.map((r) => r.gathering_type_id).filter(Boolean)).size;
-    const mostRecent = rows[0];
-
-    DemographicsUI.renderStatCardsRow("statCardsRow", [
-      { icon: "ri-file-list-3-line", label: "Total Records", value: rows.length, color: "primary" },
-      { icon: "ri-calendar-check-line", label: "This Month", value: thisMonth.length, color: "success" },
-      {
-        icon: "ri-time-line",
-        label: "Most Recent",
-        value: mostRecent ? new Date(mostRecent.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "-",
-        color: "warning",
-      },
-      { icon: "ri-star-line", label: "Event Types Used", value: distinctTypes, color: "secondary" },
-    ]);
+    AttendanceFormShared.renderGatheringStats("statCardsRow", rows, { noun: "Event", plural: "events" });
   }
 
   function openModal(record) {

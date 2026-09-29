@@ -66,15 +66,32 @@ const MonthlyStatistics = (function () {
     const result = await DemographicsAPIHandler.getDemographicsReportWidgets(USER_TERRITORY.id, { fiscal_year_id: fiscalYearId });
     const data = result.success ? result.data : null;
 
-    renderStatCards(data?.stats || []);
+    renderStatCards(data?.stats || [], data?.months || []);
     renderTable(data?.months || []);
   }
 
   /** Solid-icon cards, matching every other Demographics page now - the backend already sends {label, value, icon, color} per card, just mapped through the shared renderer instead of the pale-tint renderWidgetCard. */
-  function renderStatCards(stats) {
+  function renderStatCards(stats, months) {
     const container = document.getElementById("statCardsRow");
     if (!container) return;
-    container.innerHTML = stats.map((c) => `<div class="col-xl-4 col-lg-6 col-md-6">${DemographicsUI.renderSolidStatCard(c)}</div>`).join("");
+
+    // The backend sends plain {label, value, icon, color}; add a period
+    // comparison where the per-period rows allow one - the latest reported
+    // period's total members vs the one reported before it.
+    const reported = months.filter((m) => m.total_members != null && m.total_members !== "");
+    const latest = reported[reported.length - 1];
+    const previous = reported[reported.length - 2];
+
+    container.innerHTML = stats
+      .map((c) => {
+        const opts = { ...c };
+        if (c.label === "Latest Total Members" && latest && previous) {
+          opts.trend = DemographicsUI.trendFor(Number(latest.total_members), Number(previous.total_members));
+          opts.sublabel = `vs ${previous.month}`;
+        }
+        return `<div class="col-xl-4 col-lg-6 col-md-6">${DemographicsUI.renderSolidStatCard(opts)}</div>`;
+      })
+      .join("");
   }
 
   function renderTable(months) {

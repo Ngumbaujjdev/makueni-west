@@ -49,7 +49,7 @@ $breadcrumbs = [
          justified exception to the "reach for Bootstrap first" rule. -->
     <style>
         .fc-sunday-highlight {
-            background-color: rgba(44, 164, 191, 0.08);
+            background-color: rgba(var(--primary-rgb), 0.08);
         }
     </style>
 
@@ -78,6 +78,8 @@ $breadcrumbs = [
                 <?php include __DIR__ . '/../../includes/page-header.php' ?>
 
                 <div id="entryModeBanner"></div>
+
+                <div class="row" id="statCardsRow"></div>
 
                 <div class="row g-3">
                     <div class="col-xl-8">
@@ -142,6 +144,7 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
     <script src="<?= SITE_URL ?>/assets/libs/fullcalendar/main.min.js"></script>
 
+    <script src="<?= SITE_URL ?>/assets/libs/apexcharts/apexcharts.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js"></script>
     <script src="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/scripts/choices.min.js"></script>

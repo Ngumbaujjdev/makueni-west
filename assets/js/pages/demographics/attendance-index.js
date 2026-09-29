@@ -23,7 +23,6 @@ const AttendanceOverview = (function () {
   }
 
   async function loadStats() {
-    const container = document.getElementById("statCardsRow");
     const result = await DemographicsAPIHandler.getAttendance(USER_TERRITORY.id);
 
     if (!result.success) {
@@ -31,35 +30,61 @@ const AttendanceOverview = (function () {
       return;
     }
 
-    const rows = result.data || [];
-    const now = new Date();
-    const thisMonth = rows.filter((r) => {
-      const d = new Date(r.service_date);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    });
+    const UI = DemographicsUI;
+    const rows = (result.data || []).sort((a, b) => new Date(b.service_date) - new Date(a.service_date));
+    const recordTotal = (r) => (r.adults_count || 0) + (r.youth_count || 0) + (r.children_male_count || 0) + (r.children_female_count || 0);
+    const sundays = rows.filter((r) => r.gathering_category?.slug === "sunday_service");
+    const prevLabel = UI.monthLabel(1);
 
-    const sundayServices = thisMonth.filter((r) => r.gathering_category?.slug === "sunday_service");
-    const totalAttendance = (r) => (r.adults_count || 0) + (r.youth_count || 0) + (r.children_male_count || 0) + (r.children_female_count || 0);
-    const avgSunday = sundayServices.length
-      ? Math.round(sundayServices.reduce((sum, r) => sum + totalAttendance(r), 0) / sundayServices.length)
-      : 0;
-    const lastRecord = rows.sort((a, b) => new Date(b.service_date) - new Date(a.service_date))[0];
+    const sundaysThis = UI.rowsInMonth(sundays, 0);
+    const sundaysLast = UI.rowsInMonth(sundays, 1);
+    const avg = (list) => (list.length ? Math.round(list.reduce((acc, r) => acc + recordTotal(r), 0) / list.length) : 0);
 
-    const cards = [
-      { icon: "ri-calendar-check-line", label: "Sunday Services This Month", value: sundayServices.length, color: "primary" },
-      { icon: "ri-group-line", label: "Avg. Sunday Attendance", value: avgSunday, color: "success" },
-      { icon: "ri-file-list-3-line", label: "Total Records This Month", value: thisMonth.length, color: "warning" },
+    // Average Sunday attendance per month, for the sparkline.
+    const sundaySums = UI.monthlySeries(sundays, { value: recordTotal });
+    const sundayCounts = UI.monthlySeries(sundays);
+    const avgSeries = {
+      labels: sundaySums.labels,
+      data: sundaySums.data.map((v, i) => (sundayCounts.data[i] ? Math.round(v / sundayCounts.data[i]) : 0)),
+    };
+
+    const recordsThis = UI.rowsInMonth(rows, 0);
+    const recordsLast = UI.rowsInMonth(rows, 1);
+    const lastRecord = rows[0];
+    const daysAgo = lastRecord ? Math.floor((Date.now() - new Date(lastRecord.service_date)) / 86400000) : null;
+
+    UI.renderStatCardsRow("statCardsRow", [
+      {
+        icon: "ri-group-line",
+        label: "Avg. Sunday Attendance",
+        value: avg(sundaysThis),
+        color: "primary",
+        delta: UI.periodDelta(avg(sundaysThis), avg(sundaysLast), { prevLabel }),
+        series: avgSeries,
+      },
+      {
+        icon: "ri-calendar-check-line",
+        label: "Sundays Recorded",
+        value: sundaysThis.length,
+        color: "success",
+        delta: UI.periodDelta(sundaysThis.length, sundaysLast.length, { percent: false, prevLabel }),
+      },
+      {
+        icon: "ri-file-list-3-line",
+        label: "Records This Month",
+        value: recordsThis.length,
+        color: "purple",
+        delta: UI.periodDelta(recordsThis.length, recordsLast.length, { percent: false, prevLabel }),
+      },
       {
         icon: "ri-time-line",
         label: "Last Recorded",
         value: lastRecord ? new Date(lastRecord.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "-",
-        color: "secondary",
+        // Red when nothing has been recorded for over two weeks.
+        color: daysAgo != null && daysAgo > 14 ? "danger" : "secondary",
+        trend: daysAgo == null ? "Nothing recorded yet" : daysAgo === 0 ? "Today" : `${daysAgo} day${daysAgo === 1 ? "" : "s"} ago`,
       },
-    ];
-
-    container.innerHTML = cards
-      .map((c) => `<div class="col-xl-3 col-lg-6 col-md-6">${DemographicsUI.renderStatCard(c)}</div>`)
-      .join("");
+    ]);
   }
 
   async function loadEntryMode() {

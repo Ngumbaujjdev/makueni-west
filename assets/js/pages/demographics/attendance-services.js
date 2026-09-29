@@ -44,6 +44,7 @@ const AttendanceServices = (function () {
     await loadRecords();
     renderCalendar();
     renderRecentList();
+    renderStats();
 
     const addBtn = document.getElementById("addAttendanceBtn");
     if (addBtn) {
@@ -95,14 +96,19 @@ const AttendanceServices = (function () {
     return (row.adults_count || 0) + (row.youth_count || 0) + (row.children_male_count || 0) + (row.children_female_count || 0);
   }
 
+  function accentColor() {
+    const rgb = getComputedStyle(document.documentElement).getPropertyValue("--primary-rgb").trim();
+    return rgb ? `rgb(${rgb})` : "#2CA4BF";
+  }
+
   function buildEventSource() {
     return allRows.map((r) => ({
       id: String(r.id),
       title: `${totalFor(r)} attended`,
       start: r.service_date.substring(0, 10),
       allDay: true,
-      backgroundColor: "#2CA4BF",
-      borderColor: "#2CA4BF",
+      backgroundColor: accentColor(),
+      borderColor: accentColor(),
       extendedProps: { record: r },
     }));
   }
@@ -148,6 +154,60 @@ const AttendanceServices = (function () {
     calendar.removeAllEventSources();
     calendar.addEventSource(buildEventSource());
     renderRecentList();
+    renderStats();
+  }
+
+  /** Sundays elapsed so far this month (including today, if it's a Sunday). */
+  function sundaysElapsedThisMonth(now = new Date()) {
+    let count = 0;
+    for (let d = 1; d <= now.getDate(); d++) {
+      if (new Date(now.getFullYear(), now.getMonth(), d).getDay() === 0) count++;
+    }
+    return count;
+  }
+
+  function renderStats() {
+    const UI = DemographicsUI;
+    const prevLabel = UI.monthLabel(1);
+    const thisMonth = UI.rowsInMonth(allRows, 0);
+    const lastMonth = UI.rowsInMonth(allRows, 1);
+    const sum = (list) => list.reduce((acc, r) => acc + totalFor(r), 0);
+    const avg = (list) => (list.length ? Math.round(sum(list) / list.length) : 0);
+    const best = [...thisMonth].sort((a, b) => totalFor(b) - totalFor(a))[0];
+    const elapsed = sundaysElapsedThisMonth();
+
+    UI.renderStatCardsRow("statCardsRow", [
+      {
+        icon: "ri-group-line",
+        label: "Attendance This Month",
+        value: sum(thisMonth).toLocaleString(),
+        color: "primary",
+        delta: UI.periodDelta(sum(thisMonth), sum(lastMonth), { prevLabel }),
+        series: UI.monthlySeries(allRows, { value: totalFor }),
+      },
+      {
+        icon: "ri-bar-chart-2-line",
+        label: "Avg per Sunday",
+        value: avg(thisMonth),
+        color: "purple",
+        delta: UI.periodDelta(avg(thisMonth), avg(lastMonth), { prevLabel }),
+      },
+      {
+        icon: "ri-trophy-line",
+        label: "Best Sunday",
+        value: best ? totalFor(best) : "-",
+        color: "secondary",
+        trend: best ? new Date(best.service_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "None recorded this month",
+      },
+      {
+        icon: "ri-calendar-check-line",
+        label: "Sundays Recorded",
+        value: `${thisMonth.length} of ${elapsed}`,
+        // Red when a Sunday that has already happened is missing.
+        color: thisMonth.length < elapsed ? "danger" : "success",
+        trend: thisMonth.length < elapsed ? `${elapsed - thisMonth.length} missing` : "All caught up",
+      },
+    ]);
   }
 
   function openEntry(record, defaultDate) {

@@ -107,11 +107,33 @@ const AttendanceGatheringTypes = (function () {
     }, {});
     const mostUsed = Object.entries(countsByCategory).sort((a, b) => b[1] - a[1])[0];
 
-    DemographicsUI.renderStatCardsRow("statCardsRow", [
-      { icon: "ri-list-check-2", label: "Total Types", value: types.length, color: "primary" },
-      { icon: "ri-checkbox-circle-line", label: "Active", value: active, color: "success" },
-      { icon: "ri-close-circle-line", label: "Inactive", value: inactive, color: "secondary" },
-      { icon: "ri-bar-chart-line", label: "Most-Used Category", value: mostUsed ? mostUsed[0] : "-", color: "warning" },
+    const UI = DemographicsUI;
+    const addedThis = UI.rowsInMonth(types, 0, "created_at").length;
+    const activeShare = types.length ? Math.round((active / types.length) * 100) : 0;
+
+    UI.renderStatCardsRow("statCardsRow", [
+      {
+        icon: "ri-list-check-2",
+        label: "Total Types",
+        value: types.length,
+        color: "primary",
+        trend: addedThis ? `${addedThis} added this month` : "None added this month",
+      },
+      { icon: "ri-checkbox-circle-line", label: "Active", value: active, color: "success", trend: `${activeShare}% of all types` },
+      {
+        icon: "ri-close-circle-line",
+        label: "Inactive",
+        value: inactive,
+        color: inactive ? "danger" : "purple",
+        trend: inactive ? "Hidden from entry forms" : "Everything is in use",
+      },
+      {
+        icon: "ri-bar-chart-line",
+        label: "Most-Used Category",
+        value: mostUsed ? mostUsed[0] : "-",
+        color: "secondary",
+        trend: mostUsed ? `${mostUsed[1]} type${mostUsed[1] === 1 ? "" : "s"}` : "",
+      },
     ]);
   }
 

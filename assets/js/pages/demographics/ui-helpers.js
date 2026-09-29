@@ -153,7 +153,14 @@ const DemographicsUI = (function () {
    * @param {object} opts {icon, label, value, trend, color}
    *   trend: optional plain-text caption (e.g. "12 this month").
    */
-  function renderStatCard({ icon, label, value, trend = null, color = "primary" }) {
+  /**
+   * trend: optional plain-text caption. delta: optional periodDelta() result
+   * - shown as a coloured change top-right with its "vs last month" caption.
+   */
+  function renderStatCard({ icon, label, value, trend = null, color = "primary", delta = null }) {
+    if (delta) {
+      return renderCompactCard({ icon, label, value, color, trend: deltaToTrend(delta), caption: trend || delta.caption });
+    }
     return renderCompactCard({ icon, label, value, color, caption: trend || "" });
   }
 
@@ -164,12 +171,155 @@ const DemographicsUI = (function () {
    * @param {string} containerId
    * @param {object[]} cards - array of renderStatCard() opts
    */
+  /**
+   * A row of stat cards, all in the same Analytics layout (renderSparkCard)
+   * so they read as one set at equal height - with a sparkline where the
+   * card has a `series`, and its delta/`trend` text in the foot.
+   */
   function renderStatCardsRow(containerId, cards) {
     const container = document.getElementById(containerId);
     if (!container) return;
+    container.classList.add("stat-cards-row");
     container.innerHTML = cards
-      .map((c) => `<div class="col-xl-3 col-lg-6 col-md-6">${renderStatCard(c)}</div>`)
+      .map((c) => `<div class="col-xl-3 col-lg-6 col-md-6">${renderSparkCard({ ...c, sub: c.sub || c.trend || "" })}</div>`)
       .join("");
+    mountSparklines(container);
+  }
+
+  // ==========================================================================
+  // PERIOD ANALYSIS - "this month vs last month" deltas and monthly
+  // sparkline series, computed client-side from records the page has
+  // already loaded (GET /attendance and GET /demographics return every
+  // record for the church, so no extra request is needed).
+  // ==========================================================================
+
+  const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  function monthIndex(date) {
+    return date.getFullYear() * 12 + date.getMonth();
+  }
+
+  /** Rows falling in the month `offset` months before now (0 = this month). */
+  function rowsInMonth(rows, offset = 0, dateField = "service_date", now = new Date()) {
+    const target = monthIndex(now) - offset;
+    return rows.filter((r) => {
+      const d = new Date(r[dateField]);
+      return !isNaN(d) && monthIndex(d) === target;
+    });
+  }
+
+  function monthLabel(offset = 0, now = new Date()) {
+    const idx = monthIndex(now) - offset;
+    return MONTH_SHORT[((idx % 12) + 12) % 12];
+  }
+
+  /**
+   * Last `months` calendar months (oldest first), each summed with
+   * `value(row)` (default: count). Returns {labels, data}.
+   */
+  function monthlySeries(rows, { dateField = "service_date", value = () => 1, months = 6, now = new Date() } = {}) {
+    const end = monthIndex(now);
+    const labels = [];
+    const data = [];
+    for (let k = end - months + 1; k <= end; k++) {
+      labels.push(MONTH_SHORT[((k % 12) + 12) % 12]);
+      data.push(0);
+    }
+    rows.forEach((r) => {
+      const d = new Date(r[dateField]);
+      if (isNaN(d)) return;
+      const pos = monthIndex(d) - (end - months + 1);
+      if (pos >= 0 && pos < months) data[pos] += value(r);
+    });
+    return { labels, data };
+  }
+
+  /**
+   * {dir: up|down|flat, text, caption} comparing two period values, or null
+   * when there's nothing to compare against. percent=false shows the raw
+   * difference (better for small counts like "3 gatherings").
+   */
+  function periodDelta(current, previous, { percent = true, prevLabel = "last month" } = {}) {
+    if (previous == null || current == null) return null;
+    const caption = `vs ${prevLabel}`;
+    if (current === previous) return { dir: "flat", text: "No change", caption };
+    if (previous === 0) return { dir: "up", text: "New", caption };
+    const diff = current - previous;
+    const text = percent ? `${Math.abs(Math.round((diff / previous) * 100))}%` : `${Math.abs(diff)}`;
+    return { dir: diff > 0 ? "up" : "down", text: `${diff > 0 ? "+" : "-"}${text}`, caption };
+  }
+
+  function deltaToTrend(delta) {
+    if (!delta) return null;
+    const map = {
+      up: { color: "success", icon: "ri-arrow-up-s-fill" },
+      down: { color: "danger", icon: "ri-arrow-down-s-fill" },
+      flat: { color: "primary", icon: "ri-subtract-line" },
+    };
+    return { text: delta.text, ...map[delta.dir] };
+  }
+
+  /** Solid delta pill + caption, e.g. [▲ +12%] vs Aug. */
+  function deltaBadge(delta) {
+    if (!delta) return "";
+    const t = deltaToTrend(delta);
+    return `<span class="stat-delta is-${delta.dir}"><i class="${t.icon}"></i>${delta.text}</span><span class="stat-delta-caption">${delta.caption}</span>`;
+  }
+
+  /**
+   * Analytics-style card (template html/index-6.html "Total Users" card):
+   * label + solid icon tile, big value, solid delta pill with caption, and
+   * a sparkline of recent periods along the bottom edge. Call
+   * mountSparklines(container) after inserting the markup.
+   * @param {object} opts {icon, label, value, color, delta, series: {labels, data}, sub}
+   */
+  function renderSparkCard({ icon, label, value, color = "primary", delta = null, series = null, sub = "" }) {
+    const spark = series
+      ? `<div class="spark-card-chart" data-spark='${JSON.stringify(series).replace(/'/g, "&#39;")}' data-spark-color="${color}"></div>`
+      : "";
+    return `
+      <div class="card custom-card spark-card">
+        <div class="card-body">
+          <div class="d-flex align-items-start justify-content-between gap-2">
+            <div style="min-width: 0;">
+              <div class="spark-card-label">${label}</div>
+              <div class="spark-card-value${/^[-\d.,:%\sKES]+$|^\d+ of \d+$/.test(String(value)) ? "" : " is-text"}">${value}</div>
+            </div>
+            <span class="avatar avatar-md bg-${color} ${iconTextClass(color)} flex-shrink-0"><i class="${icon} fs-20"></i></span>
+          </div>
+          <div class="spark-card-foot">${deltaBadge(delta)}${sub ? `<span class="stat-delta-caption">${sub}</span>` : ""}</div>
+          ${spark}
+        </div>
+      </div>`;
+  }
+
+  function cssColor(name, alpha = 1) {
+    const rgb = getComputedStyle(document.documentElement).getPropertyValue(`--${name}-rgb`).trim();
+    return rgb ? `rgba(${rgb}, ${alpha})` : name;
+  }
+
+  /** Renders every not-yet-mounted [data-spark] element inside root. */
+  function mountSparklines(root = document) {
+    if (typeof ApexCharts === "undefined") return;
+    root.querySelectorAll("[data-spark]:not([data-spark-mounted])").forEach((el) => {
+      el.setAttribute("data-spark-mounted", "1");
+      let series;
+      try {
+        series = JSON.parse(el.getAttribute("data-spark"));
+      } catch (e) {
+        return;
+      }
+      const color = cssColor(el.getAttribute("data-spark-color") || "primary");
+      new ApexCharts(el, {
+        chart: { type: "area", height: 56, sparkline: { enabled: true }, animations: { enabled: !document.documentElement.classList.contains("app-reduce-motion") } },
+        series: [{ name: "", data: series.data }],
+        labels: series.labels,
+        stroke: { width: 2, curve: "smooth" },
+        fill: { type: "solid", opacity: 0.16 },
+        colors: [color],
+        tooltip: { x: { show: true }, y: { title: { formatter: () => "" } }, marker: { show: false } },
+      }).render();
+    });
   }
 
   // ==========================================================================
@@ -264,7 +414,10 @@ const DemographicsUI = (function () {
    * a genuine 0 in the previous period still produces a real trend.
    */
   function trendFor(current, previousValue) {
-    return previousValue == null ? null : { diff: current - previousValue };
+    if (previousValue == null) return null;
+    const diff = current - previousValue;
+    // pct is null when the previous value was 0 (a % change is undefined).
+    return { diff, pct: previousValue ? Math.round((diff / previousValue) * 100) : null };
   }
 
   /**
@@ -280,8 +433,9 @@ const DemographicsUI = (function () {
         t = { text: "No change", color: "primary", icon: "ri-subtract-line" };
       } else {
         const up = trend.diff > 0;
+        const pct = trend.pct != null ? ` (${Math.abs(trend.pct)}%)` : "";
         t = {
-          text: `${up ? "+" : "-"}${Math.abs(trend.diff)}`,
+          text: `${up ? "+" : "-"}${Math.abs(trend.diff)}${pct}`,
           color: up ? "success" : "danger",
           icon: up ? "ri-arrow-up-s-fill" : "ri-arrow-down-s-fill",
         };
@@ -963,6 +1117,13 @@ const DemographicsUI = (function () {
     brandHex,
     renderCompactCard,
     renderTileCard,
+    renderSparkCard,
+    mountSparklines,
+    monthlySeries,
+    rowsInMonth,
+    monthLabel,
+    periodDelta,
+    deltaBadge,
     renderStatCard,
     renderStatCardsRow,
     renderWidgetCard,
