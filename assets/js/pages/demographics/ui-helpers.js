@@ -1506,16 +1506,19 @@ const DemographicsUI = (function () {
 
   /**
    * Newest-first sort across any mix of monthly/half-yearly/yearly rows -
-   * fiscal_year.year desc, then a cadence-agnostic period number desc
-   * (fiscal_semi_annual.number for half-yearly rows, fiscal_month.number for
-   * monthly, 0 for yearly/either-missing). Sorting by fiscal_month.number
+   * fiscal_year.year desc, then the month the period ends in desc
+   * (fiscal_month.number for monthly rows, fiscal_semi_annual.number * 6 for
+   * half-yearly, 12 for yearly). Sorting by fiscal_month.number
    * alone (an earlier, duplicated inline comparator) always evaluated to 0
    * for half-yearly rows, so H1 and H2 of the same year didn't reliably
    * order against each other - this is the one correct version, shared by
    * every page that needs "most recent submission first."
    */
   function sortSubmissionsNewestFirst(rows) {
-    const periodNumber = (r) => r.fiscal_semi_annual?.number ?? r.fiscal_month?.number ?? 0;
+    // Compare by the month each period ends in (H1 = 6, H2 = 12), so a church
+    // that switched cadence still sorts correctly: March 2026 comes before
+    // H2 2026, not after it. Yearly rows count as the end of the year.
+    const periodNumber = (r) => (r.fiscal_month?.number ? r.fiscal_month.number : r.fiscal_semi_annual?.number ? r.fiscal_semi_annual.number * 6 : 12);
     return [...rows].sort((a, b) => {
       const ay = a.fiscal_year?.year || 0;
       const by = b.fiscal_year?.year || 0;
