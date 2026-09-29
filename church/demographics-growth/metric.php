@@ -94,6 +94,7 @@ $breadcrumbs = [
                         </div>
                     </div>
                     <div class="card-body">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2" id="metricChips"></div>
                         <div id="metricTrendChart"></div>
                     </div>
                 </div>
@@ -109,7 +110,7 @@ $breadcrumbs = [
                         <div id="metricFilterToolbar" class="list-filterbar-wrap"></div>
                         <div class="table-responsive">
                             <table class="table table-hover mb-0" id="metricTable">
-                                <thead>
+                                <thead id="metricTableHead">
                                     <tr>
                                         <th>Period</th>
                                         <th>Year</th>

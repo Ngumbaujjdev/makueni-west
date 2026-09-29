@@ -51,7 +51,7 @@ const DemographicsTracking = (function () {
     new_members_count: "New members",
     transferred_out_count: "Transferred out",
     baptisms_count: "Baptisms",
-    communion_participants_count: "Communion",
+    communion_participants_count: "Holy Communion",
     conversions_count: "Conversions",
   };
 

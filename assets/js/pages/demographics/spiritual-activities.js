@@ -5,7 +5,7 @@
  * Diocese Management System - Makueni West
  *
  * Year switch -> 4 KPI cards (year total, change vs the previous period,
- * per-period sparkline) -> chart card with tabs (All | Baptisms | Communion
+ * per-period sparkline) -> chart card with tabs (All | Baptisms | Holy Communion
  * | Conversions | Departures) + this year's mix donut -> a period table with
  * filters, sorting and a totals row. "All" is the grouped column chart with
  * toggle chips; an activity tab shows that activity alone with its year
@@ -27,7 +27,7 @@ const SpiritualActivities = (function () {
   const UI = DemographicsUI;
   const ACTIVITIES = [
     { field: "baptisms_count", metric: "baptisms", label: "Baptisms", icon: "ri-drop-line", color: "primary" },
-    { field: "communion_participants_count", metric: "communion", label: "Communion", icon: "ri-cup-line", color: "secondary" },
+    { field: "communion_participants_count", metric: "communion", label: "Holy Communion", icon: "ri-cup-line", color: "secondary" },
     { field: "conversions_count", metric: "conversions", label: "Conversions", icon: "ri-heart-line", color: "purple" },
     { field: "transferred_out_count", metric: "departures", label: "Departures", icon: "ri-user-unfollow-line", color: "danger" },
   ];

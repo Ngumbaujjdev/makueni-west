@@ -106,7 +106,7 @@ $breadcrumbs = [
                                         <th class="text-end">New</th>
                                         <th class="text-end">Departed</th>
                                         <th class="text-end">Baptisms</th>
-                                        <th class="text-end">Communion</th>
+                                        <th class="text-end">Holy Communion</th>
                                         <th class="text-end">Conversions</th>
                                     </tr>
                                 </thead>

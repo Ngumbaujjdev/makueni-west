@@ -28,7 +28,7 @@ $breadcrumbs = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title>Spiritual Activities - Makueni West Diocese</title>
-    <meta name="Description" content="Baptisms, communion, new converts, and departures - year trend" />
+    <meta name="Description" content="Baptisms, Holy Communion, new converts and departures - year trend" />
 
     <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico" type="image/x-icon" />
 
@@ -65,7 +65,7 @@ $breadcrumbs = [
                 <?php include __DIR__ . '/../../includes/page-header.php' ?>
 
                 <div class="page-toolbar">
-                    <div class="page-toolbar-sub" id="activitySubtitle">Baptisms, communion, conversions and departures</div>
+                    <div class="page-toolbar-sub" id="activitySubtitle">Baptisms, Holy Communion, conversions and departures</div>
                     <div class="page-toolbar-controls">
                         <div id="yearSwitchWrap"></div>
                     </div>
@@ -120,7 +120,7 @@ $breadcrumbs = [
                                         <th>Period</th>
                                         <th>Status</th>
                                         <th class="text-end">Baptisms</th>
-                                        <th class="text-end">Communion</th>
+                                        <th class="text-end">Holy Communion</th>
                                         <th class="text-end">Conversions</th>
                                         <th class="text-end">Departures</th>
                                     </tr>
