@@ -30625,7 +30625,8 @@ tr.list-row-flash > td {
   background: var(--custom-white) !important;
   box-shadow: 1px 0 0 var(--default-border);
 }
-.stats-table .stats-foot td {
+.stats-table .stats-foot td,
+#activityTable .stats-foot td {
   border-top: 2px solid var(--default-border);
   background: rgba(var(--primary-rgb), 0.05) !important;
   font-weight: 700;
@@ -30647,4 +30648,9 @@ tr.list-row-flash > td {
 .chip-toggle:not(.is-on) {
   opacity: 0.45;
   text-decoration: line-through;
+}
+/* Change pills inside composition lists keep their own white text. */
+.composition-value .stat-delta {
+  color: #fff;
+  font-size: 0.72rem;
 }

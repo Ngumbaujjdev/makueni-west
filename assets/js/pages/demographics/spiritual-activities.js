@@ -4,118 +4,207 @@
  * ============================================================================
  * Diocese Management System - Makueni West
  *
- * Tabbed report: Baptisms / Communion / New Converts / Departures. All 4
- * tabs' data arrives in one DemographicsReportWidgetService response (one
- * ChurchDemographic row per church per month - there's no per-tab query to
- * make), so a fiscal-year change refetches once and every tab renders from
- * the same payload. Tabs render lazily on first `shown.bs.tab`, matching
- * attendance-reports.js's own pattern.
+ * One simple page (the old four tabs are gone): year switch -> 4 KPI cards
+ * (year total, change vs the previous period, per-period sparkline) ->
+ * grouped column chart with toggle chips + this year's mix donut -> a
+ * period table with filters, sorting and a totals row.
  *
- * Cards (2026-09-17): now DemographicsUI.renderSolidStatCard() like every
- * other Demographics page - was still the older pale-tint renderWidgetCard,
- * the one page in this module never migrated when the rest moved over.
- * Chart stays a plain single-color column - one metric per tab, nothing to
- * split, so the Growth Analytics stacked/mixed treatment doesn't apply here.
+ * Data: GET /demographics-reports/widgets (`data.months`, one row per
+ * period; null figures = nothing approved for that period).
  *
- * Dependencies: DemographicsAPIHandler, DemographicsUI, ApexCharts,
- * Bootstrap tabs
+ * Dependencies: DemographicsAPIHandler, DemographicsUI, Toast, ApexCharts,
+ * jQuery DataTables
  * ============================================================================
  */
 
 const SpiritualActivities = (function () {
   "use strict";
 
-  const METRICS = ["baptisms_count", "communion_participants_count", "conversions_count", "transferred_out_count"];
+  const UI = DemographicsUI;
+  const ACTIVITIES = [
+    { field: "baptisms_count", metric: "baptisms", label: "Baptisms", icon: "ri-drop-line", color: "primary" },
+    { field: "communion_participants_count", metric: "communion", label: "Communion", icon: "ri-cup-line", color: "secondary" },
+    { field: "conversions_count", metric: "conversions", label: "Conversions", icon: "ri-heart-line", color: "purple" },
+    { field: "transferred_out_count", metric: "departures", label: "Departures", icon: "ri-user-unfollow-line", color: "danger" },
+  ];
 
-  let widgetsData = null;
-  const charts = {};
-  const renderedTabs = new Set();
+  let years = [];
+  let chart = null;
+  let donut = null;
 
   async function init() {
-    Object.assign(USER_TERRITORY, DemographicsUI.resolveUserTerritory(USER_TERRITORY));
-
+    Object.assign(USER_TERRITORY, UI.resolveUserTerritory(USER_TERRITORY));
     if (!USER_TERRITORY.id) {
       Toast.error("No church assigned to your account");
       return;
     }
 
-    wireTabs();
-    await loadFiscalYears();
-  }
-
-  function wireTabs() {
-    METRICS.forEach((metric) => {
-      document.getElementById(`tab-${metric}-btn`).addEventListener("shown.bs.tab", () => {
-        if (!renderedTabs.has(metric)) renderTab(metric);
-      });
-    });
-  }
-
-  function activeMetric() {
-    const active = document.querySelector("#reportTabs .nav-link.active");
-    return active ? active.id.replace("tab-", "").replace("-btn", "") : METRICS[0];
-  }
-
-  async function loadFiscalYears() {
-    const select = document.getElementById("reportFiscalYear");
     const result = await DemographicsAPIHandler.getFiscalYears();
-
-    if (!result.success || !result.data || result.data.length === 0) {
-      select.innerHTML = '<option value="">No fiscal years configured</option>';
+    const thisYear = new Date().getFullYear();
+    years = (result.success ? result.data || [] : []).filter((y) => y.year <= thisYear).sort((a, b) => b.year - a.year).slice(0, 5);
+    if (years.length === 0) {
+      document.getElementById("activityTableBody").innerHTML = UI.renderTableEmpty(6, "No fiscal years configured", "ri-calendar-line");
       return;
     }
 
-    const years = result.data.sort((a, b) => b.year - a.year);
-    select.innerHTML = years.map((y) => `<option value="${y.id}">${y.year}</option>`).join("");
-
-    const currentYear = new Date().getFullYear();
-    const defaultYear = years.find((y) => y.year === currentYear) || years[0];
-    select.value = defaultYear.id;
-
-    select.addEventListener("change", loadWidgets);
-    await loadWidgets();
+    const current = years.find((y) => y.year === thisYear) || years[0];
+    document.getElementById("yearSwitchWrap").innerHTML = UI.renderSegmented(
+      "yearSwitch",
+      [...years].reverse().map((y) => ({ value: y.id, label: y.year })),
+      current.id,
+      { ariaLabel: "Fiscal year" },
+    );
+    UI.wireSegmented("yearSwitch", load);
+    load(current.id);
   }
 
-  async function loadWidgets() {
-    const fiscalYearId = document.getElementById("reportFiscalYear").value;
-    if (!fiscalYearId) return;
+  const num = (v) => (v == null || v === "" ? null : Number(v));
 
+  async function load(fiscalYearId) {
+    document.getElementById("statCardsRow").innerHTML = UI.skeletonCards(4);
     const result = await DemographicsAPIHandler.getDemographicsReportWidgets(USER_TERRITORY.id, { fiscal_year_id: fiscalYearId });
-    widgetsData = result.success ? result.data : null;
+    if (!result.success) Toast.error(result.message || "Could not load activities");
+    const months = result.success ? result.data?.months || [] : [];
+    const year = years.find((y) => String(y.id) === String(fiscalYearId))?.year;
+    const reported = months.filter((m) => m.status === "approved");
+    document.getElementById("activitySubtitle").textContent = `${year}: ${reported.length} of ${months.length} period${months.length === 1 ? "" : "s"} reported`;
 
-    destroyAllCharts();
-    renderedTabs.clear();
-    renderTab(activeMetric());
+    renderKpis(months);
+    renderChart(months);
+    renderDonut(months);
+    renderTable(months);
   }
 
-  /** Solid-icon cards, matching every other Demographics page - the backend already sends {label, value, icon, color} per card, just mapped through the shared renderer instead of the pale-tint renderWidgetCard. */
-  function renderStatCards(containerId, stats) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    container.innerHTML = stats.map((c) => `<div class="col-xl-3 col-lg-6 col-md-6">${DemographicsUI.renderSolidStatCard(c)}</div>`).join("");
+  function renderKpis(months) {
+    const reported = months.filter((m) => m.status === "approved");
+    const latest = reported[reported.length - 1];
+    const previous = reported[reported.length - 2];
+    const labels = months.map((m) => m.month);
+
+    UI.renderStatCardsRow(
+      "statCardsRow",
+      ACTIVITIES.map((a) => ({
+        icon: a.icon,
+        label: `${a.label} this year`,
+        value: months.reduce((s, m) => s + (num(m[a.field]) || 0), 0).toLocaleString(),
+        color: a.color,
+        delta:
+          latest && previous ? UI.periodDelta(num(latest[a.field]) || 0, num(previous[a.field]) || 0, { percent: false, prevLabel: previous.month }) : null,
+        series: months.length > 1 ? { labels, data: months.map((m) => num(m[a.field]) || 0) } : null,
+        link: { href: UI.metricUrl(a.metric), text: "Full history" },
+      })),
+    );
   }
 
-  function renderTab(metric) {
-    renderedTabs.add(metric);
+  function renderChart(months) {
+    const el = document.getElementById("activityChart");
+    const chipsEl = document.getElementById("activityChips");
+    if (chart) chart.destroy();
+    chart = null;
 
-    const widget = widgetsData?.spiritual?.find((s) => s.metric === metric);
-    if (!widget) return;
+    if (months.length === 0) {
+      chipsEl.innerHTML = "";
+      el.innerHTML = '<p class="text-muted mb-0">No periods configured for this year.</p>';
+      return;
+    }
 
-    renderStatCards(`${metric}CardsRow`, widget.stats);
+    el.innerHTML = "";
+    chart = new ApexCharts(el, {
+      chart: { type: "bar", height: 320, toolbar: { show: false }, foreColor: UI.chartTextColor(), animations: { enabled: !document.documentElement.classList.contains("app-reduce-motion") } },
+      series: ACTIVITIES.map((a) => ({ name: a.label, data: months.map((m) => num(m[a.field]) || 0) })),
+      colors: ACTIVITIES.map((a) => UI.cssColor(a.color)),
+      xaxis: { categories: months.map((m) => m.month), labels: { rotate: 0, hideOverlappingLabels: true } },
+      yaxis: { forceNiceScale: true, labels: { formatter: (v) => Math.round(v) } },
+      plotOptions: { bar: { columnWidth: "55%", borderRadius: 4 } },
+      dataLabels: { enabled: false },
+      legend: { show: false },
+      grid: { borderColor: "rgba(125,125,125,0.15)", strokeDashArray: 4 },
+      tooltip: { shared: true, intersect: false },
+      responsive: [{ breakpoint: 576, options: { chart: { height: 260 } } }],
+    });
+    chart.render();
 
-    charts[metric] = DemographicsUI.renderTrendChart(`${metric}Chart`, {
-      categories: widget.chart.categories,
-      series: widget.chart.series,
-      type: "column",
-      color: widget.color,
+    chipsEl.innerHTML = ACTIVITIES.map(
+      (a) =>
+        `<button type="button" class="soft-chip soft-${a.color} chip-toggle is-on" data-series="${a.label}" aria-pressed="true"><span class="count-dot bg-${a.color}"></span>${a.label}</button>`,
+    ).join("");
+    chipsEl.querySelectorAll(".chip-toggle").forEach((btn) =>
+      btn.addEventListener("click", () => {
+        chart.toggleSeries(btn.dataset.series);
+        const on = !btn.classList.contains("is-on");
+        btn.classList.toggle("is-on", on);
+        btn.setAttribute("aria-pressed", on);
+      }),
+    );
+  }
+
+  function renderDonut(months) {
+    if (donut) donut.destroy();
+    donut = null;
+    const totals = ACTIVITIES.map((a) => months.reduce((s, m) => s + (num(m[a.field]) || 0), 0));
+    const el = document.getElementById("activityDonut");
+    if (totals.every((t) => t === 0)) {
+      el.innerHTML = `
+        <div class="list-empty">
+          <span class="list-empty-icon bg-primary text-white"><i class="ri-pie-chart-line"></i></span>
+          <div class="fw-semibold mt-2">Nothing recorded this year yet</div>
+        </div>`;
+      return;
+    }
+    donut = UI.renderRingDonut("activityDonut", {
+      labels: ACTIVITIES.map((a) => a.label),
+      series: totals,
+      colors: ACTIVITIES.map((a) => a.color),
+      centerLabel: "Recorded",
     });
   }
 
-  function destroyAllCharts() {
-    Object.keys(charts).forEach((key) => {
-      if (charts[key] && typeof charts[key].destroy === "function") charts[key].destroy();
-      delete charts[key];
+  function renderTable(months) {
+    const tbody = document.getElementById("activityTableBody");
+    const tfoot = document.getElementById("activityTableFoot");
+    if (window.$ && $.fn.DataTable && $.fn.DataTable.isDataTable("#activityTable")) $("#activityTable").DataTable().destroy();
+
+    if (months.length === 0) {
+      tbody.innerHTML = UI.renderTableEmpty(6, "No periods configured for this year", "ri-calendar-line");
+      tfoot.innerHTML = "";
+    } else {
+      tbody.innerHTML = months
+        .map((m, i) => {
+          const statusLabel = m.status === "approved" ? "Approved" : "Not submitted";
+          return `
+            <tr>
+              <td class="fw-semibold" data-order="${i}">${m.month}</td>
+              <td data-search="${statusLabel}">${UI.renderStatusBadge(m.status)}</td>
+              ${ACTIVITIES.map((a) => {
+                const v = num(m[a.field]);
+                return v == null ? '<td class="text-end text-muted" data-order="-1">-</td>' : `<td class="text-end" data-order="${v}">${v.toLocaleString()}</td>`;
+              }).join("")}
+            </tr>`;
+        })
+        .join("");
+      tfoot.innerHTML = `
+        <tr class="stats-foot">
+          <td>Year total</td>
+          <td></td>
+          ${ACTIVITIES.map((a) => `<td class="text-end">${months.reduce((s, m) => s + (num(m[a.field]) || 0), 0).toLocaleString()}</td>`).join("")}
+        </tr>`;
+    }
+
+    UI.renderFilterToolbar("activityFilterToolbar", {
+      searchPlaceholder: "Search periods...",
+      filters: [
+        {
+          id: "activityStatusFilter",
+          label: "All statuses",
+          options: [
+            { value: "Approved", label: "Approved" },
+            { value: "Not submitted", label: "Not submitted" },
+          ],
+        },
+      ],
     });
+    const table = UI.initListDataTable("activityTable", { order: [[0, "asc"]], pageLength: 25, hideDefaultSearch: true, noun: "periods" });
+    UI.wireFilterToolbar("activityFilterToolbar", table, [{ id: "activityStatusFilter", columnIndex: 1, exact: true }], { noun: "periods", urlSync: false });
   }
 
   return { init };

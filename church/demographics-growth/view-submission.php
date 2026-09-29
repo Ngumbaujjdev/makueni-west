@@ -71,64 +71,64 @@ $breadcrumbs = [
 
                 <?php include __DIR__ . '/../../includes/page-header.php' ?>
 
-                <!-- Header card: period, status, submitted/reviewed info, Edit/Back actions -->
-                <div class="card custom-card mb-3">
+<!-- Summary: period, status, dates, actions -->
+                <div class="card custom-card">
                     <div class="card-body" id="submissionHeaderCard">
-                        <div class="text-center py-4">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                        </div>
+                        <span class="skel skel-title" style="width: 30%;"></span>
+                        <span class="skel skel-line mt-2" style="width: 45%;"></span>
                     </div>
                 </div>
 
-                <!-- Headline stats -->
-                <div class="row g-3 mb-3" id="statCardsRow"></div>
+                <div class="row" id="statCardsRow"></div>
 
-                <!-- Charts -->
-                <div class="row g-3 mb-3">
-                    <div class="col-xl-6">
+                <div class="row">
+                    <div class="col-xl-7">
                         <div class="card custom-card">
                             <div class="card-header">
-                                <div class="card-title"><i class="ri-pie-chart-line me-2 text-primary"></i>Gender Split</div>
+                                <div>
+                                    <div class="card-title">Membership breakdown</div>
+                                    <span class="card-subtitle-text">Who makes up the congregation this period</span>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <div id="genderDonutChart"></div>
-                            </div>
+                            <div class="card-body" id="compositionCard"></div>
                         </div>
                     </div>
-                    <div class="col-xl-6">
+                    <div class="col-xl-5">
                         <div class="card custom-card">
                             <div class="card-header">
-                                <div class="card-title"><i class="ri-bar-chart-2-line me-2 text-primary"></i>Membership Composition</div>
+                                <div>
+                                    <div class="card-title">Gender split</div>
+                                    <span class="card-subtitle-text">All members</span>
+                                </div>
                             </div>
                             <div class="card-body">
-                                <div id="compositionChart"></div>
+                                <div id="genderDonut"></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Changes & Spiritual Activities -->
-                <div class="card custom-card mb-3">
-                    <div class="card-header">
-                        <div class="card-title"><i class="ri-hand-heart-line me-2 text-primary"></i>Changes & Spiritual Activities</div>
-                    </div>
-                    <div class="card-body">
-                        <div class="row g-3 row-cols-1 row-cols-md-3 row-cols-xl-5" id="activityStatsRow"></div>
-                    </div>
-                </div>
-
-                <!-- Leadership & Ministry Team -->
-                <div class="card custom-card mb-3">
-                    <div class="card-header">
-                        <div class="card-title"><i class="ri-shield-user-line me-2 text-primary"></i>Leadership & Ministry Team</div>
-                    </div>
-                    <div class="card-body" id="leadershipCard">
-                        <div class="text-center py-4">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
+                <div class="row">
+                    <div class="col-xl-7">
+                        <div class="card custom-card">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">Changes &amp; sacraments</div>
+                                    <span class="card-subtitle-text" id="changesSubtitle">Recorded this period</span>
+                                </div>
                             </div>
+                            <div class="card-body" id="changesCard"></div>
+                        </div>
+                    </div>
+                    <div class="col-xl-5">
+                        <div class="card custom-card">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">Leadership &amp; ministry team</div>
+                                    <span class="card-subtitle-text">Pastors and Sunday school teachers</span>
+                                </div>
+                            </div>
+                            <div class="card-body" id="leadershipCard"></div>
                         </div>
                     </div>
                 </div>

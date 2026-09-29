@@ -38,6 +38,7 @@ $breadcrumbs = [
     <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css" />
 
     <script>
         const USER_TERRITORY = {
@@ -62,60 +63,71 @@ $breadcrumbs = [
 
                 <?php include __DIR__ . '/../../includes/page-header.php' ?>
 
-                <!-- Fiscal year filter -->
-                <div class="d-flex justify-content-end mb-3">
-                    <select class="form-select form-select-sm" style="max-width: 160px;" id="reportFiscalYear">
-                        <option value="">Loading years...</option>
-                    </select>
+<div class="page-toolbar">
+                    <div class="page-toolbar-sub" id="activitySubtitle">Baptisms, communion, conversions and departures</div>
+                    <div class="page-toolbar-controls">
+                        <div id="yearSwitchWrap"></div>
+                    </div>
                 </div>
 
-                <!-- Tab bar -->
-                <ul class="nav nav-tabs nav-tabs-pill mb-3" id="reportTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="tab-baptisms_count-btn" data-bs-toggle="tab" data-bs-target="#tab-baptisms_count" type="button" role="tab">
-                            <i class="ri-drop-line me-1"></i>Baptisms
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="tab-communion_participants_count-btn" data-bs-toggle="tab" data-bs-target="#tab-communion_participants_count" type="button" role="tab">
-                            <i class="ri-cup-line me-1"></i>Communion
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="tab-conversions_count-btn" data-bs-toggle="tab" data-bs-target="#tab-conversions_count" type="button" role="tab">
-                            <i class="ri-user-add-line me-1"></i>New Converts
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="tab-transferred_out_count-btn" data-bs-toggle="tab" data-bs-target="#tab-transferred_out_count" type="button" role="tab">
-                            <i class="ri-user-unfollow-line me-1"></i>Departures
-                        </button>
-                    </li>
-                </ul>
+                <div class="row" id="statCardsRow"></div>
 
-                <div class="tab-content">
-                    <?php
-                    $tabs = [
-                        'baptisms_count' => 'Baptisms',
-                        'communion_participants_count' => 'Communion',
-                        'conversions_count' => 'New Converts',
-                        'transferred_out_count' => 'Departures',
-                    ];
-                    $first = true;
-                    foreach ($tabs as $metric => $label):
-                    ?>
-                    <div class="tab-pane fade <?= $first ? 'show active' : '' ?>" id="tab-<?= $metric ?>" role="tabpanel">
-                        <div class="row g-3 mb-3" id="<?= $metric ?>CardsRow"></div>
+                <div class="row">
+                    <div class="col-xl-8">
                         <div class="card custom-card">
                             <div class="card-header">
-                                <div class="card-title"><i class="ri-line-chart-line me-2 text-primary"></i><?= $label ?> Trend</div>
+                                <div>
+                                    <div class="card-title">Per period</div>
+                                    <span class="card-subtitle-text">Tap an activity to show or hide it</span>
+                                </div>
                             </div>
                             <div class="card-body">
-                                <div id="<?= $metric ?>Chart"></div>
+                                <div class="d-flex flex-wrap gap-2 mb-2" id="activityChips"></div>
+                                <div id="activityChart"></div>
                             </div>
                         </div>
                     </div>
-                    <?php $first = false; endforeach; ?>
+                    <div class="col-xl-4">
+                        <div class="card custom-card">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">This year's mix</div>
+                                    <span class="card-subtitle-text">Share of everything recorded</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="activityDonut"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card custom-card">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title">By period</div>
+                            <span class="card-subtitle-text">One row per reporting period</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="activityFilterToolbar" class="list-filterbar-wrap"></div>
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0" id="activityTable">
+                                <thead>
+                                    <tr>
+                                        <th>Period</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Baptisms</th>
+                                        <th class="text-end">Communion</th>
+                                        <th class="text-end">Conversions</th>
+                                        <th class="text-end">Departures</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activityTableBody"></tbody>
+                                <tfoot id="activityTableFoot"></tfoot>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
             </div>
@@ -140,6 +152,9 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/libs/apexcharts/apexcharts.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/jquery.dataTables.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js"></script>
 
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js<?= assetVersion('assets/js/pages/demographics/api-handler.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js<?= assetVersion('assets/js/pages/demographics/ui-helpers.js') ?>"></script>
