@@ -11,12 +11,18 @@ $currentRole = getCurrentRole();
 $userTerritoryId = $currentRole['territory_id'] ?? null;
 $userTerritoryName = $currentRole['territory']['name'] ?? 'Your Church';
 
-$pageTitle = 'Growth Analytics';
-$pageIcon = 'ri-bar-chart-grouped-line';
+// One metric's full history - where every "View trend" / "Full history"
+// link on the Demographics pages lands. ?key= is one of
+// DemographicsUI.DEMOGRAPHIC_METRICS (validated again in metric.js).
+$metricKey = preg_replace('/[^a-z_]/', '', $_GET['key'] ?? 'total_members');
+
+$pageTitle = 'Metric Trend';
+$pageIcon = 'ri-line-chart-line';
 $breadcrumbs = [
     'Home' => SITE_URL . '/church/dashboard',
     'Demographics & Growth' => SITE_URL . '/church/demographics-growth',
-    'Growth Analytics' => null,
+    'Growth Analytics' => SITE_URL . '/church/demographics-growth/growth-analytics',
+    'Metric' => null,
 ];
 ?>
 <!DOCTYPE html>
@@ -27,7 +33,7 @@ $breadcrumbs = [
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>Growth Analytics - Makueni West Diocese</title>
+    <title>Metric Trend - Makueni West Diocese</title>
     <meta name="Description" content="How this church's membership has grown over the years" />
 
     <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico" type="image/x-icon" />
@@ -41,6 +47,7 @@ $breadcrumbs = [
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css" />
 
     <script>
+        const METRIC_KEY = <?= json_encode($metricKey) ?>;
         const USER_TERRITORY = {
             id: <?= json_encode($userTerritoryId) ?>,
             name: '<?= addslashes($userTerritoryName) ?>'
@@ -64,62 +71,52 @@ $breadcrumbs = [
                 <?php include __DIR__ . '/../../includes/page-header.php' ?>
 
                 <div class="page-toolbar">
-                    <div class="page-toolbar-sub" id="analyticsSubtitle">How membership has changed over time</div>
-                    <div class="page-toolbar-controls">
-                        <div class="seg-control" id="rangeSwitch" role="tablist" aria-label="Range">
-                            <button type="button" class="seg-btn" data-value="1">1Y</button>
-                            <button type="button" class="seg-btn active" data-value="3">3Y</button>
-                            <button type="button" class="seg-btn" data-value="5">5Y</button>
-                            <button type="button" class="seg-btn" data-value="all">All</button>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="kpi-icon bg-primary text-white" id="metricIcon" style="width: 2.6rem; height: 2.6rem; font-size: 1.25rem;"><i class="ri-line-chart-line"></i></span>
+                        <div>
+                            <div class="fw-bold fs-5" id="metricTitle">Metric</div>
+                            <div class="page-toolbar-sub" id="metricSubtitle">Full history across every approved submission</div>
                         </div>
+                    </div>
+                    <div class="page-toolbar-controls">
+                        <div id="metricSwitchWrap"></div>
                     </div>
                 </div>
 
                 <div class="row" id="statCardsRow"></div>
 
-                <div class="row">
-                    <div class="col-xl-8">
-                        <div class="card custom-card">
-                            <div class="card-header">
-                                <div>
-                                    <div class="card-title">Membership by category</div>
-                                    <span class="card-subtitle-text">Tap a category to show or hide it</span>
-                                </div>
-                            </div>
-                            <div class="card-body">
-                                <div class="d-flex flex-wrap gap-2 mb-2" id="categoryChips"></div>
-                                <div id="categoryChart"></div>
-                            </div>
+                <div class="card custom-card">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title">Trend</div>
+                            <span class="card-subtitle-text" id="trendSubtitle">Every approved submission</span>
                         </div>
                     </div>
-                    <div class="col-xl-4">
-                        <div class="card custom-card">
-                            <div class="card-header">
-                                <div>
-                                    <div class="card-title">Composition</div>
-                                    <span class="card-subtitle-text" id="compositionSubtitle">Latest submission</span>
-                                </div>
-                            </div>
-                            <div class="card-body">
-                                <div id="compositionDonut"></div>
-                            </div>
-                        </div>
+                    <div class="card-body">
+                        <div id="metricTrendChart"></div>
                     </div>
                 </div>
 
                 <div class="card custom-card">
                     <div class="card-header">
                         <div>
-                            <div class="card-title">Year over year</div>
-                            <span class="card-subtitle-text">Latest approved figure in each year, with the change from the year before</span>
+                            <div class="card-title">By period</div>
+                            <span class="card-subtitle-text">With the change from the period before</span>
                         </div>
                     </div>
                     <div class="card-body p-0">
-                        <div id="yoyFilterToolbar" class="list-filterbar-wrap"></div>
+                        <div id="metricFilterToolbar" class="list-filterbar-wrap"></div>
                         <div class="table-responsive">
-                            <table class="table table-hover mb-0 stats-table" id="yoyTable">
-                                <thead id="yoyHead"></thead>
-                                <tbody id="yoyBody"></tbody>
+                            <table class="table table-hover mb-0" id="metricTable">
+                                <thead>
+                                    <tr>
+                                        <th>Period</th>
+                                        <th>Year</th>
+                                        <th class="text-end">Value</th>
+                                        <th class="text-end">Change</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="metricTableBody"></tbody>
                             </table>
                         </div>
                     </div>
@@ -153,9 +150,9 @@ $breadcrumbs = [
 
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js<?= assetVersion('assets/js/pages/demographics/api-handler.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js<?= assetVersion('assets/js/pages/demographics/ui-helpers.js') ?>"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/growth-analytics.js<?= assetVersion('assets/js/pages/demographics/growth-analytics.js') ?>"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/metric.js<?= assetVersion('assets/js/pages/demographics/metric.js') ?>"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => window.GrowthAnalytics.init());
+        document.addEventListener('DOMContentLoaded', () => window.DemographicsMetric.init());
     </script>
 </body>
 

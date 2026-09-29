@@ -40,10 +40,10 @@ const DemographicsOverview = (function () {
 
   // The four headline numbers. Each links to its own trend page.
   const KPIS = [
-    { key: "total_members", label: "Total members", icon: "ri-team-line", color: "primary" },
-    { key: "youth_count", label: "Youth (13-35)", icon: "ri-user-star-line", color: "success" },
-    { key: "new_members_count", label: "New members", icon: "ri-user-add-line", color: "purple" },
-    { key: "baptisms_count", label: "Baptisms", icon: "ri-drop-line", color: "secondary" },
+    { key: "total_members", metric: "total_members", label: "Total members", icon: "ri-team-line", color: "primary" },
+    { key: "youth_count", metric: "youth", label: "Youth (13-35)", icon: "ri-user-star-line", color: "success" },
+    { key: "new_members_count", metric: "new_members", label: "New members", icon: "ri-user-add-line", color: "purple" },
+    { key: "baptisms_count", metric: "baptisms", label: "Baptisms", icon: "ri-drop-line", color: "secondary" },
   ];
 
   async function init() {
@@ -147,7 +147,6 @@ const DemographicsOverview = (function () {
 
   function renderKpis(latest, previous) {
     const prevLabel = previous ? UI.demographicPeriodLabel(previous) : "";
-    const base = window.mwdBaseUrl || "";
 
     UI.renderStatCardsRow(
       "statCardsRow",
@@ -162,7 +161,7 @@ const DemographicsOverview = (function () {
           color: k.color,
           delta: value != null && prev != null ? UI.periodDelta(Number(value), Number(prev), { prevLabel }) : null,
           series: series.length > 1 ? { labels: series.map(chartLabel), data: series.map((r) => Number(r[k.key]) || 0) } : null,
-          link: { href: `${base}/church/demographics-growth/growth-analytics`, text: "View trend" },
+          link: { href: UI.metricUrl(k.metric), text: "View trend" },
         };
       }),
     );
