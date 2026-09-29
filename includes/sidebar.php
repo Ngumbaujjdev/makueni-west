@@ -33,7 +33,22 @@ function getDashboardUrl($territoryType, $baseUrl) {
 
 $dashboardUrl = getDashboardUrl($territoryType, $baseUrl);
 $userName = $currentUser['firstname'] ?? 'User';
-$userRole = $currentRole['role_name'] ?? 'Unknown Role';
+// Same fallback header.php's own $roleName uses - $_SESSION['current_role']
+// appears to genuinely lack 'role_name' by the time either file runs (a
+// pre-existing gap, not something this change caused or fixes); matching
+// header.php's fallback here at least keeps the header dropdown and this
+// sidebar row consistent with each other rather than disagreeing.
+$userRole = $currentRole['role_name'] ?? 'Member';
+
+// Same firstname+lastname-initial convention includes/header.php's own
+// profile dropdown avatar already uses, so the sidebar's profile row
+// and the header's avatar always agree.
+$userLastName = $currentUser['lastname'] ?? '';
+$sidebarInitials = strtoupper(substr($userName, 0, 1) . substr($userLastName, 0, 1));
+if (strlen($sidebarInitials) < 2) {
+    $sidebarInitials = strtoupper(substr($userName, 0, 2));
+}
+$userFullName = trim($userName . ' ' . $userLastName);
 ?>
 
 <!-- Font Awesome CDN -->
@@ -79,9 +94,14 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
                 </li>
 
                 <li class="slide">
-                    <a href="<?= $baseUrl ?>/profile" class="side-menu__item">
-                        <i class="ri-user-line side-menu__icon"></i>
-                        <span class="side-menu__label">My Profile</span>
+                    <a href="<?= $baseUrl ?>/profile" class="side-menu__item sidebar-profile-row">
+                        <span class="avatar avatar-sm rounded-circle bg-primary-transparent text-primary fw-semibold flex-shrink-0">
+                            <?= htmlspecialchars($sidebarInitials) ?>
+                        </span>
+                        <span class="d-flex flex-column ms-2" style="min-width: 0;">
+                            <span class="side-menu__label fw-semibold text-truncate"><?= htmlspecialchars($userFullName) ?></span>
+                            <span class="fs-11 text-truncate" style="color: var(--menu-prime-color);"><?= htmlspecialchars($userRole) ?></span>
+                        </span>
                     </a>
                 </li>
 
@@ -176,12 +196,16 @@ $userRole = $currentRole['role_name'] ?? 'Unknown Role';
         'default': 'ri-checkbox-blank-circle-line'
     };
 
-    // Per-group icon accent color, cycled round-robin - this app's own
-    // Bootstrap semantic color classes (matching the *-rgb variables in
-    // styles.css's :root), not thonge-leather's literal, off-brand hex
-    // values. Every module within a group shares its group's color, so
-    // the sidebar reads as organized-by-category rather than flat.
-    const ICON_COLOR_CYCLE = ['icon-primary', 'icon-secondary', 'icon-success', 'icon-danger'];
+    // Per-group icon accent color, cycled round-robin by *visible* group
+    // (see renderModuleGroups() below). 6 colors, not just the 4 brand
+    // semantics - a 4-way cycle over 5 real module groups per tier read
+    // as flat/repetitive (most groups landed on 1 of only 2 colors in
+    // practice). icon-cat-5/6 use --purple-rgb/--pink-rgb, unused-elsewhere
+    // Bootstrap variables already in styles.css's :root - not new hex
+    // values - per an explicit, scoped exception in CLAUDE.md's Design
+    // Rules (sidebar category coding, not brand identity - same reasoning
+    // already used for the heatmap's auto-shaded gradient).
+    const ICON_COLOR_CYCLE = ['icon-cat-1', 'icon-cat-2', 'icon-cat-3', 'icon-cat-4', 'icon-cat-5', 'icon-cat-6'];
 
     // Initialize on DOM ready
     document.addEventListener('DOMContentLoaded', function() {

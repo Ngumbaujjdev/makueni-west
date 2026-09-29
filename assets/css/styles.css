@@ -23261,6 +23261,16 @@ code[class*="language-"] {
   font-weight: 500;
   border-radius: 0.5rem;
 }
+/* .side-menu__angle is position:absolute (see its own rule below), so it
+   doesn't occupy real space in this flex row - a long label (e.g.
+   "Demographics & Growth") wasn't reserving room for it and could render
+   right under/behind it, reading as "no chevron" even though the icon
+   itself was correct. Reserve real flex-layout space on has-sub rows,
+   and let the label ellipsis-truncate as a second line of defense for
+   anything still too long even with the reserved space. */
+.app-sidebar .slide.has-sub > .side-menu__item {
+  padding-inline-end: 1.85rem;
+}
 .app-sidebar .side-menu__item.active,
 .app-sidebar .side-menu__item:hover {
   color: var(--menu-prime-color);
@@ -23337,6 +23347,9 @@ code[class*="language-"] {
 }
 .app-sidebar .side-menu__label {
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0; /* flex items default to min-width:auto, which blocks shrinking below content size - without this, overflow/text-overflow can't kick in */
   color: var(--menu-prime-color);
   position: relative;
   font-size: 0.85rem;
@@ -28646,9 +28659,14 @@ a:hover {
 .global-search-result {
     display: flex;
     align-items: center;
-    padding: 0.55rem 1rem;
+    padding: 0.7rem 1.25rem;
+    font-size: 0.9rem;
     color: var(--diocese-black, #0D0D0D);
     text-decoration: none;
+}
+
+.global-search-result i {
+    font-size: 1.1rem;
 }
 
 .global-search-result:hover,
@@ -28701,32 +28719,54 @@ a:hover {
    duplicated here.
    ========================================================================== */
 
-/* Per-category icon color - cycled round-robin per module group in
-   renderModuleGroups() (includes/sidebar.php). Bootstrap semantic *-rgb
-   vars from :root above, not literal hex, so a future brand-token change
-   propagates here too. :not(.active) + !important (matching this file's
-   existing convention for beating dark-mode's own specificity, see the
-   hover-state comment above) so the existing "active = solid teal" cue
-   stays the one consistent signal for "you are here" regardless of a
-   module's category color. */
-#dynamic-modules-container li.icon-primary .side-menu__item:not(.active) .side-menu__icon,
-#dynamic-modules-container .category-name .icon-primary {
+/* Per-category icon color - cycled round-robin per *visible* module group
+   in renderModuleGroups() (includes/sidebar.php). This app only ever has
+   4 real semantic brand colors (teal/gold/green/red - see CLAUDE.md
+   Design Rules) so a 4-way cycle over 5 real module groups (church tier:
+   Overview/Members/Finance/Programs/Settings) read as flat/repetitive -
+   most groups landed on one of only 2 colors in practice. Per an explicit,
+   scoped exception documented in CLAUDE.md's Design Rules (this is
+   information-coding for sidebar categories, not brand identity - the
+   same reasoning already used for the heatmap's auto-shaded gradient),
+   this cycle adds --purple-rgb/--pink-rgb - unused-elsewhere Bootstrap
+   semantic variables already sitting in :root, not new hex values - for
+   6 genuinely distinct colors instead of 4. Classes are named icon-cat-N
+   (not icon-primary/icon-danger/etc, the previous naming) specifically
+   because these no longer carry Bootstrap's semantic meaning - icon-cat-4
+   isn't "an error state," it's just the 4th color in rotation.
+   :not(.active) + !important (matching this file's existing convention
+   for beating dark-mode's own specificity, see the hover-state comment
+   above) so the existing "active = solid teal" cue stays the one
+   consistent signal for "you are here" regardless of a module's category
+   color. */
+#dynamic-modules-container li.icon-cat-1 .side-menu__item:not(.active) .side-menu__icon,
+#dynamic-modules-container .category-name .icon-cat-1 {
     color: rgb(var(--primary-rgb)) !important;
 }
 
-#dynamic-modules-container li.icon-secondary .side-menu__item:not(.active) .side-menu__icon,
-#dynamic-modules-container .category-name .icon-secondary {
+#dynamic-modules-container li.icon-cat-2 .side-menu__item:not(.active) .side-menu__icon,
+#dynamic-modules-container .category-name .icon-cat-2 {
     color: rgb(var(--secondary-rgb)) !important;
 }
 
-#dynamic-modules-container li.icon-success .side-menu__item:not(.active) .side-menu__icon,
-#dynamic-modules-container .category-name .icon-success {
+#dynamic-modules-container li.icon-cat-3 .side-menu__item:not(.active) .side-menu__icon,
+#dynamic-modules-container .category-name .icon-cat-3 {
     color: rgb(var(--success-rgb)) !important;
 }
 
-#dynamic-modules-container li.icon-danger .side-menu__item:not(.active) .side-menu__icon,
-#dynamic-modules-container .category-name .icon-danger {
+#dynamic-modules-container li.icon-cat-4 .side-menu__item:not(.active) .side-menu__icon,
+#dynamic-modules-container .category-name .icon-cat-4 {
     color: rgb(var(--danger-rgb)) !important;
+}
+
+#dynamic-modules-container li.icon-cat-5 .side-menu__item:not(.active) .side-menu__icon,
+#dynamic-modules-container .category-name .icon-cat-5 {
+    color: rgb(var(--purple-rgb)) !important;
+}
+
+#dynamic-modules-container li.icon-cat-6 .side-menu__item:not(.active) .side-menu__icon,
+#dynamic-modules-container .category-name .icon-cat-6 {
+    color: rgb(var(--pink-rgb)) !important;
 }
 
 /* Rounded-pill rows with breathing room, instead of flush full-width

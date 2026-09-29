@@ -15,13 +15,15 @@
 ?>
 <div class="modal fade" id="searchModal" tabindex="-1" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
+        <div class="modal-content rounded-3 shadow-lg border-0">
             <div class="modal-body p-0">
-                <div class="d-flex align-items-center gap-2 border-block-end px-3 py-2">
-                    <i class="ri-search-line fs-18 text-body"></i>
-                    <input type="text" class="form-control border-0 shadow-none px-1" id="globalSearchInput"
+                <div class="d-flex align-items-center gap-3 border-block-end px-4 py-3">
+                    <span class="avatar avatar-sm rounded-circle bg-primary-transparent text-primary flex-shrink-0">
+                        <i class="ri-search-line fs-16"></i>
+                    </span>
+                    <input type="text" class="form-control form-control-lg border-0 shadow-none px-1" id="globalSearchInput"
                         placeholder="Search pages..." autocomplete="off" aria-label="Search pages" />
-                    <kbd class="fs-11">Esc</kbd>
+                    <kbd class="fs-12 flex-shrink-0">Esc</kbd>
                 </div>
                 <div id="globalSearchResults" class="global-search-results"></div>
                 <div class="d-flex justify-content-center gap-3 border-block-start px-3 py-2 fs-11 text-body">

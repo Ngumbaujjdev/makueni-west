@@ -66,6 +66,15 @@ $baseUrl = '/makueni-west';
 
         <!-- Start::header-content-right -->
         <div class="header-content-right">
+            <!-- Start::header-element - Locale indicator (decorative - this app has no
+                 i18n/language switching, matching how the YNEX template's own reference
+                 demo's flag+"EN" indicator isn't real language switching either) -->
+            <div class="header-element d-none d-md-flex align-items-center">
+                <span class="fs-16" aria-hidden="true">🇰🇪</span>
+                <span class="fs-12 fw-semibold text-dark ms-1">EN</span>
+            </div>
+            <!-- End::header-element -->
+
             <!-- Start::header-element -->
             <div class="header-element header-search">
                 <!-- Start::header-link -->
