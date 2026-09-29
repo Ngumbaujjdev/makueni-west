@@ -28760,3 +28760,84 @@ a:hover {
     display: inline-block;
     animation: spin 1s linear infinite;
 }
+
+/* Appearance settings (profile.php's "Appearance" tab,
+   assets/js/pages/profile/appearance.js, backend App\Support\Appearance)
+   - classes land on <html>, either printed server-side from the
+   mwd_appearance_classes cookie (includes/session-manager.php's
+   appearanceHtmlClasses()) or applied live by the tab's own preview
+   script. Density/text-size/big-targets are scoped to .app-content
+   (the actual page body) rather than the whole document, so they don't
+   destabilize the sidebar/header's own already-tuned sizing;
+   reduce-motion/focus-outlines/high-contrast are safe everywhere. */
+.app-reduce-motion,
+.app-reduce-motion * {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+}
+
+.app-focus-outlines *:focus-visible {
+    outline: 2px solid #2CA4BF !important;
+    outline-offset: 2px !important;
+}
+
+/* Overriding the custom property, not hunting down every .text-muted
+   usage - .text-muted already reads color: var(--text-muted). */
+.app-high-contrast {
+    --text-muted: rgb(var(--diocese-black-rgb));
+}
+
+.app-underline-links .app-content a:not(.btn):not(.nav-link):not(.side-menu__item) {
+    text-decoration: underline !important;
+}
+
+.app-density-compact .app-content .card-body {
+    padding: 0.75rem;
+}
+.app-density-compact .app-content .table > :not(caption) > * > * {
+    padding: 0.4rem 0.6rem;
+}
+
+.app-density-spacious .app-content .card-body {
+    padding: 2rem;
+}
+.app-density-spacious .app-content .table > :not(caption) > * > * {
+    padding: 1rem 1.25rem;
+}
+
+.app-text-sm .app-content {
+    font-size: 0.9em;
+}
+.app-text-lg .app-content {
+    font-size: 1.125em;
+}
+
+.app-big-targets .app-content .btn {
+    min-height: 44px;
+    padding-block: 0.75rem;
+}
+.app-big-targets .app-content .form-control,
+.app-big-targets .app-content .form-select {
+    min-height: 44px;
+}
+
+/* Mobile check: the accessibility toggle rows use the existing
+   .row/.col-md-6 grid, which already stacks to one column below the md
+   breakpoint - no extra rule needed there. The Density/Text Size
+   segmented controls are a different story: Bootstrap's .btn-group is
+   display:inline-flex with no flex-wrap, so 3 buttons in a .w-100 group
+   just shrink to fit rather than wrap - on a narrow phone, labels like
+   "Comfortable" get uncomfortably cramped. Stack them into a
+   full-width vertical group below Bootstrap's own sm breakpoint. */
+@media (max-width: 575.98px) {
+    #appearanceDensityGroup,
+    #appearanceTextSizeGroup {
+        flex-direction: column;
+    }
+    #appearanceDensityGroup .btn,
+    #appearanceTextSizeGroup .btn {
+        border-radius: 0.375rem !important;
+    }
+}

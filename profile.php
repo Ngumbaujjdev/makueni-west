@@ -11,7 +11,7 @@ $user = getAuthUser();
 $currentRole = getCurrentRole();
 ?>
 <!DOCTYPE html>
-<html lang="en" dir="ltr" data-nav-layout="vertical" data-theme-mode="light" data-header-styles="light"
+<html lang="en" dir="ltr" class="<?= appearanceHtmlClasses() ?>" data-nav-layout="vertical" data-theme-mode="light" data-header-styles="light"
     data-menu-styles="dark" data-toggled="close">
 
 <head>
@@ -304,6 +304,12 @@ $currentRole = getCurrentRole();
                                                     <button class="nav-link" id="login-history-tab" data-bs-toggle="tab"
                                                         data-bs-target="#login-history-pane" type="button" role="tab">
                                                         <i class="ri-login-box-line me-1"></i>Login History
+                                                    </button>
+                                                </li>
+                                                <li class="nav-item" role="presentation">
+                                                    <button class="nav-link" id="appearance-tab" data-bs-toggle="tab"
+                                                        data-bs-target="#appearance-pane" type="button" role="tab">
+                                                        <i class="ri-palette-line me-1"></i>Appearance
                                                     </button>
                                                 </li>
                                             </ul>
@@ -646,6 +652,150 @@ $currentRole = getCurrentRole();
                                                         <div class="card-body">
                                                             <div id="loginHistoryContainer"></div>
                                                         </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Tab 7: Appearance -->
+                                                <div class="tab-pane fade" id="appearance-pane" role="tabpanel">
+                                                    <div class="card shadow-none border mb-3">
+                                                        <div class="card-header bg-primary-transparent">
+                                                            <h6 class="card-title mb-0">
+                                                                <i class="ri-layout-grid-line me-2"></i>Density &amp; Text Size
+                                                            </h6>
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div class="row g-4">
+                                                                <div class="col-md-6">
+                                                                    <label class="form-label fw-semibold text-dark d-block mb-2">
+                                                                        <i class="ri-layout-row-line me-1 text-primary"></i>Density
+                                                                    </label>
+                                                                    <div class="btn-group w-100" role="group" aria-label="Density" id="appearanceDensityGroup">
+                                                                        <input type="radio" class="btn-check" name="app-density" id="density-compact" value="compact" autocomplete="off">
+                                                                        <label class="btn btn-outline-primary" for="density-compact">Compact</label>
+                                                                        <input type="radio" class="btn-check" name="app-density" id="density-comfortable" value="comfortable" autocomplete="off">
+                                                                        <label class="btn btn-outline-primary" for="density-comfortable">Comfortable</label>
+                                                                        <input type="radio" class="btn-check" name="app-density" id="density-spacious" value="spacious" autocomplete="off">
+                                                                        <label class="btn btn-outline-primary" for="density-spacious">Spacious</label>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <label class="form-label fw-semibold text-dark d-block mb-2">
+                                                                        <i class="ri-font-size me-1 text-primary"></i>Text Size
+                                                                    </label>
+                                                                    <div class="btn-group w-100" role="group" aria-label="Text size" id="appearanceTextSizeGroup">
+                                                                        <input type="radio" class="btn-check" name="app-text-size" id="text-size-small" value="small" autocomplete="off">
+                                                                        <label class="btn btn-outline-primary" for="text-size-small">Small</label>
+                                                                        <input type="radio" class="btn-check" name="app-text-size" id="text-size-medium" value="medium" autocomplete="off">
+                                                                        <label class="btn btn-outline-primary" for="text-size-medium">Medium</label>
+                                                                        <input type="radio" class="btn-check" name="app-text-size" id="text-size-large" value="large" autocomplete="off">
+                                                                        <label class="btn btn-outline-primary" for="text-size-large">Large</label>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="border rounded p-3 mt-4">
+                                                                <p class="fs-13 text-body fw-semibold mb-2">Sample</p>
+                                                                <div class="table-responsive">
+                                                                    <table class="table table-bordered mb-0">
+                                                                        <thead class="table-light">
+                                                                            <tr>
+                                                                                <th class="fw-semibold text-dark">Name</th>
+                                                                                <th class="fw-semibold text-dark">Role</th>
+                                                                                <th class="fw-semibold text-dark text-end">Status</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            <tr>
+                                                                                <td>Joshua John</td>
+                                                                                <td>System Administrator</td>
+                                                                                <td class="text-end"><span class="badge bg-success-transparent">Active</span></td>
+                                                                            </tr>
+                                                                            <tr>
+                                                                                <td>Peter Kilonzo</td>
+                                                                                <td>Bishop</td>
+                                                                                <td class="text-end"><span class="badge bg-success-transparent">Active</span></td>
+                                                                            </tr>
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="card shadow-none border">
+                                                        <div class="card-header bg-secondary-transparent">
+                                                            <h6 class="card-title mb-0">
+                                                                <i class="ri-contrast-line me-2"></i>Accessibility &amp; Motion
+                                                            </h6>
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div class="row g-3">
+                                                                <div class="col-md-6">
+                                                                    <div class="d-flex justify-content-between align-items-center border rounded p-3 h-100">
+                                                                        <div class="pe-3">
+                                                                            <p class="fw-semibold mb-1"><i class="ri-pause-circle-line me-1 text-primary"></i>Reduce Motion</p>
+                                                                            <p class="fs-12 text-body mb-0">Disables slide/fade animations</p>
+                                                                        </div>
+                                                                        <div class="form-check form-switch mb-0">
+                                                                            <input class="form-check-input" type="checkbox" role="switch" id="reduce_motion">
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <div class="d-flex justify-content-between align-items-center border rounded p-3 h-100">
+                                                                        <div class="pe-3">
+                                                                            <p class="fw-semibold mb-1"><i class="ri-contrast-2-line me-1 text-primary"></i>High Contrast</p>
+                                                                            <p class="fs-12 text-body mb-0">Darkens secondary/muted text</p>
+                                                                        </div>
+                                                                        <div class="form-check form-switch mb-0">
+                                                                            <input class="form-check-input" type="checkbox" role="switch" id="high_contrast">
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <div class="d-flex justify-content-between align-items-center border rounded p-3 h-100">
+                                                                        <div class="pe-3">
+                                                                            <p class="fw-semibold mb-1"><i class="ri-focus-line me-1 text-primary"></i>Focus Outlines</p>
+                                                                            <p class="fs-12 text-body mb-0">Always-visible keyboard focus rings</p>
+                                                                        </div>
+                                                                        <div class="form-check form-switch mb-0">
+                                                                            <input class="form-check-input" type="checkbox" role="switch" id="focus_outlines">
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <div class="d-flex justify-content-between align-items-center border rounded p-3 h-100">
+                                                                        <div class="pe-3">
+                                                                            <p class="fw-semibold mb-1"><i class="ri-underline me-1 text-primary"></i>Underline Links</p>
+                                                                            <p class="fs-12 text-body mb-0">Underlines links, not color-only</p>
+                                                                        </div>
+                                                                        <div class="form-check form-switch mb-0">
+                                                                            <input class="form-check-input" type="checkbox" role="switch" id="underline_links">
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <div class="d-flex justify-content-between align-items-center border rounded p-3 h-100">
+                                                                        <div class="pe-3">
+                                                                            <p class="fw-semibold mb-1"><i class="ri-hand-coin-line me-1 text-primary"></i>Larger Touch Targets</p>
+                                                                            <p class="fs-12 text-body mb-0">Bigger buttons/rows for touch</p>
+                                                                        </div>
+                                                                        <div class="form-check form-switch mb-0">
+                                                                            <input class="form-check-input" type="checkbox" role="switch" id="big_targets">
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="d-flex justify-content-end gap-2 mt-3">
+                                                        <button type="button" class="btn btn-light" id="appearanceResetBtn">
+                                                            <i class="ri-refresh-line me-1"></i>Reset to Defaults
+                                                        </button>
+                                                        <button type="button" class="btn btn-primary" id="appearanceSaveBtn">
+                                                            <i class="ri-save-line me-1"></i>Save Changes
+                                                        </button>
                                                     </div>
                                                 </div>
 
@@ -1083,6 +1233,7 @@ $currentRole = getCurrentRole();
     <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/profile/profile.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/profile/appearance.js<?= assetVersion('assets/js/pages/profile/appearance.js') ?>"></script>
 </body>
 
 </html>

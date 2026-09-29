@@ -42,6 +42,29 @@ if (!function_exists('assetVersion')) {
     }
 }
 
+/*
+ * Appearance settings (density/text size/accessibility toggles - see
+ * backend App\Support\Appearance, docs/specs/appearance-settings-spec.md)
+ * are printed on every page's <html class="..."> tag server-side, so
+ * there's no flash of unstyled content on first paint. Reads a cookie
+ * (not a session/API round-trip) that assets/js/pages/profile/appearance.js
+ * keeps in sync with the saved backend state whenever settings change -
+ * a user who's never touched the Appearance tab has no cookie, which
+ * correctly resolves to "no extra classes" (all-default settings need
+ * none anyway, see Appearance::classesFor()), so there's nothing to
+ * eagerly fetch on every page load just to cover that case.
+ * Whitelist-sanitized (letters/digits/hyphen/space only) since a cookie
+ * value is attacker-controlled input and this gets echoed straight into
+ * an HTML attribute.
+ */
+if (!function_exists('appearanceHtmlClasses')) {
+    function appearanceHtmlClasses(): string
+    {
+        $raw = $_COOKIE['mwd_appearance_classes'] ?? '';
+        return preg_replace('/[^a-z0-9\- ]/', '', $raw);
+    }
+}
+
 // Session configuration
 ini_set('session.cookie_httponly', 1);
 ini_set('session.use_only_cookies', 1);

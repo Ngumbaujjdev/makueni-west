@@ -1,6 +1,6 @@
 <?php require_once __DIR__ . '/../includes/session-manager.php'; ?>
 <!DOCTYPE html>
-<html lang="en" dir="ltr" data-nav-layout="vertical" data-vertical-style="overlay" data-theme-mode="light"
+<html lang="en" dir="ltr" class="<?= appearanceHtmlClasses() ?>" data-nav-layout="vertical" data-vertical-style="overlay" data-theme-mode="light"
     data-header-styles="light" data-menu-styles="light" data-toggled="close">
 <!-- Mirrored from spruko.com/demo/blazor/ynex/ynex/dist/html/404-error.html by HTTrack Website Copier/3.x [XR&CO'2014], Fri, 05 Jan 2024 16:08:36 GMT -->
 
