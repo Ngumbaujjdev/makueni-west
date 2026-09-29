@@ -51,7 +51,7 @@ class DemographicsReportWidgetService
     private const MEMBERSHIP_COLUMNS = [
         'total_members', 'male_count', 'female_count', 'youth_count',
         'mens_fellowship_count', 'womens_fellowship_count',
-        'sunday_school_male_count', 'sunday_school_female_count', 'seniors_count',
+        'sunday_school_male_count', 'sunday_school_female_count', 'sunday_school_teachers_count', 'seniors_count',
         'new_members_count', 'transferred_out_count',
         'baptisms_count', 'communion_participants_count', 'conversions_count',
     ];
