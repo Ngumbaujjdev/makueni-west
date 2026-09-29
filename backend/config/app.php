@@ -27,7 +27,7 @@ return [
     */
 
     'env' => env('APP_ENV', 'production'),
-     /*
+    /*
     |--------------------------------------------------------------------------
     | Application Version
     |--------------------------------------------------------------------------
@@ -38,7 +38,6 @@ return [
     */
 
     'version' => env('APP_VERSION', '1.0.0'),
-
 
     /*
     |--------------------------------------------------------------------------
@@ -65,6 +64,12 @@ return [
     */
 
     'url' => env('APP_URL', 'http://localhost'),
+
+    /*
+    | The PHP frontend's public URL - report PDFs link their authenticity QR
+    | code to its verify-report page (docs/specs/reports-spec.md).
+    */
+    'frontend_url' => rtrim(env('FRONTEND_URL', 'http://localhost/makueni-west'), '/'),
 
     /*
     |--------------------------------------------------------------------------

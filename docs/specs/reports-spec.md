@@ -1,0 +1,97 @@
+# Reports (PDF + Excel) — spec
+
+**Status:** Phase 2 (engine and the church-level Demographics reports). Phase 3 adds the modal, the monitor and the verify page; Phase 4 adds subregion, region and diocese.
+
+## Why
+Churches need printable, trustworthy reports of what they record. The design follows v1-events-backend's reporting (one class per report, one PDF layout, background generation), with three changes:
+- Totals are opt-in per column instead of printed everywhere.
+- Insights and recommendations are built once and reused by any report.
+- Every PDF carries a QR code that proves it came from the system.
+
+## Data model
+
+### `report_runs`
+| column | notes |
+|---|---|
+| `id`, `uuid` | the uuid is the public handle; routes bind by uuid |
+| `user_id` | who asked for it |
+| `territory_id` | the church (later region/diocese) it's about |
+| `report_key` | e.g. `demographics.summary` |
+| `format` | `pdf` / `xlsx` |
+| `params` | json: `fiscal_year_id`, `years`, `demographic_id`… |
+| `status` | `queued` → `running` → `ready` / `failed` |
+| `progress`, `stage` | 0–100 and a short human line ("Drawing the PDF") |
+| `title`, `period_label`, `scope_label` | snapshotted, so the verify page never has to re-run the report |
+| `file_path`, `file_name`, `file_size` | on the `local` disk under `reports/` |
+| `verification_code` | unique, e.g. `MWD-DEM-7K4Q-92XF` |
+| `file_hash` | SHA-256 of the finished file |
+| `error` | set when failed |
+| `started_at`, `finished_at`, `expires_at` | files are pruned after 7 days (`reports:prune`); the run row and its code stay, so a printed copy can still be verified |
+
+## Report definitions (`app/Reports`)
+- `Report`: `key()`, `title()`, `description()`, `icon()`, `module()`, `scopes()` (TerritoryType values), `build(ReportContext): ReportData`.
+- `ReportRegistry` lists the report classes, and `forScope($type)` returns the ones that can run at a territory level.
+- `ReportContext`: the territory, its type, the ancestry label ("St Paul's · Kathonzweni Subregion · Makueni Region"), the church ids it covers, the params and the user.
+- `ReportData`: `kicker`, `title`, `periodLabel`, `scopeLabel`, `tiles`, `meta`, `sections`, `insights`.
+- `ReportSection`: `heading`, `note`, `columns`, `rows`, `totalsLabel`.
+- `ReportColumn`: `header`, `align` (`L`/`R`), `strong`, and `total` (`sum` | `latest` | `avg` | `null`).
+  - A section has a totals row **only if some column declares a total**. `latest` is for headcounts, where adding months together would be wrong.
+  - A totals row that only counts rows is not allowed.
+
+### Demographics reports (church scope)
+| key | title | totals |
+|---|---|---|
+| `demographics.summary` | Demographics summary (fiscal year) | headcounts `latest`, changes `sum` |
+| `demographics.monthly` | Monthly statistics (fiscal year) | per column: `latest` / `sum` |
+| `demographics.spiritual` | Spiritual activities (fiscal year) | `sum` |
+| `demographics.growth` | Growth analytics (1/3/5 years or all) | none |
+| `demographics.submission` | Submission report (one submission) | none |
+
+## Insights (`app/Support/Reports/Insights`)
+- `Insight {tone: good|watch|concern, title, detail, recommendation?}`
+- `InsightRule::evaluate(ReportFacts): ?Insight`. Rules are small and independent, and a report lists the ones it uses. Later modules (attendance, budget) can add their own rules to the same engine.
+- A report with no insights shows **no** insights part, in either the PDF or the Excel file.
+
+## Outputs
+- **PDF** (`App\Services\Pdf\DioceseReportPdf`, TCPDF). The layout of v1-events-backend's `TuqioReportPdf`, in diocese teal and gold:
+  - a keyline and logo header
+  - a scope heading above the title ("CHURCH REPORT"), then the title with an underline and "period · territory path"
+  - a KPI strip and a details panel
+  - tables with a teal heading band and totals only where declared
+  - **Automatic orientation per table:** portrait if the columns fit, landscape if not. A table on a different orientation starts a new page.
+  - Insights ("What we noticed") and Recommendations come last, and only when there are any.
+  - Footer: authenticity QR · "Generated … by …" · the verification code · page n / N.
+- **Excel** (`App\Exports\ReportWorkbook`):
+  - a Summary sheet (tiles and details, with the verification code in the header)
+  - one sheet per section, with teal headers, frozen header row, auto widths and numbers kept as numbers; totals only where declared, as `SUM()` formulas or the latest value
+  - a final "Insights & recommendations" sheet, only when there are insights
+
+## API (auth:sanctum unless noted)
+| method | path | purpose |
+|---|---|---|
+| GET | `/reports/catalogue?territory_id=` | reports runnable for that territory's level |
+| POST | `/reports/preview` | builds the report without queuing it; returns tiles, insights, per-section row counts, first 5 rows, and whether each section has totals |
+| POST | `/reports` | queues a run and returns `{uuid, status}` |
+| GET | `/reports/runs` | the user's 20 most recent runs |
+| GET | `/reports/runs/{uuid}` | status, progress, stage, file info |
+| GET | `/reports/runs/{uuid}/download` | the file (only while `ready`) |
+| GET | `/reports/verify/{code}` | **public**, throttled to 30/min: `genuine` + title, scope, period, generated at/by, file hash. Never any figures. |
+
+Body for preview and store: `{report_key, territory_id, format?, fiscal_year_id?, years?, demographic_id?}`.
+- Bad input returns JSON 422, never a redirect, because a fetch would save a redirect's HTML as the file.
+
+## Permissions
+- **API:** `user->canAccessTerritory(territory)`, which honours `can_see_children`. This matches the Attendance export convention: the API checks territory access, and the PHP page gates the `…export` permission with `requirePermission()` before the Export button is shown.
+- Runs are private to the user who created them. Another user's uuid returns 404.
+
+## Acceptance criteria
+1. The catalogue for a church lists the five Demographics reports; a territory level no report supports gets an empty list.
+2. A report with no totals has no totals row. `latest` shows the last reported value, not the sum.
+3. A report with no insights produces no insights part in either the PDF or the Excel file.
+4. A narrow table lays out portrait and a wide one landscape (the test uses a 17-column table).
+   - Monthly statistics is split into two tables in the PDF: "Membership & groups" and "Changes & sacraments". All 16 columns in one table wouldn't fit even in landscape without cutting numbers.
+   - In practice the 10-column "Membership & groups" table comes out landscape, and "Changes & sacraments" returns to portrait on its own page.
+5. `POST /reports` (sync queue in tests) produces a real PDF (`%PDF`) or xlsx, marks the run `ready`, and stores its size, SHA-256 and verification code.
+6. Download works for the owner and returns 404 for anyone else. A user from another church gets 403 on preview and store.
+7. Verify returns `genuine` with the details for a real code, and `not recognised` for an unknown one. It never includes figures.
+8. A failing build marks the run `failed` with the error.

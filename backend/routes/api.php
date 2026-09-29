@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\ModuleController;
 use App\Http\Controllers\Api\ModuleGroupController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PermissionController;
+use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\StatusController;
 use App\Http\Controllers\Api\SupportTicketController;
@@ -39,6 +40,10 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 // === PUBLIC ROUTES (No Authentication Required) ===
+// Public: the Verify page behind every report PDF's QR code. Says whether a
+// report is genuine and who made it - never any figures.
+Route::get('reports/verify/{code}', [ReportController::class, 'verify'])->middleware('throttle:30,1');
+
 Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
     Route::post('login-code', [AuthController::class, 'loginWithCode']);
@@ -382,6 +387,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Demographics Reports - Spiritual Activities/Monthly Statistics/Growth Analytics pages' stat cards/charts (read-only, computed server-side)
     Route::prefix('demographics-reports')->group(function () {
         Route::get('/widgets', [DemographicsReportController::class, 'widgets']);
+    });
+
+    // Reports - PDF/Excel generated in the background (docs/specs/reports-spec.md)
+    Route::prefix('reports')->group(function () {
+        Route::get('/catalogue', [ReportController::class, 'catalogue']);
+        Route::post('/preview', [ReportController::class, 'preview']);
+        Route::post('/', [ReportController::class, 'store']);
+        Route::get('/runs', [ReportController::class, 'runs']);
+        Route::get('/runs/{uuid}', [ReportController::class, 'show']);
+        Route::get('/runs/{uuid}/download', [ReportController::class, 'download']);
     });
 
     // Gathering Categories (global, read-only - Sunday Service/Ministry Gathering/Special Event)
