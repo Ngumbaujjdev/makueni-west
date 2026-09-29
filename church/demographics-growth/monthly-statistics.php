@@ -92,7 +92,7 @@ $breadcrumbs = [
                                         <th colspan="2"></th>
                                         <th colspan="5" class="stats-group soft-primary">Membership</th>
                                         <th colspan="4" class="stats-group soft-purple">Fellowships &amp; Sunday school</th>
-                                        <th colspan="5" class="stats-group soft-success">Changes &amp; sacraments</th>
+                                        <th colspan="5" class="stats-group soft-success">Changes &amp; Holy Communion</th>
                                     </tr>
                                     <tr>
                                         <th class="stats-sticky">Period</th>

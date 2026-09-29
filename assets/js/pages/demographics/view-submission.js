@@ -7,7 +7,7 @@
  * A read-only report for one demographics submission, in the same layout
  * language as the rest of the Demographics pages: summary card (period,
  * status, dates, actions) -> 4 KPI cards -> membership breakdown +
- * gender ring donut -> changes & sacraments + leadership.
+ * gender ring donut -> changes & Holy Communion + leadership.
  *
  * Changes compare with the previous *approved* submission (a draft's
  * numbers aren't final). Data: GET /demographics/{id}, GET /demographics

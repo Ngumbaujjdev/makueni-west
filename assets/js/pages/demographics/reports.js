@@ -22,10 +22,14 @@ const DemographicsReports = (function () {
 
   /** What each report holds, shown on its card. */
   const INSIDE = {
-    "demographics.summary": { color: "primary", chips: ["Membership", "Groups", "Changes & sacraments", "Insights"] },
+    "demographics.summary": { color: "primary", chips: ["Membership", "Groups", "Changes & Holy Communion", "Insights"] },
     "demographics.monthly": { color: "purple", chips: ["Every figure", "Every period", "Year summary"] },
-    "demographics.spiritual": { color: "success", chips: ["Baptisms", "Holy Communion", "Conversions", "Departures"] },
-    "demographics.growth": { color: "secondary", chips: ["Year over year", "1, 3 or 5 years", "Trends"] },
+    "demographics.spiritual": { color: "success", chips: ["All four activities", "By period", "The year at a glance"] },
+    "demographics.baptisms": { color: "primary", chips: ["By period", "Compared with membership", "Insights"] },
+    "demographics.holy_communion": { color: "secondary", chips: ["By period", "Share of members", "Insights"] },
+    "demographics.conversions": { color: "purple", chips: ["By period", "Compared with membership", "Insights"] },
+    "demographics.departures": { color: "danger", chips: ["By period", "Against new members", "Insights"] },
+    "demographics.growth": { color: "info", chips: ["Year over year", "1, 3 or 5 years", "Trends"] },
     "demographics.submission": { color: "pink", chips: ["One period", "Compared with the one before"] },
   };
 
@@ -88,7 +92,7 @@ const DemographicsReports = (function () {
                   </div>
                 </div>
                 <div class="d-flex flex-wrap gap-1 my-2">
-                  ${inside.chips.map((c) => `<span class="soft-chip soft-${inside.color === "secondary" ? "secondary" : inside.color}">${c}</span>`).join("")}
+                  ${inside.chips.map((c) => `<span class="soft-chip soft-${inside.color}">${c}</span>`).join("")}
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-2 mt-auto pt-2">
                   ${

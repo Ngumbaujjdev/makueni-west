@@ -82,7 +82,7 @@ $steps = [
     1 => ['Period', 'Which month you are reporting', 'ri-calendar-2-line'],
     2 => ['Membership', 'Whole-church headcount', 'ri-team-line'],
     3 => ['Groups', 'Fellowships and Sunday school', 'ri-group-line'],
-    4 => ['Changes & sacraments', 'What happened this period', 'ri-hand-heart-line'],
+    4 => ['Changes & Holy Communion', 'What happened this period', 'ri-hand-heart-line'],
     5 => ['Review', 'Check and submit', 'ri-checkbox-circle-line'],
 ];
 ?>
@@ -208,7 +208,7 @@ $steps = [
                                                     <div class="col-sm-6"><?= renderNumberTile('transferred_out_count', ['label' => 'Transferred out', 'icon' => 'ri-user-unfollow-line', 'color' => 'danger']) ?></div>
                                                 </div>
                                                 <div class="intake-group-head">
-                                                    <h6>Sacraments and outreach</h6>
+                                                    <h6>Baptisms, Holy Communion &amp; conversions</h6>
                                                 </div>
                                                 <div class="row g-3">
                                                     <div class="col-sm-6 col-xl-4"><?= renderNumberTile('baptisms_count', ['label' => 'Baptisms', 'icon' => 'ri-drop-line', 'color' => 'primary']) ?></div>

@@ -32,6 +32,15 @@ const SpiritualActivities = (function () {
     { field: "transferred_out_count", metric: "departures", label: "Departures", icon: "ri-user-unfollow-line", color: "danger" },
   ];
 
+  /** Export follows the open tab: each activity has its own report. */
+  const REPORT_FOR_TAB = {
+    all: "demographics.spiritual",
+    baptisms: "demographics.baptisms",
+    communion: "demographics.holy_communion",
+    conversions: "demographics.conversions",
+    departures: "demographics.departures",
+  };
+
   let years = [];
   let chart = null;
   let donut = null;
@@ -55,6 +64,7 @@ const SpiritualActivities = (function () {
 
     const requested = new URLSearchParams(window.location.search).get("tab");
     tab = ACTIVITIES.some((a) => a.metric === requested) ? requested : "all";
+    UI.syncExportButton({ reportKey: REPORT_FOR_TAB[tab] });
     renderTabs();
 
     const current = years.find((y) => y.year === thisYear) || years[0];
@@ -108,6 +118,7 @@ const SpiritualActivities = (function () {
       btn.addEventListener("click", () => {
         if (btn.dataset.tab === tab) return;
         tab = btn.dataset.tab;
+        UI.syncExportButton({ reportKey: REPORT_FOR_TAB[tab] });
         el.querySelectorAll("[data-tab]").forEach((b) => {
           b.classList.toggle("active", b === btn);
           b.setAttribute("aria-selected", b === btn);
