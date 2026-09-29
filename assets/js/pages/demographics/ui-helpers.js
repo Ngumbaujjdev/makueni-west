@@ -273,22 +273,40 @@ const DemographicsUI = (function () {
    * mountSparklines(container) after inserting the markup.
    * @param {object} opts {icon, label, value, color, delta, series: {labels, data}, sub}
    */
-  function renderSparkCard({ icon, label, value, color = "primary", delta = null, series = null, sub = "" }) {
+  function renderSparkCard({ icon, label, value, color = "primary", delta = null, series = null, sub = "", link = null }) {
+    // CRM dashboard KPI card (template html/index.php "Total Customers"):
+    // icon circle, label + value, a small sparkline on the right, and a
+    // footer with "View ... ->" on the left and the change on the right.
     const spark = series
-      ? `<div class="spark-card-chart" data-spark='${JSON.stringify(series).replace(/'/g, "&#39;")}' data-spark-color="${color}"></div>`
+      ? `<div class="kpi-spark" data-spark='${JSON.stringify(series).replace(/'/g, "&#39;")}' data-spark-color="${color}" data-spark-height="36"></div>`
       : "";
+    const isNumber = /^[-\d.,:%\sKES]+$|^\d+ of \d+$/.test(String(value));
+    const deltaHtml = delta
+      ? `<span class="kpi-delta is-${delta.dir}"><i class="ri-arrow-${delta.dir === "down" ? "down" : delta.dir === "up" ? "up" : "right"}-${delta.dir === "flat" ? "line" : "s-fill"}"></i>${delta.text}</span>`
+      : "";
+    const captionParts = [delta ? delta.caption : "", sub].filter(Boolean).join(" · ");
+    const linkHtml = link
+      ? `<a href="${link.href}" class="kpi-link text-${color === "secondary" || color === "warning" ? "dark" : color}">${link.text}<i class="ri-arrow-right-line ms-1"></i></a>`
+      : "";
+    // Compact: [icon] label ........ change
+    //          value                 sparkline
+    //          caption / link
     return `
-      <div class="card custom-card spark-card">
+      <div class="card custom-card kpi-card2">
         <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between gap-2">
-            <div style="min-width: 0;">
-              <div class="spark-card-label">${label}</div>
-              <div class="spark-card-value${/^[-\d.,:%\sKES]+$|^\d+ of \d+$/.test(String(value)) ? "" : " is-text"}">${value}</div>
-            </div>
-            <span class="avatar avatar-md bg-${color} ${iconTextClass(color)} flex-shrink-0"><i class="${icon} fs-20"></i></span>
+          <div class="d-flex align-items-center gap-2">
+            <span class="kpi-icon bg-${color} ${iconTextClass(color)}"><i class="${icon}"></i></span>
+            <span class="kpi-label flex-fill">${label}</span>
+            ${deltaHtml}
           </div>
-          <div class="spark-card-foot">${deltaBadge(delta)}${sub ? `<span class="stat-delta-caption">${sub}</span>` : ""}</div>
-          ${spark}
+          <div class="d-flex align-items-end justify-content-between gap-2 mt-2">
+            <div style="min-width: 0;">
+              <div class="kpi-value${isNumber ? "" : " is-text"}">${value}</div>
+              ${captionParts ? `<div class="kpi-caption">${captionParts}</div>` : ""}
+              ${linkHtml}
+            </div>
+            ${spark}
+          </div>
         </div>
       </div>`;
   }
@@ -311,7 +329,12 @@ const DemographicsUI = (function () {
       }
       const color = cssColor(el.getAttribute("data-spark-color") || "primary");
       new ApexCharts(el, {
-        chart: { type: "area", height: 56, sparkline: { enabled: true }, animations: { enabled: !document.documentElement.classList.contains("app-reduce-motion") } },
+        chart: {
+          type: "area",
+          height: parseInt(el.getAttribute("data-spark-height"), 10) || 56,
+          sparkline: { enabled: true },
+          animations: { enabled: !document.documentElement.classList.contains("app-reduce-motion") },
+        },
         series: [{ name: "", data: series.data }],
         labels: series.labels,
         stroke: { width: 2, curve: "smooth" },
@@ -320,6 +343,146 @@ const DemographicsUI = (function () {
         tooltip: { x: { show: true }, y: { title: { formatter: () => "" } }, marker: { show: false } },
       }).render();
     });
+  }
+
+
+  /** Chart text colour that follows the theme (was a hardcoded dark grey that vanished in dark mode). */
+  function chartTextColor() {
+    return getComputedStyle(document.documentElement).getPropertyValue("--default-text-color").trim() || "#333335";
+  }
+
+  // ==========================================================================
+  // SEGMENTED CONTROL - one pill-shaped group of options (year, range,
+  // Overview/History) instead of a lone dropdown or loose buttons.
+  // ==========================================================================
+
+  /** @param {object[]} options [{value, label}] */
+  function renderSegmented(id, options, value, { ariaLabel = "" } = {}) {
+    return `
+      <div class="seg-control" id="${id}" role="tablist" aria-label="${ariaLabel}">
+        ${options
+          .map(
+            (o) =>
+              `<button type="button" class="seg-btn${String(o.value) === String(value) ? " active" : ""}" data-value="${o.value}" role="tab" aria-selected="${String(o.value) === String(value)}">${o.label}</button>`,
+          )
+          .join("")}
+      </div>`;
+  }
+
+  /** Calls onChange(value) when a segment is picked; returns a setter. */
+  function wireSegmented(id, onChange) {
+    const el = document.getElementById(id);
+    if (!el) return () => {};
+    const set = (value) =>
+      el.querySelectorAll(".seg-btn").forEach((b) => {
+        const on = b.dataset.value === String(value);
+        b.classList.toggle("active", on);
+        b.setAttribute("aria-selected", on);
+      });
+    el.addEventListener("click", (e) => {
+      const btn = e.target.closest(".seg-btn");
+      if (!btn || btn.classList.contains("active")) return;
+      set(btn.dataset.value);
+      onChange(btn.dataset.value);
+    });
+    return set;
+  }
+
+  // ==========================================================================
+  // RING DONUT - template CRM dashboard "Leads By Source": thin ring, total
+  // in the centre, legend row underneath (dot, label, value, %).
+  // ==========================================================================
+
+  /**
+   * @param {string} containerId
+   * @param {object} opts {labels, series, colors: theme colour names, centerLabel}
+   * @returns ApexCharts instance (or null)
+   */
+  function renderRingDonut(containerId, { labels, series, colors = null, centerLabel = "Total" } = {}) {
+    const container = document.getElementById(containerId);
+    if (!container || typeof ApexCharts === "undefined") return null;
+    const names = colors || ["primary", "secondary", "success", "purple", "pink", "danger"];
+    const total = series.reduce((a, b) => a + (Number(b) || 0), 0);
+
+    container.innerHTML = `
+      <div class="ring-donut">
+        <div class="ring-donut-chart"></div>
+        <div class="ring-donut-legend">
+          ${labels
+            .map((l, i) => {
+              const v = Number(series[i]) || 0;
+              const pct = total ? Math.round((v / total) * 100) : 0;
+              return `
+                <div class="ring-donut-item">
+                  <div class="ring-donut-name"><span class="count-dot bg-${names[i % names.length]}"></span>${l}</div>
+                  <div class="ring-donut-value">${v.toLocaleString()} <span>${pct}%</span></div>
+                </div>`;
+            })
+            .join("")}
+        </div>
+      </div>`;
+
+    const text = chartTextColor();
+    const chart = new ApexCharts(container.querySelector(".ring-donut-chart"), {
+      chart: { type: "donut", height: 240, animations: { enabled: !document.documentElement.classList.contains("app-reduce-motion") } },
+      series: series.map((v) => Number(v) || 0),
+      labels,
+      colors: labels.map((_, i) => cssColor(names[i % names.length])),
+      stroke: { width: 0 },
+      legend: { show: false },
+      dataLabels: { enabled: false },
+      plotOptions: {
+        pie: {
+          expandOnClick: false,
+          donut: {
+            size: "82%",
+            labels: {
+              show: true,
+              name: { show: true, fontSize: "13px", color: text, offsetY: -4 },
+              value: { show: true, fontSize: "22px", fontWeight: 700, color: text, offsetY: 6 },
+              total: { show: true, showAlways: true, label: centerLabel, fontSize: "13px", color: text, formatter: () => total.toLocaleString() },
+            },
+          },
+        },
+      },
+    });
+    chart.render();
+    return chart;
+  }
+
+  // ==========================================================================
+  // COMPOSITION CARD - template CRM dashboard "Deals Status": a big number
+  // with its change, a segmented colour bar, and a dotted list with counts.
+  // ==========================================================================
+
+  /**
+   * @param {string} containerId - a card-body (or any container)
+   * @param {object} opts {total, totalLabel, delta (periodDelta/trend-like {dir,text,caption}), items: [{label, value, color}]}
+   */
+  function renderCompositionCard(containerId, { total, totalLabel = "", delta = null, items = [] } = {}) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const sum = items.reduce((a, it) => a + (Number(it.value) || 0), 0);
+    container.innerHTML = `
+      <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <span class="composition-total">${total != null ? Number(total).toLocaleString() : "-"}</span>
+        ${delta ? `<span class="soft-chip soft-${delta.dir === "down" ? "danger" : delta.dir === "up" ? "success" : "primary"}"><i class="ri-arrow-${delta.dir === "down" ? "down" : delta.dir === "up" ? "up" : "right"}-line me-1"></i>${delta.text}</span>` : ""}
+        <span class="kpi-caption">${delta ? delta.caption : totalLabel}</span>
+      </div>
+      <div class="count-bar composition-bar mb-3" aria-hidden="true">
+        ${items.map((it) => `<span class="bg-${it.color}" style="width: ${sum ? ((Number(it.value) || 0) / sum) * 100 : 0}%;"></span>`).join("")}
+      </div>
+      <ul class="composition-list">
+        ${items
+          .map(
+            (it) => `
+          <li>
+            <span class="composition-name"><span class="count-dot bg-${it.color}"></span>${it.label}</span>
+            <span class="composition-value">${(Number(it.value) || 0).toLocaleString()} <span>${sum ? Math.round(((Number(it.value) || 0) / sum) * 100) : 0}%</span></span>
+          </li>`,
+          )
+          .join("")}
+      </ul>`;
   }
 
   // ==========================================================================
@@ -472,7 +635,7 @@ const DemographicsUI = (function () {
     const chartType = type === "area" ? "area" : type === "line" || type === "mixed" ? "line" : type === "heatmap" ? "heatmap" : "bar";
 
     const options = {
-      chart: { type: chartType, height: 300, toolbar: { show: false }, foreColor: "#333335" },
+      chart: { type: chartType, height: 300, toolbar: { show: false }, foreColor: chartTextColor() },
       series,
       xaxis: {
         categories,
@@ -588,21 +751,17 @@ const DemographicsUI = (function () {
       return;
     }
 
+    // Soft chips (tinted, not solid) - these are supporting facts, not
+    // status signals; see CLAUDE.md's colour-balance rule.
     container.innerHTML = `
       <div class="d-flex flex-wrap gap-2">
         ${items
-          .map((it) => {
-            const color = it.color || "primary";
-            // Gold (secondary/warning in this app's brand palette) is too
-            // light for white text to read clearly - matches the same
-            // text-dark convention the breakdown table's status badges
-            // already use for those two colors.
-            const textCls = color === "warning" || color === "secondary" ? "text-dark" : "text-white";
-            return `
-          <span class="badge rounded-pill bg-${color} ${textCls}">
-            ${it.label}${it.value !== undefined && it.value !== null ? ` · ${it.value}` : ""}
-          </span>`;
-          })
+          .map(
+            (it) =>
+              `<span class="soft-chip soft-${it.color || "primary"}">${it.label}${
+                it.value !== undefined && it.value !== null ? ` <b>${it.value}</b>` : ""
+              }</span>`,
+          )
           .join("")}
       </div>`;
   }
@@ -627,7 +786,7 @@ const DemographicsUI = (function () {
     const palette = colors || [BRAND_COLORS.primary, BRAND_COLORS.secondary, BRAND_COLORS.success, BRAND_COLORS.danger];
 
     const options = {
-      chart: { type: "donut", height: 260, foreColor: "#333335" },
+      chart: { type: "donut", height: 260, foreColor: chartTextColor() },
       series,
       labels,
       colors: palette,
@@ -642,15 +801,15 @@ const DemographicsUI = (function () {
             size: "70%",
             labels: {
               show: true,
-              name: { show: true, fontSize: "13px", color: "#333335" },
-              value: { show: true, fontSize: "18px", color: "#333335" },
+              name: { show: true, fontSize: "13px", color: chartTextColor() },
+              value: { show: true, fontSize: "18px", color: chartTextColor() },
               total: {
                 show: true,
                 showAlways: true,
                 label: centerTotal.label,
                 fontSize: "20px",
                 fontWeight: 600,
-                color: "#333335",
+                color: chartTextColor(),
                 formatter: () => centerTotal.value,
               },
             },
@@ -675,7 +834,7 @@ const DemographicsUI = (function () {
     const hex = brandHex(color);
 
     const chart = new ApexCharts(el, {
-      chart: { height: 320, type: "line", toolbar: { show: false }, foreColor: "#333335" },
+      chart: { height: 320, type: "line", toolbar: { show: false }, foreColor: chartTextColor() },
       series: [
         { name: barLabel, type: "column", data: barData },
         { name: lineLabel, type: "line", data: lineData },
@@ -1349,6 +1508,11 @@ const DemographicsUI = (function () {
     skeletonCards,
     renderSparkCard,
     mountSparklines,
+    chartTextColor,
+    renderSegmented,
+    wireSegmented,
+    renderRingDonut,
+    renderCompositionCard,
     monthlySeries,
     rowsInMonth,
     monthLabel,
