@@ -1,33 +1,32 @@
 /**
  * ============================================================================
- * PAGE - VIEW SUBMISSION (read-only dashboard for one demographics record)
+ * PAGE - VIEW SUBMISSION (church/demographics-growth/view-submission.php?id=...)
  * ============================================================================
  * Diocese Management System - Makueni West
  *
- * Separate from demographics-tracking.php's locked-wizard "View" (still used
- * for Edit) - this is a proper report view: stat cards + charts instead of
- * the entry form. Built entirely from what GET /demographics/{id}
- * (DemographicsAPIHandler.getDemographic) already returns - no new backend.
+ * A read-only report for one demographics submission, in the same layout
+ * language as the rest of the Demographics pages: summary card (period,
+ * status, dates, actions) -> 4 KPI cards -> membership breakdown +
+ * gender ring donut -> changes & sacraments + leadership.
  *
- * Cards use DemographicsUI.renderSolidStatCard() (solid bg-${color} icon
- * avatar, not renderWidgetCard's pale-transparent tint - the "no
- * muted/washed-out" Design Rule this page was drifting from). Originally
- * local to this file; promoted into ui-helpers.js's public API once Growth
- * Overview needed the same card. renderWidgetCard stays as-is, unchanged,
- * for Attendance Reports.
+ * Changes compare with the previous *approved* submission (a draft's
+ * numbers aren't final). Data: GET /demographics/{id}, GET /demographics
+ * (to find the previous one) and GET /churches/{id}/clergy-summary.
+ *
+ * Dependencies: DemographicsAPIHandler, DemographicsUI, Toast, ApexCharts
  * ============================================================================
  */
 
 const DemographicsViewSubmission = (function () {
   "use strict";
 
-  const CHART_HEIGHT = 280;
+  const UI = DemographicsUI;
+  const M = UI.DEMOGRAPHIC_METRICS;
 
   async function init() {
-    Object.assign(USER_TERRITORY, DemographicsUI.resolveUserTerritory(USER_TERRITORY));
+    Object.assign(USER_TERRITORY, UI.resolveUserTerritory(USER_TERRITORY));
 
     const result = await DemographicsAPIHandler.getDemographic(DEMOGRAPHIC_ID);
-
     if (!result.success) {
       Toast.error(result.message || "Could not load that submission");
       window.location.href = "demographics-tracking.php";
@@ -35,201 +34,157 @@ const DemographicsViewSubmission = (function () {
     }
 
     const record = result.data;
-    const previous = await loadPreviousRecord(record);
+    const previous = await loadPrevious(record);
 
-    renderHeader(record);
-    renderStats(record, previous);
-    renderCharts(record);
-    renderActivityStats(record, previous);
+    renderHeader(record, previous);
+    renderKpis(record, previous);
+    renderComposition(record, previous);
+    renderGender(record);
+    renderChanges(record, previous);
     loadLeadership(record, previous);
   }
 
-  /**
-   * The submission immediately before this one (same newest-first ordering
-   * used by demographics-tracking.js/index.js) - lets the stat cards show a
-   * real period-over-period trend instead of a bare number. Returns null for
-   * the oldest/only submission, which callers treat as "no trend to show."
-   */
-  async function loadPreviousRecord(record) {
+  async function loadPrevious(record) {
     const result = await DemographicsAPIHandler.getDemographics(USER_TERRITORY.id);
     if (!result.success || !result.data) return null;
-
-    const rows = DemographicsUI.sortSubmissionsNewestFirst(result.data);
+    const rows = UI.sortSubmissionsNewestFirst(result.data);
     const index = rows.findIndex((r) => r.id === record.id);
-    return index !== -1 && rows[index + 1] ? rows[index + 1] : null;
+    return index === -1 ? null : rows.slice(index + 1).find((r) => r.status === "approved") || null;
   }
 
-  /**
-   * Per-role breakdown list, modeled on index-1.html's "Recent Orders"
-   * widget (card-header title + card-body > list-unstyled of icon/title/
-   * trailing-value rows) - adapted to this app's solid-icon + no-muted-text
-   * convention instead of the template's pale avatar image + text-muted.
-   * Replaces a single lumped "N pastors" number with one row per role, so
-   * "1 Senior Pastor, 3 Associate Pastor" is actually legible instead of a
-   * squashed text line.
-   */
-  function renderClergyListCard(counts, total) {
-    const roleNames = Object.keys(counts);
-
-    const rows = roleNames.length
-      ? roleNames
-          .map(
-            (role, i) => `
-        <li class="d-flex align-items-center${i < roleNames.length - 1 ? " mb-3" : ""}">
-          <span class="avatar avatar-sm avatar-rounded bg-primary text-white flex-shrink-0 me-2">
-            <i class="ri-user-star-line"></i>
-          </span>
-          <span class="flex-fill fw-semibold">${role}</span>
-          <span class="badge bg-primary-transparent text-primary fs-13 fw-semibold">${counts[role]}</span>
-        </li>`,
-          )
-          .join("")
-      : `<li class="fs-13 text-body fw-semibold">No pastors on record</li>`;
-
-    return `
-      <div class="card custom-card h-100">
-        <div class="card-header justify-content-between">
-          <div class="card-title">Pastors & Assistant Pastors</div>
-          ${roleNames.length ? `<span class="badge bg-primary-transparent text-primary fw-semibold">${total} total</span>` : ""}
-        </div>
-        <div class="card-body">
-          <ul class="list-unstyled mb-0">${rows}</ul>
-        </div>
-      </div>`;
+  function prevLabel(previous) {
+    return previous ? UI.demographicPeriodLabel(previous) : "";
   }
 
-  function renderHeader(record) {
-    const period = DemographicsUI.demographicPeriodLabel(record);
-    const backBtn = `<a href="demographics-tracking.php" class="btn btn-outline-primary btn-sm me-2"><i class="ri-arrow-left-line me-1"></i>Back</a>`;
-    const isEditable = record.status === "draft" || record.status === "changes_requested";
-    const editBtn = isEditable
-      ? `<a href="demographics-tracking.php?id=${record.id}" class="btn btn-primary btn-sm"><i class="ri-edit-line me-1"></i>Edit</a>`
-      : "";
-
-    const chips = [
-      record.submitted_at
-        ? `<span class="fs-12 text-body"><i class="ri-send-plane-line me-1"></i>${new Date(record.submitted_at).toLocaleDateString()}</span>`
-        : "",
-      record.reviewer
-        ? `<span class="fs-12 text-body"><i class="ri-user-star-line me-1"></i>${record.reviewer.firstname || ""} ${record.reviewer.lastname || ""}</span>`
-        : "",
-    ]
-      .filter(Boolean)
-      .join('<span class="text-body mx-1">&middot;</span>');
+  function renderHeader(record, previous) {
+    const editable = record.status === "draft" || record.status === "changes_requested";
+    const facts = [
+      record.submitted_at ? `<span><i class="ri-send-plane-line me-1"></i>Submitted ${new Date(record.submitted_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>` : "",
+      record.reviewer ? `<span><i class="ri-user-star-line me-1"></i>Reviewed by ${record.reviewer.firstname || ""} ${record.reviewer.lastname || ""}</span>` : "",
+      previous ? `<span><i class="ri-arrow-left-right-line me-1"></i>Compared with ${prevLabel(previous)}</span>` : "",
+    ].filter(Boolean);
 
     document.getElementById("submissionHeaderCard").innerHTML = `
       <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-        <div class="d-flex align-items-center gap-3">
-          <span class="avatar avatar-lg avatar-rounded bg-primary">
-            <i class="ri-file-chart-2-line fs-22 text-white"></i>
-          </span>
-          <div>
-            <div class="d-flex align-items-center gap-2">
-              <h4 class="fw-semibold mb-0">${period}</h4>
-              ${DemographicsUI.renderStatusBadge(record.status)}
+        <div class="d-flex align-items-center gap-3" style="min-width: 0;">
+          <span class="kpi-icon bg-primary text-white" style="width: 3rem; height: 3rem; font-size: 1.4rem;"><i class="ri-file-chart-2-line"></i></span>
+          <div style="min-width: 0;">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+              <h4 class="fw-bold mb-0">${UI.demographicPeriodLabel(record)}</h4>
+              ${UI.renderStatusBadge(record.status)}
             </div>
-            ${chips ? `<div class="mt-1">${chips}</div>` : ""}
+            ${facts.length ? `<div class="d-flex flex-wrap gap-3 mt-1 fs-12 text-muted">${facts.join("")}</div>` : ""}
           </div>
         </div>
-        <div>${backBtn}${editBtn}</div>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="demographics-tracking.php" class="btn btn-light"><i class="ri-arrow-left-line me-1"></i>Back</a>
+          ${editable ? `<a href="demographics-tracking.php?id=${record.id}" class="btn btn-primary"><i class="ri-edit-line me-1"></i>Edit</a>` : ""}
+        </div>
       </div>
-      ${record.review_notes ? `
-      <div class="alert alert-warning mt-3 mb-0 py-2">
-        <i class="ri-message-2-line me-2"></i>${record.review_notes}
-      </div>` : ""}`;
+      ${record.review_notes ? `<div class="alert alert-warning bg-warning-transparent mt-3 mb-0 py-2"><i class="ri-chat-quote-line me-2"></i>${record.review_notes}</div>` : ""}`;
   }
 
-  function renderStats(record, previous) {
-    const sundaySchoolCount = (record.sunday_school_male_count ?? 0) + (record.sunday_school_female_count ?? 0);
-    const prevSundaySchoolCount = previous ? (previous.sunday_school_male_count ?? 0) + (previous.sunday_school_female_count ?? 0) : null;
-    const container = document.getElementById("statCardsRow");
-    if (!container) return;
-
-    const cards = [
-      { icon: "ri-team-line", label: "Total Members", value: record.total_members ?? 0, color: "primary", trend: DemographicsUI.trendFor(record.total_members ?? 0, previous?.total_members) },
-      { icon: "ri-user-add-line", label: "New Members", value: record.new_members_count ?? 0, color: "success", trend: DemographicsUI.trendFor(record.new_members_count ?? 0, previous?.new_members_count) },
-      { icon: "ri-drop-line", label: "Baptisms", value: record.baptisms_count ?? 0, color: "info", trend: DemographicsUI.trendFor(record.baptisms_count ?? 0, previous?.baptisms_count) },
-      { icon: "ri-book-read-line", label: "Sunday School", value: sundaySchoolCount, color: "warning", trend: DemographicsUI.trendFor(sundaySchoolCount, prevSundaySchoolCount) },
-    ];
-    container.innerHTML = cards.map((c) => `<div class="col-xl-3 col-lg-6 col-md-6">${DemographicsUI.renderSolidStatCard(c)}</div>`).join("");
+  function delta(record, previous, key) {
+    const v = M[key].get(record);
+    const p = previous ? M[key].get(previous) : null;
+    if (v == null || p == null) return null;
+    return UI.periodDelta(Number(v), Number(p), { percent: !M[key].flow, prevLabel: prevLabel(previous) });
   }
 
-  function renderCharts(record) {
-    const donutEl = document.getElementById("genderDonutChart");
+  function renderKpis(record, previous) {
+    UI.renderStatCardsRow(
+      "statCardsRow",
+      ["total_members", "new_members", "baptisms", "sunday_school"].map((key) => ({
+        icon: M[key].icon,
+        label: M[key].label,
+        value: Number(M[key].get(record) || 0).toLocaleString(),
+        color: M[key].color,
+        delta: delta(record, previous, key),
+        link: { href: UI.metricUrl(key), text: "Full history" },
+      })),
+    );
+  }
+
+  function renderComposition(record, previous) {
+    UI.renderCompositionCard("compositionCard", {
+      total: record.total_members,
+      totalLabel: "total members",
+      delta: delta(record, previous, "total_members"),
+      items: ["youth", "womens_fellowship", "mens_fellowship", "sunday_school", "seniors"].map((k) => ({
+        label: M[k].label,
+        value: M[k].get(record),
+        color: M[k].color,
+      })),
+    });
+  }
+
+  function renderGender(record) {
+    const el = document.getElementById("genderDonut");
     if (!record.male_count && !record.female_count) {
-      donutEl.innerHTML = '<p class="text-center text-body fw-semibold py-5 mb-0">No gender-split data on this submission</p>';
-    } else {
-      new ApexCharts(donutEl, {
-        chart: { type: "donut", height: CHART_HEIGHT },
-        series: [record.male_count || 0, record.female_count || 0],
-        labels: ["Male", "Female"],
-        colors: ["#2CA4BF", "#F2BE22"],
-        legend: { position: "bottom" },
-        dataLabels: { enabled: true },
-      }).render();
+      el.innerHTML = `
+        <div class="list-empty">
+          <span class="list-empty-icon bg-secondary text-dark"><i class="ri-pie-chart-line"></i></span>
+          <div class="fw-semibold mt-2">No gender split on this submission</div>
+        </div>`;
+      return;
     }
-
-    const compositionEl = document.getElementById("compositionChart");
-    const categories = ["Youth", "Women's Fellowship", "Men's Fellowship", "Sunday School (Male)", "Sunday School (Female)", "Seniors"];
-    const data = [
-      record.youth_count ?? 0,
-      record.womens_fellowship_count ?? 0,
-      record.mens_fellowship_count ?? 0,
-      record.sunday_school_male_count ?? 0,
-      record.sunday_school_female_count ?? 0,
-      record.seniors_count ?? 0,
-    ];
-    // Horizontal, not vertical (renderTrendChart's shape) - full category
-    // labels sit on the y-axis instead of being squeezed under thin columns,
-    // and it fills the card height evenly next to the donut.
-    new ApexCharts(compositionEl, {
-      chart: { type: "bar", height: CHART_HEIGHT, toolbar: { show: false }, foreColor: "#333335" },
-      series: [{ name: "Count", data }],
-      xaxis: { categories },
-      colors: data.map((_, i) => `rgba(44, 164, 191, ${(0.35 + (0.65 * i) / (data.length - 1)).toFixed(2)})`),
-      plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 4, barHeight: "60%" } },
-      dataLabels: { enabled: true },
-      legend: { show: false },
-      grid: { borderColor: "rgba(44, 164, 191, 0.08)" },
-    }).render();
+    UI.renderRingDonut("genderDonut", {
+      labels: ["Male", "Female"],
+      series: [record.male_count || 0, record.female_count || 0],
+      colors: ["primary", "pink"],
+      centerLabel: "Members",
+    });
   }
 
-  function renderActivityStats(record, previous) {
-    const container = document.getElementById("activityStatsRow");
-    if (!container) return;
-
-    const cards = [
-      { icon: "ri-user-add-line", label: "New Members", value: record.new_members_count ?? 0, color: "success", trend: DemographicsUI.trendFor(record.new_members_count ?? 0, previous?.new_members_count) },
-      { icon: "ri-user-unfollow-line", label: "Transferred Out", value: record.transferred_out_count ?? 0, color: "secondary", trend: DemographicsUI.trendFor(record.transferred_out_count ?? 0, previous?.transferred_out_count) },
-      { icon: "ri-drop-line", label: "Baptisms", value: record.baptisms_count ?? 0, color: "info", trend: DemographicsUI.trendFor(record.baptisms_count ?? 0, previous?.baptisms_count) },
-      { icon: "ri-cup-line", label: "Communion", value: record.communion_participants_count ?? 0, color: "primary", trend: DemographicsUI.trendFor(record.communion_participants_count ?? 0, previous?.communion_participants_count) },
-      { icon: "ri-heart-line", label: "New Conversions", value: record.conversions_count ?? 0, color: "warning", trend: DemographicsUI.trendFor(record.conversions_count ?? 0, previous?.conversions_count) },
-    ];
-
-    // Manual .col wrapping (not a fixed 4-per-row) so all 5 cards sit evenly
-    // in one row via the container's own row-cols-xl-5.
-    container.innerHTML = cards.map((c) => `<div class="col">${DemographicsUI.renderSolidStatCard(c)}</div>`).join("");
+  function renderChanges(record, previous) {
+    if (previous) document.getElementById("changesSubtitle").textContent = `Recorded this period, with the change from ${prevLabel(previous)}`;
+    const keys = ["new_members", "departures", "baptisms", "communion", "conversions"];
+    document.getElementById("changesCard").innerHTML = `
+      <ul class="composition-list">
+        ${keys
+          .map((k) => {
+            const v = Number(M[k].get(record) || 0);
+            const p = previous ? M[k].get(previous) : null;
+            return `
+              <li>
+                <a href="${UI.metricUrl(k)}" class="composition-name text-reset">
+                  <span class="kpi-icon bg-${M[k].color} ${M[k].color === "secondary" ? "text-dark" : "text-white"} me-2"><i class="${M[k].icon}"></i></span>${M[k].label}
+                </a>
+                <span class="composition-value">${v.toLocaleString()}${p != null ? UI.changePill(v, Number(p)) : ""}</span>
+              </li>`;
+          })
+          .join("")}
+      </ul>`;
   }
 
   async function loadLeadership(record, previous) {
     const card = document.getElementById("leadershipCard");
     const result = await DemographicsAPIHandler.getClergySummary(USER_TERRITORY.id);
     const counts = result.success ? result.data.counts || {} : {};
-    const clergyTotal = result.success ? result.data.total ?? 0 : 0;
+    const total = result.success ? result.data.total ?? 0 : 0;
+    const teachers = Number(record.sunday_school_teachers_count || 0);
+    const prevTeachers = previous ? previous.sunday_school_teachers_count : null;
 
-    const teachersCard = DemographicsUI.renderSolidStatCard({
-      icon: "ri-book-read-line",
-      label: "Sunday School Teachers",
-      value: record.sunday_school_teachers_count ?? 0,
-      color: "warning",
-      trend: DemographicsUI.trendFor(record.sunday_school_teachers_count ?? 0, previous?.sunday_school_teachers_count),
-    });
-
+    const roles = Object.keys(counts);
     card.innerHTML = `
-      <div class="row g-3">
-        <div class="col-xl-6">${renderClergyListCard(counts, clergyTotal)}</div>
-        <div class="col-xl-6">${teachersCard}</div>
-      </div>`;
+      <ul class="composition-list">
+        ${roles.length
+          ? roles
+              .map(
+                (role) => `
+          <li>
+            <span class="composition-name"><span class="kpi-icon bg-primary text-white me-2"><i class="ri-user-star-line"></i></span>${role}</span>
+            <span class="composition-value">${counts[role]}</span>
+          </li>`,
+              )
+              .join("")
+          : '<li><span class="composition-name">No pastors on record</span><span></span></li>'}
+        <li>
+          <span class="composition-name"><span class="kpi-icon bg-purple text-white me-2"><i class="ri-book-read-line"></i></span>Sunday school teachers</span>
+          <span class="composition-value">${teachers.toLocaleString()}${prevTeachers != null ? UI.changePill(teachers, Number(prevTeachers)) : ""}</span>
+        </li>
+      </ul>
+      ${roles.length ? `<div class="mt-3"><span class="soft-chip soft-primary">${total} pastor${total === 1 ? "" : "s"} in total</span></div>` : ""}`;
   }
 
   return { init };
