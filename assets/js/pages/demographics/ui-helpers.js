@@ -412,7 +412,8 @@ const DemographicsUI = (function () {
    * @param {object} opts {labels, series, colors: theme colour names, centerLabel}
    * @returns ApexCharts instance (or null)
    */
-  function renderRingDonut(containerId, { labels, series, colors = null, centerLabel = "Total", focus = -1 } = {}) {
+  /** centerValue: the figure in the middle when it isn't simply the sum (an average of rounded parts can be off by one). */
+  function renderRingDonut(containerId, { labels, series, colors = null, centerLabel = "Total", focus = -1, centerValue = null } = {}) {
     const container = document.getElementById(containerId);
     if (!container || typeof ApexCharts === "undefined") return null;
     const names = colors || ["primary", "secondary", "success", "purple", "pink", "danger"];
@@ -464,7 +465,7 @@ const DemographicsUI = (function () {
                 label: focused ? `${labels[focus]} · ${pctText(Number(series[focus]) || 0)}` : centerLabel,
                 fontSize: "13px",
                 color: text,
-                formatter: () => (focused ? Number(series[focus]) || 0 : total).toLocaleString(),
+                formatter: () => (focused ? Number(series[focus]) || 0 : centerValue ?? total).toLocaleString(),
               },
             },
           },

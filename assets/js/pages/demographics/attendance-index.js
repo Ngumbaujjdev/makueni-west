@@ -77,7 +77,8 @@ const AttendanceOverview = (function () {
       const chip = e.target.closest("[data-sunday]");
       if (!chip || chip.disabled) return;
       const record = sundays().find((r) => A.recordIso(r) === chip.dataset.sunday);
-      record ? openSunday(record) : recordSunday(chip.dataset.sunday);
+      if (record) window.location.href = `${AppConfig.FRONTEND_BASE_URL}/church/attendance/record?id=${record.id}`;
+      else recordSunday(chip.dataset.sunday);
     });
   }
 
@@ -253,6 +254,7 @@ const AttendanceOverview = (function () {
       series: composition.map((g) => g.average),
       colors: composition.map((g) => GROUP_COLORS[g.key]),
       centerLabel: "Avg Sunday",
+      centerValue: analytics.summary.sunday_average,
     });
   }
 
@@ -283,7 +285,7 @@ const AttendanceOverview = (function () {
         const [label, color] = STATUS[g.status] || STATUS.never;
         const lastText = g.last ? ` · last ${A.formatDate(g.last, { day: "numeric", month: "short" })}` : "";
         return `
-          <a class="att-glance-item" href="${base}/${g.page}?gatheringFilter=${encodeURIComponent(g.name)}">
+          <a class="att-glance-item" href="${base}/gathering?${g.type_id ? `type=${g.type_id}` : `name=${encodeURIComponent(g.name)}`}">
             ${UI.avatarTile(A.escapeHtml(g.icon || (g.page === "events" ? "ri-star-line" : "ri-group-line")), UI.colorFor(g.name))}
             <span class="att-glance-text">
               <strong>${A.escapeHtml(g.name)}</strong>

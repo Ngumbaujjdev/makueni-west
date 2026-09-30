@@ -246,6 +246,37 @@
     }
   }
 
+  /** One record for the record page: counts, the meetings either side, the usual, the best, members (GET /attendance/{id}). */
+  async function getAttendanceRecord(id) {
+    try {
+      const response = await fetch(`${API_BASE}/attendance/${id}`, { method: Constants.HTTP_METHODS.GET, headers: getHeaders() });
+      return await handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
+  /** Who recorded a record and every change since. */
+  async function getAttendanceAudits(id) {
+    try {
+      const response = await fetch(`${API_BASE}/attendance/${id}/audits`, { method: Constants.HTTP_METHODS.GET, headers: getHeaders() });
+      return await handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
+  /** One ministry / event over a period (gathering page): {gathering_type_id | name, fiscal_year_id, month | from, to}. */
+  async function getGatheringDetail(territoryId, filters = {}) {
+    try {
+      const params = new URLSearchParams({ territory_id: territoryId, ...filters });
+      const response = await fetch(`${API_BASE}/attendance-reports/gathering?${params.toString()}`, { method: Constants.HTTP_METHODS.GET, headers: getHeaders() });
+      return await handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
   async function createAttendance(payload) {
     try {
       const response = await fetch(`${API_BASE}/attendance`, {
@@ -508,6 +539,9 @@
     createAttendance,
     updateAttendance,
     getAttendanceAnalytics,
+    getAttendanceRecord,
+    getAttendanceAudits,
+    getGatheringDetail,
     getDemographicsReportWidgets,
     getGatheringCategories,
     getGatheringTypes,

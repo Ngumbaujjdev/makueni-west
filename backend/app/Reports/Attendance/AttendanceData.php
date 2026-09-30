@@ -11,6 +11,8 @@ use App\Support\Reports\Insights\InsightEngine;
 use App\Support\Reports\Insights\ReportFacts;
 use App\Support\Reports\Insights\Rules\AttendanceTrendRule;
 use App\Support\Reports\Insights\Rules\AttendanceVsMembershipRule;
+use App\Support\Reports\Insights\Rules\GatheringActivityRule;
+use App\Support\Reports\Insights\Rules\GatheringTrendRule;
 use App\Support\Reports\Insights\Rules\GenderBalanceRule;
 use App\Support\Reports\Insights\Rules\PeakSundayRule;
 use App\Support\Reports\Insights\Rules\QuietGatheringRule;
@@ -121,6 +123,8 @@ final class AttendanceData
                 }
                 $row['total'] = self::total($row);
                 $row['churches'] = $group->count();
+                // The record behind it, for a link to its page (one church only).
+                $row['id'] = $group->count() === 1 ? $group->first()->id : null;
 
                 return $row;
             })
@@ -301,11 +305,11 @@ final class AttendanceData
             ->orderBy('display_order')
             ->get()
             ->each(function (GatheringType $t) use (&$rows) {
-                $rows["t{$t->id}"] = ['name' => $t->name, 'icon' => $t->icon, 'records' => collect()];
+                $rows["t{$t->id}"] = ['name' => $t->name, 'icon' => $t->icon, 'type_id' => $t->id, 'records' => collect()];
             });
         foreach ($records as $r) {
             $key = self::gatheringKey($r);
-            $rows[$key] ??= ['name' => $r->gatheringType?->name ?? $r->event_name ?? 'Gathering', 'icon' => $r->gatheringType?->icon, 'records' => collect()];
+            $rows[$key] ??= ['name' => $r->gatheringType?->name ?? $r->event_name ?? 'Gathering', 'icon' => $r->gatheringType?->icon, 'type_id' => $r->gathering_type_id, 'records' => collect()];
             $rows[$key]['records']->push($r);
         }
 
@@ -317,6 +321,7 @@ final class AttendanceData
                 return [
                     'name' => $g['name'],
                     'icon' => $g['icon'],
+                    'type_id' => $g['type_id'],
                     'times' => $totals->count(),
                     'total' => (int) $totals->sum(),
                     'average' => $totals->count() ? (int) round($totals->avg()) : 0,
@@ -358,6 +363,112 @@ final class AttendanceData
         }
 
         return CarbonImmutable::parse($last)->diffInDays(CarbonImmutable::today()) > self::QUIET_DAYS ? 'quiet' : 'active';
+    }
+
+    /**
+     * One ministry or event over the period, for the gathering page: a
+     * configured type, or a one-off named gathering. Null when a name has
+     * never been recorded.
+     */
+    public function gatheringDetail(?GatheringType $type, ?string $name): ?array
+    {
+        $matches = function ($r) use ($type, $name) {
+            return $type
+                ? $r->gathering_type_id === $type->id
+                : ! $r->gathering_type_id && mb_strtolower(trim((string) $r->event_name)) === mb_strtolower(trim((string) $name));
+        };
+        $everQuery = ChurchAttendanceRecord::with(['gatheringCategory', 'gatheringType'])
+            ->where('territory_type', 'church')
+            ->whereIn('territory_id', $this->churchIds);
+        $type ? $everQuery->where('gathering_type_id', $type->id) : $everQuery->whereNull('gathering_type_id')->where('event_name', $name);
+        $ever = $everQuery->orderBy('service_date')->get();
+        if (! $type && $ever->isEmpty()) {
+            return null;
+        }
+
+        $category = $type?->category ?? $ever->first()?->gatheringCategory;
+        $slug = $category?->slug ?? self::MINISTRY;
+        $meetings = $this->records()->filter($matches)->sortBy('service_date')->values();
+        $previous = $this->previousRecords()?->filter($matches);
+        $totals = $meetings->map(fn ($r) => self::total($r));
+        $last = $ever->last()?->service_date->toDateString();
+        $categoryTotal = $this->ofCategory($slug)->sum(fn ($r) => self::total($r));
+
+        // Meetings per month across the period (up to this month), gaps included.
+        $monthly = [];
+        $end = $this->period->end->min(CarbonImmutable::today())->startOfMonth();
+        $start = $this->period->mode === AttendancePeriod::ALL && $ever->isNotEmpty()
+            ? CarbonImmutable::parse($ever->first()->service_date)->startOfMonth()
+            : $this->period->start->startOfMonth();
+        for ($m = $start; $m->lte($end); $m = $m->addMonthNoOverflow()) {
+            $inMonth = $meetings->filter(fn ($r) => $r->service_date->format('Y-m') === $m->format('Y-m'));
+            $monthly[] = [
+                'label' => AttendancePeriod::monthLabel($m, $start->year !== $end->year),
+                'meetings' => $inMonth->count(),
+                'average' => $inMonth->isEmpty() ? 0 : (int) round($inMonth->avg(fn ($r) => self::total($r))),
+            ];
+        }
+
+        $rows = [];
+        $before = null;
+        foreach ($meetings as $r) {
+            $total = self::total($r);
+            $rows[] = [
+                'id' => $r->id,
+                'date' => $r->service_date->toDateString(),
+                'adults_count' => (int) $r->adults_count,
+                'youth_count' => (int) $r->youth_count,
+                'children_male_count' => (int) $r->children_male_count,
+                'children_female_count' => (int) $r->children_female_count,
+                'total' => $total,
+                'change' => $before === null ? null : $total - $before,
+                'notes' => $r->notes,
+            ];
+            $before = $total;
+        }
+        $peak = collect($rows)->sortByDesc('total')->first();
+
+        $summary = [
+            'times' => $meetings->count(),
+            'average' => $totals->isEmpty() ? null : (int) round($totals->avg()),
+            'peak' => $peak ? ['id' => $peak['id'], 'date' => $peak['date'], 'total' => $peak['total']] : null,
+            'last' => $last,
+            'status' => self::gatheringStatus($last),
+            'previous_times' => $previous && $this->previousRecords()->isNotEmpty() ? $previous->count() : null,
+            'previous_average' => $previous && $previous->isNotEmpty() ? (int) round($previous->avg(fn ($r) => self::total($r))) : null,
+            'share' => $categoryTotal > 0 ? (int) round($totals->sum() / $categoryTotal * 100) : null,
+            'times_ever' => $ever->count(),
+        ];
+
+        $facts = new ReportFacts([
+            'gathering' => ['name' => $type?->name ?? $name, 'noun' => $slug === self::EVENT ? 'event' : 'ministry'] + $summary,
+            'period_label' => $this->period->label,
+            'previous_label' => $this->period->previousLabel,
+            'monthly' => $monthly,
+        ]);
+
+        return [
+            'period' => [
+                'mode' => $this->period->mode,
+                'label' => $this->period->label,
+                'start' => $this->period->start->toDateString(),
+                'end' => $this->period->end->toDateString(),
+                'previous_label' => $this->period->previousLabel,
+            ],
+            'gathering' => [
+                'type_id' => $type?->id,
+                'name' => $type?->name ?? $ever->first()?->event_name ?? $name,
+                'icon' => $type?->icon,
+                'category' => $category?->name,
+                'category_slug' => $slug,
+                'is_active' => $type ? (bool) $type->is_active : true,
+            ],
+            'summary' => $summary,
+            'meetings' => array_reverse($rows),
+            'monthly' => $monthly,
+            'composition' => self::composition(array_map(fn ($r) => $r, $rows)),
+            'insights' => array_map(fn ($i) => $i->toArray(), InsightEngine::run([new GatheringActivityRule, new GatheringTrendRule], $facts)),
+        ];
     }
 
     // ------------------------------------------------------------------

@@ -33233,6 +33233,31 @@ tr.list-row-flash > td {
   flex: 0 0 90px;
   width: 90px;
 }
+.gathering-card-wrap {
+  position: relative;
+  height: 100%;
+}
+.gathering-card-view {
+  position: absolute;
+  z-index: 1;
+  top: 0.75rem;
+  inset-inline-end: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.3rem 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(var(--primary-rgb), 0.1);
+  color: rgb(var(--primary-rgb));
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.gathering-card-view:hover {
+  background: rgb(var(--primary-rgb));
+  color: #fff;
+}
+.gathering-card-wrap .gathering-card-top {
+  padding-inline-end: 3.8rem;
+}
 .gathering-card-skel {
   display: block;
   height: 8.5rem;
@@ -33446,6 +33471,266 @@ tr.list-row-flash > td {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--default-text-color);
+}
+
+/* Attendance detail pages (2026-09-30) - record.php (one Sunday or meeting)
+   and gathering.php (one ministry or event over time). */
+.record-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+.record-head-main {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-width: 0;
+}
+.record-head-main .avatar {
+  width: 2.8rem;
+  height: 2.8rem;
+  font-size: 1.3rem;
+}
+.record-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--v2-heading);
+}
+.record-title a {
+  color: inherit;
+}
+.record-title a:hover {
+  color: rgb(var(--primary-rgb));
+}
+.record-title span {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--default-text-color);
+}
+.record-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--default-text-color);
+}
+.record-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.record-actions [hidden] {
+  display: none;
+}
+.record-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.record-nav:empty {
+  display: none;
+}
+.record-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 48%;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.7rem;
+  background: var(--custom-white);
+  color: var(--v2-heading);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+.record-nav-btn i {
+  font-size: 1.2rem;
+  color: rgb(var(--primary-rgb));
+}
+.record-nav-btn small {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--default-text-color);
+}
+a.record-nav-btn:hover,
+button.record-nav-btn:hover {
+  border-color: rgb(var(--primary-rgb));
+}
+.record-nav-btn.is-missing {
+  border-color: rgba(var(--danger-rgb), 0.45);
+  background: rgba(var(--danger-rgb), 0.05);
+}
+.record-nav-btn.is-missing small,
+.record-nav-btn.is-missing i {
+  color: #c42a2a;
+}
+.record-nav-btn.is-empty {
+  opacity: 0.7;
+  border-style: dashed;
+}
+.record-total {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+.record-total-value {
+  font-size: 2.6rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--v2-heading);
+}
+.record-total-label {
+  font-weight: 600;
+  color: var(--default-text-color);
+}
+.record-bar {
+  height: 0.65rem;
+  margin: 0.9rem 0 1rem;
+}
+.record-count {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.1rem 0.55rem;
+  align-items: center;
+  height: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.7rem;
+}
+.record-count-icon {
+  display: inline-flex;
+  grid-row: span 2;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 0.55rem;
+  font-size: 1rem;
+}
+.record-count-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--default-text-color);
+}
+.record-count-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--v2-heading);
+}
+.record-count-share {
+  grid-column: 1 / -1;
+  font-size: 0.72rem;
+  color: var(--default-text-color);
+}
+.record-compare {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.record-compare li {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px dashed var(--default-border);
+}
+.record-compare li:last-child {
+  border-bottom: 0;
+}
+.record-compare-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+.record-compare-text strong {
+  color: var(--v2-heading);
+}
+.record-compare-text small {
+  font-size: 0.76rem;
+  color: var(--default-text-color);
+}
+.record-compare-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--v2-heading);
+  white-space: nowrap;
+}
+.record-notes {
+  margin: 0;
+  white-space: pre-line;
+  color: var(--v2-heading);
+}
+.record-history {
+  position: relative;
+  display: grid;
+  gap: 0.9rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.record-history li {
+  display: flex;
+  gap: 0.7rem;
+}
+.record-history-dot {
+  display: inline-flex;
+  flex: 0 0 1.9rem;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 50%;
+  background: rgb(var(--primary-rgb));
+  color: #fff;
+}
+.record-history li.is-created .record-history-dot {
+  background: rgb(var(--success-rgb));
+}
+.record-history strong {
+  display: block;
+  color: var(--v2-heading);
+}
+.record-history small {
+  font-size: 0.75rem;
+  color: var(--default-text-color);
+}
+.record-history-changes {
+  margin: 0.35rem 0 0;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.5rem;
+  background: rgba(var(--primary-rgb), 0.05);
+  list-style: none;
+  font-size: 0.8rem;
+}
+.record-history-changes i {
+  color: rgb(var(--primary-rgb));
+}
+@media (max-width: 575.98px) {
+  .record-nav-btn {
+    max-width: none;
+    flex: 1 1 0;
+  }
+  .record-actions {
+    width: 100%;
+  }
 }
 
 /* Attendance Overview: the period filter strip on top */
