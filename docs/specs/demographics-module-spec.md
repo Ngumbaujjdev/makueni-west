@@ -79,6 +79,16 @@ Base: `backend/routes/api.php`, under `auth:sanctum`.
 | PUT | `/attendance/{id}` | same prefix, `.update`, resolved from the record's existing `service_type` |
 | GET | `/attendance-reports/widgets?territory_id=&fiscal_year_id=&fiscal_month_id=&gathering_category_id=` | ownership (`userOwnsChurch`) |
 | GET | `/demographics-reports/widgets?territory_id=&fiscal_year_id=` | ownership (`userOwnsChurch`) |
+| GET | `/attendance-reports/analytics?territory_id=&fiscal_year_id=<id\|all>&month=<1-12>` | ownership (`userOwnsChurch`) |
+
+**Attendance Analytics (2026-09-30).** `church/attendance/analytics.php` (submodule + `attendancemanagement.attendanceanalytics.read` from `AddAttendanceAnalyticsSubmoduleSeeder`, granted to every role that reads Attendance Reports) is filled by one call to `/attendance-reports/analytics`, built by `App\Reports\Attendance\AttendanceData` over an `AttendancePeriod`:
+- **Period.** A fiscal year, one month of it (`month` or `fiscal_month_id`), or `fiscal_year_id=all` (from the first record to today). It is compared with the year or month before; all time has no comparison, and neither does a previous period with no records.
+- **Sunday figures are averages per Sunday, not sums.** The same congregation comes back every week. Churches are added up per Sunday, so the same class serves regions later.
+- **Coverage** counts Sundays from each church's first record up to today, so Sundays before a church started recording aren't "missing".
+- **Payload:** `summary`, plus one section each for `sunday`, `ministries`, `events` and `children`. `sunday` holds the weekly series, months, a 12-month heatmap, composition, and the top and lowest Sundays. Each section carries its own `insights` from `InsightEngine`.
+- **Rules:** `SundayCoverageRule`, `AttendanceTrendRule`, `AttendanceVsMembershipRule`, `PeakSundayRule`, `QuietGatheringRule`, `TopGatheringRule`, and `GenderBalanceRule::sundayChildren`.
+- **Members on a Sunday** uses each church's latest *approved* demographics submission up to the end of the period.
+- The attendance PDF and Excel reports use the same class (see `reports-spec.md`).
 
 **One Sunday service per church per Sunday (2026-09-30).** `POST /attendance` for the weekly category returns `422` on `service_date` ("This Sunday is already recorded") when that church already has a Sunday service record for that date, with `existing_id` pointing at it. A second record would count that week twice in every average. The entry form handles this by switching to editing the existing record. Ministry gatherings and special events can still share a date. `PUT /attendance/{id}` doesn't change `service_date`, so the form shows the date as fixed when editing.
 
