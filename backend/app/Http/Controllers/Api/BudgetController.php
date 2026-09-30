@@ -2,784 +2,357 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Exports\BudgetsExport;
 use App\Http\Controllers\Controller;
 use App\Models\Budget;
 use App\Models\BudgetDeduction;
 use App\Models\BudgetDeductionItem;
 use App\Models\BudgetLineItem;
+use App\Services\Budgets\BudgetBook;
+use App\Support\BudgetAccess;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
-use Maatwebsite\Excel\Facades\Excel;
 
 class BudgetController extends Controller
 {
+    /*
+    |--------------------------------------------------------------------------
+    | Budgets: a month or a whole year of one place (docs/specs/budgets-spec.md)
+    |--------------------------------------------------------------------------
+    | Each level keeps its own budgets (no approval); a level above can look
+    | at the budgets below it, read-only. Access is checked by
+    | EnsureBudgetAccess; every change goes through BudgetBook.
+    */
+
+    public function __construct(private BudgetBook $book) {}
+
     /**
-     * Display a listing of budgets (Territory-Agnostic)
+     * A place's budgets - your own, or (read-only) a place below yours with
+     * ?territory_id= - with the figures for the year.
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
-        try {
-            $query = Budget::with(['budgetType', 'creator', 'approver', 'budgetLineItems.budgetLine.budgetCategory']);
+        $place = BudgetAccess::place($request->user(), $request->integer('territory_id') ?: null);
+        if (! $place) {
+            return $this->forbidden('You can only see your own budgets, or those of places below you.');
+        }
 
-            // Filter by territory type
-            if ($request->has('territory_type')) {
-                $query->byTerritoryType($request->territory_type);
+        $year = $request->integer('year') ?: null;
+        $budgets = Budget::with(['creator:id,firstname,lastname', 'starter:id,firstname,lastname'])
+            ->where('territory_type', $place['type'])->where('territory_id', $place['id'])
+            ->when($year, fn ($q) => $q->where('fiscal_year', $year))
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->query('status')))
+            ->orderByDesc('fiscal_year')
+            ->orderByRaw('period_month IS NULL DESC, period_month DESC')
+            ->get();
+
+        $statsYear = $year ?? (int) now()->year;
+        $ofYear = Budget::where('territory_type', $place['type'])->where('territory_id', $place['id'])->where('fiscal_year', $statsYear)->get();
+        $years = Budget::where('territory_type', $place['type'])->where('territory_id', $place['id'])
+            ->distinct()->pluck('fiscal_year')->push((int) now()->year)->unique()->sortDesc()->values();
+
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'data' => $budgets->map(fn ($b) => $this->summaryOf($b))->values(),
+            'place' => $this->placeInfo($place),
+            'view_only' => ! BudgetAccess::isOwn($request->user(), $place['type'], $place['id']) && ! $request->user()->hasGlobalAccess(),
+            'years' => $years,
+            'stats' => [
+                'year' => $statsYear,
+                'budgets' => $ofYear->count(),
+                'in_use' => $ofYear->where('status', 'active')->count(),
+                'drafts' => $ofYear->where('status', 'draft')->count(),
+                'in_planned' => round((float) $ofYear->sum('total_income_budgeted'), 2),
+                'out_planned' => round((float) $ofYear->sum('total_expense_budgeted'), 2),
+                'in_actual' => round((float) $ofYear->sum('total_income_actual'), 2),
+                'out_actual' => round((float) $ofYear->sum('total_expense_actual'), 2),
+            ],
+        ]);
+    }
+
+    /** What the New budget form needs: usable lines, periods already taken, and last budget's amounts to copy. */
+    public function form(Request $request): JsonResponse
+    {
+        $place = $this->ownPlace($request);
+        if ($place instanceof JsonResponse) {
+            return $place;
+        }
+        $year = $request->integer('year') ?: (int) now()->year;
+        $month = $request->has('month') ? ($request->integer('month') ?: null) : (int) now()->month;
+
+        return $this->formResponse($place, $year, $month);
+    }
+
+    /** The form for changing a budget, filled with its amounts. */
+    public function formFor(Budget $budget): JsonResponse
+    {
+        $place = ['type' => $budget->territory_type, 'id' => (int) $budget->territory_id];
+        $budget->load('budgetLineItems');
+
+        return $this->formResponse($place, (int) $budget->fiscal_year, $budget->period_month, $budget);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $place = $this->ownPlace($request);
+        if ($place instanceof JsonResponse) {
+            return $place;
+        }
+        $data = $this->validateBudget($request);
+        $budget = $this->book->save($request->user(), $place['type'], $place['id'], $data);
+
+        return response()->json([
+            'success' => true,
+            'status' => 201,
+            'message' => $budget->status === 'active' ? "The {$budget->period_label} budget is in use" : "Saved the {$budget->period_label} budget as a draft",
+            'data' => $this->detailOf($budget, $request),
+        ], 201);
+    }
+
+    public function update(Request $request, Budget $budget): JsonResponse
+    {
+        if (! $budget->is_editable) {
+            return response()->json(['success' => false, 'status' => 422, 'message' => 'A closed budget can\'t be changed. Reopen it first.'], 422);
+        }
+        if ($request->filled('updated_at') && ! $budget->updated_at?->equalTo(\Carbon\Carbon::parse($request->input('updated_at')))) {
+            return response()->json(['success' => false, 'status' => 409, 'message' => 'Someone else changed this budget while you were editing. Reload it to see their changes.'], 409);
+        }
+        $data = $this->validateBudget($request);
+        $budget = $this->book->save($request->user(), $budget->territory_type, (int) $budget->territory_id, $data, $budget->load('budgetLineItems'));
+
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'message' => "Saved the {$budget->period_label} budget",
+            'data' => $this->detailOf($budget, $request),
+        ]);
+    }
+
+    public function destroy(Request $request, Budget $budget): JsonResponse
+    {
+        $label = $budget->period_label;
+        $this->book->delete($budget, $request->user());
+
+        return response()->json(['success' => true, 'status' => 200, 'message' => "Deleted the draft {$label} budget", 'data' => null]);
+    }
+
+    public function start(Request $request, Budget $budget): JsonResponse
+    {
+        $this->book->start($budget, $request->user());
+
+        return $this->moved($budget, $request, "The {$budget->period_label} budget is in use");
+    }
+
+    public function close(Request $request, Budget $budget): JsonResponse
+    {
+        $this->book->close($budget, $request->user());
+
+        return $this->moved($budget, $request, "Closed the {$budget->period_label} budget");
+    }
+
+    public function reopen(Request $request, Budget $budget): JsonResponse
+    {
+        $this->book->reopen($budget, $request->user());
+
+        return $this->moved($budget, $request, "Reopened the {$budget->period_label} budget");
+    }
+
+    /** One budget: its lines with planned, received/spent and left, totals, and what the user may do with it. */
+    public function show(Request $request, Budget $budget): JsonResponse
+    {
+        return response()->json(['success' => true, 'status' => 200, 'data' => $this->detailOf($budget, $request)]);
+    }
+
+    /** History in plain sentences, newest first. */
+    public function history(Budget $budget): JsonResponse
+    {
+        $logs = $budget->budgetLogs()->with('performer:id,firstname,lastname')->orderByDesc('created_at')->orderByDesc('id')->get();
+
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'data' => $logs->map(fn ($log) => [
+                'id' => $log->id,
+                'action' => $log->action,
+                'description' => $log->description,
+                'who' => $log->performer ? trim("{$log->performer->firstname} {$log->performer->lastname}") : null,
+                'when' => $log->created_at?->toIso8601String(),
+                'when_label' => $log->created_at?->format('j M Y, g:i a'),
+            ])->values(),
+        ]);
+    }
+
+    /* ---------------------------------------------------------------- */
+
+    /** The acting place, for creating (a global admin names one with territory_id). */
+    private function ownPlace(Request $request): array|JsonResponse
+    {
+        $user = $request->user();
+        $place = $user->hasGlobalAccess()
+            ? BudgetAccess::place($user, $request->integer('territory_id') ?: null)
+            : BudgetAccess::acting($user);
+
+        return $place ?? $this->forbidden('Choose the church, region or diocese this budget is for.');
+    }
+
+    private function validateBudget(Request $request): array
+    {
+        return $request->validate([
+            'year' => 'required|integer|min:2000|max:2100',
+            'month' => 'nullable|integer|between:1,12',
+            'notes' => 'nullable|string|max:2000',
+            'lines' => 'present|array',
+            'lines.*.budget_line_id' => 'required|integer|exists:budget_lines,id',
+            'lines.*.amount' => 'nullable|numeric|min:0|max:9999999999',
+            'start' => 'sometimes|boolean',
+        ], [
+            'year.required' => 'Choose the year.',
+            'lines.*.amount.min' => 'Amounts can\'t be negative.',
+        ]);
+    }
+
+    private function formResponse(array $place, int $year, ?int $month, ?Budget $budget = null): JsonResponse
+    {
+        $lines = $this->book->linesFor($place['type'], $place['id']);
+        // A line the budget already has stays on the form even if it was switched off since.
+        if ($budget) {
+            $missing = $budget->budgetLineItems->pluck('budget_line_id')->diff($lines->pluck('id'));
+            if ($missing->isNotEmpty()) {
+                $lines = $lines->concat(\App\Models\BudgetLine::withTrashed()->with('budgetCategory')->whereIn('id', $missing)->get());
             }
+        }
+        $shape = fn ($l) => [
+            'id' => $l->id,
+            'name' => $l->name,
+            'description' => $l->description,
+            'is_own' => $l->territory_id !== null,
+        ];
+        $previous = $this->book->previous($place['type'], $place['id'], $year, $month);
 
-            // Filter by territory ID
-            if ($request->has('territory_id')) {
-                $query->byTerritoryId($request->territory_id);
-            }
-
-            // Filter by fiscal year
-            if ($request->has('fiscal_year')) {
-                $query->byFiscalYear($request->fiscal_year);
-            }
-
-            // Filter by status
-            if ($request->has('status')) {
-                $query->byStatus($request->status);
-            }
-
-            // Filter by budget type
-            if ($request->has('budget_type_id')) {
-                $query->where('budget_type_id', $request->budget_type_id);
-            }
-
-            // Search by name
-            if ($request->has('search') && ! empty($request->search)) {
-                $query->where('name', 'like', '%'.$request->search.'%');
-            }
-
-            // Order by
-            $orderBy = $request->get('order_by', 'created_at');
-            $orderDir = $request->get('order_dir', 'desc');
-            $query->orderBy($orderBy, $orderDir);
-
-            // Pagination
-            $perPage = $request->get('per_page', 15);
-            $budgets = $query->paginate($perPage);
-
-            // Calculate statistics based on SAME FILTERS as the table
-            $statsQuery = Budget::query();
-
-            // Apply same filters as the main query
-            if ($request->has('territory_type')) {
-                $statsQuery->byTerritoryType($request->territory_type);
-            }
-            if ($request->has('territory_id')) {
-                $statsQuery->byTerritoryId($request->territory_id);
-            }
-            if ($request->has('fiscal_year')) {
-                $statsQuery->byFiscalYear($request->fiscal_year);
-            }
-            if ($request->has('status')) {
-                $statsQuery->byStatus($request->status);
-            }
-            if ($request->has('budget_type_id')) {
-                $statsQuery->where('budget_type_id', $request->budget_type_id);
-            }
-            if ($request->has('search') && ! empty($request->search)) {
-                $statsQuery->where('name', 'like', '%'.$request->search.'%');
-            }
-
-            // Current stats based on filtered data
-            $total = (clone $statsQuery)->count();
-            $active = (clone $statsQuery)->where('status', 'active')->count();
-            $pendingApproval = (clone $statsQuery)->whereIn('status', ['submitted', 'under_review'])->count();
-            $totalIncome = (clone $statsQuery)->sum('total_income_budgeted');
-            $totalExpense = (clone $statsQuery)->sum('total_expense_budgeted');
-            $totalAmount = $totalIncome + $totalExpense; // Combined income + expense for overall budget volume
-
-            // Calculate trends (this month vs last month) within filtered data
-            $currentMonth = now()->startOfMonth();
-            $lastMonth = now()->subMonth()->startOfMonth();
-
-            $totalLastMonth = (clone $statsQuery)->whereMonth('created_at', $lastMonth->month)->whereYear('created_at', $lastMonth->year)->count();
-            $activeLastMonth = (clone $statsQuery)->where('status', 'active')->whereMonth('updated_at', $lastMonth->month)->whereYear('updated_at', $lastMonth->year)->count();
-
-            // Calculate percentage change
-            $totalTrend = $totalLastMonth > 0 ? round((($total - $totalLastMonth) / $totalLastMonth) * 100, 1) : 0;
-            $activeTrend = $activeLastMonth > 0 ? round((($active - $activeLastMonth) / $activeLastMonth) * 100, 1) : 0;
-
-            $stats = [
-                'total' => $total,
-                'total_trend' => $totalTrend,
-                'active' => $active,
-                'active_trend' => $activeTrend,
-                'pending_approval' => $pendingApproval,
-                'total_income' => $totalIncome,
-                'total_expense' => $totalExpense,
-                'total_amount' => $totalAmount,
-            ];
-
-            return response()->json([
-                'success' => true,
-                'status' => 200,
-                'message' => 'Budgets retrieved successfully',
-                'data' => $budgets->items(),
-                'meta' => [
-                    'current_page' => $budgets->currentPage(),
-                    'last_page' => $budgets->lastPage(),
-                    'per_page' => $budgets->perPage(),
-                    'total' => $budgets->total(),
-                    'from' => $budgets->firstItem(),
-                    'to' => $budgets->lastItem(),
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'data' => [
+                'place' => $this->placeInfo($place),
+                'year' => $year,
+                'month' => $month,
+                'lines' => [
+                    'in' => $lines->filter(fn ($l) => $l->budgetCategory?->slug === 'income')->map($shape)->values(),
+                    'out' => $lines->filter(fn ($l) => $l->budgetCategory?->slug === 'expense')->map($shape)->values(),
                 ],
-                'stats' => $stats,
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Failed to retrieve budgets: '.$e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'status' => 500,
-                'message' => 'Failed to retrieve budgets',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+                'taken' => $this->book->takenPeriods($place['type'], $place['id'], $year, $budget?->id),
+                'copy' => $previous ? [
+                    'budget_id' => $previous->id,
+                    'period_label' => $previous->period_label,
+                    'amounts' => $previous->budgetLineItems->mapWithKeys(fn ($i) => [$i->budget_line_id => (float) $i->budgeted_amount])->filter(),
+                ] : null,
+                'budget' => $budget ? [
+                    'id' => $budget->id,
+                    'status' => $budget->status,
+                    'period_label' => $budget->period_label,
+                    'notes' => $budget->description,
+                    'updated_at' => $budget->updated_at?->toIso8601String(),
+                    'amounts' => $budget->budgetLineItems->mapWithKeys(fn ($i) => [$i->budget_line_id => (float) $i->budgeted_amount])->filter(),
+                ] : null,
+            ],
+        ]);
     }
 
-    /**
-     * Export budgets to Excel
-     */
-    public function export(Request $request)
+    private function summaryOf(Budget $b): array
     {
-        try {
-            $query = Budget::with(['budgetType', 'creator', 'approver', 'status']);
+        $name = fn ($u) => $u ? trim("{$u->firstname} {$u->lastname}") : null;
 
-            // Apply same filters as index method
-            if ($request->has('territory_type')) {
-                $query->byTerritoryType($request->territory_type);
-            }
-
-            if ($request->has('territory_id')) {
-                $query->byTerritoryId($request->territory_id);
-            }
-
-            if ($request->has('fiscal_year')) {
-                $query->byFiscalYear($request->fiscal_year);
-            }
-
-            if ($request->has('status')) {
-                $query->byStatus($request->status);
-            }
-
-            if ($request->has('budget_type_id')) {
-                $query->where('budget_type_id', $request->budget_type_id);
-            }
-
-            if ($request->has('search')) {
-                $search = $request->search;
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('description', 'like', "%{$search}%");
-                });
-            }
-
-            // Order by
-            $orderBy = $request->get('order_by', 'created_at');
-            $orderDir = $request->get('order_dir', 'desc');
-            $query->orderBy($orderBy, $orderDir);
-
-            // Generate filename with timestamp
-            $timestamp = now()->format('Y-m-d_His');
-            $filename = "budgets_export_{$timestamp}.xlsx";
-
-            // Export to Excel
-            return Excel::download(new BudgetsExport($query), $filename);
-
-        } catch (\Exception $e) {
-            Log::error('Failed to export budgets: '.$e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'status' => 500,
-                'message' => 'Failed to export budgets',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        return [
+            'id' => $b->id,
+            'period_label' => $b->period_label,
+            'fiscal_year' => (int) $b->fiscal_year,
+            'period_month' => $b->period_month,
+            'status' => $b->status,
+            'status_label' => $b->status_label,
+            'in_planned' => (float) $b->total_income_budgeted,
+            'out_planned' => (float) $b->total_expense_budgeted,
+            'in_actual' => (float) $b->total_income_actual,
+            'out_actual' => (float) $b->total_expense_actual,
+            'left_planned' => round((float) $b->total_income_budgeted - (float) $b->total_expense_budgeted, 2),
+            'prepared_by' => $name($b->creator),
+            'started_by' => $name($b->starter),
+            'started_at' => $b->started_at?->toIso8601String(),
+            'updated_at' => $b->updated_at?->toIso8601String(),
+        ];
     }
 
-    /**
-     * Store a newly created budget
-     */
-    public function store(Request $request)
+    private function detailOf(Budget $budget, Request $request): array
     {
-        try {
-            $validator = Validator::make($request->all(), [
-                'budget_type_id' => 'required|exists:budget_types,id',
-                'territory_type' => 'required|in:diocese,region,subregion,church',
-                'territory_id' => 'required|integer',
-                'name' => 'required|string|max:255',
-                'slug' => 'nullable|string|max:255|unique:budgets,slug',
-                'description' => 'nullable|string',
-                'fiscal_year' => 'required|integer|min:2000|max:2100',
-                'start_date' => 'required|date',
-                'end_date' => 'required|date|after:start_date',
-                'budget_period_id' => 'nullable|exists:budget_periods,id',
-                'items' => 'nullable|array',
-                'items.*.budget_line_id' => 'required|exists:budget_lines,id',
-                'items.*.budgeted_amount' => 'required|numeric|min:0',
-                'items.*.actual_amount' => 'nullable|numeric|min:0',
-                'items.*.notes' => 'nullable|string|max:500',
-            ]);
+        $budget->loadMissing(['budgetLineItems.budgetLine', 'budgetLineItems.budgetCategory', 'creator:id,firstname,lastname', 'starter:id,firstname,lastname', 'closer:id,firstname,lastname', 'updater:id,firstname,lastname']);
+        $user = $request->user();
+        $own = BudgetAccess::canWrite($user, $budget);
+        $row = function ($item) {
+            $planned = (float) $item->budgeted_amount;
+            $actual = (float) $item->actual_amount;
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'status' => 422,
-                    'message' => 'Validation error',
-                    'errors' => $validator->errors(),
-                ], 422);
-            }
+            return [
+                'item_id' => $item->id,
+                'line_id' => $item->budget_line_id,
+                'name' => $item->budgetLine?->name ?? 'Line '.$item->budget_line_id,
+                'is_own' => $item->budgetLine?->territory_id !== null,
+                'planned' => $planned,
+                'actual' => $actual,
+                'left' => round($planned - $actual, 2),
+                'pct' => $planned > 0 ? round($actual / $planned * 100, 1) : null,
+            ];
+        };
+        $items = $budget->budgetLineItems->sortBy(fn ($i) => $i->budgetLine?->display_order ?? 0);
+        $name = fn ($u) => $u ? trim("{$u->firstname} {$u->lastname}") : null;
 
-            $data = $validator->validated();
-            $items = $data['items'] ?? [];
-            unset($data['items']); // Remove items from budget data
-
-            if ($error = $this->unusableLineError(array_column($items, 'budget_line_id'), $data['territory_type'], (int) $data['territory_id'])) {
-                return $error;
-            }
-
-            // Auto-generate unique slug if not provided
-            if (! isset($data['slug'])) {
-                $baseSlug = Str::slug($data['name']);
-                $slug = $baseSlug;
-                $counter = 1;
-
-                // Keep incrementing counter until we find a unique slug
-                while (Budget::where('slug', $slug)->exists()) {
-                    $slug = $baseSlug.'-'.$counter;
-                    $counter++;
-                }
-
-                $data['slug'] = $slug;
-            }
-
-            // Set created_by and status
-            $data['created_by'] = auth()->id();
-
-            // Use status from request if provided, otherwise default to 'draft'
-            if (! isset($data['status'])) {
-                $data['status'] = 'draft';
-            }
-
-            // Create the budget
-            $budget = Budget::create($data);
-
-            // Create line items if provided
-            if (! empty($items)) {
-                foreach ($items as $item) {
-                    // Get the budget line to fetch its category_id
-                    $budgetLine = \App\Models\BudgetLine::find($item['budget_line_id']);
-
-                    if (! $budgetLine) {
-                        continue; // Skip if budget line not found
-                    }
-
-                    $budget->budgetLineItems()->create([
-                        'budget_line_id' => $item['budget_line_id'],
-                        'budget_category_id' => $budgetLine->budget_category_id,
-                        'budgeted_amount' => $item['budgeted_amount'],
-                        'actual_amount' => $item['actual_amount'] ?? 0,
-                        'notes' => $item['notes'] ?? null,
-                        'created_by' => auth()->id(),
-                    ]);
-                }
-            }
-
-            // Load relationships including line items
-            $budget->load(['budgetType', 'creator', 'budgetLineItems.budgetLine']);
-
-            return response()->json([
-                'success' => true,
-                'status' => 201,
-                'message' => 'Budget created successfully',
-                'data' => $budget,
-            ], 201);
-
-        } catch (\Exception $e) {
-            Log::error('Failed to create budget: '.$e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'status' => 500,
-                'message' => 'Failed to create budget',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        return [
+            'budget' => [
+                ...$this->summaryOf($budget),
+                'start_date' => $budget->start_date?->toDateString(),
+                'end_date' => $budget->end_date?->toDateString(),
+                'notes' => $budget->description,
+                'created_at' => $budget->created_at?->toIso8601String(),
+                'closed_at' => $budget->closed_at?->toIso8601String(),
+                'closed_by' => $name($budget->closer),
+                'updated_by' => $name($budget->updater),
+                'place' => $this->placeInfo(['type' => $budget->territory_type, 'id' => (int) $budget->territory_id]),
+            ],
+            'lines' => [
+                'in' => $items->filter(fn ($i) => $i->budgetCategory?->slug === 'income')->map($row)->values(),
+                'out' => $items->filter(fn ($i) => $i->budgetCategory?->slug === 'expense')->map($row)->values(),
+            ],
+            'view_only' => ! $own,
+            'can' => [
+                'edit' => $own && $budget->is_editable,
+                'start' => $own && $budget->status === 'draft',
+                'close' => $own && $budget->status === 'active',
+                'reopen' => $own && $budget->status === 'closed',
+                'delete' => $own && $budget->status === 'draft',
+            ],
+        ];
     }
 
-    /**
-     * Display the specified budget
-     */
-    public function show(Budget $budget)
+    private function placeInfo(array $place): array
     {
-        try {
-            $budget->load(['budgetType', 'budgetLineItems.budgetLine', 'budgetLineItems.budgetCategory', 'creator', 'updater', 'approver']);
-
-            return response()->json([
-                'success' => true,
-                'status' => 200,
-                'message' => 'Budget retrieved successfully',
-                'data' => $budget,
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Failed to retrieve budget: '.$e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'status' => 500,
-                'message' => 'Failed to retrieve budget',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        return [...$place, 'name' => \App\Models\Territory::find($place['id'])?->name];
     }
 
-    /**
-     * Update the specified budget
-     */
-    public function update(Request $request, Budget $budget)
+    private function moved(Budget $budget, Request $request, string $message): JsonResponse
     {
-        try {
-            // Check if budget is editable
-            if (! $budget->is_editable) {
-                return response()->json([
-                    'success' => false,
-                    'status' => 400,
-                    'message' => "Cannot edit budget with status '{$budget->status}'. Only draft, under_review, or rejected budgets can be edited.",
-                ], 400);
-            }
-
-            $validator = Validator::make($request->all(), [
-                'budget_type_id' => 'sometimes|required|exists:budget_types,id',
-                'name' => 'sometimes|required|string|max:255',
-                'slug' => 'nullable|string|max:255|unique:budgets,slug,'.$budget->id,
-                'description' => 'nullable|string',
-                'fiscal_year' => 'sometimes|required|integer|min:2000|max:2100',
-                'start_date' => 'sometimes|required|date',
-                'end_date' => 'sometimes|required|date|after:start_date',
-                'budget_period_id' => 'nullable|exists:budget_periods,id',
-            ]);
-
-            // Additional validation for budget_period_id to ensure it matches fiscal year and budget type
-            if ($request->has('budget_period_id') && $request->budget_period_id) {
-                $budgetPeriod = \App\Models\BudgetPeriod::find($request->budget_period_id);
-
-                if ($budgetPeriod) {
-                    $fiscalYearId = $request->has('fiscal_year') ?
-                        \App\Models\FiscalYear::where('year', $request->fiscal_year)->value('id') :
-                        $budget->budgetType->fiscal_year_id ?? null;
-
-                    $budgetTypeId = $request->budget_type_id ?? $budget->budget_type_id;
-
-                    if ($budgetPeriod->fiscal_year_id != $fiscalYearId) {
-                        return response()->json([
-                            'success' => false,
-                            'status' => 422,
-                            'message' => 'Validation error',
-                            'errors' => ['budget_period_id' => ['The selected budget period does not belong to the specified fiscal year.']],
-                        ], 422);
-                    }
-
-                    if ($budgetPeriod->budget_type_id != $budgetTypeId) {
-                        return response()->json([
-                            'success' => false,
-                            'status' => 422,
-                            'message' => 'Validation error',
-                            'errors' => ['budget_period_id' => ['The selected budget period does not belong to the specified budget type.']],
-                        ], 422);
-                    }
-                }
-            }
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'status' => 422,
-                    'message' => 'Validation error',
-                    'errors' => $validator->errors(),
-                ], 422);
-            }
-
-            $data = $validator->validated();
-
-            // Auto-generate slug if name is updated but slug is not provided
-            if (isset($data['name']) && ! isset($data['slug'])) {
-                $data['slug'] = Str::slug($data['name']);
-            }
-
-            $data['updated_by'] = auth()->id();
-
-            $budget->update($data);
-            $budget->load(['budgetType', 'creator', 'updater']);
-
-            return response()->json([
-                'success' => true,
-                'status' => 200,
-                'message' => 'Budget updated successfully',
-                'data' => $budget->fresh(['budgetType', 'creator', 'updater']),
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Failed to update budget: '.$e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'status' => 500,
-                'message' => 'Failed to update budget',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        return response()->json(['success' => true, 'status' => 200, 'message' => $message, 'data' => $this->detailOf($budget->fresh(), $request)]);
     }
 
-    /**
-     * Remove the specified budget
-     */
-    public function destroy(Budget $budget)
+    private function forbidden(string $message): JsonResponse
     {
-        try {
-            // Only allow deletion of draft or rejected budgets
-            if (! in_array($budget->status, ['draft', 'rejected'])) {
-                return response()->json([
-                    'success' => false,
-                    'status' => 400,
-                    'message' => "Cannot delete budget with status '{$budget->status}'. Only draft or rejected budgets can be deleted.",
-                ], 400);
-            }
-
-            // Cascade delete will handle budget_line_items
-            $budget->delete();
-
-            return response()->json([
-                'success' => true,
-                'status' => 200,
-                'message' => 'Budget deleted successfully',
-                'data' => null,
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Failed to delete budget: '.$e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'status' => 500,
-                'message' => 'Failed to delete budget',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        return response()->json(['success' => false, 'status' => 403, 'message' => $message], 403);
     }
 
-    /**
-     * Submit budget for review (draft → submitted)
-     */
-    public function submit(Budget $budget)
-    {
-        try {
-            if (! $budget->can_be_submitted) {
-                return response()->json([
-                    'success' => false,
-                    'status' => 400,
-                    'message' => 'Budget cannot be submitted. It must be a draft (or a rejected budget being resubmitted) with at least one line.',
-                ], 400);
-            }
-
-            $budget->update([
-                'status' => 'submitted',
-                'submitted_at' => now(),
-                'rejection_reason' => null,
-                'updated_by' => auth()->id(),
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'status' => 200,
-                'message' => 'Budget submitted for review successfully',
-                'data' => $budget->fresh(),
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Failed to submit budget: '.$e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'status' => 500,
-                'message' => 'Failed to submit budget',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Approve budget (submitted/under_review → approved)
-     */
-    public function approve(Request $request, Budget $budget)
-    {
-        try {
-            if (! $budget->can_be_approved) {
-                return response()->json([
-                    'success' => false,
-                    'status' => 400,
-                    'message' => "Cannot approve budget with status '{$budget->status}'.",
-                ], 400);
-            }
-
-            $validator = Validator::make($request->all(), [
-                'approval_notes' => 'nullable|string|max:1000',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'status' => 422,
-                    'message' => 'Validation error',
-                    'errors' => $validator->errors(),
-                ], 422);
-            }
-
-            $budget->update([
-                'status' => 'approved',
-                'approved_at' => now(),
-                'approved_by' => auth()->id(),
-                'approval_notes' => $request->approval_notes,
-                'updated_by' => auth()->id(),
-            ]);
-
-            // Lock all line items
-            $budget->budgetLineItems()->update(['is_locked' => true]);
-
-            return response()->json([
-                'success' => true,
-                'status' => 200,
-                'message' => 'Budget approved successfully',
-                'data' => $budget->fresh(['approver']),
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Failed to approve budget: '.$e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'status' => 500,
-                'message' => 'Failed to approve budget',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Reject budget (submitted/under_review → rejected)
-     */
-    public function reject(Request $request, Budget $budget)
-    {
-        try {
-            if (! in_array($budget->status, ['submitted', 'under_review'])) {
-                return response()->json([
-                    'success' => false,
-                    'status' => 400,
-                    'message' => "Cannot reject budget with status '{$budget->status}'.",
-                ], 400);
-            }
-
-            // The details page sends "reason"; older callers send "rejection_reason".
-            if (! $request->filled('rejection_reason') && $request->filled('reason')) {
-                $request->merge(['rejection_reason' => $request->input('reason')]);
-            }
-
-            $validator = Validator::make($request->all(), [
-                'rejection_reason' => 'required|string|max:1000',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'status' => 422,
-                    'message' => 'Validation error',
-                    'errors' => $validator->errors(),
-                ], 422);
-            }
-
-            $budget->update([
-                'status' => 'rejected',
-                'rejection_reason' => $request->rejection_reason,
-                'updated_by' => auth()->id(),
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'status' => 200,
-                'message' => 'Budget rejected successfully',
-                'data' => $budget->fresh(),
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Failed to reject budget: '.$e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'status' => 500,
-                'message' => 'Failed to reject budget',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Activate budget (approved → active)
-     */
-    public function activate(Budget $budget)
-    {
-        try {
-            if (! $budget->can_be_activated) {
-                return response()->json([
-                    'success' => false,
-                    'status' => 400,
-                    'message' => "Cannot activate budget with status '{$budget->status}'. Budget must be approved first.",
-                ], 400);
-            }
-
-            $budget->update([
-                'status' => 'active',
-                'updated_by' => auth()->id(),
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'status' => 200,
-                'message' => 'Budget activated successfully',
-                'data' => $budget->fresh(),
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Failed to activate budget: '.$e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'status' => 500,
-                'message' => 'Failed to activate budget',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Close budget (active → closed)
-     */
-    public function close(Budget $budget)
-    {
-        try {
-            if ($budget->status !== 'active') {
-                return response()->json([
-                    'success' => false,
-                    'status' => 400,
-                    'message' => "Cannot close budget with status '{$budget->status}'. Budget must be active.",
-                ], 400);
-            }
-
-            $budget->update([
-                'status' => 'closed',
-                'updated_by' => auth()->id(),
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'status' => 200,
-                'message' => 'Budget closed successfully',
-                'data' => $budget->fresh(),
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Failed to close budget: '.$e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'status' => 500,
-                'message' => 'Failed to close budget',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Clone budget to new fiscal year
-     */
-    public function clone(Request $request, Budget $budget)
-    {
-        try {
-            $validator = Validator::make($request->all(), [
-                'fiscal_year' => 'required|integer|min:2000|max:2100',
-                'name' => 'nullable|string|max:255',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'status' => 422,
-                    'message' => 'Validation error',
-                    'errors' => $validator->errors(),
-                ], 422);
-            }
-
-            DB::beginTransaction();
-
-            // Clone budget
-            $newBudget = $budget->replicate();
-            $newBudget->fiscal_year = $request->fiscal_year;
-            $newBudget->name = $request->name ?? "{$budget->name} ({$request->fiscal_year})";
-            $newBudget->slug = Str::slug($newBudget->name);
-            $newBudget->status = 'draft';
-            $newBudget->total_income_budgeted = 0;
-            $newBudget->total_expense_budgeted = 0;
-            $newBudget->total_income_actual = 0;
-            $newBudget->total_expense_actual = 0;
-            $newBudget->submitted_at = null;
-            $newBudget->approved_at = null;
-            $newBudget->approved_by = null;
-            $newBudget->approval_notes = null;
-            $newBudget->rejection_reason = null;
-            $newBudget->created_by = auth()->id();
-            $newBudget->updated_by = null;
-            $newBudget->save();
-
-            // Clone line items
-            foreach ($budget->budgetLineItems as $lineItem) {
-                $newLineItem = $lineItem->replicate();
-                $newLineItem->budget_id = $newBudget->id;
-                $newLineItem->actual_amount = 0;
-                $newLineItem->is_locked = false;
-                $newLineItem->created_by = auth()->id();
-                $newLineItem->updated_by = null;
-                $newLineItem->save();
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'status' => 201,
-                'message' => 'Budget cloned successfully',
-                'data' => $newBudget->fresh(['budgetType', 'budgetLineItems']),
-            ], 201);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Failed to clone budget: '.$e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'status' => 500,
-                'message' => 'Failed to clone budget',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
+    /*
+    |--------------------------------------------------------------------------
+    | Older actions - replaced by the spending and deductions phases, then removed
+    |--------------------------------------------------------------------------
+    */
 
     /**
      * Get all line items for a budget
@@ -968,7 +541,7 @@ class BudgetController extends Controller
             return null;
         }
         $query = \App\Models\BudgetLine::whereIn('id', $lineIds);
-        $usable = ($territoryType === 'church' ? $query->forChurch($territoryId) : $query->shared())->count();
+        $usable = $query->forPlace($territoryType, $territoryId)->count();
         if ($usable === count($lineIds)) {
             return null;
         }

@@ -9,32 +9,44 @@ use App\Models\BudgetType;
 use App\Models\Church;
 use App\Models\Diocese;
 use App\Models\Permission;
+use App\Models\Region;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\UserTerritoryAssignment;
-use App\Support\BudgetAccess;
+use App\Services\Budgets\BudgetBook;
 
 /**
- * Two churches, a pastor of the first (church budget + budget-lines
- * permissions, as ChurchBudgetAccessSeeder grants), a diocese approver, one
- * budget type and category, and shared lines for churches, the diocese and
- * all territories.
+ * A diocese with two regions; region A has two churches, region B one.
+ * A pastor of church 1 (church budgets + budget lines, as the seeders
+ * grant), an overseer of region A and a bishop - each with read, prepare
+ * and (above church) viewing the places below. One budget type, the two
+ * categories, and shared lines for churches, regions, the diocese and all.
  */
 trait BuildsBudgetWorld
 {
+    protected Diocese $diocese;
+
+    protected Region $region;
+
+    protected Region $otherRegion;
+
     protected Church $myChurch;
 
     protected Church $otherChurch;
 
-    protected Diocese $diocese;
+    protected Church $farChurch;
 
     protected User $pastor;
 
-    protected User $approver;
+    protected User $overseer;
+
+    protected User $bishop;
 
     protected BudgetType $type;
 
     protected BudgetCategory $category;
+
+    protected BudgetCategory $incomeCategory;
 
     protected BudgetLine $churchLine;
 
@@ -42,52 +54,66 @@ trait BuildsBudgetWorld
 
     protected BudgetLine $dioceseLine;
 
+    protected BudgetLine $incomeLine;
+
     protected function buildBudgetWorld(): void
     {
         $this->diocese = Diocese::create(['name' => 'Test Diocese', 'code' => 'T-DIO', 'territory_type' => 'diocese', 'level' => 1]);
-        $this->myChurch = Church::create(['name' => 'My Church', 'code' => 'MY-CH', 'territory_type' => 'church', 'level' => 4]);
-        $this->otherChurch = Church::create(['name' => 'Other Church', 'code' => 'OTHER-CH', 'territory_type' => 'church', 'level' => 4]);
+        $this->region = Region::create(['name' => 'Region A', 'code' => 'T-RA', 'territory_type' => 'region', 'level' => 2, 'parent_territory_id' => $this->diocese->id]);
+        $this->otherRegion = Region::create(['name' => 'Region B', 'code' => 'T-RB', 'territory_type' => 'region', 'level' => 2, 'parent_territory_id' => $this->diocese->id]);
+        $this->myChurch = Church::create(['name' => 'My Church', 'code' => 'MY-CH', 'territory_type' => 'church', 'level' => 4, 'parent_territory_id' => $this->region->id]);
+        $this->otherChurch = Church::create(['name' => 'Other Church', 'code' => 'OTHER-CH', 'territory_type' => 'church', 'level' => 4, 'parent_territory_id' => $this->region->id]);
+        $this->farChurch = Church::create(['name' => 'Far Church', 'code' => 'FAR-CH', 'territory_type' => 'church', 'level' => 4, 'parent_territory_id' => $this->otherRegion->id]);
 
         $this->pastor = $this->userWithRole('pastor', 'Test Pastor', 'church', $this->myChurch->id, [
-            ...array_map(fn ($a) => BudgetAccess::CHURCH_PERMISSION_PREFIX.".{$a}", ['read', 'create', 'update', 'submit']),
+            ...array_map(fn ($a) => "church.budgets.budgets.{$a}", ['read', 'prepare', 'export']),
             ...array_map(fn ($a) => "church.settings.budgetsettings.budgetlines.{$a}", ['read', 'create', 'update', 'delete']),
         ]);
-        $this->approver = $this->userWithRole('bishop', 'Test Bishop', 'diocese', $this->diocese->id, [BudgetAccess::APPROVE_PERMISSION]);
+        $this->overseer = $this->userWithRole('overseer', 'Test Overseer', 'region', $this->region->id, [
+            ...array_map(fn ($a) => "region.budgets.budgets.{$a}", ['read', 'prepare', 'export']),
+            'region.budgets.below.read',
+        ]);
+        $this->bishop = $this->userWithRole('bishop', 'Test Bishop', 'diocese', $this->diocese->id, [
+            ...array_map(fn ($a) => "diocese.budgets.budgets.{$a}", ['read', 'prepare', 'export']),
+            'diocese.budgets.below.read',
+        ]);
 
         $this->type = BudgetType::create(['name' => 'Annual', 'slug' => 'annual', 'duration_months' => 12, 'is_active' => true]);
-        $this->category = BudgetCategory::create(['name' => 'Operations', 'slug' => 'operations', 'is_active' => true]);
+        $this->incomeCategory = BudgetCategory::create(['name' => 'Income', 'slug' => 'income', 'is_active' => true]);
+        $this->category = BudgetCategory::create(['name' => 'Expense', 'slug' => 'expense', 'is_active' => true]);
         $this->churchLine = $this->sharedLine('Church Rent', 'church');
         $this->allLine = $this->sharedLine('Utilities', 'all');
         $this->dioceseLine = $this->sharedLine('Diocese Office', 'diocese');
+        $this->incomeLine = $this->sharedLine('Tithes', 'all', $this->incomeCategory);
     }
 
-    private function userWithRole(string $username, string $roleName, string $level, int $territoryId, array $permissions): User
+    protected function userWithRole(string $username, string $roleName, string $level, int $territoryId, array $permissions, string $assignment = 'primary'): User
     {
-        $role = Role::create(['name' => $roleName, 'guard_name' => 'web', 'territory_level' => $level]);
+        $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web'], ['territory_level' => $level]);
         foreach ($permissions as $name) {
             $role->givePermissionTo(Permission::firstOrCreate(
                 ['name' => $name, 'guard_name' => 'web'],
                 ['action' => substr(strrchr($name, '.'), 1), 'territory_scope' => $level],
             ));
         }
-        $user = User::create([
-            'firstname' => 'Test', 'lastname' => ucfirst($username), 'username' => "test.{$username}",
+        $user = User::firstOrCreate(['username' => "test.{$username}"], [
+            'firstname' => 'Test', 'lastname' => ucfirst($username),
             'email' => "test.{$username}@example.test", 'password' => bcrypt('password'),
         ]);
         $user->assignRole($role);
         UserTerritoryAssignment::create([
             'user_id' => $user->id, 'territory_id' => $territoryId, 'role_id' => $role->id,
-            'assignment_type' => 'primary', 'is_active' => true,
+            'assignment_type' => $assignment, 'is_active' => true,
             'effective_from' => now()->subDay(), 'assigned_by' => $user->id, 'assigned_at' => now()->subDay(),
         ]);
 
         return $user;
     }
 
-    protected function sharedLine(string $name, string $scope): BudgetLine
+    protected function sharedLine(string $name, string $scope, ?BudgetCategory $category = null): BudgetLine
     {
         return BudgetLine::create([
-            'budget_category_id' => $this->category->id, 'name' => $name, 'slug' => str($name)->slug(),
+            'budget_category_id' => ($category ?? $this->category)->id, 'name' => $name, 'slug' => str($name)->slug(),
             'territory_scope' => $scope, 'is_active' => true,
         ]);
     }
@@ -100,19 +126,20 @@ trait BuildsBudgetWorld
         ]);
     }
 
-    protected function budgetFor(Church $church, string $status = 'draft', array $lines = []): Budget
+    /** A budget of a place, built the way the pages build it. */
+    protected function budgetFor($place, string $status = 'draft', array $lines = [], int $year = 2026, ?int $month = 1): Budget
     {
-        $budget = Budget::create([
-            'budget_type_id' => $this->type->id, 'territory_type' => 'church', 'territory_id' => $church->id,
-            'name' => "{$church->name} 2026 ".uniqid(), 'slug' => 'b-'.uniqid(), 'fiscal_year' => 2026,
-            'start_date' => '2026-01-01', 'end_date' => '2026-12-31', 'status' => $status,
-        ]);
-        foreach ($lines ?: [$this->churchLine] as $line) {
-            $budget->budgetLineItems()->create([
-                'budget_line_id' => $line->id, 'budget_category_id' => $line->budget_category_id, 'budgeted_amount' => 1000,
-            ]);
+        $type = $place->territory_type->value;
+        $amounts = array_map(fn ($line) => ['budget_line_id' => $line->id, 'amount' => 1000], $lines ?: [$type === 'church' ? $this->churchLine : $this->allLine]);
+        $book = app(BudgetBook::class);
+        $budget = $book->save($this->pastor, $type, $place->id, ['year' => $year, 'month' => $month, 'lines' => $amounts]);
+        if ($status !== 'draft') {
+            $book->start($budget, $this->pastor);
+        }
+        if ($status === 'closed') {
+            $book->close($budget->fresh(), $this->pastor);
         }
 
-        return $budget;
+        return $budget->fresh();
     }
 }

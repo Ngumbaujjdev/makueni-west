@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use OwenIt\Auditing\Contracts\Auditable;
 
 class Budget extends Model implements Auditable
@@ -24,10 +24,15 @@ class Budget extends Model implements Auditable
         'slug',
         'description',
         'fiscal_year',
+        'period_month',
         'start_date',
         'end_date',
         'status',
         'status_id',
+        'started_at',
+        'started_by',
+        'closed_at',
+        'closed_by',
         'total_income_budgeted',
         'total_expense_budgeted',
         'total_income_actual',
@@ -57,7 +62,23 @@ class Budget extends Model implements Auditable
         'net_income_budgeted' => 'decimal:2',
         'net_income_actual' => 'decimal:2',
         'fiscal_year' => 'integer',
+        'period_month' => 'integer',
+        'started_at' => 'datetime',
+        'closed_at' => 'datetime',
     ];
+
+    /** What a budget can be: still being prepared, in use, or done. No approval step. */
+    public const STATUSES = ['draft', 'active', 'closed'];
+
+    public const STATUS_LABELS = ['draft' => 'Draft', 'active' => 'In use', 'closed' => 'Closed'];
+
+    private const MONTHS = [1 => 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+    /** "January 2026", or "2026" for a whole-year budget. */
+    public static function periodLabelFor(int $year, ?int $month): string
+    {
+        return $month ? self::MONTHS[$month].' '.$year : 'Whole of '.$year;
+    }
 
     // ========================================================================
     // RELATIONSHIPS
@@ -130,6 +151,16 @@ class Budget extends Model implements Auditable
     /**
      * Get all logs for this budget
      */
+    public function starter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'started_by');
+    }
+
+    public function closer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'closed_by');
+    }
+
     public function budgetLogs(): HasMany
     {
         return $this->hasMany(BudgetLog::class);
@@ -203,22 +234,6 @@ class Budget extends Model implements Auditable
         return $query->where('status', 'draft');
     }
 
-    /**
-     * Get only submitted budgets
-     */
-    public function scopeSubmitted($query)
-    {
-        return $query->where('status', 'submitted');
-    }
-
-    /**
-     * Get only approved budgets
-     */
-    public function scopeApproved($query)
-    {
-        return $query->where('status', 'approved');
-    }
-
     // ========================================================================
     // COMPUTED ATTRIBUTES
     // ========================================================================
@@ -274,48 +289,32 @@ class Budget extends Model implements Auditable
                     return 0;
                 }
                 $variance = $this->total_actual - $this->total_budgeted;
+
                 return round(($variance / $this->total_budgeted) * 100, 2);
             }
         );
     }
 
-    /**
-     * Check if budget is editable
-     */
+    /** Draft and in-use budgets can be changed; a closed one can't until it's reopened. */
     protected function isEditable(): Attribute
     {
         return Attribute::make(
-            get: fn () => in_array($this->status, ['draft', 'under_review', 'rejected']),
+            get: fn () => in_array($this->status, ['draft', 'active'], true),
         );
     }
 
-    /**
-     * Check if budget can be submitted
-     */
-    protected function canBeSubmitted(): Attribute
+    /** "January 2026" / "Whole of 2026". */
+    protected function periodLabel(): Attribute
     {
         return Attribute::make(
-            get: fn () => in_array($this->status, ['draft', 'rejected']) && $this->budgetLineItems()->count() > 0,
+            get: fn () => self::periodLabelFor((int) $this->fiscal_year, $this->period_month),
         );
     }
 
-    /**
-     * Check if budget can be approved
-     */
-    protected function canBeApproved(): Attribute
+    protected function statusLabel(): Attribute
     {
         return Attribute::make(
-            get: fn () => in_array($this->status, ['submitted', 'under_review']),
-        );
-    }
-
-    /**
-     * Check if budget can be activated
-     */
-    protected function canBeActivated(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => $this->status === 'approved',
+            get: fn () => self::STATUS_LABELS[$this->status] ?? ucfirst((string) $this->status),
         );
     }
 
@@ -374,34 +373,6 @@ class Budget extends Model implements Auditable
     }
 
     /**
-     * Change budget status with logging
-     */
-    public function changeStatus(int $newStatusId, ?string $notes = null): void
-    {
-        $oldStatus = $this->status_id;
-        $oldStatusModel = $oldStatus ? Status::find($oldStatus) : null;
-        $newStatusModel = Status::find($newStatusId);
-
-        $this->update(['status_id' => $newStatusId]);
-
-        $this->log(
-            'status_changed',
-            "Status changed from " . ($oldStatusModel->name ?? 'None') . " to {$newStatusModel->name}",
-            [
-                'old_values' => [
-                    'status_id' => $oldStatus,
-                    'status_name' => $oldStatusModel->name ?? null,
-                ],
-                'new_values' => [
-                    'status_id' => $newStatusId,
-                    'status_name' => $newStatusModel->name,
-                ],
-                'notes' => $notes,
-            ]
-        );
-    }
-
-    /**
      * Apply a deduction to this budget
      */
     public function applyDeduction(int $deductionId, float $amount, ?string $notes = null): BudgetDeductionItem
@@ -442,68 +413,13 @@ class Budget extends Model implements Auditable
         $deductionItem = $this->budgetDeductionItems()->findOrFail($deductionItemId);
 
         if ($deductionItem->is_reversed) {
-            throw new \Exception("This deduction has already been reversed");
+            throw new \Exception('This deduction has already been reversed');
         }
 
-        if (!$deductionItem->is_applied) {
+        if (! $deductionItem->is_applied) {
             throw new \Exception("Cannot reverse a deduction that hasn't been applied");
         }
 
         $deductionItem->reverse($reason, auth()->id());
-    }
-
-    // ========================================================================
-    // MODEL EVENTS
-    // ========================================================================
-
-    protected static function boot()
-    {
-        parent::boot();
-
-        // Log budget creation
-        static::created(function ($budget) {
-            $budget->log(
-                'created',
-                "Budget created: {$budget->name}",
-                [
-                    'new_values' => [
-                        'name' => $budget->name,
-                        'fiscal_year' => $budget->fiscal_year,
-                        'territory' => $budget->territory_type,
-                    ],
-                ]
-            );
-        });
-
-        // Log budget updates
-        static::updated(function ($budget) {
-            $changes = $budget->getChanges();
-
-            // Exclude auto-calculated fields and timestamps from logging
-            $excludeFields = ['total_deductions', 'net_income_budgeted', 'net_income_actual', 'updated_at'];
-            $relevantChanges = array_diff_key($changes, array_flip($excludeFields));
-
-            if (!empty($relevantChanges)) {
-                $budget->log(
-                    'updated',
-                    "Budget updated: {$budget->name}",
-                    [
-                        'old_values' => $budget->getOriginal(),
-                        'new_values' => $relevantChanges,
-                    ]
-                );
-            }
-        });
-
-        // Log budget deletion
-        static::deleted(function ($budget) {
-            $budget->log(
-                'deleted',
-                "Budget deleted: {$budget->name}",
-                [
-                    'old_values' => $budget->getAttributes(),
-                ]
-            );
-        });
     }
 }
