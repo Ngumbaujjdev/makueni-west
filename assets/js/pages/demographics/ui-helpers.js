@@ -1012,6 +1012,96 @@ const DemographicsUI = (function () {
   }
 
   // ==========================================================================
+  // PERIOD PICKER - Year (+ All time) and Month (+ Whole year) selects, used
+  // by Attendance Analytics and the Attendance Overview. Kept in the URL
+  // (?year=2026&month=8, other params left alone); nothing reloads the page.
+  // ==========================================================================
+
+  const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+  /**
+   * @param {object} opts
+   *   yearId, monthId, monthWrapId - the two <select>s and the month's wrapper (hidden for All time)
+   *   years        - fiscal years [{id, year}] (future years are left out)
+   *   defaultMonth - true: open on the current month (the Overview); false: the whole year (Analytics)
+   *   onChange()   - called after every change, once the URL is updated
+   * @returns {{filters: function(): object, state: function(): {year: string, month: string}, label: function(): string}}
+   */
+  function renderPeriodPicker({ yearId, monthId, monthWrapId, years, defaultMonth = false, onChange = () => {} }) {
+    const yearSel = document.getElementById(yearId);
+    const monthSel = document.getElementById(monthId);
+    const now = new Date();
+    const thisYear = now.getFullYear();
+    const list = (years || []).filter((y) => y.year <= thisYear).sort((a, b) => b.year - a.year);
+    const params = new URLSearchParams(window.location.search);
+
+    yearSel.innerHTML = list.map((y) => `<option value="${y.id}" data-year="${y.year}">${y.year}</option>`).join("") + '<option value="all">All time</option>';
+    const wanted = params.get("year");
+    const match = wanted === "all" ? "all" : list.find((y) => String(y.year) === wanted)?.id;
+    yearSel.value = String(match || list.find((y) => y.year === thisYear)?.id || list[0]?.id || "all");
+
+    const selectedYear = () => Number(yearSel.selectedOptions[0]?.dataset.year) || null;
+    // "month=all" means Whole year when the page opens on a month by default.
+    const wantedMonth = params.get("month");
+    const initialMonth = wantedMonth === "all" ? "" : wantedMonth ? Number(wantedMonth) : defaultMonth && selectedYear() === thisYear ? now.getMonth() + 1 : "";
+
+    function fillMonths(keep) {
+      const last = selectedYear() === thisYear ? now.getMonth() + 1 : 12;
+      monthSel.innerHTML = '<option value="">Whole year</option>' + MONTH_NAMES.slice(0, last).map((m, i) => `<option value="${i + 1}">${m}</option>`).join("");
+      monthSel.value = keep && Number(keep) <= last ? String(keep) : "";
+      const wrap = document.getElementById(monthWrapId);
+      if (wrap) wrap.hidden = yearSel.value === "all";
+      syncSelect(monthSel);
+    }
+
+    function state() {
+      const year = yearSel.value === "all" ? "all" : String(selectedYear() || "");
+      return { year, month: year === "all" ? "" : monthSel.value };
+    }
+
+    function syncUrl() {
+      const url = new URLSearchParams(window.location.search);
+      const { year, month } = state();
+      year && year !== String(thisYear) ? url.set("year", year) : url.delete("year");
+      const isDefaultMonth = defaultMonth && year === String(thisYear) && month === String(now.getMonth() + 1);
+      if (year === "all" || isDefaultMonth || (!month && !defaultMonth)) url.delete("month");
+      else url.set("month", month || "all");
+      const qs = url.toString();
+      history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+    }
+
+    fillMonths(initialMonth);
+    enhanceSelect(yearSel, { search: false, dropdownAutoWidth: true });
+    enhanceSelect(monthSel, { search: false, dropdownAutoWidth: true });
+    yearSel.addEventListener("change", () => {
+      fillMonths(monthSel.value);
+      syncUrl();
+      onChange();
+    });
+    monthSel.addEventListener("change", () => {
+      syncUrl();
+      onChange();
+    });
+    syncUrl();
+
+    return {
+      state,
+      /** Params for GET /attendance-reports/analytics. */
+      filters() {
+        const { month } = state();
+        const f = { fiscal_year_id: yearSel.value };
+        if (month) f.month = month;
+        return f;
+      },
+      label() {
+        const { year, month } = state();
+        if (year === "all") return "All time";
+        return month ? `${MONTH_NAMES[month - 1]} ${year}` : year;
+      },
+    };
+  }
+
+  // ==========================================================================
   // BUTTON LOADING STATE
   // ==========================================================================
 
@@ -1744,6 +1834,7 @@ const DemographicsUI = (function () {
     renderComboChart,
     renderInsightCallout,
     renderInsightList,
+    renderPeriodPicker,
     setButtonLoading,
     restoreButton,
     renderTableLoading,
