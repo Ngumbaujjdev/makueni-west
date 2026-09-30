@@ -178,6 +178,9 @@ class ReportController extends Controller
             'demographic_id' => 'nullable|integer',
             'metric' => 'nullable|string|max:40',
             'month' => 'nullable|integer|between:1,12',
+            // Attendance reports: a range of months instead of a year.
+            'from' => ['nullable', 'date_format:Y-m', 'required_with:to'],
+            'to' => ['nullable', 'date_format:Y-m', 'required_with:from', 'after_or_equal:from'],
             'gathering_type_id' => 'nullable|integer',
         ]);
         if ($validator->fails()) {
@@ -204,7 +207,11 @@ class ReportController extends Controller
             return $this->fail(422, 'Choose a metric to report on.', ['metric' => ['Unknown metric.']]);
         }
 
-        $params = array_filter($request->only(['fiscal_year_id', 'years', 'demographic_id', 'metric', 'month', 'gathering_type_id']), fn ($v) => $v !== null && $v !== '');
+        $params = array_filter($request->only(['fiscal_year_id', 'years', 'demographic_id', 'metric', 'month', 'gathering_type_id', 'from', 'to']), fn ($v) => $v !== null && $v !== '');
+        // A range only means something to reports that take a month.
+        if (! in_array('fiscal_month', $report->inputs(), true)) {
+            unset($params['from'], $params['to']);
+        }
         $context = new ReportContext($territory, $request->user(), $params);
 
         // A ministry/event report can be narrowed to one gathering type - one of this territory's own.

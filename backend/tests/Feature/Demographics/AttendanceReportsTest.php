@@ -200,6 +200,14 @@ class AttendanceReportsTest extends TestCase
         }
     }
 
+    public function test_a_report_can_cover_a_range_of_months(): void
+    {
+        $data = $this->preview(['report_key' => 'attendance.sunday', 'fiscal_year_id' => null, 'from' => '2026-02', 'to' => '2026-03']);
+
+        $this->assertSame('Feb 2026 - Mar 2026', $data['period_label']);
+        $this->assertSame(6, collect($data['sections'])->firstWhere('heading', 'Every Sunday')['row_count'], '22 Feb, 1, 8 and 22 Mar recorded + 15 and 29 Mar not recorded');
+    }
+
     public function test_another_churchs_attendance_report_is_refused(): void
     {
         Sanctum::actingAs($this->pastor);

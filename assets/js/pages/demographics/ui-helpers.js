@@ -1012,33 +1012,65 @@ const DemographicsUI = (function () {
   }
 
   // ==========================================================================
-  // PERIOD PICKER - Year (+ All time) and Month (+ Whole year) selects, used
-  // by Attendance Analytics and the Attendance Overview. Kept in the URL
-  // (?year=2026&month=8, other params left alone); nothing reloads the page.
+  // PERIOD PICKER - Year (+ Last 12 months, Custom range, All time) and Month
+  // (+ Whole year) selects, used by Attendance Analytics and the Attendance
+  // Overview. A custom range swaps the Month select for From / To month
+  // selects ("Jan 2025" ... this month). Kept in the URL (?year=2026&month=8,
+  // ?from=2025-01&to=2026-08, ?year=last12; other params left alone).
   // ==========================================================================
 
   const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const MONTH_SHORT_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const ym = (y, m) => `${y}-${String(m).padStart(2, "0")}`;
+  const ymLabel = (v) => `${MONTH_SHORT_NAMES[Number(v.slice(5)) - 1]} ${v.slice(0, 4)}`;
 
   /**
    * @param {object} opts
-   *   yearId, monthId, monthWrapId - the two <select>s and the month's wrapper (hidden for All time)
+   *   yearId, monthId, monthWrapId - the Year and Month selects, and the Month's wrapper
+   *   fromId, toId, rangeWrapId    - the From / To selects and their wrapper (shown for a custom range)
    *   years        - fiscal years [{id, year}] (future years are left out)
    *   defaultMonth - true: open on the current month (the Overview); false: the whole year (Analytics)
    *   onChange()   - called after every change, once the URL is updated
-   * @returns {{filters: function(): object, state: function(): {year: string, month: string}, label: function(): string}}
+   * @returns {{filters, state, label, exportParams}}
    */
-  function renderPeriodPicker({ yearId, monthId, monthWrapId, years, defaultMonth = false, onChange = () => {} }) {
+  function renderPeriodPicker({ yearId, monthId, monthWrapId, fromId, toId, rangeWrapId, years, defaultMonth = false, onChange = () => {} }) {
     const yearSel = document.getElementById(yearId);
     const monthSel = document.getElementById(monthId);
+    const fromSel = fromId ? document.getElementById(fromId) : null;
+    const toSel = toId ? document.getElementById(toId) : null;
     const now = new Date();
     const thisYear = now.getFullYear();
+    const thisYm = ym(thisYear, now.getMonth() + 1);
     const list = (years || []).filter((y) => y.year <= thisYear).sort((a, b) => b.year - a.year);
     const params = new URLSearchParams(window.location.search);
+    const hasRange = !!(fromSel && toSel);
 
-    yearSel.innerHTML = list.map((y) => `<option value="${y.id}" data-year="${y.year}">${y.year}</option>`).join("") + '<option value="all">All time</option>';
+    yearSel.innerHTML =
+      list.map((y) => `<option value="${y.id}" data-year="${y.year}">${y.year}</option>`).join("") +
+      (hasRange ? '<option value="last12" data-color="success">Last 12 months</option><option value="range" data-color="purple">Custom range...</option>' : "") +
+      '<option value="all">All time</option>';
+
+    // Every month from the first fiscal year to now, newest first, for From / To.
+    if (hasRange) {
+      const firstYear = list.length ? list[list.length - 1].year : thisYear;
+      const months = [];
+      for (let y = thisYear; y >= firstYear; y--) {
+        for (let m = y === thisYear ? now.getMonth() + 1 : 12; m >= 1; m--) months.push(ym(y, m));
+      }
+      const options = months.map((v) => `<option value="${v}">${ymLabel(v)}</option>`).join("");
+      fromSel.innerHTML = options;
+      toSel.innerHTML = options;
+    }
+
     const wanted = params.get("year");
-    const match = wanted === "all" ? "all" : list.find((y) => String(y.year) === wanted)?.id;
+    const wantsRange = hasRange && params.get("from") && params.get("to");
+    const match = wantsRange ? "range" : wanted === "all" || (hasRange && wanted === "last12") ? wanted : list.find((y) => String(y.year) === wanted)?.id;
     yearSel.value = String(match || list.find((y) => y.year === thisYear)?.id || list[0]?.id || "all");
+    if (hasRange) {
+      fromSel.value = wantsRange && [...fromSel.options].some((o) => o.value === params.get("from")) ? params.get("from") : ym(thisYear - 1, 1);
+      toSel.value = wantsRange && [...toSel.options].some((o) => o.value === params.get("to")) ? params.get("to") : thisYm;
+      if (!fromSel.value) fromSel.value = fromSel.options[fromSel.options.length - 1]?.value;
+    }
 
     const selectedYear = () => Number(yearSel.selectedOptions[0]?.dataset.year) || null;
     // "month=all" means Whole year when the page opens on a month by default.
@@ -1049,54 +1081,88 @@ const DemographicsUI = (function () {
       const last = selectedYear() === thisYear ? now.getMonth() + 1 : 12;
       monthSel.innerHTML = '<option value="">Whole year</option>' + MONTH_NAMES.slice(0, last).map((m, i) => `<option value="${i + 1}">${m}</option>`).join("");
       monthSel.value = keep && Number(keep) <= last ? String(keep) : "";
-      const wrap = document.getElementById(monthWrapId);
-      if (wrap) wrap.hidden = yearSel.value === "all";
       syncSelect(monthSel);
+      showParts();
     }
 
+    function showParts() {
+      const v = yearSel.value;
+      const monthWrap = document.getElementById(monthWrapId);
+      if (monthWrap) monthWrap.hidden = v === "all" || v === "range" || v === "last12";
+      const rangeWrap = rangeWrapId ? document.getElementById(rangeWrapId) : null;
+      if (rangeWrap) rangeWrap.hidden = v !== "range";
+    }
+
+    /** {year: "2026" | "all" | "range" | "last12", month, from, to} */
     function state() {
-      const year = yearSel.value === "all" ? "all" : String(selectedYear() || "");
-      return { year, month: year === "all" ? "" : monthSel.value };
+      const v = yearSel.value;
+      if (v === "range") {
+        let [from, to] = [fromSel.value, toSel.value];
+        if (from > to) [from, to] = [to, from];
+        return { year: "range", month: "", from, to };
+      }
+      if (v === "last12") {
+        const start = new Date(thisYear, now.getMonth() - 11, 1);
+        return { year: "last12", month: "", from: ym(start.getFullYear(), start.getMonth() + 1), to: thisYm };
+      }
+      const year = v === "all" ? "all" : String(selectedYear() || "");
+      return { year, month: year === "all" ? "" : monthSel.value, from: "", to: "" };
     }
 
     function syncUrl() {
       const url = new URLSearchParams(window.location.search);
-      const { year, month } = state();
-      year && year !== String(thisYear) ? url.set("year", year) : url.delete("year");
-      const isDefaultMonth = defaultMonth && year === String(thisYear) && month === String(now.getMonth() + 1);
-      if (year === "all" || isDefaultMonth || (!month && !defaultMonth)) url.delete("month");
-      else url.set("month", month || "all");
+      const st = state();
+      ["year", "month", "from", "to"].forEach((k) => url.delete(k));
+      if (st.year === "range") {
+        url.set("from", st.from);
+        url.set("to", st.to);
+      } else if (st.year === "last12" || st.year === "all") {
+        url.set("year", st.year);
+      } else {
+        if (st.year !== String(thisYear)) url.set("year", st.year);
+        const isDefaultMonth = defaultMonth && st.year === String(thisYear) && st.month === String(now.getMonth() + 1);
+        if (!isDefaultMonth && (st.month || defaultMonth)) url.set("month", st.month || "all");
+      }
       const qs = url.toString();
       history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
     }
 
+    const changed = () => {
+      syncUrl();
+      onChange();
+    };
+
     fillMonths(initialMonth);
-    enhanceSelect(yearSel, { search: false, dropdownAutoWidth: true });
-    enhanceSelect(monthSel, { search: false, dropdownAutoWidth: true });
+    [yearSel, monthSel, fromSel, toSel].filter(Boolean).forEach((el) => enhanceSelect(el, { search: el === fromSel || el === toSel, dropdownAutoWidth: true }));
     yearSel.addEventListener("change", () => {
       fillMonths(monthSel.value);
-      syncUrl();
-      onChange();
+      changed();
     });
-    monthSel.addEventListener("change", () => {
-      syncUrl();
-      onChange();
-    });
+    monthSel.addEventListener("change", changed);
+    fromSel?.addEventListener("change", changed);
+    toSel?.addEventListener("change", changed);
     syncUrl();
 
     return {
       state,
       /** Params for GET /attendance-reports/analytics. */
       filters() {
-        const { month } = state();
+        const st = state();
+        if (st.from) return { from: st.from, to: st.to };
         const f = { fiscal_year_id: yearSel.value };
-        if (month) f.month = month;
+        if (st.month) f.month = st.month;
         return f;
       },
       label() {
-        const { year, month } = state();
-        if (year === "all") return "All time";
-        return month ? `${MONTH_NAMES[month - 1]} ${year}` : year;
+        const st = state();
+        if (st.from) return st.from === st.to ? ymLabel(st.from) : `${ymLabel(st.from)} - ${ymLabel(st.to)}`;
+        if (st.year === "all") return "All time";
+        return st.month ? `${MONTH_NAMES[st.month - 1]} ${st.year}` : st.year;
+      },
+      /** For syncExportButton: a year and month, or a from/to range (the other left empty). */
+      exportParams() {
+        const st = state();
+        return st.from ? { year: "", month: "", from: st.from, to: st.to } : { year: st.year, month: st.month, from: "", to: "" };
       },
     };
   }

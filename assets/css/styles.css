@@ -33340,6 +33340,114 @@ tr.list-row-flash > td {
   color: #fff;
 }
 
+/* Section tabs (2026-09-30) - a dashboard's main tabs: a white strip of
+   equal tabs, each with an icon tile, its name and a live figure; the
+   active one solid (the one-tab-style rule). Its panes sit straight on the
+   page - no template tab-pane box. Used by Attendance Analytics. */
+.section-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
+  padding: 0.4rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.85rem;
+  background: var(--custom-white);
+}
+.section-tabs .section-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
+  border: 0;
+  border-radius: 0.6rem;
+  background: transparent;
+  color: var(--v2-heading);
+  text-align: start;
+  transition: background 0.15s, color 0.15s;
+}
+.section-tabs .section-tab:hover {
+  background: rgba(var(--primary-rgb), 0.07);
+}
+.section-tab-icon {
+  display: inline-flex;
+  flex: 0 0 2.4rem;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.6rem;
+  color: #fff;
+  font-size: 1.15rem;
+}
+.section-tab-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.section-tab-text strong {
+  font-size: 0.9rem;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.section-tab-text small {
+  overflow: hidden;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--default-text-color);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.section-tabs .section-tab.active {
+  background: rgb(var(--primary-rgb));
+  color: #fff;
+}
+.section-tabs .section-tab.active .section-tab-text small {
+  color: rgba(255, 255, 255, 0.92);
+}
+.section-tabs .section-tab.active .section-tab-icon {
+  background: #fff !important;
+  color: rgb(var(--primary-rgb));
+}
+.section-tab-content > .tab-pane {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+@media (max-width: 991.98px) {
+  .section-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .section-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .section-tabs .section-tab {
+    flex: 0 0 auto;
+  }
+}
+
+/* A custom range: From [month] to [month] */
+.att-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.att-range[hidden] {
+  display: none;
+}
+.att-range .select2-container {
+  min-width: 120px;
+}
+.att-range-to {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--default-text-color);
+}
+
 /* Attendance Overview: the period filter strip on top */
 .att-filter-strip {
   display: flex;

@@ -39,7 +39,10 @@ class AttendanceReportController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'fiscal_year_id' => ['required', function ($attribute, $value, $fail) {
+            // A range of months (from/to, YYYY-MM) instead of a year.
+            'from' => ['nullable', 'date_format:Y-m', 'required_with:to'],
+            'to' => ['nullable', 'date_format:Y-m', 'required_with:from', 'after_or_equal:from'],
+            'fiscal_year_id' => ['nullable', 'required_without:from', function ($attribute, $value, $fail) {
                 if ($value !== 'all' && ! FiscalYear::whereKey($value)->exists()) {
                     $fail('Choose a year, or all time.');
                 }
@@ -54,6 +57,14 @@ class AttendanceReportController extends Controller
                 'message' => 'Validation error',
                 'errors' => $validator->errors(),
             ], 422);
+        }
+
+        if ($request->filled('from')) {
+            return response()->json([
+                'success' => true,
+                'status' => 200,
+                'data' => (new AttendanceData([$territoryId], AttendancePeriod::range($request->query('from'), $request->query('to'))))->analytics(),
+            ]);
         }
 
         $yearId = $request->query('fiscal_year_id');

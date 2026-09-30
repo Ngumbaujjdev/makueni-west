@@ -10,8 +10,9 @@ use Carbon\CarbonImmutable;
 
 /**
  * The stretch of time an attendance page or report covers: a fiscal year,
- * one month of it, or all time (from the first record to today), plus the
- * period before it to compare with (none for all time).
+ * one month of it, a range of months ("Jan 2025 - Aug 2026"), or all time
+ * (from the first record to today), plus the period before it to compare
+ * with - the same length just before (none for all time).
  */
 final class AttendancePeriod
 {
@@ -20,6 +21,8 @@ final class AttendancePeriod
     public const MONTH = 'month';
 
     public const ALL = 'all';
+
+    public const RANGE = 'range';
 
     private function __construct(
         public readonly string $mode,
@@ -76,6 +79,30 @@ final class AttendancePeriod
             $start->subYear(),
             $end->subYear(),
             (string) ($year->year - 1),
+        );
+    }
+
+    /**
+     * A range of whole months, e.g. ('2025-01', '2026-08'), compared with
+     * the same number of months just before it.
+     */
+    public static function range(string $from, string $to): self
+    {
+        $start = CarbonImmutable::createFromFormat('!Y-m', $from)->startOfMonth();
+        $end = CarbonImmutable::createFromFormat('!Y-m', $to)->endOfMonth();
+        $months = $start->diffInMonths($end->startOfMonth()) + 1;
+        $previousEnd = $start->subDay();
+        $previousStart = $start->subMonthsNoOverflow((int) $months);
+        $label = $start->format('M Y') === $end->format('M Y') ? $start->format('F Y') : $start->format('M Y').' - '.$end->format('M Y');
+
+        return new self(
+            self::RANGE,
+            $start,
+            $end,
+            $label,
+            $previousStart,
+            $previousEnd,
+            "the previous {$months} months",
         );
     }
 

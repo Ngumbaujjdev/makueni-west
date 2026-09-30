@@ -14,7 +14,8 @@ use Carbon\CarbonImmutable;
 
 /**
  * Shared plumbing for the attendance reports: the period (a fiscal year,
- * one month of it, or all time - params fiscal_year_id and month), the
+ * one month of it, a range of months, or all time - params fiscal_year_id
+ * and month, or from/to as YYYY-MM), the
  * AttendanceData behind it, and the tables more than one report uses.
  * Same numbers as the Attendance Analytics page.
  */
@@ -32,6 +33,9 @@ abstract class AttendanceReport extends Report
 
     protected function data(ReportContext $context): AttendanceData
     {
+        if ($context->param('from') && $context->param('to')) {
+            return new AttendanceData($context->churchIds(), AttendancePeriod::range($context->param('from'), $context->param('to')));
+        }
         $yearId = $context->param('fiscal_year_id');
         if ($yearId !== 'all') {
             $yearId = ($yearId ? FiscalYear::whereKey($yearId)->value('id') : null)
@@ -51,7 +55,7 @@ abstract class AttendanceReport extends Report
             return 'All time (since '.$p->start->format('j M Y').')';
         }
 
-        return $p->mode === AttendancePeriod::MONTH ? $p->label : "Fiscal year {$p->label}";
+        return in_array($p->mode, [AttendancePeriod::MONTH, AttendancePeriod::RANGE], true) ? $p->label : "Fiscal year {$p->label}";
     }
 
     /** The details panel. */

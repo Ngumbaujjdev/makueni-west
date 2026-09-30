@@ -129,6 +129,11 @@ These are already mapped onto the YNEX template's Bootstrap variables (`--primar
   - Solid: KPI icon tiles, status pills (Approved/Active...), delta pills and primary buttons.
   - Soft tints, via the `.soft-chip.soft-{color}` classes: info and legend chips ("Latest · 622"), secondary tags, table group headers, the filter-bar strip, and modal panels (tinted sections and inputs).
   - Don't make everything solid, and don't make everything pale.
+- **Section tabs (2026-09-30).** A dashboard's main tabs use `.section-tabs` (see Attendance Analytics):
+  - a white strip of equal tabs, each with an icon tile, its name and a live figure
+  - the active tab solid, and one scrollable row on a phone
+  - panes in `.section-tab-content`, with no template tab-pane box
+  - Smaller in-card tab rows keep the solid-pill style.
 - **Design system v2 (2026-09-29) lives at the end of `styles.css`** — real 14px base type (the old `html { zoom: 90% }` is gone; don't reintroduce page zoom), cards with a 1px border and no decorative title bar, one tab style (solid active pill) for `tab-style-6`/`nav-tabs-header`/`nav-tabs-pill`, real-size green switches, pill segmented `btn-group`s, and white table headers with small uppercase labels. Extend that section rather than restyling components page by page.
 - **Stat/summary cards follow the same no-muted rule.** Solid backgrounds, full-contrast numbers and labels — even a "neutral" or "inactive" stat still reads as deliberate, not a faded/light variant standing in for "less important."
 - **Card accents carry data, not decoration.** Don't add a plain colored border/stripe to a card as a stand-in for content — it reads as decoration, not information. When a card needs visual distinction, use something that's actually informative instead: an icon avatar in the card's color, a trend badge, or a small sparkline.

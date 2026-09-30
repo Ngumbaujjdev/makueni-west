@@ -123,6 +123,11 @@ function gatheringsPane(string $key, string $noun, string $plural): string
                         <div class="att-period-select" id="periodMonthWrap">
                             <select id="periodMonth" aria-label="Month"></select>
                         </div>
+                        <div class="att-period-select att-range" id="periodRangeWrap" hidden>
+                            <select id="periodFrom" aria-label="From"></select>
+                            <span class="att-range-to">to</span>
+                            <select id="periodTo" aria-label="To"></select>
+                        </div>
                         <?php if (canExportAttendanceReports()): ?>
                         <button type="button" class="btn btn-outline-primary" id="exportReportBtn" data-lock="1" data-module="attendance" data-report-key="attendance.sunday"><i class="ri-download-2-line me-1"></i>Export</button>
                         <?php endif ?>
@@ -132,22 +137,26 @@ function gatheringsPane(string $key, string $noun, string $plural): string
                 <div id="analyticsBody" class="att-analytics">
                     <div class="row" id="summaryCardsRow"></div>
 
-                    <ul class="nav nav-tabs nav-tabs-pill mb-3" id="analyticsTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="tab-sunday-btn" data-bs-toggle="tab" data-bs-target="#tab-sunday" type="button" role="tab"><i class="ri-sun-line me-1"></i>Sunday service</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="tab-ministries-btn" data-bs-toggle="tab" data-bs-target="#tab-ministries" type="button" role="tab"><i class="ri-group-line me-1"></i>Ministries</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="tab-events-btn" data-bs-toggle="tab" data-bs-target="#tab-events" type="button" role="tab"><i class="ri-star-line me-1"></i>Special events</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="tab-children-btn" data-bs-toggle="tab" data-bs-target="#tab-children" type="button" role="tab"><i class="ri-parent-line me-1"></i>Children</button>
-                        </li>
-                    </ul>
+                    <div class="nav section-tabs" id="analyticsTabs" role="tablist" aria-label="Attendance">
+                        <button class="nav-link section-tab active" id="tab-sunday-btn" data-bs-toggle="tab" data-bs-target="#tab-sunday" type="button" role="tab" aria-controls="tab-sunday" aria-selected="true">
+                            <span class="section-tab-icon bg-primary"><i class="ri-sun-line"></i></span>
+                            <span class="section-tab-text"><strong>Sunday service</strong><small data-tab-figure="sunday">&nbsp;</small></span>
+                        </button>
+                        <button class="nav-link section-tab" id="tab-ministries-btn" data-bs-toggle="tab" data-bs-target="#tab-ministries" type="button" role="tab" aria-controls="tab-ministries" aria-selected="false">
+                            <span class="section-tab-icon bg-success"><i class="ri-group-line"></i></span>
+                            <span class="section-tab-text"><strong>Ministries</strong><small data-tab-figure="ministries">&nbsp;</small></span>
+                        </button>
+                        <button class="nav-link section-tab" id="tab-events-btn" data-bs-toggle="tab" data-bs-target="#tab-events" type="button" role="tab" aria-controls="tab-events" aria-selected="false">
+                            <span class="section-tab-icon bg-purple"><i class="ri-star-line"></i></span>
+                            <span class="section-tab-text"><strong>Special events</strong><small data-tab-figure="events">&nbsp;</small></span>
+                        </button>
+                        <button class="nav-link section-tab" id="tab-children-btn" data-bs-toggle="tab" data-bs-target="#tab-children" type="button" role="tab" aria-controls="tab-children" aria-selected="false">
+                            <span class="section-tab-icon bg-pink"><i class="ri-parent-line"></i></span>
+                            <span class="section-tab-text"><strong>Children</strong><small data-tab-figure="children">&nbsp;</small></span>
+                        </button>
+                    </div>
 
-                    <div class="tab-content">
+                    <div class="tab-content section-tab-content">
                         <!-- Sunday service -->
                         <div class="tab-pane fade show active" id="tab-sunday" role="tabpanel">
                             <div class="row">

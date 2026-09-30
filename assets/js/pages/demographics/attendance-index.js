@@ -62,6 +62,9 @@ const AttendanceOverview = (function () {
       yearId: "periodYear",
       monthId: "periodMonth",
       monthWrapId: "periodMonthWrap",
+      fromId: "periodFrom",
+      toId: "periodTo",
+      rangeWrapId: "periodRangeWrap",
       years: yearsResult.success ? yearsResult.data || [] : [],
       defaultMonth: true,
       onChange: loadPeriod,
@@ -88,8 +91,7 @@ const AttendanceOverview = (function () {
   async function loadPeriod() {
     const body = document.getElementById("overviewBody");
     body.classList.add("is-loading");
-    const { year, month } = picker.state();
-    UI.syncExportButton({ year, month });
+    UI.syncExportButton(picker.exportParams());
     document.getElementById("periodLabel").textContent = picker.label();
 
     const res = await DemographicsAPIHandler.getAttendanceAnalytics(USER_TERRITORY.id, picker.filters());
@@ -178,10 +180,11 @@ const AttendanceOverview = (function () {
   // THE PERIOD'S SUNDAYS
   // ==========================================================================
 
-  /** The month the chips show: the chosen month; else this month, or December of a past year. */
+  /** The month the chips show: the chosen month (or a range's last); else this month, or December of a past year. */
   function chipsMonth() {
-    const { year, month } = picker.state();
+    const { year, month, to } = picker.state();
     const now = new Date();
+    if (to) return { y: Number(to.slice(0, 4)), m: Number(to.slice(5)) - 1 };
     if (year === "all" || Number(year) === now.getFullYear()) return month ? { y: now.getFullYear(), m: Number(month) - 1 } : { y: now.getFullYear(), m: now.getMonth() };
     return { y: Number(year), m: month ? Number(month) - 1 : 11 };
   }
