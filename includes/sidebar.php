@@ -541,24 +541,35 @@ $userEmail = $currentUser['email'] ?? '';
         }
 
         panel.style.left = sidebarRect.right + 'px';
-        // Auto-size to content instead of forcing full remaining viewport
-        // height - a short submodule list should read as a compact,
-        // proportioned card, not stretch into a mostly-empty tall box.
-        // max-height (with a small bottom margin) still caps it so a long
-        // list scrolls within the available space instead of overflowing
-        // past the viewport.
+
+        // Fit the panel inside the window below the header: level with its
+        // trigger where there's room, moved up just enough when the trigger
+        // is low in a long sidebar, and scrolling inside itself when its
+        // list is taller than the whole window. Measured from the panel's
+        // real content height (scrollHeight), so it also re-fits after a
+        // group inside it expands.
+        const bottomGap = 12;
         panel.style.height = 'auto';
-        panel.style.maxHeight = (window.innerHeight - minTop - 12) + 'px';
+        panel.style.maxHeight = 'none';
+        const contentHeight = panel.scrollHeight;
+        const height = Math.min(contentHeight, window.innerHeight - minTop - bottomGap);
 
         const triggerRect = trigger ? trigger.getBoundingClientRect() : { top: minTop };
         let top = Math.max(minTop, triggerRect.top);
-        // Panel is already visible (display set by the caller) by this
-        // point, so its real rendered height is available to clamp against.
-        const panelHeight = panel.getBoundingClientRect().height;
-        const maxTop = Math.max(minTop, window.innerHeight - panelHeight - 12);
-        top = Math.min(top, maxTop);
+        top = Math.max(minTop, Math.min(top, window.innerHeight - height - bottomGap));
 
         panel.style.top = top + 'px';
+        panel.style.maxHeight = (window.innerHeight - top - bottomGap) + 'px';
+    }
+
+    /** Re-fit whichever flyout is open (after it changes size, or the page/sidebar scrolls). */
+    function refitOpenFlyout() {
+        const activePanel = document.querySelector(
+            '#dynamic-modules-container > li[data-module-id] > .slide-menu.flyout-active'
+        );
+        if (activePanel && isDesktopFlyout()) {
+            positionFlyout(activePanel, activePanel.previousElementSibling);
+        }
     }
 
     function closeAllFlyouts() {
@@ -672,8 +683,15 @@ $userEmail = $currentUser['email'] ?? '';
 
                 parentLi.classList.toggle('open');
                 submenu.style.display = parentLi.classList.contains('open') ? 'block' : 'none';
+                // The open flyout just got taller or shorter - keep it inside the window.
+                refitOpenFlyout();
             });
         });
+
+        // The trigger moves when the sidebar or the page scrolls - keep the panel beside it.
+        // (Scroll events don't bubble, so listen in the capture phase on the sidebar.)
+        if (sidebarEl) sidebarEl.addEventListener('scroll', refitOpenFlyout, true);
+        window.addEventListener('scroll', refitOpenFlyout, { passive: true });
 
         console.log('✅ Click handlers setup');
     }
