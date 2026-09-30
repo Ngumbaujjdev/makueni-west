@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Jobs\GenerateReportJob;
 use App\Models\FiscalYear;
+use App\Models\GatheringType;
 use App\Models\ReportRun;
 use App\Models\Territory;
 use App\Reports\Demographics\MetricReport;
@@ -28,7 +29,7 @@ use Illuminate\Validation\ValidationException;
  */
 class ReportController extends Controller
 {
-    /** GET /reports/catalogue?territory_id= */
+    /** GET /reports/catalogue?territory_id=&module= (module: demographics | attendance, optional) */
     public function catalogue(Request $request): JsonResponse
     {
         $territory = Territory::find((int) $request->query('territory_id'));
@@ -38,7 +39,7 @@ class ReportController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => array_map(fn (Report $r) => $r->toCatalogue(), ReportRegistry::forScope($territory->territory_type)),
+            'data' => array_map(fn (Report $r) => $r->toCatalogue(), ReportRegistry::forScope($territory->territory_type, $request->query('module') ?: null)),
         ]);
     }
 
@@ -176,6 +177,8 @@ class ReportController extends Controller
             'years' => 'nullable|in:1,3,5,all',
             'demographic_id' => 'nullable|integer',
             'metric' => 'nullable|string|max:40',
+            'month' => 'nullable|integer|between:1,12',
+            'gathering_type_id' => 'nullable|integer',
         ]);
         if ($validator->fails()) {
             return $this->fail(422, $validator->errors()->first(), $validator->errors()->toArray());
@@ -201,9 +204,20 @@ class ReportController extends Controller
             return $this->fail(422, 'Choose a metric to report on.', ['metric' => ['Unknown metric.']]);
         }
 
-        $params = array_filter($request->only(['fiscal_year_id', 'years', 'demographic_id', 'metric']), fn ($v) => $v !== null && $v !== '');
+        $params = array_filter($request->only(['fiscal_year_id', 'years', 'demographic_id', 'metric', 'month', 'gathering_type_id']), fn ($v) => $v !== null && $v !== '');
+        $context = new ReportContext($territory, $request->user(), $params);
 
-        return [$report, new ReportContext($territory, $request->user(), $params)];
+        // A ministry/event report can be narrowed to one gathering type - one of this territory's own.
+        if (isset($params['gathering_type_id'])) {
+            if (! in_array('gathering_type', $report->inputs(), true)) {
+                unset($params['gathering_type_id']);
+                $context = new ReportContext($territory, $request->user(), $params);
+            } elseif (! GatheringType::whereKey($params['gathering_type_id'])->whereIn('territory_id', $context->churchIds())->exists()) {
+                return $this->fail(422, 'That gathering type does not belong to this church.', ['gathering_type_id' => ['Invalid gathering type for this church.']]);
+            }
+        }
+
+        return [$report, $context];
     }
 
     private function ownRun(Request $request, string $uuid): ?ReportRun

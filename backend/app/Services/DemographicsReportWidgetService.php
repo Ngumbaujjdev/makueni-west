@@ -11,12 +11,9 @@ use Illuminate\Support\Collection;
 
 /**
  * Backs the Spiritual Activities and Monthly Statistics church-tier report
- * pages - the Church-level sibling of AttendanceReportWidgetService, not an
- * extension of DemographicsGrowthService (that class rolls up *multiple*
- * descendant churches for overseers; a pastor looking at their own church
- * needs a single church's period-by-period series instead, the same split
- * AttendanceReportController/AttendanceReportWidgetService already draws
- * from the plain CRUD AttendanceController).
+ * pages - not an extension of DemographicsGrowthService (that class rolls
+ * up *multiple* descendant churches for overseers; a pastor looking at their
+ * own church needs a single church's period-by-period series instead).
  *
  * Cadence-aware (monthly/half_yearly/yearly) as of 2026-09-14 - a church's
  * period breakdown used to always assume 12 fiscal months regardless of its
@@ -35,9 +32,7 @@ use Illuminate\Support\Collection;
  * submit() today (no live reviewer step, see DemographicsController::submit()),
  * so in practice a period is either 'draft' (in progress, not shown
  * here) or 'approved' (done), or has no row at all. A period with no approved
- * row reports as no data (null), never a fabricated 0 - the same principle
- * AttendanceReportWidgetService already applies to its own trend badges and
- * averages.
+ * row reports as no data (null), never a fabricated 0.
  */
 class DemographicsReportWidgetService
 {

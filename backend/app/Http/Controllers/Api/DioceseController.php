@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\TerritoryType;
 use App\Http\Controllers\Controller;
 use App\Models\Territory;
-use App\Enums\TerritoryType;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class DioceseController extends Controller
 {
@@ -28,7 +28,7 @@ class DioceseController extends Controller
 
             // Search by name
             if ($request->filled('search')) {
-                $query->where('name', 'like', '%' . $request->search . '%');
+                $query->where('name', 'like', '%'.$request->search.'%');
             }
 
             // Sorting
@@ -38,28 +38,29 @@ class DioceseController extends Controller
 
             // Pagination
             $perPage = $request->input('per_page', 15);
-            
+
             // ============================================================
             // ✅ SUPPORT FOR ?all=true (for dropdowns)
             // ============================================================
             if ($request->has('all') && $request->boolean('all')) {
                 // Return all dioceses without pagination
                 $dioceses = $query->get();
-                
+
                 // Add regions count to each diocese
                 $dioceses->transform(function ($diocese) {
                     $diocese->regions_count = $diocese->children()
                         ->where('territory_type', TerritoryType::REGION)
                         ->count();
+
                     return $diocese;
                 });
-                
+
                 return successResponse('Dioceses retrieved successfully', [
                     'dioceses' => $dioceses,
-                    'total' => $dioceses->count()
+                    'total' => $dioceses->count(),
                 ]);
             }
-            
+
             // Regular pagination
             $dioceses = $query->paginate($perPage);
 
@@ -68,6 +69,7 @@ class DioceseController extends Controller
                 $diocese->regions_count = $diocese->children()
                     ->where('territory_type', TerritoryType::REGION)
                     ->count();
+
                 return $diocese;
             });
 
@@ -78,12 +80,12 @@ class DioceseController extends Controller
                     'last_page' => $dioceses->lastPage(),
                     'per_page' => $dioceses->perPage(),
                     'total' => $dioceses->total(),
-                ]
+                ],
             ]);
 
         } catch (\Exception $e) {
             Log::error('Failed to retrieve dioceses', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to retrieve dioceses', $e->getMessage());
@@ -143,7 +145,7 @@ class DioceseController extends Controller
             Log::info('Diocese created successfully', [
                 'diocese_id' => $diocese->id,
                 'diocese_name' => $diocese->name,
-                'created_by' => $authUser->id
+                'created_by' => $authUser->id,
             ]);
 
             return createdResponse($diocese, 'Diocese created successfully');
@@ -153,7 +155,7 @@ class DioceseController extends Controller
 
             Log::error('Failed to create diocese', [
                 'request_data' => $request->all(),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to create diocese', $e->getMessage());
@@ -173,7 +175,7 @@ class DioceseController extends Controller
 
             $diocese->load([
                 'creator:id,firstname,lastname',
-                'updater:id,firstname,lastname'
+                'updater:id,firstname,lastname',
             ]);
 
             // Add statistics
@@ -181,7 +183,7 @@ class DioceseController extends Controller
                 ->where('territory_type', TerritoryType::REGION)
                 ->count();
 
-            $diocese->total_churches = Territory::where('full_path', 'like', $diocese->name . '%')
+            $diocese->total_churches = Territory::where('full_path', 'like', $diocese->name.'%')
                 ->where('territory_type', TerritoryType::CHURCH)
                 ->count();
 
@@ -190,7 +192,7 @@ class DioceseController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to retrieve diocese', [
                 'diocese_id' => $diocese->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to retrieve diocese', $e->getMessage());
@@ -209,7 +211,7 @@ class DioceseController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
-            'code' => 'sometimes|required|string|max:20|unique:territories,code,' . $diocese->id,
+            'code' => 'sometimes|required|string|max:20|unique:territories,code,'.$diocese->id,
             'address' => 'nullable|string',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email',
@@ -233,7 +235,7 @@ class DioceseController extends Controller
             $updateData = $request->only([
                 'name', 'code', 'address', 'phone', 'email',
                 'postal_code', 'town', 'county', 'latitude', 'longitude',
-                'established_date', 'description', 'is_active'
+                'established_date', 'description', 'is_active',
             ]);
 
             $updateData['updated_by'] = $authUser->id;
@@ -243,7 +245,7 @@ class DioceseController extends Controller
             Log::info('Diocese updated successfully', [
                 'diocese_id' => $diocese->id,
                 'updated_by' => $authUser->id,
-                'updated_fields' => array_keys($updateData)
+                'updated_fields' => array_keys($updateData),
             ]);
 
             return updatedResponse($diocese->fresh(), 'Diocese updated successfully');
@@ -251,7 +253,7 @@ class DioceseController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to update diocese', [
                 'diocese_id' => $diocese->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to update diocese', $e->getMessage());
@@ -279,7 +281,7 @@ class DioceseController extends Controller
             $diocese->delete();
 
             Log::info('Diocese deleted successfully', [
-                'diocese_name' => $dioceseName
+                'diocese_name' => $dioceseName,
             ]);
 
             return deleteResponse('Diocese deleted successfully');
@@ -287,7 +289,7 @@ class DioceseController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to delete diocese', [
                 'diocese_id' => $diocese->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to delete diocese', $e->getMessage());
@@ -321,6 +323,7 @@ class DioceseController extends Controller
                 $region->subregions_count = $region->children()
                     ->where('territory_type', TerritoryType::SUBREGION)
                     ->count();
+
                 return $region;
             });
 
@@ -329,13 +332,13 @@ class DioceseController extends Controller
                     'id' => $diocese->id,
                     'name' => $diocese->name,
                 ],
-                'regions' => $regions
+                'regions' => $regions,
             ]);
 
         } catch (\Exception $e) {
             Log::error('Failed to retrieve regions', [
                 'diocese_id' => $diocese->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to retrieve regions', $e->getMessage());
@@ -363,11 +366,11 @@ class DioceseController extends Controller
                                     ->with([
                                         'children' => function ($sq) {
                                             $sq->where('territory_type', TerritoryType::CHURCH);
-                                        }
+                                        },
                                     ]);
-                            }
+                            },
                         ]);
-                }
+                },
             ]);
 
             return successResponse('Diocese hierarchy retrieved successfully', $diocese);
@@ -375,7 +378,7 @@ class DioceseController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to retrieve diocese hierarchy', [
                 'diocese_id' => $diocese->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to retrieve diocese hierarchy', $e->getMessage());

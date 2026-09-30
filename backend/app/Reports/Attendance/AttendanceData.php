@@ -278,13 +278,13 @@ final class AttendanceData
      * didn't meet) plus any one-off named gathering, most attended first.
      * The status comes from the last time it ever met, not just this period.
      */
-    public function gatherings(string $slug): array
+    public function gatherings(string $slug, ?int $typeId = null): array
     {
         $category = GatheringCategory::where('slug', $slug)->first();
         if (! $category) {
             return [];
         }
-        $records = $this->ofCategory($slug);
+        $records = $this->meetings($slug, $typeId);
         $lastEver = ChurchAttendanceRecord::where('territory_type', 'church')
             ->whereIn('territory_id', $this->churchIds)
             ->where('gathering_category_id', $category->id)
@@ -297,6 +297,7 @@ final class AttendanceData
         GatheringType::whereIn('territory_id', $this->churchIds)
             ->where('gathering_category_id', $category->id)
             ->where('is_active', true)
+            ->when($typeId, fn ($q) => $q->whereKey($typeId))
             ->orderBy('display_order')
             ->get()
             ->each(function (GatheringType $t) use (&$rows) {
@@ -327,6 +328,22 @@ final class AttendanceData
             ->sortBy([['total', 'desc'], ['times', 'desc'], ['name', 'asc']])
             ->values()
             ->all();
+    }
+
+    /** Every ministry meeting / event in the period, oldest first - optionally one gathering type's. */
+    public function meetings(string $slug, ?int $typeId = null): Collection
+    {
+        return $this->ofCategory($slug)
+            ->when($typeId, fn (Collection $c) => $c->where('gathering_type_id', $typeId))
+            ->values();
+    }
+
+    /** The details panel every attendance report shows. */
+    public function coverageText(): string
+    {
+        $c = $this->coverage();
+
+        return $c['elapsed'] ? "{$c['recorded']} of {$c['elapsed']} ({$c['percentage']}%)" : 'None due yet';
     }
 
     public static function gatheringKey($r): string

@@ -17,7 +17,6 @@ class ModuleGroupController extends Controller
      * - territory_scope: Filter by territory (diocese, region, subregion, church)
      * - include_inactive: Include inactive groups (default: false)
      *
-     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function index(Request $request)
@@ -31,7 +30,7 @@ class ModuleGroupController extends Controller
                 $territoryScope = $request->query('territory_scope');
                 $validTerritoryLevels = ['diocese', 'region', 'subregion', 'church'];
 
-                if (!in_array($territoryScope, $validTerritoryLevels)) {
+                if (! in_array($territoryScope, $validTerritoryLevels)) {
                     return errorResponse('Invalid territory scope. Must be one of: diocese, region, subregion, church', 400);
                 }
 
@@ -39,18 +38,18 @@ class ModuleGroupController extends Controller
             }
 
             // Filter active/inactive
-            if (!$request->boolean('include_inactive', false)) {
+            if (! $request->boolean('include_inactive', false)) {
                 $query->where('is_active', true);
             }
 
             // Get module groups with modules count
             $moduleGroups = $query->orderBy('order')
-                                  ->orderBy('name')
-                                  ->withCount('modules')
-                                  ->get();
+                ->orderBy('name')
+                ->withCount('modules')
+                ->get();
 
             // Format response
-            $groupsData = $moduleGroups->map(function($group) {
+            $groupsData = $moduleGroups->map(function ($group) {
                 return [
                     'id' => $group->id,
                     'name' => $group->name,
@@ -74,7 +73,7 @@ class ModuleGroupController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to retrieve module groups', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return serverErrorResponse('Failed to retrieve module groups', $e->getMessage());
@@ -84,7 +83,6 @@ class ModuleGroupController extends Controller
     /**
      * Store a newly created module group
      *
-     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
@@ -118,7 +116,7 @@ class ModuleGroupController extends Controller
                 'module_group_id' => $moduleGroup->id,
                 'module_group_name' => $moduleGroup->name,
                 'territory_scope' => $moduleGroup->territory_scope,
-                'created_by' => auth()->id()
+                'created_by' => auth()->id(),
             ]);
 
             return createdResponse('Module group created successfully', [
@@ -131,7 +129,7 @@ class ModuleGroupController extends Controller
                     'territory_scope' => $moduleGroup->territory_scope,
                     'description' => $moduleGroup->description,
                     'is_active' => $moduleGroup->is_active,
-                ]
+                ],
             ], 201);
 
         } catch (\Exception $e) {
@@ -139,7 +137,7 @@ class ModuleGroupController extends Controller
                 'request_data' => $request->all(),
                 'user_id' => auth()->id(),
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return serverErrorResponse('Failed to create module group', $e->getMessage());
@@ -149,7 +147,6 @@ class ModuleGroupController extends Controller
     /**
      * Display the specified module group
      *
-     * @param ModuleGroup $moduleGroup
      * @return \Illuminate\Http\JsonResponse
      */
     public function show(ModuleGroup $moduleGroup)
@@ -157,12 +154,12 @@ class ModuleGroupController extends Controller
         try {
             // Load modules with counts
             $moduleGroup->load([
-                'modules' => function($query) {
+                'modules' => function ($query) {
                     $query->active()
-                          ->orderBy('number')
-                          ->orderBy('name')
-                          ->withCount(['submodules', 'permissions']);
-                }
+                        ->orderBy('number')
+                        ->orderBy('name')
+                        ->withCount(['submodules', 'permissions']);
+                },
             ]);
 
             $groupData = [
@@ -175,7 +172,7 @@ class ModuleGroupController extends Controller
                 'description' => $moduleGroup->description,
                 'is_active' => $moduleGroup->is_active,
                 'modules_count' => $moduleGroup->modules->count(),
-                'modules' => $moduleGroup->modules->map(function($module) {
+                'modules' => $moduleGroup->modules->map(function ($module) {
                     return [
                         'id' => $module->id,
                         'name' => $module->name,
@@ -197,7 +194,7 @@ class ModuleGroupController extends Controller
             Log::error('Failed to retrieve module group', [
                 'module_group_id' => $moduleGroup->id,
                 'user_id' => auth()->id(),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to retrieve module group', $e->getMessage());
@@ -207,15 +204,13 @@ class ModuleGroupController extends Controller
     /**
      * Update the specified module group
      *
-     * @param Request $request
-     * @param ModuleGroup $moduleGroup
      * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, ModuleGroup $moduleGroup)
     {
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255|unique:module_groups,name,' . $moduleGroup->id,
-            'slug' => 'nullable|string|max:255|unique:module_groups,slug,' . $moduleGroup->id,
+            'name' => 'required|string|max:255|unique:module_groups,name,'.$moduleGroup->id,
+            'slug' => 'nullable|string|max:255|unique:module_groups,slug,'.$moduleGroup->id,
             'icon' => 'nullable|string|max:100',
             'order' => 'nullable|integer|min:0',
             'territory_scope' => 'required|string|in:diocese,region,subregion,church',
@@ -240,7 +235,7 @@ class ModuleGroupController extends Controller
 
             Log::info('Module group updated successfully', [
                 'module_group_id' => $moduleGroup->id,
-                'updated_by' => auth()->id()
+                'updated_by' => auth()->id(),
             ]);
 
             return updatedResponse($moduleGroup->fresh(), 'Module group updated successfully');
@@ -248,7 +243,7 @@ class ModuleGroupController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to update module group', [
                 'module_group_id' => $moduleGroup->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to update module group', $e->getMessage());
@@ -258,7 +253,6 @@ class ModuleGroupController extends Controller
     /**
      * Remove the specified module group
      *
-     * @param ModuleGroup $moduleGroup
      * @return \Illuminate\Http\JsonResponse
      */
     public function destroy(ModuleGroup $moduleGroup)
@@ -278,7 +272,7 @@ class ModuleGroupController extends Controller
 
             Log::info('Module group deleted successfully', [
                 'module_group_name' => $groupName,
-                'deleted_by' => auth()->id()
+                'deleted_by' => auth()->id(),
             ]);
 
             return deleteResponse('Module group deleted successfully');
@@ -286,7 +280,7 @@ class ModuleGroupController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to delete module group', [
                 'module_group_id' => $moduleGroup->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to delete module group', $e->getMessage());
@@ -296,8 +290,6 @@ class ModuleGroupController extends Controller
     /**
      * Update module group order
      *
-     * @param Request $request
-     * @param ModuleGroup $moduleGroup
      * @return \Illuminate\Http\JsonResponse
      */
     public function updateOrder(Request $request, ModuleGroup $moduleGroup)
@@ -346,8 +338,6 @@ class ModuleGroupController extends Controller
     /**
      * Get module groups by territory scope
      *
-     * @param Request $request
-     * @param string $territoryScope
      * @return \Illuminate\Http\JsonResponse
      */
     public function getByTerritory(Request $request, string $territoryScope)
@@ -355,7 +345,7 @@ class ModuleGroupController extends Controller
         try {
             $validTerritoryLevels = ['diocese', 'region', 'subregion', 'church'];
 
-            if (!in_array($territoryScope, $validTerritoryLevels)) {
+            if (! in_array($territoryScope, $validTerritoryLevels)) {
                 return errorResponse('Invalid territory scope. Must be one of: diocese, region, subregion, church', 400);
             }
 
@@ -368,7 +358,7 @@ class ModuleGroupController extends Controller
                 ->get();
 
             // Format response
-            $groupsData = $moduleGroups->map(function($group) {
+            $groupsData = $moduleGroups->map(function ($group) {
                 return [
                     'id' => $group->id,
                     'name' => $group->name,
@@ -392,7 +382,7 @@ class ModuleGroupController extends Controller
             Log::error('Failed to retrieve module groups by territory', [
                 'territory_scope' => $territoryScope,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return serverErrorResponse('Failed to retrieve module groups', $e->getMessage());
@@ -405,15 +395,12 @@ class ModuleGroupController extends Controller
 
     /**
      * Get next available order number for a territory scope
-     *
-     * @param string $territoryScope
-     * @return int
      */
     private function getNextGroupOrder(string $territoryScope): int
     {
         $lastGroup = ModuleGroup::where('territory_scope', $territoryScope)
-                                ->orderBy('order', 'desc')
-                                ->first();
+            ->orderBy('order', 'desc')
+            ->first();
 
         return $lastGroup ? $lastGroup->order + 1 : 1;
     }

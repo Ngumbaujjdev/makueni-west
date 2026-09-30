@@ -1,3 +1,5 @@
+> **Superseded (2026-09-30).** The synchronous attendance PDF and Excel export described below has been removed. Attendance reports now go through the shared report engine: queued, with progress, QR verification and insights (see `reports-spec.md` → "Attendance reports"). This file is kept for history.
+
 # Attendance PDF Reports Spec
 
 ## Data Model

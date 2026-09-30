@@ -45,16 +45,17 @@ class BudgetDeductionController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget deductions retrieved successfully',
-                'data' => $deductions
+                'data' => $deductions,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve budget deductions: ' . $e->getMessage());
+            Log::error('Failed to retrieve budget deductions: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve budget deductions',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -83,14 +84,14 @@ class BudgetDeductionController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation error',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $data = $validator->validated();
 
             // Auto-generate slug if not provided
-            if (!isset($data['slug'])) {
+            if (! isset($data['slug'])) {
                 $data['slug'] = Str::slug($data['name']);
             }
 
@@ -98,7 +99,7 @@ class BudgetDeductionController extends Controller
             $data['created_by'] = auth()->id();
 
             // Auto-generate display_order if not provided
-            if (!isset($data['display_order'])) {
+            if (! isset($data['display_order'])) {
                 $maxOrder = BudgetDeduction::max('display_order');
                 $data['display_order'] = $maxOrder ? $maxOrder + 1 : 1;
             }
@@ -109,16 +110,17 @@ class BudgetDeductionController extends Controller
                 'success' => true,
                 'status' => 201,
                 'message' => 'Budget deduction created successfully',
-                'data' => $deduction
+                'data' => $deduction,
             ], 201);
 
         } catch (\Exception $e) {
-            Log::error('Failed to create budget deduction: ' . $e->getMessage());
+            Log::error('Failed to create budget deduction: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to create budget deduction',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -133,16 +135,17 @@ class BudgetDeductionController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget deduction retrieved successfully',
-                'data' => $budgetDeduction
+                'data' => $budgetDeduction,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve budget deduction: ' . $e->getMessage());
+            Log::error('Failed to retrieve budget deduction: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve budget deduction',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -155,7 +158,7 @@ class BudgetDeductionController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'name' => 'sometimes|required|string|max:255',
-                'slug' => 'nullable|string|max:255|unique:budget_deductions,slug,' . $budgetDeduction->id,
+                'slug' => 'nullable|string|max:255|unique:budget_deductions,slug,'.$budgetDeduction->id,
                 'description' => 'nullable|string|max:1000',
                 'deduction_type' => 'sometimes|required|in:percentage,fixed_amount',
                 'deduction_value' => 'sometimes|required|numeric|min:0',
@@ -171,14 +174,14 @@ class BudgetDeductionController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation error',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $data = $validator->validated();
 
             // Auto-generate slug if name is updated but slug is not provided
-            if (isset($data['name']) && !isset($data['slug'])) {
+            if (isset($data['name']) && ! isset($data['slug'])) {
                 $data['slug'] = Str::slug($data['name']);
             }
 
@@ -191,16 +194,17 @@ class BudgetDeductionController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget deduction updated successfully',
-                'data' => $budgetDeduction->fresh()
+                'data' => $budgetDeduction->fresh(),
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to update budget deduction: ' . $e->getMessage());
+            Log::error('Failed to update budget deduction: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to update budget deduction',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -220,29 +224,30 @@ class BudgetDeductionController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation error',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $budgetDeduction->update([
                 'display_order' => $request->display_order,
-                'updated_by' => auth()->id()
+                'updated_by' => auth()->id(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'status' => 200,
                 'message' => 'Display order updated successfully',
-                'data' => null
+                'data' => null,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to update display order: ' . $e->getMessage());
+            Log::error('Failed to update display order: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to update display order',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -260,7 +265,7 @@ class BudgetDeductionController extends Controller
                     'success' => false,
                     'status' => 400,
                     'message' => "Cannot delete deduction. It is being used in {$usageCount} budget(s).",
-                    'data' => null
+                    'data' => null,
                 ], 400);
             }
 
@@ -270,16 +275,17 @@ class BudgetDeductionController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget deduction deleted successfully',
-                'data' => null
+                'data' => null,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to delete budget deduction: ' . $e->getMessage());
+            Log::error('Failed to delete budget deduction: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to delete budget deduction',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -300,7 +306,7 @@ class BudgetDeductionController extends Controller
                         'event' => $audit->event,
                         'user' => $audit->user ? [
                             'id' => $audit->user->id,
-                            'name' => $audit->user->firstname . ' ' . $audit->user->lastname,
+                            'name' => $audit->user->firstname.' '.$audit->user->lastname,
                             'email' => $audit->user->email,
                         ] : null,
                         'old_values' => $audit->old_values,
@@ -316,16 +322,17 @@ class BudgetDeductionController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Audit trail retrieved successfully',
-                'data' => $audits
+                'data' => $audits,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve audit trail: ' . $e->getMessage());
+            Log::error('Failed to retrieve audit trail: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve audit trail',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

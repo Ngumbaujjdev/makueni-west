@@ -11,14 +11,11 @@ class BudgetPeriodController extends Controller
 {
     /**
      * List budget periods with optional filters
-     * 
+     *
      * Query Parameters:
      * - fiscal_year_id: Filter by fiscal year (required for meaningful results)
      * - budget_type_id: Filter by budget type (monthly, quarterly, etc.)
      * - is_active: Filter by active status
-     * 
-     * @param Request $request
-     * @return JsonResponse
      */
     public function index(Request $request): JsonResponse
     {
@@ -47,21 +44,18 @@ class BudgetPeriodController extends Controller
                 'success' => true,
                 'data' => $periods,
                 'message' => 'Budget periods retrieved successfully',
-                'count' => $periods->count()
+                'count' => $periods->count(),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve budget periods: ' . $e->getMessage()
+                'message' => 'Failed to retrieve budget periods: '.$e->getMessage(),
             ], 500);
         }
     }
 
     /**
      * Get a single budget period with all related data
-     * 
-     * @param int $id
-     * @return JsonResponse
      */
     public function show(int $id): JsonResponse
     {
@@ -72,12 +66,12 @@ class BudgetPeriodController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $period,
-                'message' => 'Budget period retrieved successfully'
+                'message' => 'Budget period retrieved successfully',
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Budget period not found'
+                'message' => 'Budget period not found',
             ], 404);
         }
     }
@@ -85,15 +79,12 @@ class BudgetPeriodController extends Controller
     /**
      * Get budget periods grouped by type for a specific year
      * Useful for populating dropdowns
-     * 
-     * @param Request $request
-     * @return JsonResponse
      */
     public function byYear(Request $request): JsonResponse
     {
         try {
             $request->validate([
-                'fiscal_year_id' => 'required|integer|exists:fiscal_years,id'
+                'fiscal_year_id' => 'required|integer|exists:fiscal_years,id',
             ]);
 
             $periods = BudgetPeriod::with(['budgetType'])
@@ -109,12 +100,12 @@ class BudgetPeriodController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $periods,
-                'message' => 'Budget periods grouped by type'
+                'message' => 'Budget periods grouped by type',
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve budget periods: ' . $e->getMessage()
+                'message' => 'Failed to retrieve budget periods: '.$e->getMessage(),
             ], 500);
         }
     }

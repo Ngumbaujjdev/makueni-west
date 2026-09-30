@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\BudgetCategory;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class BudgetCategoryController extends Controller
 {
@@ -33,16 +33,17 @@ class BudgetCategoryController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget categories retrieved successfully',
-                'data' => $budgetCategories
+                'data' => $budgetCategories,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve budget categories: ' . $e->getMessage());
+            Log::error('Failed to retrieve budget categories: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve budget categories',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -65,14 +66,14 @@ class BudgetCategoryController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation error',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $data = $validator->validated();
 
             // Auto-generate slug if not provided
-            if (!isset($data['slug'])) {
+            if (! isset($data['slug'])) {
                 $data['slug'] = Str::slug($data['name']);
             }
 
@@ -85,16 +86,17 @@ class BudgetCategoryController extends Controller
                 'success' => true,
                 'status' => 201,
                 'message' => 'Budget category created successfully',
-                'data' => $budgetCategory
+                'data' => $budgetCategory,
             ], 201);
 
         } catch (\Exception $e) {
-            Log::error('Failed to create budget category: ' . $e->getMessage());
+            Log::error('Failed to create budget category: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to create budget category',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -113,16 +115,17 @@ class BudgetCategoryController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget category retrieved successfully',
-                'data' => $budgetCategory
+                'data' => $budgetCategory,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve budget category: ' . $e->getMessage());
+            Log::error('Failed to retrieve budget category: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve budget category',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -134,8 +137,8 @@ class BudgetCategoryController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'name' => 'sometimes|required|string|max:255|unique:budget_categories,name,' . $budgetCategory->id,
-                'slug' => 'nullable|string|max:255|unique:budget_categories,slug,' . $budgetCategory->id,
+                'name' => 'sometimes|required|string|max:255|unique:budget_categories,name,'.$budgetCategory->id,
+                'slug' => 'nullable|string|max:255|unique:budget_categories,slug,'.$budgetCategory->id,
                 'description' => 'nullable|string|max:1000',
                 'is_active' => 'nullable|boolean',
             ]);
@@ -145,14 +148,14 @@ class BudgetCategoryController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation error',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $data = $validator->validated();
 
             // Auto-generate slug if name is updated but slug is not provided
-            if (isset($data['name']) && !isset($data['slug'])) {
+            if (isset($data['name']) && ! isset($data['slug'])) {
                 $data['slug'] = Str::slug($data['name']);
             }
 
@@ -162,16 +165,17 @@ class BudgetCategoryController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget category updated successfully',
-                'data' => $budgetCategory->fresh()
+                'data' => $budgetCategory->fresh(),
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to update budget category: ' . $e->getMessage());
+            Log::error('Failed to update budget category: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to update budget category',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -192,7 +196,7 @@ class BudgetCategoryController extends Controller
                         'event' => $audit->event, // created, updated, deleted
                         'user' => $audit->user ? [
                             'id' => $audit->user->id,
-                            'name' => $audit->user->firstname . ' ' . $audit->user->lastname,
+                            'name' => $audit->user->firstname.' '.$audit->user->lastname,
                             'email' => $audit->user->email,
                         ] : null,
                         'old_values' => $audit->old_values,
@@ -208,16 +212,17 @@ class BudgetCategoryController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Audit trail retrieved successfully',
-                'data' => $audits
+                'data' => $audits,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve audit trail: ' . $e->getMessage());
+            Log::error('Failed to retrieve audit trail: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve audit trail',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -246,16 +251,17 @@ class BudgetCategoryController extends Controller
                 'message' => $linesCount > 0
                     ? "Budget category and {$linesCount} associated budget line(s) deleted successfully"
                     : 'Budget category deleted successfully',
-                'data' => null
+                'data' => null,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to delete budget category: ' . $e->getMessage());
+            Log::error('Failed to delete budget category: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to delete budget category',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

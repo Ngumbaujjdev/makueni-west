@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exports\BudgetsExport;
 use App\Http\Controllers\Controller;
 use App\Models\Budget;
-use App\Models\BudgetLineItem;
 use App\Models\BudgetDeduction;
 use App\Models\BudgetDeductionItem;
+use App\Models\BudgetLineItem;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\DB;
-use App\Exports\BudgetsExport;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
 class BudgetController extends Controller
@@ -51,8 +51,8 @@ class BudgetController extends Controller
             }
 
             // Search by name
-            if ($request->has('search') && !empty($request->search)) {
-                $query->where('name', 'like', '%' . $request->search . '%');
+            if ($request->has('search') && ! empty($request->search)) {
+                $query->where('name', 'like', '%'.$request->search.'%');
             }
 
             // Order by
@@ -83,8 +83,8 @@ class BudgetController extends Controller
             if ($request->has('budget_type_id')) {
                 $statsQuery->where('budget_type_id', $request->budget_type_id);
             }
-            if ($request->has('search') && !empty($request->search)) {
-                $statsQuery->where('name', 'like', '%' . $request->search . '%');
+            if ($request->has('search') && ! empty($request->search)) {
+                $statsQuery->where('name', 'like', '%'.$request->search.'%');
             }
 
             // Current stats based on filtered data
@@ -114,7 +114,7 @@ class BudgetController extends Controller
                 'pending_approval' => $pendingApproval,
                 'total_income' => $totalIncome,
                 'total_expense' => $totalExpense,
-                'total_amount' => $totalAmount
+                'total_amount' => $totalAmount,
             ];
 
             return response()->json([
@@ -128,18 +128,19 @@ class BudgetController extends Controller
                     'per_page' => $budgets->perPage(),
                     'total' => $budgets->total(),
                     'from' => $budgets->firstItem(),
-                    'to' => $budgets->lastItem()
+                    'to' => $budgets->lastItem(),
                 ],
-                'stats' => $stats
+                'stats' => $stats,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve budgets: ' . $e->getMessage());
+            Log::error('Failed to retrieve budgets: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve budgets',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -177,7 +178,7 @@ class BudgetController extends Controller
                 $search = $request->search;
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%");
+                        ->orWhere('description', 'like', "%{$search}%");
                 });
             }
 
@@ -194,12 +195,13 @@ class BudgetController extends Controller
             return Excel::download(new BudgetsExport($query), $filename);
 
         } catch (\Exception $e) {
-            Log::error('Failed to export budgets: ' . $e->getMessage());
+            Log::error('Failed to export budgets: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to export budgets',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -233,7 +235,7 @@ class BudgetController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation error',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -242,14 +244,14 @@ class BudgetController extends Controller
             unset($data['items']); // Remove items from budget data
 
             // Auto-generate unique slug if not provided
-            if (!isset($data['slug'])) {
+            if (! isset($data['slug'])) {
                 $baseSlug = Str::slug($data['name']);
                 $slug = $baseSlug;
                 $counter = 1;
 
                 // Keep incrementing counter until we find a unique slug
                 while (Budget::where('slug', $slug)->exists()) {
-                    $slug = $baseSlug . '-' . $counter;
+                    $slug = $baseSlug.'-'.$counter;
                     $counter++;
                 }
 
@@ -260,7 +262,7 @@ class BudgetController extends Controller
             $data['created_by'] = auth()->id();
 
             // Use status from request if provided, otherwise default to 'draft'
-            if (!isset($data['status'])) {
+            if (! isset($data['status'])) {
                 $data['status'] = 'draft';
             }
 
@@ -268,12 +270,12 @@ class BudgetController extends Controller
             $budget = Budget::create($data);
 
             // Create line items if provided
-            if (!empty($items)) {
+            if (! empty($items)) {
                 foreach ($items as $item) {
                     // Get the budget line to fetch its category_id
                     $budgetLine = \App\Models\BudgetLine::find($item['budget_line_id']);
 
-                    if (!$budgetLine) {
+                    if (! $budgetLine) {
                         continue; // Skip if budget line not found
                     }
 
@@ -295,16 +297,17 @@ class BudgetController extends Controller
                 'success' => true,
                 'status' => 201,
                 'message' => 'Budget created successfully',
-                'data' => $budget
+                'data' => $budget,
             ], 201);
 
         } catch (\Exception $e) {
-            Log::error('Failed to create budget: ' . $e->getMessage());
+            Log::error('Failed to create budget: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to create budget',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -321,16 +324,17 @@ class BudgetController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget retrieved successfully',
-                'data' => $budget
+                'data' => $budget,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve budget: ' . $e->getMessage());
+            Log::error('Failed to retrieve budget: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve budget',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -342,7 +346,7 @@ class BudgetController extends Controller
     {
         try {
             // Check if budget is editable
-            if (!$budget->is_editable) {
+            if (! $budget->is_editable) {
                 return response()->json([
                     'success' => false,
                     'status' => 400,
@@ -353,7 +357,7 @@ class BudgetController extends Controller
             $validator = Validator::make($request->all(), [
                 'budget_type_id' => 'sometimes|required|exists:budget_types,id',
                 'name' => 'sometimes|required|string|max:255',
-                'slug' => 'nullable|string|max:255|unique:budgets,slug,' . $budget->id,
+                'slug' => 'nullable|string|max:255|unique:budgets,slug,'.$budget->id,
                 'description' => 'nullable|string',
                 'fiscal_year' => 'sometimes|required|integer|min:2000|max:2100',
                 'start_date' => 'sometimes|required|date',
@@ -377,7 +381,7 @@ class BudgetController extends Controller
                             'success' => false,
                             'status' => 422,
                             'message' => 'Validation error',
-                            'errors' => ['budget_period_id' => ['The selected budget period does not belong to the specified fiscal year.']]
+                            'errors' => ['budget_period_id' => ['The selected budget period does not belong to the specified fiscal year.']],
                         ], 422);
                     }
 
@@ -386,7 +390,7 @@ class BudgetController extends Controller
                             'success' => false,
                             'status' => 422,
                             'message' => 'Validation error',
-                            'errors' => ['budget_period_id' => ['The selected budget period does not belong to the specified budget type.']]
+                            'errors' => ['budget_period_id' => ['The selected budget period does not belong to the specified budget type.']],
                         ], 422);
                     }
                 }
@@ -397,14 +401,14 @@ class BudgetController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation error',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $data = $validator->validated();
 
             // Auto-generate slug if name is updated but slug is not provided
-            if (isset($data['name']) && !isset($data['slug'])) {
+            if (isset($data['name']) && ! isset($data['slug'])) {
                 $data['slug'] = Str::slug($data['name']);
             }
 
@@ -417,16 +421,17 @@ class BudgetController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget updated successfully',
-                'data' => $budget->fresh(['budgetType', 'creator', 'updater'])
+                'data' => $budget->fresh(['budgetType', 'creator', 'updater']),
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to update budget: ' . $e->getMessage());
+            Log::error('Failed to update budget: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to update budget',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -438,7 +443,7 @@ class BudgetController extends Controller
     {
         try {
             // Only allow deletion of draft or rejected budgets
-            if (!in_array($budget->status, ['draft', 'rejected'])) {
+            if (! in_array($budget->status, ['draft', 'rejected'])) {
                 return response()->json([
                     'success' => false,
                     'status' => 400,
@@ -453,16 +458,17 @@ class BudgetController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget deleted successfully',
-                'data' => null
+                'data' => null,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to delete budget: ' . $e->getMessage());
+            Log::error('Failed to delete budget: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to delete budget',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -473,7 +479,7 @@ class BudgetController extends Controller
     public function submit(Budget $budget)
     {
         try {
-            if (!$budget->can_be_submitted) {
+            if (! $budget->can_be_submitted) {
                 return response()->json([
                     'success' => false,
                     'status' => 400,
@@ -484,23 +490,24 @@ class BudgetController extends Controller
             $budget->update([
                 'status' => 'submitted',
                 'submitted_at' => now(),
-                'updated_by' => auth()->id()
+                'updated_by' => auth()->id(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget submitted for review successfully',
-                'data' => $budget->fresh()
+                'data' => $budget->fresh(),
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to submit budget: ' . $e->getMessage());
+            Log::error('Failed to submit budget: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to submit budget',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -511,7 +518,7 @@ class BudgetController extends Controller
     public function approve(Request $request, Budget $budget)
     {
         try {
-            if (!$budget->can_be_approved) {
+            if (! $budget->can_be_approved) {
                 return response()->json([
                     'success' => false,
                     'status' => 400,
@@ -528,7 +535,7 @@ class BudgetController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation error',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -537,7 +544,7 @@ class BudgetController extends Controller
                 'approved_at' => now(),
                 'approved_by' => auth()->id(),
                 'approval_notes' => $request->approval_notes,
-                'updated_by' => auth()->id()
+                'updated_by' => auth()->id(),
             ]);
 
             // Lock all line items
@@ -547,16 +554,17 @@ class BudgetController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget approved successfully',
-                'data' => $budget->fresh(['approver'])
+                'data' => $budget->fresh(['approver']),
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to approve budget: ' . $e->getMessage());
+            Log::error('Failed to approve budget: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to approve budget',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -567,7 +575,7 @@ class BudgetController extends Controller
     public function reject(Request $request, Budget $budget)
     {
         try {
-            if (!in_array($budget->status, ['submitted', 'under_review'])) {
+            if (! in_array($budget->status, ['submitted', 'under_review'])) {
                 return response()->json([
                     'success' => false,
                     'status' => 400,
@@ -584,30 +592,31 @@ class BudgetController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation error',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $budget->update([
                 'status' => 'rejected',
                 'rejection_reason' => $request->rejection_reason,
-                'updated_by' => auth()->id()
+                'updated_by' => auth()->id(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget rejected successfully',
-                'data' => $budget->fresh()
+                'data' => $budget->fresh(),
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to reject budget: ' . $e->getMessage());
+            Log::error('Failed to reject budget: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to reject budget',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -618,7 +627,7 @@ class BudgetController extends Controller
     public function activate(Budget $budget)
     {
         try {
-            if (!$budget->can_be_activated) {
+            if (! $budget->can_be_activated) {
                 return response()->json([
                     'success' => false,
                     'status' => 400,
@@ -628,23 +637,24 @@ class BudgetController extends Controller
 
             $budget->update([
                 'status' => 'active',
-                'updated_by' => auth()->id()
+                'updated_by' => auth()->id(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget activated successfully',
-                'data' => $budget->fresh()
+                'data' => $budget->fresh(),
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to activate budget: ' . $e->getMessage());
+            Log::error('Failed to activate budget: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to activate budget',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -665,23 +675,24 @@ class BudgetController extends Controller
 
             $budget->update([
                 'status' => 'closed',
-                'updated_by' => auth()->id()
+                'updated_by' => auth()->id(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget closed successfully',
-                'data' => $budget->fresh()
+                'data' => $budget->fresh(),
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to close budget: ' . $e->getMessage());
+            Log::error('Failed to close budget: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to close budget',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -702,7 +713,7 @@ class BudgetController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation error',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -744,17 +755,18 @@ class BudgetController extends Controller
                 'success' => true,
                 'status' => 201,
                 'message' => 'Budget cloned successfully',
-                'data' => $newBudget->fresh(['budgetType', 'budgetLineItems'])
+                'data' => $newBudget->fresh(['budgetType', 'budgetLineItems']),
             ], 201);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Failed to clone budget: ' . $e->getMessage());
+            Log::error('Failed to clone budget: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to clone budget',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -775,16 +787,17 @@ class BudgetController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget line items retrieved successfully',
-                'data' => $lineItems
+                'data' => $lineItems,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve line items: ' . $e->getMessage());
+            Log::error('Failed to retrieve line items: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve line items',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -796,7 +809,7 @@ class BudgetController extends Controller
     {
         try {
             // Check if editable
-            if (!$lineItem->is_editable) {
+            if (! $lineItem->is_editable) {
                 return response()->json([
                     'success' => false,
                     'status' => 400,
@@ -815,7 +828,7 @@ class BudgetController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation error',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -828,16 +841,17 @@ class BudgetController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Line item updated successfully',
-                'data' => $lineItem->fresh(['budgetLine', 'budgetCategory'])
+                'data' => $lineItem->fresh(['budgetLine', 'budgetCategory']),
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to update line item: ' . $e->getMessage());
+            Log::error('Failed to update line item: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to update line item',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -858,7 +872,7 @@ class BudgetController extends Controller
                         'event' => $audit->event,
                         'user' => $audit->user ? [
                             'id' => $audit->user->id,
-                            'name' => $audit->user->firstname . ' ' . $audit->user->lastname,
+                            'name' => $audit->user->firstname.' '.$audit->user->lastname,
                             'email' => $audit->user->email,
                         ] : null,
                         'old_values' => $audit->old_values,
@@ -874,16 +888,17 @@ class BudgetController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Audit trail retrieved successfully',
-                'data' => $audits
+                'data' => $audits,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve audit trail: ' . $e->getMessage());
+            Log::error('Failed to retrieve audit trail: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve audit trail',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -925,16 +940,17 @@ class BudgetController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget summary retrieved successfully',
-                'data' => $summary
+                'data' => $summary,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve budget summary: ' . $e->getMessage());
+            Log::error('Failed to retrieve budget summary: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve budget summary',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -942,7 +958,6 @@ class BudgetController extends Controller
     /**
      * Get all deductions for a budget
      *
-     * @param Budget $budget
      * @return \Illuminate\Http\JsonResponse
      */
     public function getDeductions(Budget $budget)
@@ -957,16 +972,17 @@ class BudgetController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget deductions retrieved successfully',
-                'data' => $deductions
+                'data' => $deductions,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve budget deductions: ' . $e->getMessage());
+            Log::error('Failed to retrieve budget deductions: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve budget deductions',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -974,8 +990,6 @@ class BudgetController extends Controller
     /**
      * Apply a deduction to a budget
      *
-     * @param Request $request
-     * @param Budget $budget
      * @return \Illuminate\Http\JsonResponse
      */
     public function applyDeduction(Request $request, Budget $budget)
@@ -992,7 +1006,7 @@ class BudgetController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -1000,9 +1014,9 @@ class BudgetController extends Controller
 
             // Calculate deduction amount if not provided
             $amount = $request->deduction_amount;
-            if (!$amount) {
+            if (! $amount) {
                 // Determine base amount
-                $baseAmount = match($deduction->applies_to) {
+                $baseAmount = match ($deduction->applies_to) {
                     'income' => $budget->total_income_budgeted,
                     'expense' => $budget->total_expense_budgeted,
                     'both' => $budget->total_income_budgeted + $budget->total_expense_budgeted,
@@ -1023,16 +1037,17 @@ class BudgetController extends Controller
                 'success' => true,
                 'status' => 201,
                 'message' => 'Deduction applied successfully',
-                'data' => $deductionItem
+                'data' => $deductionItem,
             ], 201);
 
         } catch (\Exception $e) {
-            Log::error('Failed to apply deduction: ' . $e->getMessage());
+            Log::error('Failed to apply deduction: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to apply deduction',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -1040,9 +1055,6 @@ class BudgetController extends Controller
     /**
      * Reverse a deduction
      *
-     * @param Request $request
-     * @param Budget $budget
-     * @param BudgetDeductionItem $deductionItem
      * @return \Illuminate\Http\JsonResponse
      */
     public function reverseDeduction(Request $request, Budget $budget, BudgetDeductionItem $deductionItem)
@@ -1057,7 +1069,7 @@ class BudgetController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -1078,16 +1090,17 @@ class BudgetController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Deduction reversed successfully',
-                'data' => $deductionItem
+                'data' => $deductionItem,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to reverse deduction: ' . $e->getMessage());
+            Log::error('Failed to reverse deduction: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to reverse deduction',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -1095,7 +1108,6 @@ class BudgetController extends Controller
     /**
      * Recalculate budget deductions
      *
-     * @param Budget $budget
      * @return \Illuminate\Http\JsonResponse
      */
     public function recalculateDeductions(Budget $budget)
@@ -1112,16 +1124,17 @@ class BudgetController extends Controller
                     'total_deductions' => $budget->total_deductions,
                     'net_income_budgeted' => $budget->net_income_budgeted,
                     'net_income_actual' => $budget->net_income_actual,
-                ]
+                ],
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to recalculate budget deductions: ' . $e->getMessage());
+            Log::error('Failed to recalculate budget deductions: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to recalculate budget deductions',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

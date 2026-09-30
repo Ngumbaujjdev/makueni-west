@@ -3,6 +3,11 @@
 namespace App\Reports;
 
 use App\Enums\TerritoryType;
+use App\Reports\Attendance\AttendanceSummaryReport;
+use App\Reports\Attendance\ChildrenReport;
+use App\Reports\Attendance\EventsReport;
+use App\Reports\Attendance\MinistriesReport;
+use App\Reports\Attendance\SundayServiceReport;
 use App\Reports\Demographics\BaptismsReport;
 use App\Reports\Demographics\ConversionsReport;
 use App\Reports\Demographics\DemographicsSummaryReport;
@@ -28,6 +33,11 @@ final class ReportRegistry
         GrowthAnalyticsReport::class,
         SubmissionReport::class,
         MetricReport::class,
+        AttendanceSummaryReport::class,
+        SundayServiceReport::class,
+        MinistriesReport::class,
+        EventsReport::class,
+        ChildrenReport::class,
     ];
 
     /** @return Report[] */
@@ -48,8 +58,8 @@ final class ReportRegistry
     }
 
     /** @return Report[] */
-    public static function forScope(TerritoryType $type): array
+    public static function forScope(TerritoryType $type, ?string $module = null): array
     {
-        return array_values(array_filter(self::all(), fn (Report $r) => $r->supports($type)));
+        return array_values(array_filter(self::all(), fn (Report $r) => $r->supports($type) && ($module === null || $r->module() === $module)));
     }
 }

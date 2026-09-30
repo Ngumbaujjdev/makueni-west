@@ -116,7 +116,7 @@ class ReportsTest extends TestCase
     {
         Sanctum::actingAs($this->pastor);
 
-        $keys = collect($this->getJson('/api/reports/catalogue?territory_id='.$this->myChurch->id)->assertOk()->json('data'))->pluck('key');
+        $keys = collect($this->getJson('/api/reports/catalogue?module=demographics&territory_id='.$this->myChurch->id)->assertOk()->json('data'))->pluck('key');
 
         $this->assertEqualsCanonicalizing(
             ['demographics.summary', 'demographics.monthly', 'demographics.spiritual', 'demographics.baptisms', 'demographics.holy_communion',

@@ -53,8 +53,41 @@ Fiscal-year reports also take `fiscal_year_id: "all"`, which means **All time**:
 Spiritual activities and its four activity reports share `group: "Spiritual activities"`, so the modal shows them together.
 | `demographics.submission` | Submission report (one submission) | none |
 
+### Attendance reports (church scope, 2026-09-30)
+All five build from `App\Reports\Attendance\AttendanceData`, the same class behind the Attendance Analytics page (see `demographics-module-spec.md`). `module()` is `attendance`, and the verification codes start `MWD-ATT-`.
+
+**Inputs.** Every attendance report takes `fiscal_year` (an id, or `"all"`) and `fiscal_month` (`month`: 1-12, ignored for all time). Ministries and events also take `gathering_type` (`gathering_type_id`), which must belong to one of the report's churches or the request returns 422 on `gathering_type_id`.
+
+**Totals.** Sunday figures are **averages, never sums**: the same congregation comes every week.
+
+| key | title | contents | totals |
+|---|---|---|---|
+| `attendance.summary` | Attendance | Sunday service by month, ministries, special events; every attendance insight rule | Sundays `sum`; averages none (an average of monthly averages isn't the period's average) |
+| `attendance.sunday` | Sunday service | Every Sunday, with missed Sundays listed as "Not recorded", plus month by month | every count `avg` ("Average Sunday") |
+| `attendance.ministries` | Ministry gatherings (with `gathering_type_id`: that ministry, e.g. "Kesha") | Leaderboard (times met, average, most, last met, status) and every meeting. With a type: its meetings only | times met `sum`; meeting total `avg` |
+| `attendance.events` | Special events | Same shape as ministries | same |
+| `attendance.children` | Children's attendance | Boys, girls, children and share for every Sunday, plus month by month | `avg` per Sunday |
+
+**Replaces the old path.** These replace the synchronous `GET /attendance-reports/export-pdf|export-excel`, `AttendanceSummaryPdfReport`, `AttendanceReportExport`, `AttendanceReportWidgetService` and `GET /attendance-reports/widgets`, all removed. `attendance-pdf-reports-spec.md` is superseded.
+
 ### Page-aware export
 Export on a page opens the modal **locked to that page's report**: only the period and the format are chosen, and "Choose a different report" unlocks the full list. The Reports page shows the full list.
+
+**One module per modal.** The modal only lists its own module's reports:
+- It is opened with `module` (from `data-module`, or the report key's prefix).
+- `GET /reports/catalogue` takes `?module=`.
+- Each module has its own Reports page (`church/demographics-growth/reports.php`, `church/attendance/reports.php`), built by the same `reports.js`.
+
+**Attendance Export buttons:**
+
+| Page | Report |
+|---|---|
+| Overview | `attendance.summary` |
+| Sunday Services | `attendance.sunday`, for the year and month filtered |
+| Ministries / Special Events | `attendance.ministries` / `.events`; with a ministry picked, that ministry's report (`gathering_type_id`) |
+| Analytics | the open tab's report, for its period |
+
+**Year numbers.** Pages pass `data-year` (e.g. 2026), and the modal turns it into the fiscal year id.
 
 Each report names itself in the line above its title (`subject()`), e.g. "CHURCH HOLY COMMUNION REPORT" or "CHURCH SUNDAY SCHOOL REPORT", so a report never reads as a generic demographics report. The PDF header names the church body as **Christian Church International**.
 
@@ -80,7 +113,7 @@ Each report names itself in the line above its title (`subject()`), e.g. "CHURCH
 ## API (auth:sanctum unless noted)
 | method | path | purpose |
 |---|---|---|
-| GET | `/reports/catalogue?territory_id=` | reports runnable for that territory's level |
+| GET | `/reports/catalogue?territory_id=&module=` | reports runnable for that territory's level, optionally one module's (`demographics`, `attendance`) |
 | POST | `/reports/preview` | builds the report without queuing it; returns tiles, insights, per-section row counts, first 5 rows, and whether each section has totals |
 | POST | `/reports` | queues a run and returns `{uuid, status}` |
 | GET | `/reports/runs` | the user's 20 most recent runs |
@@ -88,7 +121,7 @@ Each report names itself in the line above its title (`subject()`), e.g. "CHURCH
 | GET | `/reports/runs/{uuid}/download` | the file (only while `ready`), with `Content-Length` so the browser can show real download progress |
 | GET | `/reports/verify/{code}` | **public**, throttled to 30/min: `genuine` + title, scope, period, generated at/by, file hash. Never any figures. |
 
-Body for preview and store: `{report_key, territory_id, format?, fiscal_year_id?, years?, demographic_id?}`.
+Body for preview and store: `{report_key, territory_id, format?, fiscal_year_id?, years?, demographic_id?, metric?, month?, gathering_type_id?}`.
 - Bad input returns JSON 422, never a redirect, because a fetch would save a redirect's HTML as the file.
 
 ## Permissions
@@ -98,6 +131,12 @@ Body for preview and store: `{report_key, territory_id, format?, fiscal_year_id?
 ## Acceptance criteria
 1. The catalogue for a church lists the nine Demographics reports; a territory level no report supports gets an empty list.
 9. `fiscal_year_id: "all"` covers every approved submission. Each activity report holds just its own column.
+10. Attendance (`AttendanceReportsTest`):
+    - `?module=attendance` lists the five attendance reports.
+    - The Sunday report lists missed Sundays, and its totals row is the average Sunday, not the sum.
+    - A ministry report narrows to one gathering type; another church's type returns 422.
+    - Verification codes start `MWD-ATT-`.
+    - Every attendance report also builds as Excel.
 2. A report with no totals has no totals row. `latest` shows the last reported value, not the sum.
 3. A report with no insights produces no insights part in either the PDF or the Excel file.
 4. A narrow table lays out portrait and a wide one landscape (the test uses a 17-column table). A report containing any wide table is landscape on every page.

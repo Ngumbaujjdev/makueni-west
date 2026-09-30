@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\UserTerritoryAssignment;
-use App\Models\User;
-use App\Models\Territory;
 use App\Models\Role;
+use App\Models\Territory;
+use App\Models\User;
+use App\Models\UserTerritoryAssignment;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class UserTerritoryAssignmentController extends Controller
@@ -33,7 +33,7 @@ class UserTerritoryAssignmentController extends Controller
             $query = UserTerritoryAssignment::with(['user', 'territory', 'role', 'assignedByUser']);
 
             // Apply territorial access control
-            if (!$authUser->hasGlobalAccess()) {
+            if (! $authUser->hasGlobalAccess()) {
                 $accessibleTerritories = $this->getUserAccessibleTerritories($authUser);
                 $territoryIds = $accessibleTerritories->pluck('id');
                 $query->whereIn('territory_id', $territoryIds);
@@ -106,20 +106,19 @@ class UserTerritoryAssignmentController extends Controller
                     'role_id' => $roleId,
                     'assignment_type' => $assignmentType,
                     'is_active' => $isActive,
-                ]
+                ],
             ]);
 
         } catch (\Exception $e) {
             Log::error('Failed to retrieve territorial assignments', [
                 'user_id' => auth()->id(),
                 'filters' => $request->query(),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to retrieve territorial assignments', $e->getMessage());
         }
     }
-
 
     /**
      * Display the specified assignment
@@ -130,7 +129,7 @@ class UserTerritoryAssignmentController extends Controller
             $authUser = auth()->user();
 
             // Check territorial access
-            if (!$this->canAccessAssignment($authUser, $assignment)) {
+            if (! $this->canAccessAssignment($authUser, $assignment)) {
                 return errorResponse('You do not have permission to view this assignment', 403);
             }
 
@@ -182,7 +181,7 @@ class UserTerritoryAssignmentController extends Controller
             Log::error('Failed to retrieve territorial assignment', [
                 'assignment_id' => $assignment->id,
                 'auth_user_id' => auth()->id(),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to retrieve territorial assignment', $e->getMessage());
@@ -215,17 +214,17 @@ class UserTerritoryAssignmentController extends Controller
             $role = Role::findOrFail($request->role_id);
 
             // Check if auth user can access the target user
-            if (!$this->canAccessUser($authUser, $targetUser)) {
+            if (! $this->canAccessUser($authUser, $targetUser)) {
                 return errorResponse('You do not have permission to manage this user\'s assignments', 403);
             }
 
             // Check if auth user can assign to this territory
-            if (!$this->canAssignToTerritory($authUser, $territory)) {
+            if (! $this->canAssignToTerritory($authUser, $territory)) {
                 return errorResponse('You do not have permission to assign to this territory', 403);
             }
 
             // Check if role is compatible with territory
-            if (!$this->isRoleCompatibleWithTerritory($role, $territory)) {
+            if (! $this->isRoleCompatibleWithTerritory($role, $territory)) {
                 return errorResponse(
                     "Role '{$role->name}' (level: {$role->territory_level}) is not compatible with territory '{$territory->name}' (type: {$territory->territory_type->value})",
                     400
@@ -239,12 +238,11 @@ class UserTerritoryAssignmentController extends Controller
                 ->where('role_id', $request->role_id)
                 ->first();
 
-
             if ($existingAssignment) {
                 // Check if assignment is soft-deleted
                 $isSoftDeleted = $existingAssignment->trashed();
-                
-                if ($existingAssignment->is_active && !$isSoftDeleted) {
+
+                if ($existingAssignment->is_active && ! $isSoftDeleted) {
                     return errorResponse(
                         'This user already has an active assignment with this role in this territory. Please update the existing assignment instead.',
                         400
@@ -252,12 +250,12 @@ class UserTerritoryAssignmentController extends Controller
                 } else {
                     // Reactivate or restore the existing assignment
                     DB::beginTransaction();
-                    
+
                     try {
                         // Restore if soft-deleted
                         if ($isSoftDeleted) {
                             $existingAssignment->restore();
-                            
+
                             Log::info('Soft-deleted assignment restored', [
                                 'assignment_id' => $existingAssignment->id,
                                 'user_id' => $request->user_id,
@@ -266,7 +264,7 @@ class UserTerritoryAssignmentController extends Controller
                                 'restored_by' => $authUser->id,
                             ]);
                         }
-                        
+
                         // Handle primary assignment logic if reactivating as primary
                         if ($request->assignment_type === 'primary') {
                             $existingPrimary = UserTerritoryAssignment::where('user_id', $request->user_id)
@@ -459,7 +457,7 @@ class UserTerritoryAssignmentController extends Controller
             $authUser = auth()->user();
 
             // Check if auth user can access this assignment
-            if (!$this->canAccessAssignment($authUser, $assignment)) {
+            if (! $this->canAccessAssignment($authUser, $assignment)) {
                 return errorResponse('You do not have permission to modify this assignment', 403);
             }
 
@@ -475,24 +473,24 @@ class UserTerritoryAssignmentController extends Controller
             }
 
             // Get territory and role if being updated
-            $territory = $request->has('territory_id') 
-                ? Territory::findOrFail($request->territory_id) 
+            $territory = $request->has('territory_id')
+                ? Territory::findOrFail($request->territory_id)
                 : $assignment->territory;
-            
-            $role = $request->has('role_id') 
-                ? Role::findOrFail($request->role_id) 
+
+            $role = $request->has('role_id')
+                ? Role::findOrFail($request->role_id)
                 : $assignment->role;
 
             // Check if auth user can assign to the new territory (if changed)
             if ($request->has('territory_id') && $request->territory_id != $assignment->territory_id) {
-                if (!$this->canAssignToTerritory($authUser, $territory)) {
+                if (! $this->canAssignToTerritory($authUser, $territory)) {
                     return errorResponse('You do not have permission to assign to this territory', 403);
                 }
             }
 
             // Check if role is compatible with territory (if either is being changed)
             if ($request->has('territory_id') || $request->has('role_id')) {
-                if (!$this->isRoleCompatibleWithTerritory($role, $territory)) {
+                if (! $this->isRoleCompatibleWithTerritory($role, $territory)) {
                     return errorResponse(
                         "Role '{$role->name}' (level: {$role->territory_level}) is not compatible with territory '{$territory->name}' (type: {$territory->territory_type->value})",
                         400
@@ -614,7 +612,7 @@ class UserTerritoryAssignmentController extends Controller
             $authUser = auth()->user();
 
             // Check if auth user can access this assignment
-            if (!$this->canAccessAssignment($authUser, $assignment)) {
+            if (! $this->canAccessAssignment($authUser, $assignment)) {
                 return errorResponse('You do not have permission to remove this assignment', 403);
             }
 
@@ -686,14 +684,14 @@ class UserTerritoryAssignmentController extends Controller
             $authUser = auth()->user();
 
             // Check if auth user can view this user's assignments
-            if (!$this->canAccessUser($authUser, $user)) {
+            if (! $this->canAccessUser($authUser, $user)) {
                 return errorResponse('You do not have permission to view this user\'s assignments', 403);
             }
 
             $assignments = $user->allAssignments()
-                              ->with(['territory', 'role', 'assignedByUser'])
-                              ->orderBy('assigned_at', 'desc')
-                              ->get();
+                ->with(['territory', 'role', 'assignedByUser'])
+                ->orderBy('assigned_at', 'desc')
+                ->get();
 
             $assignmentsData = $assignments->map(function ($assignment) {
                 return [
@@ -732,7 +730,7 @@ class UserTerritoryAssignmentController extends Controller
             Log::error('Failed to retrieve user assignments', [
                 'user_id' => $user->id,
                 'auth_user_id' => auth()->id(),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to retrieve user assignments', $e->getMessage());
@@ -748,15 +746,15 @@ class UserTerritoryAssignmentController extends Controller
             $authUser = auth()->user();
 
             // Check territorial access
-            if (!$this->canAccessTerritory($authUser, $territory)) {
+            if (! $this->canAccessTerritory($authUser, $territory)) {
                 return errorResponse('You do not have permission to view this territory\'s assignments', 403);
             }
 
             $assignments = $territory->userAssignments()
-                                   ->with(['user', 'role', 'assignedByUser'])
-                                   ->active()
-                                   ->orderBy('assigned_at', 'desc')
-                                   ->get();
+                ->with(['user', 'role', 'assignedByUser'])
+                ->active()
+                ->orderBy('assigned_at', 'desc')
+                ->get();
 
             $assignmentsData = $assignments->map(function ($assignment) {
                 return [
@@ -796,7 +794,7 @@ class UserTerritoryAssignmentController extends Controller
             Log::error('Failed to retrieve territory assignments', [
                 'territory_id' => $territory->id,
                 'auth_user_id' => auth()->id(),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to retrieve territory assignments', $e->getMessage());
@@ -839,6 +837,7 @@ class UserTerritoryAssignmentController extends Controller
         }
 
         $accessibleTerritories = $this->getUserAccessibleTerritories($authUser);
+
         return $accessibleTerritories->contains('id', $assignment->territory_id);
     }
 
@@ -852,6 +851,7 @@ class UserTerritoryAssignmentController extends Controller
         }
 
         $accessibleTerritories = $this->getUserAccessibleTerritories($authUser);
+
         return $accessibleTerritories->contains('id', $territory->id);
     }
 
@@ -892,9 +892,10 @@ class UserTerritoryAssignmentController extends Controller
 
         // Convert territory_type Enum to string value for comparison
         $territoryType = $territory->territory_type->value ?? $territory->territory_type;
-        
+
         return in_array($territoryType, $compatibilityMap[$role->territory_level] ?? []);
     }
+
     /**
      * Switch primary assignment for a user
      * Makes a secondary assignment primary and demotes the current primary to secondary
@@ -906,7 +907,7 @@ class UserTerritoryAssignmentController extends Controller
             $targetUser = User::findOrFail($userId);
 
             // Check if auth user can manage this user
-            if (!$this->canManageUser($authUser, $targetUser)) {
+            if (! $this->canManageUser($authUser, $targetUser)) {
                 return errorResponse('You do not have permission to modify this user\'s assignments', 403);
             }
 
@@ -927,7 +928,7 @@ class UserTerritoryAssignmentController extends Controller
                 ->where('is_active', true)
                 ->first();
 
-            if (!$newPrimaryAssignment) {
+            if (! $newPrimaryAssignment) {
                 return errorResponse('Assignment not found or not active for this user', 404);
             }
 
@@ -1030,7 +1031,7 @@ class UserTerritoryAssignmentController extends Controller
                 'user_id' => $userId,
                 'new_primary_assignment_id' => $request->new_primary_assignment_id ?? null,
                 'auth_user_id' => auth()->id(),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to switch primary assignment', $e->getMessage());

@@ -11,8 +11,6 @@ class FiscalYearController extends Controller
 {
     /**
      * List all fiscal years
-     * 
-     * @return JsonResponse
      */
     public function index(Request $request): JsonResponse
     {
@@ -30,21 +28,18 @@ class FiscalYearController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $years,
-                'message' => 'Fiscal years retrieved successfully'
+                'message' => 'Fiscal years retrieved successfully',
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve fiscal years: ' . $e->getMessage()
+                'message' => 'Failed to retrieve fiscal years: '.$e->getMessage(),
             ], 500);
         }
     }
 
     /**
      * Get a single fiscal year with its related data
-     * 
-     * @param int $id
-     * @return JsonResponse
      */
     public function show(int $id): JsonResponse
     {
@@ -55,12 +50,12 @@ class FiscalYearController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $fiscalYear,
-                'message' => 'Fiscal year retrieved successfully'
+                'message' => 'Fiscal year retrieved successfully',
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Fiscal year not found'
+                'message' => 'Fiscal year not found',
             ], 404);
         }
     }

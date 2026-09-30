@@ -172,7 +172,7 @@ class DioceseReportPdf extends TCPDF
             $this->Cell(110, 3.5, 'Verification code '.$this->verificationCode, 0, 2, 'L');
         }
         $this->Cell(110, 3.5, 'Generated '.now()->format('j M Y \a\t H:i').' by '.$this->generatedBy, 0, 2, 'L');
-        $this->Cell(110, 3.5, 'Computer-generated from approved submissions - no signature needed.', 0, 0, 'L');
+        $this->Cell(110, 3.5, 'Computer-generated from the diocese system - no signature needed.', 0, 0, 'L');
 
         $this->SetXY($w - $lm - 60, $top + 4);
         $this->SetFont('helvetica', 'B', 7.4);

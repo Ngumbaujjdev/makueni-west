@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\BudgetType;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class BudgetTypeController extends Controller
 {
@@ -31,16 +31,17 @@ class BudgetTypeController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget types retrieved successfully',
-                'data' => $budgetTypes
+                'data' => $budgetTypes,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve budget types: ' . $e->getMessage());
+            Log::error('Failed to retrieve budget types: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve budget types',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -63,14 +64,14 @@ class BudgetTypeController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation error',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $data = $validator->validated();
 
             // Auto-generate slug if not provided
-            if (!isset($data['slug'])) {
+            if (! isset($data['slug'])) {
                 $data['slug'] = Str::slug($data['name']);
             }
 
@@ -83,16 +84,17 @@ class BudgetTypeController extends Controller
                 'success' => true,
                 'status' => 201,
                 'message' => 'Budget type created successfully',
-                'data' => $budgetType
+                'data' => $budgetType,
             ], 201);
 
         } catch (\Exception $e) {
-            Log::error('Failed to create budget type: ' . $e->getMessage());
+            Log::error('Failed to create budget type: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to create budget type',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -107,16 +109,17 @@ class BudgetTypeController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget type retrieved successfully',
-                'data' => $budgetType
+                'data' => $budgetType,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve budget type: ' . $e->getMessage());
+            Log::error('Failed to retrieve budget type: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve budget type',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -128,8 +131,8 @@ class BudgetTypeController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'name' => 'sometimes|required|string|max:255|unique:budget_types,name,' . $budgetType->id,
-                'slug' => 'nullable|string|max:255|unique:budget_types,slug,' . $budgetType->id,
+                'name' => 'sometimes|required|string|max:255|unique:budget_types,name,'.$budgetType->id,
+                'slug' => 'nullable|string|max:255|unique:budget_types,slug,'.$budgetType->id,
                 'duration_months' => 'nullable|integer|min:1',
                 'is_active' => 'nullable|boolean',
             ]);
@@ -139,14 +142,14 @@ class BudgetTypeController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation error',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $data = $validator->validated();
 
             // Auto-generate slug if name is updated but slug is not provided
-            if (isset($data['name']) && !isset($data['slug'])) {
+            if (isset($data['name']) && ! isset($data['slug'])) {
                 $data['slug'] = Str::slug($data['name']);
             }
 
@@ -156,16 +159,17 @@ class BudgetTypeController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget type updated successfully',
-                'data' => $budgetType->fresh()
+                'data' => $budgetType->fresh(),
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to update budget type: ' . $e->getMessage());
+            Log::error('Failed to update budget type: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to update budget type',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -186,7 +190,7 @@ class BudgetTypeController extends Controller
                         'event' => $audit->event, // created, updated, deleted
                         'user' => $audit->user ? [
                             'id' => $audit->user->id,
-                            'name' => $audit->user->firstname . ' ' . $audit->user->lastname,
+                            'name' => $audit->user->firstname.' '.$audit->user->lastname,
                             'email' => $audit->user->email,
                         ] : null,
                         'old_values' => $audit->old_values,
@@ -202,16 +206,17 @@ class BudgetTypeController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Audit trail retrieved successfully',
-                'data' => $audits
+                'data' => $audits,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve audit trail: ' . $e->getMessage());
+            Log::error('Failed to retrieve audit trail: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve audit trail',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -241,16 +246,17 @@ class BudgetTypeController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget type deleted successfully',
-                'data' => null
+                'data' => null,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to delete budget type: ' . $e->getMessage());
+            Log::error('Failed to delete budget type: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to delete budget type',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

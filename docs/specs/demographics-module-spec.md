@@ -77,7 +77,6 @@ Base: `backend/routes/api.php`, under `auth:sanctum`.
 | GET | `/attendance?territory_id=&service_type=&fiscal_year_id=&fiscal_month_id=` | ownership |
 | POST | `/attendance` | per `service_type`: `attendancemanagement.{serviceattendance\|specialeventsattendance\|ministryattendance}.create` |
 | PUT | `/attendance/{id}` | same prefix, `.update`, resolved from the record's existing `service_type` |
-| GET | `/attendance-reports/widgets?territory_id=&fiscal_year_id=&fiscal_month_id=&gathering_category_id=` | ownership (`userOwnsChurch`) |
 | GET | `/demographics-reports/widgets?territory_id=&fiscal_year_id=` | ownership (`userOwnsChurch`) |
 | GET | `/attendance-reports/analytics?territory_id=&fiscal_year_id=<id\|all>&month=<1-12>` | ownership (`userOwnsChurch`) |
 
@@ -103,7 +102,7 @@ Base: `backend/routes/api.php`, under `auth:sanctum`.
   growth: { previous_month_total_members, delta, percentage (or null if previous total is 0) } }
 ```
 
-`GET /demographics-reports/widgets?territory_id=&fiscal_year_id=` response shape (`DemographicsReportWidgetService::widgetsFor()`) - the Church-tier sibling of `AttendanceReportWidgetService`, backing the Spiritual Activities and Monthly Statistics pages. Unlike `summary()`, this is a single church's own whole-fiscal-year series, not a multi-church overseer rollup, so it needs no territory-tier permission match - ownership alone gates it, same as `attendance-reports/widgets`:
+`GET /demographics-reports/widgets?territory_id=&fiscal_year_id=` response shape (`DemographicsReportWidgetService::widgetsFor()`) - backing the Spiritual Activities and Monthly Statistics pages. Unlike `summary()`, this is a single church's own whole-fiscal-year series, not a multi-church overseer rollup, so it needs no territory-tier permission match - ownership alone gates it, same as `attendance-reports/analytics`:
 ```
 { months: [ { fiscal_month_id, month (short name), status ('approved'|'not_submitted'),
     total_members, male_count, female_count, youth_count, mens_fellowship_count,

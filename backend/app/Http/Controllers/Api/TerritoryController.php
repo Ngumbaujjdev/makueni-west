@@ -5,10 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Territory;
 use App\Models\User;
-use App\Models\UserTerritoryAssignment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class TerritoryController extends Controller
@@ -16,127 +14,128 @@ class TerritoryController extends Controller
     /**
      * Display a listing of territories with hierarchical filtering
      */
-     /**
- * Display a listing of territories with hierarchical structure
- * Filtered by user's territorial access level (like modules)
- */
-public function index(Request $request)
-{
-    try {
-       $user = $request->user();
+    /**
+     * Display a listing of territories with hierarchical structure
+     * Filtered by user's territorial access level (like modules)
+     */
+    public function index(Request $request)
+    {
+        try {
+            $user = $request->user();
 
-        // Determine effective territory level (SAME LOGIC AS MODULES!)
-        $superAdminConfig = \App\Models\SuperAdminConfig::where('user_id', $user->id)
-                                                        ->where('global_access', true)
-                                                        ->first();
+            // Determine effective territory level (SAME LOGIC AS MODULES!)
+            $superAdminConfig = \App\Models\SuperAdminConfig::where('user_id', $user->id)
+                ->where('global_access', true)
+                ->first();
 
-        if ($superAdminConfig) {
-            // ✅ Global admin sees ALL dioceses (root level)
-            $effectiveTerritoryLevel = 'diocese';
-            $rootTerritories = Territory::where('territory_type', 'diocese')
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->with([
-                    'children' => function($query) {
-                        $query->active()->orderBy('name')
-                            ->with([
-                                'children' => function($subQuery) {
-                                    $subQuery->active()->orderBy('name')
-                                        ->with(['children' => function($churchQuery) {
-                                            $churchQuery->active()->orderBy('name');
-                                        }]);
-                                }
-                            ]);
-                    }
-                ])
-                ->get();
-        } else {
-            // ✅ Regular user - get their highest territorial level
-            $effectiveTerritoryLevel = $this->getUserHighestTerritorialLevel($user);
+            if ($superAdminConfig) {
+                // ✅ Global admin sees ALL dioceses (root level)
+                $effectiveTerritoryLevel = 'diocese';
+                $rootTerritories = Territory::where('territory_type', 'diocese')
+                    ->where('is_active', true)
+                    ->orderBy('name')
+                    ->with([
+                        'children' => function ($query) {
+                            $query->active()->orderBy('name')
+                                ->with([
+                                    'children' => function ($subQuery) {
+                                        $subQuery->active()->orderBy('name')
+                                            ->with(['children' => function ($churchQuery) {
+                                                $churchQuery->active()->orderBy('name');
+                                            }]);
+                                    },
+                                ]);
+                        },
+                    ])
+                    ->get();
+            } else {
+                // ✅ Regular user - get their highest territorial level
+                $effectiveTerritoryLevel = $this->getUserHighestTerritorialLevel($user);
 
-            // Get accessible territories based on user's assignments
-            $accessibleTerritories = $this->getUserAccessibleTerritories($user);
-            $accessibleIds = $accessibleTerritories->pluck('id');
+                // Get accessible territories based on user's assignments
+                $accessibleTerritories = $this->getUserAccessibleTerritories($user);
+                $accessibleIds = $accessibleTerritories->pluck('id');
 
-            // Get root territories for this user (their assigned territories)
-            $rootTerritories = Territory::whereIn('id', $accessibleIds)
-                ->where(function($query) use ($accessibleIds) {
-                    // Include territories where parent is not in accessible list (these are roots for this user)
-                    $query->whereNull('parent_territory_id')
-                          ->orWhereNotIn('parent_territory_id', $accessibleIds);
-                })
-                ->where('is_active', true)
-                ->orderBy('territory_type')
-                ->orderBy('name')
-                ->with([
-                    'children' => function($query) use ($accessibleIds) {
-                        $query->whereIn('id', $accessibleIds)
-                            ->active()
-                            ->orderBy('name')
-                            ->with([
-                                'children' => function($subQuery) use ($accessibleIds) {
-                                    $subQuery->whereIn('id', $accessibleIds)
-                                        ->active()
-                                        ->orderBy('name')
-                                        ->with(['children' => function($churchQuery) use ($accessibleIds) {
-                                            $churchQuery->whereIn('id', $accessibleIds)
-                                                ->active()
-                                                ->orderBy('name');
-                                        }]);
-                                }
-                            ]);
-                    }
-                ])
-                ->get();
-        }
+                // Get root territories for this user (their assigned territories)
+                $rootTerritories = Territory::whereIn('id', $accessibleIds)
+                    ->where(function ($query) use ($accessibleIds) {
+                        // Include territories where parent is not in accessible list (these are roots for this user)
+                        $query->whereNull('parent_territory_id')
+                            ->orWhereNotIn('parent_territory_id', $accessibleIds);
+                    })
+                    ->where('is_active', true)
+                    ->orderBy('territory_type')
+                    ->orderBy('name')
+                    ->with([
+                        'children' => function ($query) use ($accessibleIds) {
+                            $query->whereIn('id', $accessibleIds)
+                                ->active()
+                                ->orderBy('name')
+                                ->with([
+                                    'children' => function ($subQuery) use ($accessibleIds) {
+                                        $subQuery->whereIn('id', $accessibleIds)
+                                            ->active()
+                                            ->orderBy('name')
+                                            ->with(['children' => function ($churchQuery) use ($accessibleIds) {
+                                                $churchQuery->whereIn('id', $accessibleIds)
+                                                    ->active()
+                                                    ->orderBy('name');
+                                            }]);
+                                    },
+                                ]);
+                        },
+                    ])
+                    ->get();
+            }
 
-        // Format the hierarchical response
-        $territoriesData = $rootTerritories->map(function($territory) {
-            return $this->buildTerritoryTree($territory);
-        });
+            // Format the hierarchical response
+            $territoriesData = $rootTerritories->map(function ($territory) {
+                return $this->buildTerritoryTree($territory);
+            });
 
-        return successResponse('Territories retrieved successfully', [
-            'territories' => $territoriesData,
-            'territory_level' => $effectiveTerritoryLevel,
-            'is_global_admin' => $superAdminConfig ? true : false,
-            'total_territories' => $territoriesData->count(),
-            'note' => 'Hierarchical structure filtered by user territorial access'
-        ]);
+            return successResponse('Territories retrieved successfully', [
+                'territories' => $territoriesData,
+                'territory_level' => $effectiveTerritoryLevel,
+                'is_global_admin' => $superAdminConfig ? true : false,
+                'total_territories' => $territoriesData->count(),
+                'note' => 'Hierarchical structure filtered by user territorial access',
+            ]);
 
-    } catch (\Exception $e) {
-        Log::error('Failed to retrieve territories', [
-            'user_id' => auth()->id(),
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to retrieve territories', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
 
-        return serverErrorResponse('Failed to retrieve territories', $e->getMessage());
-    }
-}
-
-/**
- * Get user's highest territorial level from their active assignments
- */
-private function getUserHighestTerritorialLevel(User $user): string
-{
-    $levelHierarchy = ['church', 'subregion', 'region', 'diocese'];
-
-    $userLevels = $user->activeAssignments()
-                      ->with('role')
-                      ->get()
-                      ->pluck('role.territory_level')
-                      ->unique()
-                      ->filter();
-
-    // Return highest level user has access to
-    foreach (array_reverse($levelHierarchy) as $level) {
-        if ($userLevels->contains($level)) {
-            return $level;
+            return serverErrorResponse('Failed to retrieve territories', $e->getMessage());
         }
     }
 
-    return 'church'; // Default to lowest level
-}
+    /**
+     * Get user's highest territorial level from their active assignments
+     */
+    private function getUserHighestTerritorialLevel(User $user): string
+    {
+        $levelHierarchy = ['church', 'subregion', 'region', 'diocese'];
+
+        $userLevels = $user->activeAssignments()
+            ->with('role')
+            ->get()
+            ->pluck('role.territory_level')
+            ->unique()
+            ->filter();
+
+        // Return highest level user has access to
+        foreach (array_reverse($levelHierarchy) as $level) {
+            if ($userLevels->contains($level)) {
+                return $level;
+            }
+        }
+
+        return 'church'; // Default to lowest level
+    }
+
     /**
      * Store a newly created territory
      */
@@ -160,22 +159,22 @@ private function getUserHighestTerritorialLevel(User $user): string
         }
 
         try {
-           $user = $request->user();
+            $user = $request->user();
 
             // Validate territorial hierarchy (FLEXIBLE - churches can be under diocese/region/subregion)
-            if (!$this->validateTerritorialHierarchy($request->territory_type, $request->parent_territory_id)) {
+            if (! $this->validateTerritorialHierarchy($request->territory_type, $request->parent_territory_id)) {
                 return errorResponse('Invalid territorial hierarchy. Check parent-child relationship.', 400);
             }
 
             // Check if user can create territories at this level
-            if (!$this->canManageTerritorialLevel($user, $request->territory_type)) {
+            if (! $this->canManageTerritorialLevel($user, $request->territory_type)) {
                 return errorResponse('You do not have permission to create territories at this level', 403);
             }
 
             // If parent specified, check if user can manage parent territory
             if ($request->parent_territory_id) {
                 $parentTerritory = Territory::find($request->parent_territory_id);
-                if (!$this->canAccessTerritory($user, $parentTerritory)) {
+                if (! $this->canAccessTerritory($user, $parentTerritory)) {
                     return errorResponse('You do not have permission to create territories under this parent', 403);
                 }
             }
@@ -197,7 +196,7 @@ private function getUserHighestTerritorialLevel(User $user): string
                 'territory_id' => $territory->id,
                 'territory_name' => $territory->name,
                 'territory_type' => $territory->territory_type,
-                'created_by' => auth()->id()
+                'created_by' => auth()->id(),
             ]);
 
             return createdResponse('Territory created successfully', 201);
@@ -206,7 +205,7 @@ private function getUserHighestTerritorialLevel(User $user): string
             Log::error('Failed to create territory', [
                 'request_data' => $request->all(),
                 'user_id' => auth()->id(),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to create territory', $e->getMessage());
@@ -216,174 +215,175 @@ private function getUserHighestTerritorialLevel(User $user): string
     /**
      * Display the specified territory with detailed information
      */
-   /**
- * Display the specified territory with detailed information
- *
- * Query Parameters:
- * - include_audits: Include full audit trail (default: false)
- * - audit_limit: Number of audit records (default: 20)
- * - audit_type: Filter audits by type (created, updated, territory_renamed, etc.)
- * - audit_from: Filter audits from date (Y-m-d)
- * - audit_to: Filter audits to date (Y-m-d)
- * - audit_page: Page number for audit pagination
- */
-public function show(Request $request, Territory $territory)
-{
-    try {
-       $user = $request->user();
+    /**
+     * Display the specified territory with detailed information
+     *
+     * Query Parameters:
+     * - include_audits: Include full audit trail (default: false)
+     * - audit_limit: Number of audit records (default: 20)
+     * - audit_type: Filter audits by type (created, updated, territory_renamed, etc.)
+     * - audit_from: Filter audits from date (Y-m-d)
+     * - audit_to: Filter audits to date (Y-m-d)
+     * - audit_page: Page number for audit pagination
+     */
+    public function show(Request $request, Territory $territory)
+    {
+        try {
+            $user = $request->user();
 
-        // Check territorial access
-        if (!$this->canAccessTerritory($user, $territory)) {
-            return errorResponse('You do not have permission to view this territory', 403);
-        }
-
-        $territory->load(['parent', 'children.children', 'userAssignments.user', 'userAssignments.role']);
-
-        $territoryData = [
-            'id' => $territory->id,
-            'name' => $territory->name,
-            'territory_type' => $territory->territory_type,
-            'territory_type_name' => $territory->territory_type_name,
-            'code' => $territory->code,
-            'description' => $territory->description,
-            'location' => $territory->location,
-            'contact_person' => $territory->contact_person,
-            'contact_phone' => $territory->contact_phone,
-            'contact_email' => $territory->contact_email,
-            'is_active' => $territory->is_active,
-            'hierarchy_path' => $territory->hierarchy_path,
-            'parent' => $territory->parent ? [
-                'id' => $territory->parent->id,
-                'name' => $territory->parent->name,
-                'type' => $territory->parent->territory_type,
-                'code' => $territory->parent->code,
-            ] : null,
-            'children' => $territory->children->map(function($child) {
-                return [
-                    'id' => $child->id,
-                    'name' => $child->name,
-                    'territory_type' => $child->territory_type,
-                    'code' => $child->code,
-                    'is_active' => $child->is_active,
-                    'children_count' => $child->children->count(),
-                ];
-            }),
-            'user_assignments' => $territory->userAssignments->map(function($assignment) {
-                return [
-                    'id' => $assignment->id,
-                    'user' => [
-                        'id' => $assignment->user->id,
-                        'name' => $assignment->user->full_name,
-                        'email' => $assignment->user->email,
-                        'employee_code' => $assignment->user->employee_code,
-                    ],
-                    'role' => [
-                        'id' => $assignment->role->id,
-                        'name' => $assignment->role->name,
-                    ],
-                    'assignment_type' => $assignment->assignment_type,
-                    'is_primary' => $assignment->is_primary,
-                    'assigned_at' => $assignment->assigned_at,
-                ];
-            }),
-            'statistics' => [
-                'total_children' => $territory->children->count(),
-                'active_children' => $territory->children->where('is_active', true)->count(),
-                'total_assignments' => $territory->userAssignments->count(),
-                'active_assignments' => $territory->userAssignments->where('is_active', true)->count(),
-            ],
-            'created_at' => $territory->created_at,
-            'updated_at' => $territory->updated_at,
-        ];
-
-        // Include audit trails if requested
-        if ($request->boolean('include_audits', false)) {
-            $auditLimit = $request->input('audit_limit', 20);
-
-            // Build audit query
-            $auditQuery = $territory->audits()
-                ->with('user:id,firstname,lastname,username');
-
-            // Filter by event type if specified
-            if ($request->filled('audit_type')) {
-                $auditQuery->where('event', $request->audit_type);
+            // Check territorial access
+            if (! $this->canAccessTerritory($user, $territory)) {
+                return errorResponse('You do not have permission to view this territory', 403);
             }
 
-            // Filter by date range
-            if ($request->filled('audit_from')) {
-                $auditQuery->whereDate('created_at', '>=', $request->audit_from);
-            }
-            if ($request->filled('audit_to')) {
-                $auditQuery->whereDate('created_at', '<=', $request->audit_to);
-            }
+            $territory->load(['parent', 'children.children', 'userAssignments.user', 'userAssignments.role']);
 
-            // Get paginated or limited results
-            if ($request->has('audit_page')) {
-                $audits = $auditQuery->latest()->paginate($auditLimit, ['*'], 'audit_page');
-
-                $territoryData['audit_trail'] = [
-                    'data' => $audits->map(function ($audit) {
-                        return [
-                            'id' => $audit->id,
-                            'event' => $audit->event,
-                            'changed_by' => $audit->user ? [
-                                'id' => $audit->user->id,
-                                'name' => $audit->user->full_name,
-                            ] : 'System',
-                            'old_values' => $audit->old_values,
-                            'new_values' => $audit->new_values,
-                            'ip_address' => $audit->ip_address,
-                            'user_agent' => $audit->user_agent,
-                            'created_at' => $audit->created_at->format('Y-m-d H:i:s'),
-                        ];
-                    }),
-                    'pagination' => [
-                        'current_page' => $audits->currentPage(),
-                        'last_page' => $audits->lastPage(),
-                        'per_page' => $audits->perPage(),
-                        'total' => $audits->total(),
-                    ]
-                ];
-            } else {
-                $territoryData['audit_trail'] = $auditQuery->latest()
-                    ->limit($auditLimit)
-                    ->get()
-                    ->map(function ($audit) {
-                        return [
-                            'id' => $audit->id,
-                            'event' => $audit->event,
-                            'changed_by' => $audit->user ? [
-                                'id' => $audit->user->id,
-                                'name' => $audit->user->full_name,
-                            ] : 'System',
-                            'old_values' => $audit->old_values,
-                            'new_values' => $audit->new_values,
-                            'ip_address' => $audit->ip_address,
-                            'user_agent' => $audit->user_agent,
-                            'created_at' => $audit->created_at->format('Y-m-d H:i:s'),
-                        ];
-                    });
-            }
-
-            // Add audit summary
-            $territoryData['audit_summary'] = [
-                'total_changes' => $territory->audits()->count(),
-                'last_modified_by' => $territory->getLastModifiedBy(),
+            $territoryData = [
+                'id' => $territory->id,
+                'name' => $territory->name,
+                'territory_type' => $territory->territory_type,
+                'territory_type_name' => $territory->territory_type_name,
+                'code' => $territory->code,
+                'description' => $territory->description,
+                'location' => $territory->location,
+                'contact_person' => $territory->contact_person,
+                'contact_phone' => $territory->contact_phone,
+                'contact_email' => $territory->contact_email,
+                'is_active' => $territory->is_active,
+                'hierarchy_path' => $territory->hierarchy_path,
+                'parent' => $territory->parent ? [
+                    'id' => $territory->parent->id,
+                    'name' => $territory->parent->name,
+                    'type' => $territory->parent->territory_type,
+                    'code' => $territory->parent->code,
+                ] : null,
+                'children' => $territory->children->map(function ($child) {
+                    return [
+                        'id' => $child->id,
+                        'name' => $child->name,
+                        'territory_type' => $child->territory_type,
+                        'code' => $child->code,
+                        'is_active' => $child->is_active,
+                        'children_count' => $child->children->count(),
+                    ];
+                }),
+                'user_assignments' => $territory->userAssignments->map(function ($assignment) {
+                    return [
+                        'id' => $assignment->id,
+                        'user' => [
+                            'id' => $assignment->user->id,
+                            'name' => $assignment->user->full_name,
+                            'email' => $assignment->user->email,
+                            'employee_code' => $assignment->user->employee_code,
+                        ],
+                        'role' => [
+                            'id' => $assignment->role->id,
+                            'name' => $assignment->role->name,
+                        ],
+                        'assignment_type' => $assignment->assignment_type,
+                        'is_primary' => $assignment->is_primary,
+                        'assigned_at' => $assignment->assigned_at,
+                    ];
+                }),
+                'statistics' => [
+                    'total_children' => $territory->children->count(),
+                    'active_children' => $territory->children->where('is_active', true)->count(),
+                    'total_assignments' => $territory->userAssignments->count(),
+                    'active_assignments' => $territory->userAssignments->where('is_active', true)->count(),
+                ],
+                'created_at' => $territory->created_at,
+                'updated_at' => $territory->updated_at,
             ];
+
+            // Include audit trails if requested
+            if ($request->boolean('include_audits', false)) {
+                $auditLimit = $request->input('audit_limit', 20);
+
+                // Build audit query
+                $auditQuery = $territory->audits()
+                    ->with('user:id,firstname,lastname,username');
+
+                // Filter by event type if specified
+                if ($request->filled('audit_type')) {
+                    $auditQuery->where('event', $request->audit_type);
+                }
+
+                // Filter by date range
+                if ($request->filled('audit_from')) {
+                    $auditQuery->whereDate('created_at', '>=', $request->audit_from);
+                }
+                if ($request->filled('audit_to')) {
+                    $auditQuery->whereDate('created_at', '<=', $request->audit_to);
+                }
+
+                // Get paginated or limited results
+                if ($request->has('audit_page')) {
+                    $audits = $auditQuery->latest()->paginate($auditLimit, ['*'], 'audit_page');
+
+                    $territoryData['audit_trail'] = [
+                        'data' => $audits->map(function ($audit) {
+                            return [
+                                'id' => $audit->id,
+                                'event' => $audit->event,
+                                'changed_by' => $audit->user ? [
+                                    'id' => $audit->user->id,
+                                    'name' => $audit->user->full_name,
+                                ] : 'System',
+                                'old_values' => $audit->old_values,
+                                'new_values' => $audit->new_values,
+                                'ip_address' => $audit->ip_address,
+                                'user_agent' => $audit->user_agent,
+                                'created_at' => $audit->created_at->format('Y-m-d H:i:s'),
+                            ];
+                        }),
+                        'pagination' => [
+                            'current_page' => $audits->currentPage(),
+                            'last_page' => $audits->lastPage(),
+                            'per_page' => $audits->perPage(),
+                            'total' => $audits->total(),
+                        ],
+                    ];
+                } else {
+                    $territoryData['audit_trail'] = $auditQuery->latest()
+                        ->limit($auditLimit)
+                        ->get()
+                        ->map(function ($audit) {
+                            return [
+                                'id' => $audit->id,
+                                'event' => $audit->event,
+                                'changed_by' => $audit->user ? [
+                                    'id' => $audit->user->id,
+                                    'name' => $audit->user->full_name,
+                                ] : 'System',
+                                'old_values' => $audit->old_values,
+                                'new_values' => $audit->new_values,
+                                'ip_address' => $audit->ip_address,
+                                'user_agent' => $audit->user_agent,
+                                'created_at' => $audit->created_at->format('Y-m-d H:i:s'),
+                            ];
+                        });
+                }
+
+                // Add audit summary
+                $territoryData['audit_summary'] = [
+                    'total_changes' => $territory->audits()->count(),
+                    'last_modified_by' => $territory->getLastModifiedBy(),
+                ];
+            }
+
+            return successResponse('Territory retrieved successfully', $territoryData);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to retrieve territory', [
+                'territory_id' => $territory->id,
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return serverErrorResponse('Failed to retrieve territory', $e->getMessage());
         }
-
-        return successResponse('Territory retrieved successfully', $territoryData);
-
-    } catch (\Exception $e) {
-        Log::error('Failed to retrieve territory', [
-            'territory_id' => $territory->id,
-            'user_id' => auth()->id(),
-            'error' => $e->getMessage()
-        ]);
-
-        return serverErrorResponse('Failed to retrieve territory', $e->getMessage());
     }
-}
+
     /**
      * Update the specified territory
      */
@@ -393,7 +393,7 @@ public function show(Request $request, Territory $territory)
             'name' => 'required|string|max:255',
             'territory_type' => 'required|in:diocese,region,subregion,church',
             'parent_territory_id' => 'nullable|exists:territories,id',
-            'code' => 'nullable|string|max:50|unique:territories,code,' . $territory->id,
+            'code' => 'nullable|string|max:50|unique:territories,code,'.$territory->id,
             'description' => 'nullable|string|max:1000',
             'location' => 'nullable|string|max:500',
             'contact_person' => 'nullable|string|max:255',
@@ -407,15 +407,15 @@ public function show(Request $request, Territory $territory)
         }
 
         try {
-           $user = $request->user();
+            $user = $request->user();
 
             // Check territorial access
-            if (!$this->canAccessTerritory($user, $territory)) {
+            if (! $this->canAccessTerritory($user, $territory)) {
                 return errorResponse('You do not have permission to update this territory', 403);
             }
 
             // Validate territorial hierarchy (excluding current territory for parent check)
-            if (!$this->validateTerritorialHierarchy($request->territory_type, $request->parent_territory_id, $territory->id)) {
+            if (! $this->validateTerritorialHierarchy($request->territory_type, $request->parent_territory_id, $territory->id)) {
                 return errorResponse('Invalid territorial hierarchy. Cannot set territory as its own descendant.', 400);
             }
 
@@ -434,7 +434,7 @@ public function show(Request $request, Territory $territory)
 
             Log::info('Territory updated successfully', [
                 'territory_id' => $territory->id,
-                'updated_by' => auth()->id()
+                'updated_by' => auth()->id(),
             ]);
 
             return updatedResponse($territory->fresh(['parent', 'children']), 'Territory updated successfully');
@@ -442,7 +442,7 @@ public function show(Request $request, Territory $territory)
         } catch (\Exception $e) {
             Log::error('Failed to update territory', [
                 'territory_id' => $territory->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to update territory', $e->getMessage());
@@ -455,10 +455,10 @@ public function show(Request $request, Territory $territory)
     public function destroy(Territory $territory)
     {
         try {
-           $user = $request->user();
+            $user = $request->user();
 
             // Check territorial access
-            if (!$this->canAccessTerritory($user, $territory)) {
+            if (! $this->canAccessTerritory($user, $territory)) {
                 return errorResponse('You do not have permission to delete this territory', 403);
             }
 
@@ -485,7 +485,7 @@ public function show(Request $request, Territory $territory)
 
             Log::info('Territory deleted successfully', [
                 'territory_name' => $territoryName,
-                'deleted_by' => auth()->id()
+                'deleted_by' => auth()->id(),
             ]);
 
             return deleteResponse('Territory deleted successfully');
@@ -493,7 +493,7 @@ public function show(Request $request, Territory $territory)
         } catch (\Exception $e) {
             Log::error('Failed to delete territory', [
                 'territory_id' => $territory->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to delete territory', $e->getMessage());
@@ -506,13 +506,13 @@ public function show(Request $request, Territory $territory)
     public function getHierarchy(Request $request)
     {
         try {
-           $user = $request->user();
+            $user = $request->user();
             $startFromId = $request->query('territory_id'); // Start from specific territory
 
             // Base query - get all dioceses OR specific territory
             if ($startFromId) {
                 $territory = Territory::find($startFromId);
-                if (!$territory || !$this->canAccessTerritory($user, $territory)) {
+                if (! $territory || ! $this->canAccessTerritory($user, $territory)) {
                     return errorResponse('Territory not found or access denied', 404);
                 }
 
@@ -520,10 +520,10 @@ public function show(Request $request, Territory $territory)
                 $territories = collect([$territory->load(['children.children.children.children'])]);
             } else {
                 $query = Territory::with(['children.children.children.children'])
-                                 ->where('territory_type', 'diocese');
+                    ->where('territory_type', 'diocese');
 
                 // Apply territorial access control
-                if (!$user->hasGlobalAccess()) {
+                if (! $user->hasGlobalAccess()) {
                     $accessibleTerritories = $this->getUserAccessibleTerritories($user);
                     $query->whereIn('id', $accessibleTerritories->pluck('id'));
                 }
@@ -544,7 +544,7 @@ public function show(Request $request, Territory $territory)
         } catch (\Exception $e) {
             Log::error('Failed to retrieve territory hierarchy', [
                 'user_id' => auth()->id(),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to retrieve territory hierarchy', $e->getMessage());
@@ -567,7 +567,7 @@ public function show(Request $request, Territory $territory)
                 return validationErrorResponse($validator->errors());
             }
 
-           $user = $request->user();
+            $user = $request->user();
             $type = $request->query('type');
             $parentId = $request->query('parent_id');
             $activeOnly = $request->query('active_only', true);
@@ -583,7 +583,7 @@ public function show(Request $request, Territory $territory)
             }
 
             // Apply territorial access control
-            if (!$user->hasGlobalAccess()) {
+            if (! $user->hasGlobalAccess()) {
                 $accessibleTerritories = $this->getUserAccessibleTerritories($user);
                 $query->whereIn('id', $accessibleTerritories->pluck('id'));
             }
@@ -612,7 +612,7 @@ public function show(Request $request, Territory $territory)
             Log::error('Failed to retrieve territories by type', [
                 'user_id' => auth()->id(),
                 'type' => $request->query('type'),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to retrieve territories by type', $e->getMessage());
@@ -660,6 +660,7 @@ public function show(Request $request, Territory $territory)
         }
 
         $accessibleTerritories = $this->getUserAccessibleTerritories($user);
+
         return $accessibleTerritories->contains('id', $territory->id);
     }
 
@@ -686,12 +687,12 @@ public function show(Request $request, Territory $territory)
      */
     private function validateTerritorialHierarchy($type, $parentId, $excludeId = null): bool
     {
-        if (!$parentId) {
+        if (! $parentId) {
             return $type === 'diocese'; // Only diocese can have no parent
         }
 
         $parent = Territory::find($parentId);
-        if (!$parent) {
+        if (! $parent) {
             return false;
         }
 
@@ -721,11 +722,12 @@ public function show(Request $request, Territory $territory)
     {
         $prefix = strtoupper(substr($type, 0, 3));
         $lastTerritory = Territory::where('territory_type', $type)
-                                ->orderBy('id', 'desc')
-                                ->first();
+            ->orderBy('id', 'desc')
+            ->first();
 
         $number = $lastTerritory ? ($lastTerritory->id + 1) : 1;
-        return $prefix . str_pad($number, 4, '0', STR_PAD_LEFT);
+
+        return $prefix.str_pad($number, 4, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -743,7 +745,7 @@ public function show(Request $request, Territory $territory)
         ];
 
         if ($territory->children->isNotEmpty()) {
-            $data['children'] = $territory->children->map(function($child) {
+            $data['children'] = $territory->children->map(function ($child) {
                 return $this->buildTerritoryTree($child);
             });
         }

@@ -36,7 +36,7 @@ final class ReportGenerator
         }
 
         $run->forceFill(['status' => ReportRun::STATUS_RUNNING, 'started_at' => now()])->save();
-        $run->stage('Collecting approved submissions', 15);
+        $run->stage('Collecting the figures', 15);
 
         $context = $this->contextFor($run);
         $data = $report->build($context);
