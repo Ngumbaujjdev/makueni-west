@@ -290,6 +290,23 @@
   }
 
   /**
+   * Everything the Attendance Analytics page shows (AttendanceData on the
+   * API): filters {fiscal_year_id: id|"all", month: 1-12}.
+   */
+  async function getAttendanceAnalytics(territoryId, filters = {}) {
+    try {
+      const params = new URLSearchParams({ territory_id: territoryId, ...filters });
+      const response = await fetch(`${API_BASE}/attendance-reports/analytics?${params.toString()}`, {
+        method: Constants.HTTP_METHODS.GET,
+        headers: getHeaders(),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
+  /**
    * Streams the branded PDF export from GET /attendance-reports/export-pdf.
    * Not routed through handleResponse() - that assumes a JSON body, and
    * this endpoint returns a raw PDF binary - so this returns the Blob
@@ -560,6 +577,7 @@
     createAttendance,
     updateAttendance,
     getAttendanceReportWidgets,
+    getAttendanceAnalytics,
     exportAttendanceReportPdf,
     exportAttendanceReportExcel,
     getDemographicsReportWidgets,

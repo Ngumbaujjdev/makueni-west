@@ -380,6 +380,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Attendance Reports - tabbed dashboard stat cards/charts/breakdown (read-only, computed server-side)
     Route::prefix('attendance-reports')->group(function () {
         Route::get('/widgets', [AttendanceReportController::class, 'widgets']);
+        Route::get('/analytics', [AttendanceReportController::class, 'analytics']);               // Attendance Analytics page (AttendanceData)
         Route::get('/export-pdf', [AttendanceReportController::class, 'exportPdf']);
         Route::get('/export-excel', [AttendanceReportController::class, 'exportExcel']);
     });

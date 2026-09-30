@@ -9,6 +9,8 @@ use App\Models\FiscalYear;
 use App\Models\GatheringCategory;
 use App\Models\GatheringType;
 use App\Models\Territory;
+use App\Reports\Attendance\AttendanceData;
+use App\Reports\Attendance\AttendancePeriod;
 use App\Services\AttendanceReportWidgetService;
 use App\Services\Pdf\AttendanceSummaryPdfReport;
 use Illuminate\Http\JsonResponse;
@@ -67,6 +69,60 @@ class AttendanceReportController extends Controller
             'status' => 200,
             'message' => 'Attendance report widgets retrieved successfully',
             'data' => $this->widgets->widgetsFor($territoryId, $category, $year, $month),
+        ]);
+    }
+
+    /**
+     * Everything the Attendance Analytics page shows for one church and
+     * period (a fiscal year, a month of it, or fiscal_year_id=all): the
+     * summary strip, the Sunday / Ministries / Events / Children tabs and
+     * (month narrows a year to one month: fiscal_month_id or month=1-12)
+     * their insights - built by AttendanceData, the same numbers the
+     * attendance PDF and Excel reports use.
+     */
+    public function analytics(Request $request): JsonResponse
+    {
+        $territoryId = (int) $request->query('territory_id');
+        if (! $territoryId || ! $this->userOwnsChurch($request->user(), $territoryId)) {
+            return response()->json([
+                'success' => false,
+                'status' => 403,
+                'message' => 'You do not have access to this church\'s attendance.',
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'fiscal_year_id' => ['required', function ($attribute, $value, $fail) {
+                if ($value !== 'all' && ! FiscalYear::whereKey($value)->exists()) {
+                    $fail('Choose a year, or all time.');
+                }
+            }],
+            'fiscal_month_id' => 'nullable|exists:fiscal_months,id',
+            'month' => 'nullable|integer|between:1,12',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'status' => 422,
+                'message' => 'Validation error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $yearId = $request->query('fiscal_year_id');
+        // A month by id, or by number (1-12) - the page only knows the number.
+        $monthId = match (true) {
+            $yearId === 'all' => null,
+            $request->filled('fiscal_month_id') => (int) $request->query('fiscal_month_id'),
+            $request->filled('month') => FiscalMonth::where('number', (int) $request->query('month'))->value('id'),
+            default => null,
+        };
+        $period = AttendancePeriod::resolve($yearId === 'all' ? 'all' : (int) $yearId, $monthId, [$territoryId]);
+
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'data' => (new AttendanceData([$territoryId], $period))->analytics(),
         ]);
     }
 

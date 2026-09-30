@@ -37,6 +37,14 @@ final class GenderBalanceRule implements InsightRule
             'Look at what keeps boys coming - activities and male teachers they relate to.');
     }
 
+    /** Boys and girls at an average Sunday (facts `latest` holds the averages). */
+    public static function sundayChildren(): self
+    {
+        return new self('children_male_count', 'children_female_count', 'Boys', 'Girls', 'children on Sundays',
+            'Look at what keeps girls coming - Sunday school activities and teachers they relate to.',
+            'Look at what keeps boys coming - Sunday school activities and male teachers they relate to.');
+    }
+
     public function evaluate(ReportFacts $facts): ?Insight
     {
         $latest = $facts->get('latest');
