@@ -34009,3 +34009,124 @@ button.record-nav-btn:hover {
     position: static;
   }
 }
+
+/* Budgets 1b - the year at a glance (a tile per month) and the form's
+   month/year chips, in the Demographics look. */
+.budget-month-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+  gap: 0.75rem;
+}
+.budget-month-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.75rem;
+  background: var(--custom-white);
+  color: var(--v2-heading);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+a.budget-month-tile:hover {
+  border-color: rgb(var(--primary-rgb));
+  box-shadow: 0 0.25rem 0.9rem rgba(var(--primary-rgb), 0.12);
+  color: var(--v2-heading);
+}
+.budget-month-tile.is-wide {
+  grid-column: 1 / -1;
+}
+.budget-month-tile.is-empty {
+  border-style: dashed;
+  background: transparent;
+}
+.budget-month-tile.is-now {
+  border-color: rgb(var(--primary-rgb));
+}
+.budget-month-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.budget-month-figure {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.budget-month-tile.is-empty .budget-month-figure {
+  color: var(--v2-heading);
+  font-weight: 600;
+}
+.budget-month-sub {
+  font-size: 0.78rem;
+}
+.budget-month-link {
+  margin-top: auto;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.budget-period-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: 0.5rem;
+}
+.budget-period-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.6rem;
+  background: var(--custom-white);
+  color: var(--v2-heading);
+  font-weight: 600;
+  text-align: start;
+}
+.budget-period-chip small {
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+.budget-period-chip:hover {
+  border-color: rgb(var(--primary-rgb));
+}
+.budget-period-chip.is-selected {
+  border-color: rgb(var(--primary-rgb));
+  background: rgb(var(--primary-rgb));
+  color: #fff;
+}
+.budget-period-chip.is-taken {
+  border-style: dashed;
+}
+.budget-period-chip.is-whole {
+  grid-column: span 2;
+}
+.budget-last-time {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.74rem;
+  text-align: end;
+}
+.budget-facts li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px dashed var(--default-border);
+  color: var(--v2-heading);
+}
+.budget-facts li:last-child {
+  border-bottom: 0;
+}
+@media (max-width: 575.98px) {
+  .budget-month-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+  .budget-month-tile {
+    padding: 0.7rem 0.75rem;
+  }
+  .budget-month-figure {
+    font-size: 0.95rem;
+  }
+}

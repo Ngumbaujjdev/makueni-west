@@ -280,7 +280,8 @@ const DemographicsUI = (function () {
     const spark = series
       ? `<div class="kpi-spark" data-spark='${JSON.stringify(series).replace(/'/g, "&#39;")}' data-spark-color="${color}" data-spark-height="36"></div>`
       : "";
-    const isNumber = /^[-\d.,:%\sKES]+$|^\d+ of \d+$/.test(String(value));
+    // Numbers, money ("KES 2.5M", "KES 415K") and "3 of 12" get the big figure style.
+    const isNumber = /^[-\d.,:%\sKESM]+$|^\d+ of \d+$/.test(String(value));
     const deltaHtml = delta
       ? `<span class="kpi-delta is-${delta.dir}"><i class="ri-arrow-${delta.dir === "down" ? "down" : delta.dir === "up" ? "up" : "right"}-${delta.dir === "flat" ? "line" : "s-fill"}"></i>${delta.text}</span>`
       : "";
@@ -413,7 +414,9 @@ const DemographicsUI = (function () {
    * @returns ApexCharts instance (or null)
    */
   /** centerValue: the figure in the middle when it isn't simply the sum (an average of rounded parts can be off by one). */
-  function renderRingDonut(containerId, { labels, series, colors = null, centerLabel = "Total", focus = -1, centerValue = null } = {}) {
+  // `format` turns a value into text (default: a plain number) - money pages pass their own.
+  function renderRingDonut(containerId, { labels, series, colors = null, centerLabel = "Total", focus = -1, centerValue = null, format = null } = {}) {
+    const fmt = format || ((v) => Number(v).toLocaleString());
     const container = document.getElementById(containerId);
     if (!container || typeof ApexCharts === "undefined") return null;
     const names = colors || ["primary", "secondary", "success", "purple", "pink", "danger"];
@@ -434,7 +437,7 @@ const DemographicsUI = (function () {
               return `
                 <div class="ring-donut-item${i === focus ? " is-focus" : ""}">
                   <div class="ring-donut-name"><span class="count-dot bg-${names[i % names.length]}"></span>${l}</div>
-                  <div class="ring-donut-value">${v.toLocaleString()} <span>${pctText(v)}</span></div>
+                  <div class="ring-donut-value">${fmt(v)} <span>${pctText(v)}</span></div>
                 </div>`;
             })
             .join("")}
@@ -465,7 +468,7 @@ const DemographicsUI = (function () {
                 label: focused ? `${labels[focus]} · ${pctText(Number(series[focus]) || 0)}` : centerLabel,
                 fontSize: "13px",
                 color: text,
-                formatter: () => (focused ? Number(series[focus]) || 0 : centerValue ?? total).toLocaleString(),
+                formatter: () => fmt(focused ? Number(series[focus]) || 0 : centerValue ?? total),
               },
             },
           },
@@ -485,13 +488,14 @@ const DemographicsUI = (function () {
    * @param {string} containerId - a card-body (or any container)
    * @param {object} opts {total, totalLabel, delta (periodDelta/trend-like {dir,text,caption}), items: [{label, value, color}]}
    */
-  function renderCompositionCard(containerId, { total, totalLabel = "", delta = null, items = [] } = {}) {
+  function renderCompositionCard(containerId, { total, totalLabel = "", delta = null, items = [], format = null } = {}) {
     const container = document.getElementById(containerId);
     if (!container) return;
+    const fmt = format || ((v) => Number(v).toLocaleString());
     const sum = items.reduce((a, it) => a + (Number(it.value) || 0), 0);
     container.innerHTML = `
       <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-        <span class="composition-total">${total != null ? Number(total).toLocaleString() : "-"}</span>
+        <span class="composition-total">${total != null ? fmt(total) : "-"}</span>
         ${delta ? `<span class="soft-chip soft-${delta.dir === "down" ? "danger" : delta.dir === "up" ? "success" : "primary"}"><i class="ri-arrow-${delta.dir === "down" ? "down" : delta.dir === "up" ? "up" : "right"}-line me-1"></i>${delta.text}</span>` : ""}
         <span class="kpi-caption">${delta ? delta.caption : totalLabel}</span>
       </div>
@@ -504,7 +508,7 @@ const DemographicsUI = (function () {
             (it) => `
           <li>
             <span class="composition-name"><span class="count-dot bg-${it.color}"></span>${it.label}</span>
-            <span class="composition-value">${(Number(it.value) || 0).toLocaleString()} <span>${sum ? Math.round(((Number(it.value) || 0) / sum) * 100) : 0}%</span></span>
+            <span class="composition-value">${fmt(Number(it.value) || 0)} <span>${sum ? Math.round(((Number(it.value) || 0) / sum) * 100) : 0}%</span></span>
           </li>`,
           )
           .join("")}
@@ -710,7 +714,8 @@ const DemographicsUI = (function () {
    *   `colors` would render every line in the same hue, which is the bug
    *   this param exists to prevent.
    */
-  function renderTrendChart(containerId, { categories, series, type = "area", color = "primary", colors = null, stacked = false } = {}) {
+  // `yFormat` formats the value axis and tooltips (default: whole numbers) - e.g. money.
+  function renderTrendChart(containerId, { categories, series, type = "area", color = "primary", colors = null, stacked = false, yFormat = null } = {}) {
     const el = document.getElementById(containerId);
     if (!el || typeof ApexCharts === "undefined") return null;
     const hex = brandHex(color);
@@ -737,7 +742,8 @@ const DemographicsUI = (function () {
       },
       colors: colors || [hex],
       // People and events are whole numbers - no "0.7" axis ticks.
-      yaxis: { forceNiceScale: true, labels: { formatter: (v) => (v == null ? v : Math.round(v).toLocaleString()) } },
+      yaxis: { forceNiceScale: true, labels: { formatter: (v) => (v == null ? v : yFormat ? yFormat(v) : Math.round(v).toLocaleString()) } },
+      ...(yFormat ? { tooltip: { y: { formatter: (v) => (v == null ? v : yFormat(v, true)) } } } : {}),
       dataLabels: { enabled: false },
       grid: { borderColor: hexToRgba(hex, 0.05) },
       legend: { show: series.length > 1, position: "bottom" },

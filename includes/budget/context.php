@@ -74,6 +74,7 @@ function budgetPageScripts(string $pageScript, bool $withTables = false): void
         'assets/js/simplebar.js',
         'assets/js/custom-switcher.min.js',
         'assets/js/custom.js',
+        'assets/libs/apexcharts/apexcharts.min.js',
     ];
     foreach ($base as $src) {
         echo '<script src="' . SITE_URL . "/{$src}\"></script>\n";

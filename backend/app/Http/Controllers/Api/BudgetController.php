@@ -11,6 +11,7 @@ use App\Services\Budgets\BudgetBook;
 use App\Support\BudgetAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
@@ -49,6 +50,7 @@ class BudgetController extends Controller
 
         $statsYear = $year ?? (int) now()->year;
         $ofYear = Budget::where('territory_type', $place['type'])->where('territory_id', $place['id'])->where('fiscal_year', $statsYear)->get();
+        $lastYear = Budget::where('territory_type', $place['type'])->where('territory_id', $place['id'])->where('fiscal_year', $statsYear - 1)->get();
         $years = Budget::where('territory_type', $place['type'])->where('territory_id', $place['id'])
             ->distinct()->pluck('fiscal_year')->push((int) now()->year)->unique()->sortDesc()->values();
 
@@ -59,17 +61,50 @@ class BudgetController extends Controller
             'place' => $this->placeInfo($place),
             'view_only' => ! BudgetAccess::isOwn($request->user(), $place['type'], $place['id']) && ! $request->user()->hasGlobalAccess(),
             'years' => $years,
-            'stats' => [
-                'year' => $statsYear,
-                'budgets' => $ofYear->count(),
-                'in_use' => $ofYear->where('status', 'active')->count(),
-                'drafts' => $ofYear->where('status', 'draft')->count(),
-                'in_planned' => round((float) $ofYear->sum('total_income_budgeted'), 2),
-                'out_planned' => round((float) $ofYear->sum('total_expense_budgeted'), 2),
-                'in_actual' => round((float) $ofYear->sum('total_income_actual'), 2),
-                'out_actual' => round((float) $ofYear->sum('total_expense_actual'), 2),
-            ],
+            'stats' => $this->yearStats($ofYear, $statsYear),
+            // Last year's figures, for "vs 2025" on the cards (null when there were no budgets).
+            'previous_stats' => $lastYear->isEmpty() ? null : $this->yearStats($lastYear, $statsYear - 1),
+            // Where the year's money goes / comes from: the biggest lines and the rest.
+            'top_out' => $this->topLines($ofYear->pluck('id'), 'expense'),
+            'top_in' => $this->topLines($ofYear->pluck('id'), 'income'),
         ]);
+    }
+
+    private function yearStats($budgets, int $year): array
+    {
+        return [
+            'year' => $year,
+            'budgets' => $budgets->count(),
+            'in_use' => $budgets->where('status', 'active')->count(),
+            'drafts' => $budgets->where('status', 'draft')->count(),
+            'in_planned' => round((float) $budgets->sum('total_income_budgeted'), 2),
+            'out_planned' => round((float) $budgets->sum('total_expense_budgeted'), 2),
+            'in_actual' => round((float) $budgets->sum('total_income_actual'), 2),
+            'out_actual' => round((float) $budgets->sum('total_expense_actual'), 2),
+        ];
+    }
+
+    /**
+     * The biggest lines of these budgets by planned amount - the top five
+     * and "Other" for the rest - for the "Where the money goes" donut.
+     */
+    private function topLines($budgetIds, string $slug, int $top = 5): array
+    {
+        $rows = DB::table('budget_line_items as i')
+            ->join('budget_lines as l', 'l.id', '=', 'i.budget_line_id')
+            ->join('budget_categories as c', 'c.id', '=', 'i.budget_category_id')
+            ->whereIn('i.budget_id', $budgetIds)->whereNull('i.deleted_at')->where('c.slug', $slug)
+            ->groupBy('l.id', 'l.name')
+            ->selectRaw('l.name, SUM(i.budgeted_amount) AS planned, SUM(i.actual_amount) AS actual')
+            ->orderByDesc('planned')
+            ->get();
+        $lines = $rows->take($top)->map(fn ($r) => ['name' => $r->name, 'planned' => round((float) $r->planned, 2), 'actual' => round((float) $r->actual, 2)])->values()->all();
+        $rest = $rows->slice($top);
+        if ($rest->isNotEmpty()) {
+            $lines[] = ['name' => 'Other ('.$rest->count().' lines)', 'planned' => round((float) $rest->sum('planned'), 2), 'actual' => round((float) $rest->sum('actual'), 2)];
+        }
+
+        return $lines;
     }
 
     /** What the New budget form needs: usable lines, periods already taken, and last budget's amounts to copy. */
@@ -322,6 +357,7 @@ class BudgetController extends Controller
                 'in' => $items->filter(fn ($i) => $i->budgetCategory?->slug === 'income')->map($row)->values(),
                 'out' => $items->filter(fn ($i) => $i->budgetCategory?->slug === 'expense')->map($row)->values(),
             ],
+            'previous' => $this->previousOf($budget),
             'view_only' => ! $own,
             'can' => [
                 'edit' => $own && $budget->is_editable,
@@ -330,6 +366,24 @@ class BudgetController extends Controller
                 'reopen' => $own && $budget->status === 'closed',
                 'delete' => $own && $budget->status === 'draft',
             ],
+        ];
+    }
+
+    /** The place's budget just before this one, for "vs December 2025". */
+    private function previousOf(Budget $budget): ?array
+    {
+        $previous = $this->book->previous($budget->territory_type, (int) $budget->territory_id, (int) $budget->fiscal_year, $budget->period_month);
+        if (! $previous) {
+            return null;
+        }
+
+        return [
+            'id' => $previous->id,
+            'period_label' => $previous->period_label,
+            'in_planned' => (float) $previous->total_income_budgeted,
+            'out_planned' => (float) $previous->total_expense_budgeted,
+            'left_planned' => round((float) $previous->total_income_budgeted - (float) $previous->total_expense_budgeted, 2),
+            'lines' => $previous->budgetLineItems->mapWithKeys(fn ($i) => [$i->budget_line_id => (float) $i->budgeted_amount]),
         ];
     }
 

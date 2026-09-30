@@ -73,6 +73,32 @@ $breadcrumbs = [
 
                 <div class="row" id="statCardsRow"></div>
 
+                <div class="row">
+                    <div class="col-xl-7">
+                        <div class="card custom-card">
+                            <div class="card-header justify-content-between flex-wrap gap-2">
+                                <div>
+                                    <div class="card-title">Where the money goes</div>
+                                    <span class="card-subtitle-text" id="whereSub">This budget's money out, by line</span>
+                                </div>
+                                <div id="whereSwitchWrap"></div>
+                            </div>
+                            <div class="card-body" id="whereDonut"><span class="skel" style="height: 260px; display: block;"></span></div>
+                        </div>
+                    </div>
+                    <div class="col-xl-5">
+                        <div class="card custom-card">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">This budget</div>
+                                    <span class="card-subtitle-text" id="statusSub">How far into it we are</span>
+                                </div>
+                            </div>
+                            <div class="card-body" id="statusCard"><span class="skel" style="height: 260px; display: block;"></span></div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="nav section-tabs" id="budgetTabs" role="tablist" aria-label="Budget">
                     <button class="nav-link section-tab active" data-bs-toggle="tab" data-bs-target="#tab-lines" data-tab="lines" type="button" role="tab" aria-controls="tab-lines" aria-selected="true">
                         <span class="section-tab-icon bg-primary"><i class="ri-list-check-2"></i></span>

@@ -103,14 +103,14 @@ All routes are under `auth:sanctum` and `EnsureBudgetAccess`.
 
 | Method | Path | Does |
 |---|---|---|
-| GET | `/budgets?year=&status=&search=&territory_id=` | This place's budgets, with stats. A `territory_id` below the acting place gives a read-only list. |
+| GET | `/budgets?year=&status=&search=&territory_id=` | This place's budgets, with stats. A `territory_id` below the acting place gives a read-only list. Also returns `previous_stats` (last year's totals, for "vs 2025"), and `top_out` / `top_in` (the year's five biggest lines by planned amount plus "Other", for "Where the money goes"). |
 | GET | `/budgets/form?year=&month=` | What the form needs: usable lines grouped Money in / Money out, amounts from the latest earlier budget (`copy`), periods already taken in that year. |
 | GET | `/budgets/{id}/form` | The same, for editing. |
 | POST | `/budgets` | Body `{year, month\|null, notes, lines:[{budget_line_id, amount}], start: bool}`. One transaction. Lines at 0 are left out. |
 | PUT | `/budgets/{id}` | Same body. Replaces the amounts. Sending `updated_at` returns 409 if someone saved in between. |
 | DELETE | `/budgets/{id}` | Drafts only. |
 | POST | `/budgets/{id}/start`, `/close`, `/reopen` | Status moves. |
-| GET | `/budgets/{id}` | Details: lines with planned, actual, left and % used; totals; `can: {edit, start, close, reopen, delete}`; `view_only`. |
+| GET | `/budgets/{id}` | Details: lines with planned, actual, left and % used; totals; `can: {edit, start, close, reopen, delete}`; `view_only`; `previous` (the place's budget just before, with its planned amounts per line, for "vs January 2026"). |
 | GET | `/budgets/{id}/history` | The History timeline in plain sentences. |
 
 The old approval routes (`submit`, `approve`, `reject`, `activate`) and `clone` are removed.
@@ -138,6 +138,17 @@ The old approval routes (`submit`, `approve`, `reject`, `activate`) and `clone` 
   - Lines and History tabs;
   - buttons only where allowed;
   - a "View only" banner for a place below.
+
+## Look
+
+Every budget page matches the redesigned Demographics pages (reference: `church/demographics-growth/index.php`):
+- year buttons in the toolbar;
+- KPI cards with "vs last year" or "vs last budget" and sparklines;
+- one hero chart with summary chips;
+- "Where the money goes" as a ring donut;
+- breakdown bars and a status card.
+
+The Budgets page is the year's dashboard, with "The year at a glance" as a tile per month. The form picks the period with chips and shows last time's amounts. The budget page compares every figure and line with the budget before it.
 
 ## Acceptance Criteria (phase 1)
 
