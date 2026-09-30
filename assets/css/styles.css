@@ -32863,3 +32863,497 @@ tr.list-row-flash > td {
     width: 100%;
   }
 }
+
+/* ==========================================================================
+   Attendance (2026-09-29) - church/attendance/*. The entry form (shared by
+   every attendance page, attendance-form-shared.js), Sunday chips (the
+   intake page's .period-chip with recorded / missing / upcoming states),
+   gathering cards, the overview's glance list and shortcuts, and the
+   gathering-type icon picker.
+   ========================================================================== */
+
+/* Sunday chips */
+.att-sunday-grid {
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+}
+.att-sunday-chip.is-recorded { background: rgba(var(--success-rgb), 0.06); }
+.att-sunday-chip.is-recorded .period-chip-status { color: #138a69; }
+.att-sunday-chip.is-missing { border-color: rgba(var(--danger-rgb), 0.45); background: rgba(var(--danger-rgb), 0.05); }
+.att-sunday-chip.is-missing .period-chip-status { color: #c42a2a; }
+.att-sunday-chip.is-missing:not(:disabled):hover { border-color: rgb(var(--danger-rgb)); }
+.att-sunday-chip.is-selected.is-missing,
+.att-sunday-chip.is-selected.is-recorded {
+  border-color: rgb(var(--primary-rgb));
+  background: rgba(var(--primary-rgb), 0.07);
+}
+.att-sunday-other {
+  cursor: pointer;
+  border-style: dashed;
+}
+.att-sunday-other-input {
+  width: 100%;
+  padding: 0.1rem 0.3rem;
+  border: 1px solid var(--input-border);
+  border-radius: 0.35rem;
+  background: var(--custom-white);
+  color: var(--default-text-color);
+  font-size: 0.75rem;
+}
+
+/* Entry form */
+.att-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  gap: 1.4rem;
+  align-items: start;
+}
+.att-entry-section {
+  margin-bottom: 1.25rem;
+}
+.att-entry-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--v2-heading);
+}
+.att-entry-title > span:first-child:not(.d-inline-flex),
+.att-entry-title #attendanceCountsStep {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 50%;
+  background: rgb(var(--primary-rgb));
+  color: #fff;
+  font-size: 0.75rem;
+}
+.att-date-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+.att-date-row .form-control {
+  flex: 0 1 200px;
+}
+.att-date-row[hidden],
+.att-sunday-grid[hidden],
+.att-date-fixed[hidden],
+.att-notice[hidden],
+.att-entry-section[hidden],
+#attendanceEventNameGroup[hidden] {
+  display: none;
+}
+.att-date-fixed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.6rem;
+  font-weight: 700;
+  color: var(--v2-heading);
+}
+.att-date-fixed i {
+  color: rgb(var(--primary-rgb));
+}
+.att-date-fixed span {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--default-text-color);
+}
+.att-entry .invalid-feedback {
+  margin-top: 0.4rem;
+}
+.att-notice {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.7rem;
+}
+.att-notice-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.55rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.att-notice-item > span {
+  flex: 1 1 180px;
+}
+.att-notice-item.is-primary { background: rgba(var(--primary-rgb), 0.08); color: var(--v2-heading); }
+.att-notice-item.is-primary > i { color: rgb(var(--primary-rgb)); }
+.att-notice-item.is-warning { background: rgba(var(--secondary-rgb), 0.16); color: #6b5205; }
+.att-notice-item.is-danger { background: rgba(var(--danger-rgb), 0.08); color: #b02222; }
+.att-entry .num-tile-last:empty::before {
+  content: "\00a0";
+}
+
+/* Live preview */
+.att-entry-preview {
+  position: sticky;
+  top: 0;
+  padding: 1rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.8rem;
+  background: rgba(var(--primary-rgb), 0.03);
+}
+.att-preview-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(var(--primary-rgb));
+}
+.att-preview-what {
+  margin-top: 0.15rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--v2-heading);
+}
+.att-preview-total {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  margin: 0.55rem 0 0.6rem;
+}
+.att-preview-total span {
+  font-size: 2.1rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--v2-heading);
+}
+.att-preview-total small {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--default-text-color);
+}
+.att-preview-bar {
+  height: 0.55rem;
+  margin-bottom: 0.7rem;
+}
+.att-preview-list {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0 0 0.8rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+}
+.att-preview-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--default-text-color);
+}
+.att-preview-list b {
+  color: var(--v2-heading);
+}
+.att-preview-list small {
+  margin-inline-start: 0.3rem;
+  font-weight: 600;
+  color: var(--default-text-color);
+}
+.att-preview-compare {
+  display: grid;
+  gap: 0.35rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--default-border);
+}
+.att-compare-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--default-text-color);
+}
+.att-compare-row small {
+  display: block;
+  font-size: 0.7rem;
+}
+.att-compare-row b {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--v2-heading);
+}
+.att-compare-warn {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.5rem;
+  background: rgba(var(--secondary-rgb), 0.16);
+  color: #6b5205;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+/* Page pieces */
+.att-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(var(--secondary-rgb), 0.45);
+  border-radius: 0.75rem;
+  background: rgba(var(--secondary-rgb), 0.1);
+}
+.att-banner > div {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 240px;
+  font-size: 0.82rem;
+}
+.att-banner strong {
+  color: var(--v2-heading);
+}
+.att-banner-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 0.55rem;
+  font-size: 1.1rem;
+}
+.att-empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--default-text-color);
+}
+.att-year-select {
+  min-width: 110px;
+}
+.att-row-missing > td {
+  background: rgba(var(--danger-rgb), 0.035) !important;
+}
+.att-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.7rem;
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  color: var(--default-text-color);
+}
+.fc-sunday-highlight {
+  background-color: rgba(var(--primary-rgb), 0.06);
+}
+.fc .fc-sunday-missing {
+  background-color: rgba(var(--danger-rgb), 0.1);
+}
+.att-calendar .fc-daygrid-day.fc-sunday-highlight {
+  cursor: pointer;
+}
+
+/* A four-item ring legend (Adults / Youth / Boys / Girls) reads as 2 x 2, not 3 + 1. */
+.ring-donut-legend:has(> .ring-donut-item:nth-child(4):last-child) {
+  grid-template-columns: repeat(2, 1fr);
+}
+.ring-donut-legend:has(> .ring-donut-item:nth-child(4):last-child) .ring-donut-item:nth-child(2n) {
+  border-inline-end: 0;
+}
+.ring-donut-legend:has(> .ring-donut-item:nth-child(4):last-child) .ring-donut-item:nth-child(-n + 2) {
+  border-bottom: 1px solid var(--default-border);
+}
+
+/* Gathering cards (Ministries / Special Events) */
+.gathering-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  width: 100%;
+  height: 100%;
+  padding: 0.9rem;
+  border: 1.5px solid var(--default-border);
+  border-radius: 0.8rem;
+  background: var(--custom-white);
+  text-align: start;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.gathering-card:hover {
+  border-color: rgba(var(--primary-rgb), 0.55);
+}
+.gathering-card.is-active {
+  border-color: rgb(var(--primary-rgb));
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.15);
+}
+.gathering-card-top {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+.gathering-card-name {
+  display: -webkit-box;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--v2-heading);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.gathering-card-status {
+  align-self: flex-start;
+  margin-inline-start: auto;
+}
+.gathering-card-stats {
+  display: flex;
+  gap: 1.2rem;
+  font-size: 0.75rem;
+  color: var(--default-text-color);
+}
+.gathering-card-stats b {
+  display: block;
+  font-size: 1.15rem;
+  line-height: 1.2;
+  color: var(--v2-heading);
+}
+.gathering-card-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: auto;
+  font-size: 0.75rem;
+  color: var(--default-text-color);
+}
+.gathering-card-spark {
+  flex: 0 0 90px;
+  width: 90px;
+}
+.gathering-card-skel {
+  display: block;
+  height: 8.5rem;
+  border-radius: 0.8rem;
+}
+
+/* Overview: ministries at a glance + shortcuts */
+.att-glance {
+  display: grid;
+  gap: 0.2rem;
+}
+.att-glance-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.5rem;
+  border-radius: 0.6rem;
+  color: inherit;
+}
+.att-glance-item:hover {
+  background: rgba(var(--primary-rgb), 0.05);
+}
+.att-glance-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.att-glance-text strong {
+  color: var(--v2-heading);
+}
+.att-glance-text small {
+  font-size: 0.76rem;
+  color: var(--default-text-color);
+}
+.att-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+.att-shortcut {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.75rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.75rem;
+  color: inherit;
+  transition: border-color 0.15s;
+}
+.att-shortcut:hover {
+  border-color: rgb(var(--primary-rgb));
+}
+.att-shortcut > span:last-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.att-shortcut strong {
+  color: var(--v2-heading);
+}
+.att-shortcut small {
+  font-size: 0.75rem;
+  color: var(--default-text-color);
+}
+
+/* Gathering type icon picker */
+.icon-pick-current {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.4rem;
+}
+.icon-picker {
+  padding: 0.75rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.75rem;
+}
+.icon-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2.6rem, 1fr));
+  gap: 0.4rem;
+  max-height: 11rem;
+  margin-top: 0.65rem;
+  overflow-y: auto;
+}
+.icon-pick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.6rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.55rem;
+  background: var(--custom-white);
+  color: var(--v2-heading);
+  font-size: 1.2rem;
+}
+.icon-pick:hover {
+  border-color: rgb(var(--primary-rgb));
+  color: rgb(var(--primary-rgb));
+}
+.icon-pick.is-selected {
+  border-color: rgb(var(--primary-rgb));
+  background: rgb(var(--primary-rgb));
+  color: #fff;
+}
+
+@media (max-width: 991.98px) {
+  .att-entry {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .att-entry-preview {
+    position: static;
+  }
+}
+@media (max-width: 575.98px) {
+  .att-sunday-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .gathering-card-spark {
+    flex-basis: 70px;
+    width: 70px;
+  }
+}

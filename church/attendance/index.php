@@ -30,12 +30,13 @@ $breadcrumbs = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title>Attendance - Makueni West Diocese</title>
-    <meta name="Description" content="Church attendance overview and entry settings" />
+    <meta name="Description" content="Sunday services, ministries and events at a glance" />
 
     <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico" type="image/x-icon" />
 
     <script src="<?= SITE_URL ?>/assets/js/main.js"></script>
     <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/select2/select2.min.css" />
     <link href="<?= SITE_URL ?>/assets/css/styles.min.css<?= assetVersion('assets/css/styles.min.css') ?>" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
@@ -65,60 +66,98 @@ $breadcrumbs = [
 
                 <?php include __DIR__ . '/../../includes/page-header.php' ?>
 
-                <div class="row g-3 mb-3" id="statCardsRow">
-                    <!-- Stat cards injected by attendance-index.js -->
+                <div class="page-toolbar">
+                    <div class="page-toolbar-sub">Sunday services, ministries and events at <?= htmlspecialchars($userTerritoryName) ?></div>
+                    <div class="page-toolbar-controls">
+                        <a href="<?= SITE_URL ?>/church/attendance/reports" class="btn btn-outline-primary"><i class="ri-bar-chart-box-line me-1"></i>Analytics</a>
+                        <?php if ($canEnter): ?>
+                        <button type="button" class="btn btn-primary" id="recordSundayBtn"><i class="ri-add-line me-1"></i>Record Sunday</button>
+                        <?php endif; ?>
+                    </div>
                 </div>
 
-                <div class="row g-3">
-                    <div class="col-xl-4">
+                <div class="row" id="statCardsRow"></div>
+
+                <div class="row">
+                    <div class="col-xl-8">
                         <div class="card custom-card">
-                            <div class="card-header">
-                                <div class="card-title"><i class="ri-settings-3-line me-2 text-primary"></i>Entry Mode</div>
-                            </div>
-                            <div class="card-body" id="entryModeCard">
-                                <div class="text-center py-3">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Loading...</span>
-                                    </div>
+                            <div class="card-header justify-content-between flex-wrap gap-2">
+                                <div>
+                                    <div class="card-title">Sunday attendance</div>
+                                    <span class="card-subtitle-text">The last 12 Sundays recorded, by group</span>
                                 </div>
+                                <div class="d-flex flex-wrap gap-1" id="trendChips"></div>
+                            </div>
+                            <div class="card-body">
+                                <div id="sundayTrendChart"></div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-xl-8">
+                    <div class="col-xl-4">
                         <div class="card custom-card">
                             <div class="card-header">
-                                <div class="card-title"><i class="ri-links-line me-2 text-primary"></i>Quick Links</div>
-                            </div>
-                            <div class="card-body">
-                                <div class="row g-3">
-                                    <div class="col-md-4">
-                                        <a href="<?= SITE_URL ?>/church/attendance/services" class="btn btn-primary w-100 py-3 position-relative">
-                                            <span class="badge bg-white text-primary position-absolute top-0 end-0 mt-1 me-1 fs-10">Primary &middot; Weekly</span>
-                                            <i class="ri-calendar-2-line fs-20 d-block mb-1"></i>Sunday Services
-                                        </a>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <a href="<?= SITE_URL ?>/church/attendance/ministries" class="btn btn-outline-primary w-100 py-3">
-                                            <i class="ri-group-line fs-20 d-block mb-1"></i>Ministry Gatherings
-                                        </a>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <a href="<?= SITE_URL ?>/church/attendance/events" class="btn btn-outline-primary w-100 py-3">
-                                            <i class="ri-star-line fs-20 d-block mb-1"></i>Special Events
-                                        </a>
-                                    </div>
-                                    <div class="col-md-8">
-                                        <a href="<?= SITE_URL ?>/church/attendance/reports" class="btn btn-light w-100">
-                                            <i class="ri-bar-chart-line me-1"></i>View Attendance Reports
-                                        </a>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <a href="<?= SITE_URL ?>/church/settings/attendance-settings/gathering-types" class="btn btn-light w-100">
-                                            <i class="ri-settings-3-line me-1"></i>Gathering Types
-                                        </a>
-                                    </div>
+                                <div>
+                                    <div class="card-title">Who attends</div>
+                                    <span class="card-subtitle-text" id="whoAttendsSubtitle">Average Sunday</span>
                                 </div>
                             </div>
+                            <div class="card-body">
+                                <div id="whoAttendsDonut"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-xl-7">
+                        <div class="card custom-card">
+                            <div class="card-header justify-content-between">
+                                <div>
+                                    <div class="card-title">Ministries &amp; events</div>
+                                    <span class="card-subtitle-text" id="glanceSub">Most met first</span>
+                                </div>
+                                <a href="<?= SITE_URL ?>/church/attendance/ministries" class="fs-12 fw-semibold">All ministries <i class="ri-arrow-right-line ms-1"></i></a>
+                            </div>
+                            <div class="card-body">
+                                <div class="att-glance" id="glanceList"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-5">
+                        <div class="card custom-card">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title" id="monthSundaysTitle">This month's Sundays</div>
+                                    <span class="card-subtitle-text" id="monthSundaysSub"></span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="period-grid att-sunday-grid" id="monthSundays"></div>
+                            </div>
+                        </div>
+                        <div class="card custom-card">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">How we record</div>
+                                    <span class="card-subtitle-text">Choose what suits this church</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="entryModeSwitch"></div>
+                                <p class="fs-13 mt-2 mb-0" id="entryModeText"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card custom-card">
+                    <div class="card-body">
+                        <div class="att-shortcuts">
+                            <a href="<?= SITE_URL ?>/church/attendance/services" class="att-shortcut"><span class="avatar bg-primary text-white"><i class="ri-sun-line"></i></span><span><strong>Sunday services</strong><small>Every Sunday, recorded or not</small></span></a>
+                            <a href="<?= SITE_URL ?>/church/attendance/ministries" class="att-shortcut"><span class="avatar bg-success text-white"><i class="ri-group-line"></i></span><span><strong>Ministry gatherings</strong><small>Fellowships, prayer, choir</small></span></a>
+                            <a href="<?= SITE_URL ?>/church/attendance/events" class="att-shortcut"><span class="avatar bg-purple text-white"><i class="ri-star-line"></i></span><span><strong>Special events</strong><small>Crusades, baptisms, dedications</small></span></a>
+                            <a href="<?= SITE_URL ?>/church/attendance/reports" class="att-shortcut"><span class="avatar bg-secondary text-dark"><i class="ri-bar-chart-box-line"></i></span><span><strong>Analytics</strong><small>Trends, coverage, insights</small></span></a>
+                            <a href="<?= SITE_URL ?>/church/settings/attendance-settings/gathering-types" class="att-shortcut"><span class="avatar bg-pink text-white"><i class="ri-list-settings-line"></i></span><span><strong>Gathering types</strong><small>Your ministries and events</small></span></a>
                         </div>
                     </div>
                 </div>
@@ -146,8 +185,11 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
 
     <script src="<?= SITE_URL ?>/assets/libs/apexcharts/apexcharts.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/select2/select2.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js<?= assetVersion('assets/js/pages/demographics/api-handler.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js<?= assetVersion('assets/js/pages/demographics/ui-helpers.js') ?>"></script>
+    <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-form-shared.js<?= assetVersion('assets/js/pages/demographics/attendance-form-shared.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-index.js<?= assetVersion('assets/js/pages/demographics/attendance-index.js') ?>"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => window.AttendanceOverview.init());

@@ -747,7 +747,8 @@ const DemographicsUI = (function () {
       // out fully solid), so the transparency goes into the fill colour and
       // the line and markers keep the solid one.
       const solid = options.colors;
-      options.colors = solid.map((c) => withAlpha(c, 0.18));
+      options.chart.stacked = stacked;
+      options.colors = solid.map((c) => withAlpha(c, stacked ? 0.35 : 0.18));
       options.stroke = { curve: "smooth", width: 2.5, colors: solid };
       options.markers = { size: 4, colors: solid, strokeWidth: 0 };
       options.fill = { type: "solid" };

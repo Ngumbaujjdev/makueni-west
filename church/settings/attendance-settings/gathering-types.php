@@ -75,29 +75,32 @@ $breadcrumbs = [
                     listed here since it doesn't use a gathering type.
                 </div>
 
-                <div class="row g-3 mb-3" id="statCardsRow">
-                    <!-- Stat cards injected by attendance-gathering-types.js -->
-                </div>
+                <div class="row" id="statCardsRow"></div>
 
                 <div class="card custom-card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <div class="card-title"><i class="ri-list-check-2 me-2 text-primary"></i>Gathering Types</div>
+                    <div class="card-header justify-content-between flex-wrap gap-2">
+                        <div>
+                            <div class="card-title">Gathering types</div>
+                            <span class="card-subtitle-text">What people choose from when recording a ministry gathering or special event</span>
+                        </div>
                         <?php if ($canWrite): ?>
-                        <button type="button" class="btn btn-primary btn-wave" id="addGatheringTypeBtn">
-                            <i class="ri-add-line me-1"></i>Add Gathering Type
+                        <button type="button" class="btn btn-primary" id="addGatheringTypeBtn">
+                            <i class="ri-add-line me-1"></i>Add gathering type
                         </button>
                         <?php endif; ?>
                     </div>
                     <div class="card-body p-0">
-                        <div class="px-3 pt-3" id="filterToolbar"></div>
+                        <div id="filterToolbar" class="list-filterbar-wrap"></div>
                         <div class="table-responsive">
                             <table class="table table-hover mb-0" id="gatheringTypesTable">
-                                <thead class="table-light">
+                                <thead>
                                     <tr>
-                                        <th class="fw-semibold text-dark">Name</th>
-                                        <th class="fw-semibold text-dark">Category</th>
-                                        <th class="fw-semibold text-dark text-center">Status</th>
-                                        <th class="fw-semibold text-dark text-end">Action</th>
+                                        <th>Name</th>
+                                        <th>Category</th>
+                                        <th class="d-none d-md-table-cell">Met this year</th>
+                                        <th class="d-none d-md-table-cell">Last held</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="gatheringTypesTableBody">
@@ -116,7 +119,7 @@ $breadcrumbs = [
 
     <!-- Create/Edit Gathering Type Modal -->
     <div class="modal fade app-modal" id="gatheringTypeModal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="gatheringTypeModalTitle">
-        <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable modal-fullscreen-sm-down">
             <div class="modal-content">
                 <div class="modal-header">
                     <span class="app-modal-icon" id="gatheringTypeModalIcon"><i class="ri-calendar-event-line"></i></span>
@@ -142,12 +145,21 @@ $breadcrumbs = [
                             <div class="invalid-feedback">Choose a category.</div>
                         </div>
                         <div class="col-md-6">
-                            <label for="gatheringTypeIcon" class="form-label">Icon <span class="fw-normal text-muted">(optional)</span></label>
-                            <div class="input-group">
-                                <span class="input-group-text" id="gatheringTypeIconPreview"><i class="ri-calendar-event-line"></i></span>
-                                <input type="text" class="form-control" id="gatheringTypeIcon" placeholder="e.g. ri-moon-line">
+                            <label class="form-label">Icon</label>
+                            <div class="icon-pick-current">
+                                <span class="avatar bg-primary text-white" id="gatheringTypeIconPreview"><i class="ri-calendar-event-line"></i></span>
+                                <span class="fs-12" id="gatheringTypeIconName">Pick one below</span>
                             </div>
-                            <div class="field-hint mt-1">A Remix Icon class - browse at remixicon.com</div>
+                            <input type="hidden" id="gatheringTypeIcon">
+                        </div>
+                        <div class="col-12">
+                            <div class="icon-picker">
+                                <div class="list-search">
+                                    <i class="ri-search-line"></i>
+                                    <input type="search" class="form-control" id="iconPickerSearch" placeholder="Search icons - prayer, music, youth, bible..." autocomplete="off">
+                                </div>
+                                <div class="icon-picker-grid" id="iconPickerGrid" role="radiogroup" aria-label="Icon"></div>
+                            </div>
                         </div>
                         <div class="col-12">
                             <div class="appearance-toggle-row border rounded-3 px-3">

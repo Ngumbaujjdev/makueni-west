@@ -14,12 +14,12 @@ $currentRole = getCurrentRole();
 $userTerritoryId = $currentRole['territory_id'] ?? null;
 $userTerritoryName = $currentRole['territory']['name'] ?? 'Your Church';
 
-$pageTitle = 'Sunday Service Attendance';
-$pageIcon = 'ri-calendar-2-line';
+$pageTitle = 'Sunday Services';
+$pageIcon = 'ri-sun-line';
 $breadcrumbs = [
     'Home' => SITE_URL . '/church/dashboard',
     'Attendance' => SITE_URL . '/church/attendance',
-    'Sunday Service Attendance' => null,
+    'Sunday Services' => null,
 ];
 ?>
 <!DOCTYPE html>
@@ -30,28 +30,20 @@ $breadcrumbs = [
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>Sunday Service Attendance - Makueni West Diocese</title>
-    <meta name="Description" content="Click a Sunday to record that week's service attendance" />
+    <title>Sunday Services - Makueni West Diocese</title>
+    <meta name="Description" content="Every Sunday's attendance - recorded, missed and upcoming" />
 
     <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico" type="image/x-icon" />
 
     <script src="<?= SITE_URL ?>/assets/js/main.js"></script>
     <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/select2/select2.min.css" />
     <link href="<?= SITE_URL ?>/assets/css/styles.min.css<?= assetVersion('assets/css/styles.min.css') ?>" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/css/icons.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/node-waves/waves.min.css" rel="stylesheet" />
     <link href="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/styles/choices.min.css" />
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css" />
     <link href="<?= SITE_URL ?>/assets/libs/fullcalendar/main.min.css" rel="stylesheet" />
-
-    <!-- Sunday-highlight UX: FullCalendar's day-cell background isn't
-         reachable with Bootstrap utility classes, so this one rule is a
-         justified exception to the "reach for Bootstrap first" rule. -->
-    <style>
-        .fc-sunday-highlight {
-            background-color: rgba(var(--primary-rgb), 0.08);
-        }
-    </style>
 
     <script>
         const USER_TERRITORY = {
@@ -77,45 +69,84 @@ $breadcrumbs = [
 
                 <?php include __DIR__ . '/../../includes/page-header.php' ?>
 
+                <div class="page-toolbar">
+                    <div class="page-toolbar-sub">Every Sunday at <?= htmlspecialchars($userTerritoryName) ?> - recorded, missed and coming up</div>
+                    <div class="page-toolbar-controls">
+                        <div class="seg-control" id="viewSwitch" role="tablist" aria-label="View">
+                            <button type="button" class="seg-btn active" data-value="list"><i class="ri-list-check-2 me-1"></i>List</button>
+                            <button type="button" class="seg-btn" data-value="calendar"><i class="ri-calendar-2-line me-1"></i>Calendar</button>
+                        </div>
+                        <?php if ($canWrite): ?>
+                        <button type="button" class="btn btn-primary" id="recordNextBtn"><i class="ri-add-line me-1"></i>Record Sunday</button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
                 <div id="entryModeBanner"></div>
 
                 <div class="row" id="statCardsRow"></div>
 
-                <div class="row g-3">
+                <div class="row">
                     <div class="col-xl-8">
                         <div class="card custom-card">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <div class="card-title"><i class="ri-calendar-2-line me-2 text-primary"></i>Click a Sunday to Record Attendance</div>
-                                <?php if ($canWrite): ?>
-                                <button type="button" class="btn btn-primary btn-wave" id="addAttendanceBtn">
-                                    <i class="ri-add-line me-1"></i>Add Attendance
-                                </button>
-                                <?php endif; ?>
+                            <div class="card-header justify-content-between flex-wrap gap-2">
+                                <div>
+                                    <div class="card-title">Sundays</div>
+                                    <span class="card-subtitle-text" id="sundayListSubtitle">Loading...</span>
+                                </div>
+                                <div class="att-year-select">
+                                    <select id="sundayYear" aria-label="Year"></select>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <div id="attendanceCalendar"></div>
+                            <div class="card-body p-0" id="listView">
+                                <div id="sundayFilterToolbar" class="list-filterbar-wrap"></div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0" id="sundayTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Sunday</th>
+                                                <th>Status</th>
+                                                <th class="d-none d-md-table-cell">Adults</th>
+                                                <th class="d-none d-md-table-cell">Youth</th>
+                                                <th class="d-none d-md-table-cell">Children</th>
+                                                <th>Total</th>
+                                                <th class="text-end">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="sundayTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="card-body" id="calendarView" hidden>
+                                <div id="attendanceCalendar" class="att-calendar"></div>
+                                <div class="period-legend">
+                                    <span><span class="count-dot bg-primary"></span>Recorded</span>
+                                    <span><span class="count-dot bg-danger"></span>Sunday not recorded</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div class="col-xl-4">
                         <div class="card custom-card">
                             <div class="card-header">
-                                <div class="card-title"><i class="ri-list-check-2 me-2 text-primary"></i>Recent Sundays</div>
-                            </div>
-                            <div class="card-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-hover mb-0">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th class="fw-semibold text-dark">Date</th>
-                                                <th class="fw-semibold text-dark text-end">Total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="recentSundaysBody">
-                                            <!-- Rows injected by attendance-services.js -->
-                                        </tbody>
-                                    </table>
+                                <div>
+                                    <div class="card-title">Last 12 Sundays</div>
+                                    <span class="card-subtitle-text">Who came, week by week</span>
                                 </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="sundayTrendChart"></div>
+                            </div>
+                        </div>
+                        <div class="card custom-card">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">Who attends</div>
+                                    <span class="card-subtitle-text" id="whoAttendsSubtitle">Average Sunday</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="whoAttendsDonut"></div>
                             </div>
                         </div>
                     </div>
@@ -143,11 +174,14 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/libs/fullcalendar/main.min.js"></script>
-
     <script src="<?= SITE_URL ?>/assets/libs/apexcharts/apexcharts.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/select2/select2.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/jquery.dataTables.min.js"></script>
+    <script src="<?= SITE_URL ?>/assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js"></script>
+
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js<?= assetVersion('assets/js/pages/demographics/api-handler.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js<?= assetVersion('assets/js/pages/demographics/ui-helpers.js') ?>"></script>
-    <script src="<?= SITE_URL ?>/assets/libs/choices.js/public/assets/scripts/choices.min.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-form-shared.js<?= assetVersion('assets/js/pages/demographics/attendance-form-shared.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-services.js<?= assetVersion('assets/js/pages/demographics/attendance-services.js') ?>"></script>
     <script>
