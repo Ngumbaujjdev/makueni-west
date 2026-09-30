@@ -103,6 +103,24 @@ class AttendanceControllerTest extends TestCase
         ]);
     }
 
+    public function test_counts_left_empty_are_saved_as_zero(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $this->postJson('/api/attendance', [
+            'territory_id' => $this->myChurch->id,
+            'service_date' => '2026-08-16',
+            'gathering_category_id' => $this->sundayServiceCategoryId,
+            'adults_count' => 11,
+            'youth_count' => 2,
+            'children_male_count' => null,
+            'children_female_count' => null,
+        ])->assertStatus(201)->assertJsonPath('data.children_male_count', 0);
+
+        $record = ChurchAttendanceRecord::firstOrFail();
+        $this->putJson("/api/attendance/{$record->id}", ['youth_count' => null])->assertOk()->assertJsonPath('data.youth_count', 0);
+    }
+
     public function test_the_same_sunday_cannot_be_recorded_twice(): void
     {
         Sanctum::actingAs($this->pastor);
@@ -228,6 +246,95 @@ class AttendanceControllerTest extends TestCase
         $response = $this->putJson("/api/attendance/{$record->id}", ['adults_count' => 45]);
 
         $response->assertStatus(200)->assertJsonPath('data.adults_count', 45);
+    }
+
+    private function sunday(string $date, int $adults = 40, ?int $churchId = null): ChurchAttendanceRecord
+    {
+        return ChurchAttendanceRecord::create([
+            'territory_type' => 'church', 'territory_id' => $churchId ?? $this->myChurch->id,
+            'service_date' => $date,
+            'fiscal_year_id' => FiscalYear::first()->id, 'fiscal_month_id' => FiscalMonth::first()->id,
+            'gathering_category_id' => $this->sundayServiceCategoryId, 'adults_count' => $adults,
+        ]);
+    }
+
+    private function grantDelete(): void
+    {
+        $permission = Permission::create(['name' => 'attendancemanagement.serviceattendance.delete', 'guard_name' => 'web', 'action' => 'delete', 'territory_scope' => 'church']);
+        $this->pastorRole->givePermissionTo($permission);
+    }
+
+    public function test_a_sunday_entered_on_the_wrong_date_can_be_moved(): void
+    {
+        Sanctum::actingAs($this->pastor);
+        $record = $this->sunday('2026-08-16');
+
+        $this->putJson("/api/attendance/{$record->id}", ['service_date' => '2026-08-09', 'adults_count' => 40])
+            ->assertOk()
+            ->assertJsonPath('data.adults_count', 40);
+
+        $this->assertSame('2026-08-09', $record->fresh()->service_date->toDateString());
+    }
+
+    public function test_a_sunday_cannot_be_moved_off_a_sunday_or_onto_a_recorded_one(): void
+    {
+        Sanctum::actingAs($this->pastor);
+        $taken = $this->sunday('2026-08-09');
+        $record = $this->sunday('2026-08-16');
+
+        $this->putJson("/api/attendance/{$record->id}", ['service_date' => '2026-08-15'])
+            ->assertStatus(422)->assertJsonValidationErrors('service_date');
+        $this->putJson("/api/attendance/{$record->id}", ['service_date' => '2026-08-09'])
+            ->assertStatus(422)->assertJsonPath('existing_id', $taken->id);
+        // No fiscal month is set up for September in this test.
+        $this->putJson("/api/attendance/{$record->id}", ['service_date' => '2026-09-06'])
+            ->assertStatus(422)->assertJsonValidationErrors('service_date');
+        $this->assertSame('2026-08-16', $record->fresh()->service_date->toDateString());
+    }
+
+    public function test_deleting_needs_the_delete_permission(): void
+    {
+        Sanctum::actingAs($this->pastor);
+        $record = $this->sunday('2026-08-16');
+
+        $this->deleteJson("/api/attendance/{$record->id}")->assertForbidden();
+        $this->assertNotSoftDeleted($record);
+    }
+
+    public function test_a_deleted_record_leaves_the_list_and_can_be_put_back(): void
+    {
+        $this->grantDelete();
+        Sanctum::actingAs($this->pastor);
+        $record = $this->sunday('2026-08-16');
+
+        $this->deleteJson("/api/attendance/{$record->id}")->assertOk();
+        $this->assertSoftDeleted($record);
+        $this->assertCount(0, $this->getJson('/api/attendance?territory_id='.$this->myChurch->id)->json('data'));
+
+        $this->postJson("/api/attendance/{$record->id}/restore")->assertOk();
+        $this->assertNotSoftDeleted($record);
+    }
+
+    public function test_a_delete_cannot_be_undone_once_that_sunday_is_recorded_again(): void
+    {
+        $this->grantDelete();
+        Sanctum::actingAs($this->pastor);
+        $record = $this->sunday('2026-08-16');
+        $this->deleteJson("/api/attendance/{$record->id}")->assertOk();
+        $again = $this->sunday('2026-08-16', 55);
+
+        $this->postJson("/api/attendance/{$record->id}/restore")
+            ->assertStatus(422)->assertJsonPath('existing_id', $again->id);
+    }
+
+    public function test_another_churchs_record_cannot_be_deleted(): void
+    {
+        $this->grantDelete();
+        Sanctum::actingAs($this->pastor);
+        $theirs = $this->sunday('2026-08-16', 40, $this->otherChurch->id);
+
+        $this->deleteJson("/api/attendance/{$theirs->id}")->assertForbidden();
+        $this->assertNotSoftDeleted($theirs);
     }
 
     public function test_pastor_cannot_update_another_churchs_attendance_record(): void
