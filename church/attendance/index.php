@@ -69,7 +69,7 @@ $breadcrumbs = [
                 <div class="page-toolbar">
                     <div class="page-toolbar-sub">Sunday services, ministries and events at <?= htmlspecialchars($userTerritoryName) ?></div>
                     <div class="page-toolbar-controls">
-                        <a href="<?= SITE_URL ?>/church/attendance/reports" class="btn btn-outline-primary"><i class="ri-bar-chart-box-line me-1"></i>Analytics</a>
+                        <a href="<?= SITE_URL ?>/church/attendance/analytics" class="btn btn-outline-primary"><i class="ri-bar-chart-box-line me-1"></i>Analytics</a>
                         <?php if ($canEnter): ?>
                         <button type="button" class="btn btn-primary" id="recordSundayBtn"><i class="ri-add-line me-1"></i>Record Sunday</button>
                         <?php endif; ?>
@@ -156,7 +156,7 @@ $breadcrumbs = [
                             <a href="<?= SITE_URL ?>/church/attendance/services" class="att-shortcut"><span class="avatar bg-primary text-white"><i class="ri-sun-line"></i></span><span><strong>Sunday services</strong><small>Every Sunday, recorded or not</small></span></a>
                             <a href="<?= SITE_URL ?>/church/attendance/ministries" class="att-shortcut"><span class="avatar bg-success text-white"><i class="ri-group-line"></i></span><span><strong>Ministry gatherings</strong><small>Fellowships, prayer, choir</small></span></a>
                             <a href="<?= SITE_URL ?>/church/attendance/events" class="att-shortcut"><span class="avatar bg-purple text-white"><i class="ri-star-line"></i></span><span><strong>Special events</strong><small>Crusades, baptisms, dedications</small></span></a>
-                            <a href="<?= SITE_URL ?>/church/attendance/reports" class="att-shortcut"><span class="avatar bg-secondary text-dark"><i class="ri-bar-chart-box-line"></i></span><span><strong>Analytics</strong><small>Trends, coverage, insights</small></span></a>
+                            <a href="<?= SITE_URL ?>/church/attendance/analytics" class="att-shortcut"><span class="avatar bg-secondary text-dark"><i class="ri-bar-chart-box-line"></i></span><span><strong>Analytics</strong><small>Trends, coverage, insights</small></span></a>
                             <a href="<?= SITE_URL ?>/church/settings/attendance-settings/gathering-types" class="att-shortcut"><span class="avatar bg-pink text-white"><i class="ri-list-settings-line"></i></span><span><strong>Gathering types</strong><small>Your ministries and events</small></span></a>
                         </div>
                     </div>

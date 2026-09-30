@@ -33340,6 +33340,101 @@ tr.list-row-flash > td {
   color: #fff;
 }
 
+/* Attendance Analytics */
+.att-period-select {
+  min-width: 130px;
+}
+.att-period-select[hidden] {
+  display: none;
+}
+.att-analytics {
+  transition: opacity 0.2s;
+}
+.att-analytics.is-loading {
+  opacity: 0.55;
+  pointer-events: none;
+}
+.att-missing-title {
+  margin: 0.8rem 0 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--v2-heading);
+}
+.att-missing {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.apex-tip {
+  padding: 0.45rem 0.6rem;
+  font-size: 0.78rem;
+}
+
+/* "What we noticed" - insights with their recommendations */
+.insight-list {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.insight-list li {
+  display: flex;
+  gap: 0.7rem;
+  padding: 0.75rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.7rem;
+}
+.insight-list li.is-concern { background: rgba(var(--danger-rgb), 0.04); border-color: rgba(var(--danger-rgb), 0.3); }
+.insight-list li.is-watch { background: rgba(var(--secondary-rgb), 0.07); border-color: rgba(var(--secondary-rgb), 0.4); }
+.insight-list li.is-good { background: rgba(var(--success-rgb), 0.05); border-color: rgba(var(--success-rgb), 0.3); }
+.insight-icon {
+  display: inline-flex;
+  flex: 0 0 2rem;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.55rem;
+  font-size: 1rem;
+}
+.insight-list strong {
+  display: block;
+  color: var(--v2-heading);
+}
+.insight-list p {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  color: var(--default-text-color);
+}
+.insight-rec {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--v2-heading);
+}
+.insight-rec i {
+  color: rgb(var(--primary-rgb));
+}
+.insight-empty {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-radius: 0.7rem;
+  background: rgba(var(--success-rgb), 0.06);
+  font-weight: 600;
+  color: var(--v2-heading);
+}
+.insight-empty i {
+  font-size: 1.2rem;
+  color: rgb(var(--success-rgb));
+}
+
 @media (max-width: 991.98px) {
   .att-entry {
     grid-template-columns: minmax(0, 1fr);

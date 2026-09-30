@@ -976,6 +976,41 @@ const DemographicsUI = (function () {
       </div>`;
   }
 
+  /**
+   * "What we noticed": insights from the API's InsightEngine
+   * ({tone: good|watch|concern, title, detail, recommendation}), concerns
+   * first, each with its recommendation underneath.
+   */
+  const INSIGHT_TONES = {
+    good: { icon: "ri-thumb-up-line", color: "success" },
+    watch: { icon: "ri-eye-line", color: "secondary" },
+    concern: { icon: "ri-alarm-warning-line", color: "danger" },
+  };
+
+  function renderInsightList(containerId, insights, { empty = "Nothing stands out for this period." } = {}) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (!insights || !insights.length) {
+      container.innerHTML = `<div class="insight-empty"><i class="ri-checkbox-circle-line"></i>${empty}</div>`;
+      return;
+    }
+    const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+    container.innerHTML = `<ul class="insight-list">${insights
+      .map((i) => {
+        const t = INSIGHT_TONES[i.tone] || INSIGHT_TONES.watch;
+        return `
+          <li class="is-${i.tone}">
+            <span class="insight-icon bg-${t.color} ${iconTextClass(t.color)}"><i class="${t.icon}"></i></span>
+            <div>
+              <strong>${esc(i.title)}</strong>
+              <p>${esc(i.detail)}</p>
+              ${i.recommendation ? `<div class="insight-rec"><i class="ri-lightbulb-line"></i>${esc(i.recommendation)}</div>` : ""}
+            </div>
+          </li>`;
+      })
+      .join("")}</ul>`;
+  }
+
   // ==========================================================================
   // BUTTON LOADING STATE
   // ==========================================================================
@@ -1682,6 +1717,7 @@ const DemographicsUI = (function () {
     mountSparklines,
     chartTextColor,
     cssColor,
+    withAlpha,
     renderSegmented,
     wireSegmented,
     renderRingDonut,
@@ -1707,6 +1743,7 @@ const DemographicsUI = (function () {
     renderDonutChart,
     renderComboChart,
     renderInsightCallout,
+    renderInsightList,
     setButtonLoading,
     restoreButton,
     renderTableLoading,
