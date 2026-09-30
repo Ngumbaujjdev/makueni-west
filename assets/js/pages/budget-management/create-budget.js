@@ -619,8 +619,9 @@
       return categorySlug === type;
     });
 
-    // Sort by territory: user's territory first, then "all", then others
+    // Sort: the church's own lines first, then the user's territory, then "all", then others
     filteredLines.sort((a, b) => {
+      if (!!a.territory_id !== !!b.territory_id) return a.territory_id ? -1 : 1;
       const aScope = a.territory_scope || "";
       const bScope = b.territory_scope || "";
 
@@ -635,12 +636,7 @@
     filteredLines.forEach((line) => {
       const option = document.createElement("option");
       option.value = line.id;
-      const scopeLabel =
-        line.territory_scope === "all"
-          ? "All"
-          : line.territory_scope.charAt(0).toUpperCase() +
-            line.territory_scope.slice(1);
-      option.textContent = `${line.name} (${scopeLabel})`;
+      option.textContent = `${line.name} (${budgetLineScopeLabel(line)})`;
       option.dataset.categoryId = line.budget_category_id;
       lineSelect.appendChild(option);
     });
@@ -667,6 +663,14 @@
     console.log(
       `🔍 Filtered ${filteredLines.length} ${type} lines for territory: ${userTerritory}`,
     );
+  }
+
+  /** "Our church" for a church's own line; otherwise who the shared line is for. */
+  function budgetLineScopeLabel(line) {
+    if (line.territory_id) return "Our church";
+    if (window.BUDGET_CTX?.scope === "church") return "Diocese";
+    const scope = line.territory_scope || "all";
+    return scope === "all" ? "All" : scope.charAt(0).toUpperCase() + scope.slice(1);
   }
 
   function calculateTotals() {
@@ -867,7 +871,7 @@
         Toast.success("Budget created successfully!");
         setTimeout(() => {
           window.location.href =
-            "/makueni-west/diocese/budget-management/budget-overview/all-budgets";
+            `${window.BUDGET_CTX.baseUrl}/all-budgets.php`;
         }, 1500);
       } else {
         throw new Error(result.message || "Failed to create budget");
@@ -897,7 +901,7 @@
         Toast.success("Draft saved successfully!");
         setTimeout(() => {
           window.location.href =
-            "/makueni-west/diocese/budget-management/budget-overview/all-budgets";
+            `${window.BUDGET_CTX.baseUrl}/all-budgets.php`;
         }, 1500);
       } else {
         throw new Error(result.message || "Failed to save draft");
