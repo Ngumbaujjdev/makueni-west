@@ -88,6 +88,11 @@ $breadcrumbs = [
                     <div class="att-period-select" id="periodMonthWrap">
                         <select id="periodMonth" aria-label="Month"></select>
                     </div>
+                    <div class="att-period-select att-range" id="periodRangeWrap" hidden>
+                        <select id="periodFrom" aria-label="From"></select>
+                        <span class="att-range-to">to</span>
+                        <select id="periodTo" aria-label="To"></select>
+                    </div>
                     <span class="soft-chip soft-primary att-filter-period"><i class="ri-calendar-line me-1"></i><b id="periodLabel">-</b></span>
                 </div>
 

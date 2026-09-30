@@ -51,7 +51,16 @@ const AttendanceAnalytics = (function () {
     tab = TABS.includes(params.get("tab")) ? params.get("tab") : "sunday";
 
     const res = await DemographicsAPIHandler.getFiscalYears();
-    picker = UI.renderPeriodPicker({ yearId: "periodYear", monthId: "periodMonth", monthWrapId: "periodMonthWrap", years: res.success ? res.data || [] : [], onChange: load });
+    picker = UI.renderPeriodPicker({
+      yearId: "periodYear",
+      monthId: "periodMonth",
+      monthWrapId: "periodMonthWrap",
+      fromId: "periodFrom",
+      toId: "periodTo",
+      rangeWrapId: "periodRangeWrap",
+      years: res.success ? res.data || [] : [],
+      onChange: load,
+    });
     wireTabs();
     await load();
   }
@@ -65,8 +74,7 @@ const AttendanceAnalytics = (function () {
     tab !== "sunday" ? params.set("tab", tab) : params.delete("tab");
     const qs = params.toString();
     history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
-    const { year, month } = picker.state();
-    UI.syncExportButton({ reportKey: REPORT_FOR_TAB[tab], year, month });
+    UI.syncExportButton({ reportKey: REPORT_FOR_TAB[tab], ...picker.exportParams() });
   }
 
   async function load() {
@@ -83,6 +91,7 @@ const AttendanceAnalytics = (function () {
     drawn.clear();
     document.getElementById("periodLabel").textContent = data.period.label;
     renderSummary();
+    renderTabFigures();
     drawTab(tab);
   }
 
@@ -128,6 +137,25 @@ const AttendanceAnalytics = (function () {
         sub: m ? `Of ${n(m.total_members)} members${m.as_of ? ` (${esc(m.as_of)})` : ""}` : "No approved demographics yet",
       },
     ]);
+  }
+
+  /** The live figure under each tab's name. */
+  function renderTabFigures() {
+    const s = data.summary;
+    const c = s.coverage;
+    const heldOf = (items) => `${items.filter((g) => g.times > 0).length} of ${items.length} met`;
+    const events = data.events.items.reduce((sum, g) => sum + g.times, 0);
+    const ch = data.children;
+    const figures = {
+      sunday: s.sunday_average == null ? "No Sundays recorded" : `Avg ${n(s.sunday_average)}${c.elapsed ? ` · ${c.recorded} of ${c.elapsed}` : ""}`,
+      ministries: data.ministries.items.length ? heldOf(data.ministries.items) : "None set up",
+      events: events ? `${events} held` : "None held",
+      children: ch.boys + ch.girls ? `${n(ch.boys + ch.girls)} a Sunday${ch.girls_share != null ? ` · ${ch.girls_share}% girls` : ""}` : "None recorded",
+    };
+    Object.entries(figures).forEach(([key, text]) => {
+      const el = document.querySelector(`[data-tab-figure="${key}"]`);
+      if (el) el.textContent = text;
+    });
   }
 
   // ==========================================================================

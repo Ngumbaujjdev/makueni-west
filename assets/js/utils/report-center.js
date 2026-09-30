@@ -475,6 +475,21 @@ const ReportCenter = (function () {
     const wrap = $("rpPeriod");
     if (!report) return;
 
+    if (report.inputs.includes("fiscal_month") && state.params.from && state.params.to) {
+      // The page is showing a range of months: export that range.
+      $("rpPeriodTitle").textContent = "Period";
+      wrap.innerHTML = `
+        <span class="soft-chip soft-purple rp-period-chip"><i class="ri-calendar-2-line"></i>${esc(rangeLabel())}</span>
+        <button type="button" class="rp-edit mt-2" id="rpUseYear"><i class="ri-calendar-line me-1"></i>Use a year instead</button>
+        ${gatheringChip(report)}`;
+      $("rpUseYear").addEventListener("click", () => {
+        delete state.params.from;
+        delete state.params.to;
+        renderPeriod();
+      });
+      updateSummary();
+      return;
+    }
     if (report.inputs.includes("fiscal_year")) {
       $("rpPeriodTitle").textContent = "Period";
       const thisYear = new Date().getFullYear();
@@ -535,9 +550,16 @@ const ReportCenter = (function () {
     return `<span class="soft-chip soft-success rp-period-chip mt-2"><i class="ri-group-line"></i>Only ${esc(state.lockedTitle || "this gathering")}</span>`;
   }
 
+  function rangeLabel() {
+    const short = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const fmt = (v) => `${short[Number(String(v).slice(5)) - 1]} ${String(v).slice(0, 4)}`;
+    return state.params.from === state.params.to ? fmt(state.params.from) : `${fmt(state.params.from)} - ${fmt(state.params.to)}`;
+  }
+
   function periodText() {
     const report = current();
     if (!report) return "";
+    if (report.inputs.includes("fiscal_month") && state.params.from && state.params.to) return rangeLabel();
     if (report.inputs.includes("fiscal_year")) {
       if (state.params.fiscal_year_id === "all") return "All time";
       const year = String(state.years?.find((y) => String(y.id) === String(state.params.fiscal_year_id))?.year || "");
@@ -561,7 +583,11 @@ const ReportCenter = (function () {
     if (report.inputs.includes("years")) body.years = state.params.years;
     if (report.inputs.includes("submission")) body.demographic_id = state.params.demographic_id;
     if (report.inputs.includes("metric")) body.metric = state.params.metric;
-    if (report.inputs.includes("fiscal_month") && state.params.month && state.params.fiscal_year_id !== "all") body.month = state.params.month;
+    if (report.inputs.includes("fiscal_month") && state.params.from && state.params.to) {
+      body.from = state.params.from;
+      body.to = state.params.to;
+      delete body.fiscal_year_id;
+    } else if (report.inputs.includes("fiscal_month") && state.params.month && state.params.fiscal_year_id !== "all") body.month = state.params.month;
     if (report.inputs.includes("gathering_type") && state.params.gathering_type_id) body.gathering_type_id = state.params.gathering_type_id;
     return body;
   }
@@ -868,7 +894,7 @@ const ReportCenter = (function () {
       if (!trigger) return;
       e.preventDefault();
       const params = {};
-      ["fiscal_year_id", "year", "month", "years", "demographic_id", "submission_label", "metric", "gathering_type_id"].forEach((k) => {
+      ["fiscal_year_id", "year", "month", "from", "to", "years", "demographic_id", "submission_label", "metric", "gathering_type_id"].forEach((k) => {
         const v = trigger.dataset[k.replace(/_([a-z])/g, (_, c) => c.toUpperCase())];
         if (v) params[k] = /^\d+$/.test(v) ? Number(v) : v;
       });
