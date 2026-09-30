@@ -30,6 +30,7 @@ const AttendanceServices = (function () {
   let entryMode = "weekly_and_monthly";
   let calendar = null;
   let trendChart = null;
+  let whoChart = null;
   let view = "list";
   let year = new Date().getFullYear();
 
@@ -340,12 +341,15 @@ const AttendanceServices = (function () {
     const y = new Date().getFullYear();
     const thisYear = allRows.filter((r) => A.parseIso(A.recordIso(r)).getFullYear() === y);
     const base = thisYear.length ? thisYear : allRows;
+    // Destroy the old ring first - redrawing over it mid-animation made ApexCharts draw into removed nodes.
+    if (whoChart) whoChart.destroy();
+    whoChart = null;
     document.getElementById("whoAttendsSubtitle").textContent = thisYear.length ? `Average Sunday in ${y}` : "Average Sunday";
     if (!base.length) {
       document.getElementById("whoAttendsDonut").innerHTML = '<div class="att-empty">Nothing recorded yet</div>';
       return;
     }
-    UI.renderRingDonut("whoAttendsDonut", {
+    whoChart = UI.renderRingDonut("whoAttendsDonut", {
       labels: A.GROUPS.map((g) => g.label),
       series: A.GROUPS.map((g) => Math.round(base.reduce((s, r) => s + (Number(r[g.key]) || 0), 0) / base.length)),
       colors: A.GROUPS.map((g) => g.color),
@@ -426,10 +430,15 @@ const AttendanceServices = (function () {
       record: record || null,
       defaultDate,
       records: allRows,
+      canDelete: CAN_DELETE_ATTENDANCE,
       onSaved: async (saved) => {
         await loadRecords();
         renderAll();
         UI.flashRow(saved?.id);
+      },
+      onDeleted: async () => {
+        await loadRecords();
+        renderAll();
       },
     });
   }

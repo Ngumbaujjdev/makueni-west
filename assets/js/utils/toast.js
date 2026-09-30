@@ -45,7 +45,7 @@ const Toast = (function () {
   /**
    * Create toast HTML element
    */
-  function createToastElement(message, type = "info", title = null) {
+  function createToastElement(message, type = "info", title = null, actionLabel = null) {
     const toastConfig = toastTypes[type] || toastTypes.info;
     const toastId = `toast-${Date.now()}-${Math.random()
       .toString(36)
@@ -61,6 +61,7 @@ const Toast = (function () {
         </div>
         <div class="toast-body">
           ${message}
+          ${actionLabel ? `<div class="mt-2"><button type="button" class="btn btn-sm btn-light" data-action="toast-action">${actionLabel}</button></div>` : ""}
         </div>
       </div>
     `;
@@ -110,14 +111,16 @@ const Toast = (function () {
   }
 
   /**
-   * Show toast notification
+   * Show toast notification. options.action = {label, onClick} adds one
+   * button (e.g. Undo) that closes the toast and runs onClick.
    */
   function show(message, type = "info", options = {}) {
     const container = initToastContainer();
     const toastElement = createToastElement(
       message,
       type,
-      options.title || null
+      options.title || null,
+      options.action ? options.action.label : null
     );
 
     // Add to container
@@ -128,6 +131,14 @@ const Toast = (function () {
       autohide: options.autohide !== false,
       delay: options.duration || config.duration,
     });
+
+    const actionBtn = toastElement.querySelector('[data-action="toast-action"]');
+    if (actionBtn && options.action) {
+      actionBtn.addEventListener("click", function () {
+        bsToast.hide();
+        options.action.onClick();
+      });
+    }
 
     // Show toast
     bsToast.show();

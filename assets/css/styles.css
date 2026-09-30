@@ -32940,6 +32940,7 @@ tr.list-row-flash > td {
 .att-date-row .form-control {
   flex: 0 1 200px;
 }
+.att-date-quick[hidden],
 .att-date-row[hidden],
 .att-sunday-grid[hidden],
 .att-date-fixed[hidden],

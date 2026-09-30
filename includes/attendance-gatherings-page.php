@@ -40,6 +40,7 @@ if (!isset($gatheringPage)) {
             name: '<?= addslashes($userTerritoryName) ?>'
         };
         const CAN_WRITE_ATTENDANCE = <?= $canWrite ? 'true' : 'false' ?>;
+        const CAN_DELETE_ATTENDANCE = <?= !empty($canDelete) ? 'true' : 'false' ?>;
         window.GATHERING_PAGE = <?= json_encode($gatheringPage) ?>;
     </script>
 </head>

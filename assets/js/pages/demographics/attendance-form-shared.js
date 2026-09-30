@@ -384,6 +384,7 @@ const AttendanceFormShared = (function () {
               </div>
             </div>
             <div class="modal-footer">
+              <button type="button" class="btn btn-outline-danger me-auto" id="attendanceDeleteBtn" hidden><i class="ri-delete-bin-line me-1"></i>Delete</button>
               <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
               <button type="button" class="btn btn-primary" id="attendanceModalSaveBtn"><i class="ri-check-line me-1"></i><span>Save</span></button>
             </div>
@@ -435,6 +436,19 @@ const AttendanceFormShared = (function () {
       refreshContext();
     });
     modalEl.addEventListener("hidden.bs.modal", () => modalEl.classList.remove("is-busy", "is-done"));
+    // Editing: the date can be changed when it was recorded on the wrong day.
+    document.getElementById("attendanceDateFixed").addEventListener("click", (e) => {
+      if (!e.target.closest("[data-change-date]")) return;
+      document.getElementById("attendanceDateFixed").hidden = true;
+      document.getElementById("attendanceDateRow").hidden = false;
+      document.getElementById("attendanceDateQuick").hidden = true;
+      document.getElementById("attendanceServiceDate").focus();
+    });
+    document.getElementById("attendanceDeleteBtn").addEventListener("click", () => {
+      const record = currentConfig.record;
+      bootstrap.Modal.getInstance(modalEl).hide();
+      deleteRecord(record, { onDeleted: currentConfig.onDeleted || currentConfig.onSaved, onRestored: currentConfig.onRestored || currentConfig.onSaved });
+    });
   }
 
   function categoryLabel() {
@@ -492,7 +506,10 @@ const AttendanceFormShared = (function () {
     document.getElementById("attendanceSundayPicker").hidden = editing || !config.isWeekly;
     document.getElementById("attendanceDateRow").hidden = editing || config.isWeekly;
     document.getElementById("attendanceDateFixed").hidden = !editing;
-    document.getElementById("attendanceDateFixed").innerHTML = `<i class="ri-calendar-line"></i>${longDate(initialDate)}<span>The date can't be changed once saved</span>`;
+    document.getElementById("attendanceDateFixed").innerHTML = `<i class="ri-calendar-line"></i>${longDate(initialDate)}<button type="button" class="btn btn-sm btn-light ms-auto" data-change-date><i class="ri-calendar-event-line me-1"></i>Change the date</button>`;
+    document.getElementById("attendanceDateQuick").hidden = false;
+    const deleteBtn = document.getElementById("attendanceDeleteBtn");
+    deleteBtn.hidden = !(editing && config.canDelete);
     document.getElementById("attendanceServiceDate").max = todayIso();
 
     if (!config.isWeekly) {
@@ -661,6 +678,14 @@ const AttendanceFormShared = (function () {
 
     if (currentConfig.isWeekly && !currentConfig.record && currentRecordId) {
       messages.push({ tone: "primary", icon: "ri-edit-line", text: "This Sunday is already recorded - you're updating it." });
+    }
+    if (currentConfig.isWeekly && currentConfig.record && selectedDate !== recordIso(currentConfig.record) && d && d.getDay() === 0) {
+      const taken = records().find((r) => r.id !== currentConfig.record.id && recordIso(r) === selectedDate);
+      messages.push(
+        taken
+          ? { tone: "danger", icon: "ri-error-warning-line", text: `${longDate(selectedDate)} is already recorded (${recordTotal(taken)} attended) - pick another Sunday.` }
+          : { tone: "primary", icon: "ri-calendar-event-line", text: `Moving this Sunday from ${shortDate(recordIso(currentConfig.record))} to ${shortDate(selectedDate)}.` },
+      );
     }
     if (currentConfig.isWeekly && d && d.getDay() !== 0) {
       messages.push({ tone: "danger", icon: "ri-error-warning-line", text: `${longDate(selectedDate)} isn't a Sunday.` });
@@ -1014,8 +1039,48 @@ const AttendanceFormShared = (function () {
     ]);
   }
 
+  /**
+   * Delete a record entered by mistake: confirm, delete (soft), then a toast
+   * with Undo that puts it back.
+   * @param {object} record
+   * @param {object} opts {onDeleted(record), onRestored(record)}
+   */
+  function deleteRecord(record, { onDeleted = null, onRestored = null } = {}) {
+    const name = record.gathering_category?.slug === "sunday_service" || !record.event_name ? "Sunday service" : record.gathering_type?.name || record.event_name;
+    const what = `${escapeHtml(name)}, ${shortDate(recordIso(record))} (${recordTotal(record).toLocaleString()} attended)`;
+    Toast.confirm(
+      `Delete <b>${what}</b>? It comes out of every total, chart and report.`,
+      async () => {
+        const res = await DemographicsAPIHandler.deleteAttendance(record.id);
+        if (!res.success) {
+          Toast.error(res.message || "Couldn't delete the record");
+          return;
+        }
+        if (onDeleted) onDeleted(record);
+        Toast.success(`Deleted - ${what}`, {
+          duration: 8000,
+          action: {
+            label: '<i class="ri-arrow-go-back-line me-1"></i>Undo',
+            onClick: async () => {
+              const back = await DemographicsAPIHandler.restoreAttendance(record.id);
+              if (!back.success) {
+                Toast.error(back.message || "Couldn't put the record back");
+                return;
+              }
+              Toast.success(`Put back - ${what}`);
+              if (onRestored) onRestored(back.data);
+            },
+          },
+        });
+      },
+      null,
+      { title: "Delete this record?", confirmText: "Delete", type: "error" },
+    );
+  }
+
   return {
     GROUPS,
+    deleteRecord,
     openEntryModal,
     renderListRows,
     renderGatheringStats,
