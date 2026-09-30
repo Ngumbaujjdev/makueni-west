@@ -13,6 +13,20 @@
   let printMode = false;
   let budgetId = null;
 
+  /**
+   * The role the user is acting in, for the budget API (EnsureBudgetAccess):
+   * someone with a church role and a diocese role acts as whichever one
+   * they've switched to, not as every role they hold.
+   */
+  function actingRoleHeader() {
+    try {
+      const role = JSON.parse(localStorage.getItem(Constants.STORAGE_KEYS.CURRENT_ROLE) || "null");
+      return role?.assignment_id ? { "X-Assignment-Id": String(role.assignment_id) } : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
   // ========================================================================
   // PUBLIC API
   // ========================================================================
@@ -117,6 +131,7 @@
           {
             headers: {
               Authorization: `Bearer ${token}`,
+              ...actingRoleHeader(),
               "Content-Type": "application/json",
             },
           },
@@ -157,6 +172,7 @@
       const response = await fetch(`${API_BASE}/budgets/${budgetId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
+          ...actingRoleHeader(),
           "Content-Type": "application/json",
         },
       });
@@ -197,6 +213,7 @@
         {
           headers: {
             Authorization: `Bearer ${token}`,
+            ...actingRoleHeader(),
             "Content-Type": "application/json",
           },
         },
@@ -231,6 +248,7 @@
         {
           headers: {
             Authorization: `Bearer ${token}`,
+            ...actingRoleHeader(),
             "Content-Type": "application/json",
           },
         },
@@ -262,6 +280,7 @@
       const response = await fetch(`${API_BASE}/budgets/${budgetId}/logs`, {
         headers: {
           Authorization: `Bearer ${token}`,
+          ...actingRoleHeader(),
           "Content-Type": "application/json",
         },
       });
@@ -300,10 +319,26 @@
 
     // Status badge
     const statusEl = document.getElementById("budgetStatus");
-    const status = currentBudget.status || {};
-    const statusClass = getStatusClass(status.slug);
-    statusEl.className = `badge bg-${statusClass}`;
-    statusEl.textContent = status.name || "Draft";
+    // status is a plain string ("under_review"); older payloads had a {slug, name} relation
+    const statusSlug = currentBudget.status?.slug || currentBudget.status || "draft";
+    const statusName = currentBudget.status?.name ||
+      statusSlug.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    statusEl.className = `badge bg-${getStatusClass(statusSlug)}`;
+    statusEl.textContent = statusName;
+
+    // A rejected budget says why, and what to do next
+    const rejectionAlert = document.getElementById("rejectionAlert");
+    if (rejectionAlert) {
+      const rejected = statusSlug === "rejected" && currentBudget.rejection_reason;
+      rejectionAlert.classList.toggle("d-none", !rejected);
+      rejectionAlert.classList.toggle("d-flex", !!rejected);
+      if (rejected) {
+        document.getElementById("rejectionReasonText").textContent = currentBudget.rejection_reason;
+        document.getElementById("rejectionNextStep").textContent = window.BUDGET_CTX?.canEdit
+          ? "Edit the budget to address this, then submit it again."
+          : "";
+      }
+    }
 
     // Key metrics
     const totalIncome = parseFloat(currentBudget.total_income_budgeted || 0);
@@ -1179,7 +1214,7 @@
                         </span>
                         <div>
                             <span class="fw-semibold d-block">${line.budget_line?.name}</span>
-                            <span class="fs-11 text-muted">${line.budget_line?.code}</span>
+                            ${line.budget_line?.code ? `<span class="fs-11 text-muted">${line.budget_line.code}</span>` : ""}
                         </div>
                     </div>
                 </td>
@@ -1209,7 +1244,10 @@
   function updateActionButtons() {
     if (!currentBudget) return;
 
-    const status = currentBudget.status?.slug || "draft";
+    // status comes back as a plain string ("submitted"); older payloads had a relation
+    const status = currentBudget.status?.slug || currentBudget.status || "draft";
+    // What this tier may do (BUDGET_CTX, set by the page): only the diocese approves.
+    const ctx = window.BUDGET_CTX || {};
 
     // Show/hide buttons based on status
     const editBtn = document.getElementById("editBudgetBtn");
@@ -1219,29 +1257,29 @@
     const activateBtn = document.getElementById("activateBudgetBtn");
 
     if (editBtn)
-      editBtn.style.display = ["draft", "rejected"].includes(status)
+      editBtn.style.display = ctx.canEdit && ["draft", "rejected"].includes(status)
         ? "inline-block"
         : "none";
     if (submitBtn)
-      submitBtn.style.display = ["draft"].includes(status)
+      submitBtn.style.display = ctx.canSubmit && ["draft", "rejected"].includes(status)
         ? "inline-block"
         : "none";
     if (approveBtn)
-      approveBtn.style.display = ["submitted", "under_review"].includes(status)
+      approveBtn.style.display = ctx.canApprove && ["submitted", "under_review"].includes(status)
         ? "inline-block"
         : "none";
     if (rejectBtn)
-      rejectBtn.style.display = ["submitted", "under_review"].includes(status)
+      rejectBtn.style.display = ctx.canApprove && ["submitted", "under_review"].includes(status)
         ? "inline-block"
         : "none";
     if (activateBtn)
-      activateBtn.style.display = ["approved"].includes(status)
+      activateBtn.style.display = ctx.canApprove && ["approved"].includes(status)
         ? "inline-block"
         : "none";
   }
 
   function editBudget() {
-    window.location.href = `/makueni-west/diocese/budget-management/budget-overview/edit-budget.php?id=${budgetId}`;
+    window.location.href = `${window.BUDGET_CTX.baseUrl}/edit-budget.php?id=${budgetId}`;
   }
 
   async function submitBudget() {
@@ -1257,6 +1295,7 @@
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
+          ...actingRoleHeader(),
           "Content-Type": "application/json",
         },
       });
@@ -1287,6 +1326,7 @@
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
+          ...actingRoleHeader(),
           "Content-Type": "application/json",
         },
       });
@@ -1318,6 +1358,7 @@
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
+          ...actingRoleHeader(),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ reason }),
@@ -1349,6 +1390,7 @@
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
+          ...actingRoleHeader(),
           "Content-Type": "application/json",
         },
       });

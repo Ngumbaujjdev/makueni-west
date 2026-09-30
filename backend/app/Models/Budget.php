@@ -295,7 +295,7 @@ class Budget extends Model implements Auditable
     protected function canBeSubmitted(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->status === 'draft' && $this->budgetLineItems()->count() > 0,
+            get: fn () => in_array($this->status, ['draft', 'rejected']) && $this->budgetLineItems()->count() > 0,
         );
     }
 

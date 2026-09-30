@@ -243,6 +243,10 @@ class BudgetController extends Controller
             $items = $data['items'] ?? [];
             unset($data['items']); // Remove items from budget data
 
+            if ($error = $this->unusableLineError(array_column($items, 'budget_line_id'), $data['territory_type'], (int) $data['territory_id'])) {
+                return $error;
+            }
+
             // Auto-generate unique slug if not provided
             if (! isset($data['slug'])) {
                 $baseSlug = Str::slug($data['name']);
@@ -483,13 +487,14 @@ class BudgetController extends Controller
                 return response()->json([
                     'success' => false,
                     'status' => 400,
-                    'message' => 'Budget cannot be submitted. Status must be draft and must have line items.',
+                    'message' => 'Budget cannot be submitted. It must be a draft (or a rejected budget being resubmitted) with at least one line.',
                 ], 400);
             }
 
             $budget->update([
                 'status' => 'submitted',
                 'submitted_at' => now(),
+                'rejection_reason' => null,
                 'updated_by' => auth()->id(),
             ]);
 
@@ -581,6 +586,11 @@ class BudgetController extends Controller
                     'status' => 400,
                     'message' => "Cannot reject budget with status '{$budget->status}'.",
                 ], 400);
+            }
+
+            // The details page sends "reason"; older callers send "rejection_reason".
+            if (! $request->filled('rejection_reason') && $request->filled('reason')) {
+                $request->merge(['rejection_reason' => $request->input('reason')]);
             }
 
             $validator = Validator::make($request->all(), [
@@ -805,7 +815,19 @@ class BudgetController extends Controller
     /**
      * Update a budget line item
      */
-    public function updateLineItem(Request $request, BudgetLineItem $lineItem)
+    public function updateLineItem(Request $request, Budget $budget, BudgetLineItem $lineItem)
+    {
+        if ($lineItem->budget_id !== $budget->id) {
+            return response()->json(['success' => false, 'status' => 404, 'message' => 'That line is not part of this budget.'], 404);
+        }
+
+        return $this->updateLooseLineItem($request, $lineItem);
+    }
+
+    /**
+     * Update a budget line item by its id alone (PUT /budgets/line-items/{lineItem})
+     */
+    public function updateLooseLineItem(Request $request, BudgetLineItem $lineItem)
     {
         try {
             // Check if editable
@@ -854,6 +876,109 @@ class BudgetController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Add a line to a budget that can still be edited
+     */
+    public function addLineItem(Request $request, Budget $budget)
+    {
+        if (! $budget->is_editable) {
+            return response()->json([
+                'success' => false,
+                'status' => 400,
+                'message' => "Cannot change a budget with status '{$budget->status}'.",
+            ], 400);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'budget_line_id' => 'required|exists:budget_lines,id',
+            'budgeted_amount' => 'required|numeric|min:0',
+            'actual_amount' => 'nullable|numeric|min:0',
+            'notes' => 'nullable|string|max:500',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'status' => 422,
+                'message' => 'Validation error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+        if ($error = $this->unusableLineError([$request->budget_line_id], $budget->territory_type, (int) $budget->territory_id)) {
+            return $error;
+        }
+        if ($budget->budgetLineItems()->where('budget_line_id', $request->budget_line_id)->exists()) {
+            return response()->json([
+                'success' => false,
+                'status' => 422,
+                'message' => 'That line is already in this budget - change its amount instead.',
+                'errors' => ['budget_line_id' => ['Already in this budget.']],
+            ], 422);
+        }
+
+        $line = \App\Models\BudgetLine::findOrFail($request->budget_line_id);
+        $item = $budget->budgetLineItems()->create([
+            'budget_line_id' => $line->id,
+            'budget_category_id' => $line->budget_category_id,
+            'budgeted_amount' => $request->budgeted_amount,
+            'actual_amount' => $request->actual_amount ?? 0,
+            'notes' => $request->notes,
+            'created_by' => auth()->id(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'status' => 201,
+            'message' => 'Line added to the budget',
+            'data' => $item->fresh(['budgetLine', 'budgetCategory']),
+        ], 201);
+    }
+
+    /**
+     * Remove a line from a budget that can still be edited
+     */
+    public function deleteLineItem(Budget $budget, BudgetLineItem $lineItem)
+    {
+        if ($lineItem->budget_id !== $budget->id) {
+            return response()->json(['success' => false, 'status' => 404, 'message' => 'That line is not part of this budget.'], 404);
+        }
+        if (! $lineItem->is_editable) {
+            return response()->json([
+                'success' => false,
+                'status' => 400,
+                'message' => 'Cannot remove a locked line, or a line of a budget that can no longer be edited.',
+            ], 400);
+        }
+
+        $lineItem->delete();
+
+        return response()->json(['success' => true, 'status' => 200, 'message' => 'Line removed from the budget', 'data' => null]);
+    }
+
+    /**
+     * A 422 when any of the lines can't be used by a budget of this territory:
+     * a church budget may use the shared church lines and its own, any other
+     * budget only shared lines.
+     */
+    private function unusableLineError(array $lineIds, string $territoryType, int $territoryId): ?\Illuminate\Http\JsonResponse
+    {
+        $lineIds = array_unique(array_filter($lineIds));
+        if (! $lineIds) {
+            return null;
+        }
+        $query = \App\Models\BudgetLine::whereIn('id', $lineIds);
+        $usable = ($territoryType === 'church' ? $query->forChurch($territoryId) : $query->shared())->count();
+        if ($usable === count($lineIds)) {
+            return null;
+        }
+
+        return response()->json([
+            'success' => false,
+            'status' => 422,
+            'message' => 'One or more budget lines belong to another church and cannot be used here.',
+            'errors' => ['items' => ['Choose lines shared by the diocese or your own church\'s lines.']],
+        ], 422);
     }
 
     /**

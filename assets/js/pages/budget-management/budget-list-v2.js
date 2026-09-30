@@ -90,6 +90,7 @@
   function bindEventListeners() {
     // Create Budget Button
     const createBtn = document.getElementById('createBudgetBtn');
+    if (createBtn && window.BUDGET_CTX && !window.BUDGET_CTX.canCreate) createBtn.classList.add('d-none');
     if (createBtn) {
       createBtn.addEventListener('click', navigateToCreateBudget);
     }
@@ -344,11 +345,16 @@
   function renderActionButtons(budget) {
     const statusSlug = budget.status_relation?.slug || budget.status;
     const buttons = [];
+    // What this tier may do (BUDGET_CTX, set by the page): a church edits
+    // only drafts and rejected budgets, submits, and never approves/activates.
+    const ctx = window.BUDGET_CTX || {};
+    const isChurch = ctx.scope === "church";
+    const editable = isChurch ? ["draft", "rejected"] : ["draft", "rejected", "submitted", "under_review"];
 
     console.log(`🔘 Rendering buttons for Budget ID: ${budget.id}, Status: ${statusSlug}`);
 
     // View button (always)
-    const viewUrl = `${BASE_URL}/diocese/budget-management/budget-overview/budget-details.php?id=${budget.id}`;
+    const viewUrl = `${window.BUDGET_CTX.baseUrl}/budget-details.php?id=${budget.id}`;
     console.log(`   👁️ View URL: ${viewUrl}`);
     buttons.push(`
       <button class="btn btn-icon btn-sm btn-info-light btn-wave" onclick="BudgetList.viewBudget(${budget.id})" title="View Details">
@@ -357,8 +363,8 @@
     `);
 
     // Edit button (draft, rejected, submitted, under_review)
-    if (['draft', 'rejected', 'submitted', 'under_review'].includes(statusSlug)) {
-      const editUrl = `${BASE_URL}/diocese/budget-management/budget-overview/edit-budget.php?id=${budget.id}`;
+    if (ctx.canEdit && editable.includes(statusSlug)) {
+      const editUrl = `${window.BUDGET_CTX.baseUrl}/edit-budget.php?id=${budget.id}`;
       console.log(`   ✏️ Edit URL: ${editUrl}`);
       buttons.push(`
         <button class="btn btn-icon btn-sm btn-primary-light btn-wave" onclick="BudgetList.editBudget(${budget.id})" title="Edit Budget">
@@ -367,8 +373,8 @@
       `);
     }
 
-    // Submit button (draft only)
-    if (statusSlug === 'draft') {
+    // Submit button (draft, or a rejected budget being resubmitted)
+    if (ctx.canSubmit && ['draft', 'rejected'].includes(statusSlug)) {
       console.log(`   📤 Submit button added for Budget ID: ${budget.id}`);
       buttons.push(`
         <button class="btn btn-icon btn-sm btn-success-light btn-wave" onclick="BudgetList.submitBudget(${budget.id})" title="Submit for Approval">
@@ -378,7 +384,7 @@
     }
 
     // Activate button (approved only)
-    if (statusSlug === 'approved') {
+    if (ctx.canApprove && statusSlug === 'approved') {
       console.log(`   ▶️ Activate button added for Budget ID: ${budget.id}`);
       buttons.push(`
         <button class="btn btn-icon btn-sm btn-success-light btn-wave" onclick="BudgetList.activateBudget(${budget.id})" title="Activate Budget">
@@ -388,7 +394,7 @@
     }
 
     // Print button (always)
-    const printUrl = `${BASE_URL}/diocese/budget-management/budget-overview/budget-details.php?id=${budget.id}&print=true`;
+    const printUrl = `${window.BUDGET_CTX.baseUrl}/budget-details.php?id=${budget.id}&print=true`;
     console.log(`   🖨️ Print URL: ${printUrl}`);
     buttons.push(`
       <button class="btn btn-icon btn-sm btn-secondary-light btn-wave" onclick="BudgetList.printBudget(${budget.id})" title="Print/Download">
@@ -397,7 +403,7 @@
     `);
 
     // Delete button (draft, rejected only)
-    if (['draft', 'rejected'].includes(statusSlug)) {
+    if (ctx.canEdit && ['draft', 'rejected'].includes(statusSlug)) {
       console.log(`   🗑️ Delete button added for Budget ID: ${budget.id}`);
       buttons.push(`
         <button class="btn btn-icon btn-sm btn-danger-light btn-wave" onclick="BudgetList.deleteBudget(${budget.id})" title="Delete Budget">
@@ -534,25 +540,25 @@
   const BASE_URL = window.APP_BASE_URL || '/makueni-west';
 
   function navigateToCreateBudget() {
-    const url = `${BASE_URL}/diocese/budget-management/budget-overview/create-budget`;
+    const url = `${window.BUDGET_CTX.baseUrl}/create-budget.php`;
     console.log('🔗 Navigating to CREATE:', url);
     window.location.href = url;
   }
 
   function navigateToViewBudget(id) {
-    const url = `${BASE_URL}/diocese/budget-management/budget-overview/budget-details?id=${id}`;
+    const url = `${window.BUDGET_CTX.baseUrl}/budget-details.php?id=${id}`;
     console.log('🔗 Navigating to VIEW:', url);
     window.location.href = url;
   }
 
   function navigateToEditBudget(id) {
-    const url = `${BASE_URL}/diocese/budget-management/budget-overview/edit-budget?id=${id}`;
+    const url = `${window.BUDGET_CTX.baseUrl}/edit-budget.php?id=${id}`;
     console.log('🔗 Navigating to EDIT:', url);
     window.location.href = url;
   }
 
   function navigateToPrintBudget(id) {
-    const url = `${BASE_URL}/diocese/budget-management/budget-overview/budget-details?id=${id}&print=true`;
+    const url = `${window.BUDGET_CTX.baseUrl}/budget-details.php?id=${id}&print=true`;
     console.log('🔗 Opening PRINT:', url);
     window.open(url, '_blank');
   }

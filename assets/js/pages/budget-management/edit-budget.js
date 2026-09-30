@@ -106,6 +106,11 @@
   // INITIALIZATION
   // ========================================================================
 
+  /** Income or expense: the line's category slug ("income" / "expense"). */
+  function lineTypeOf(item) {
+    return item.budget_category?.slug || item.budget_line?.budget_category?.slug || item.line_type || "expense";
+  }
+
   async function init() {
     console.log("📝 Edit Budget: Initializing...");
 
@@ -115,7 +120,7 @@
     if (!budgetId) {
       Toast.error("Invalid budget ID");
       window.location.href =
-        "/makueni-west/diocese/budget-management/budget-overview/all-budgets";
+        `${window.BUDGET_CTX.baseUrl}/all-budgets.php`;
       return;
     }
 
@@ -173,6 +178,7 @@
       placeholder: true,
       placeholderValue: "Select type first",
       allowHTML: true,
+      shouldSort: false, // keep the church's own lines first
     });
     newBudgetLineChoices.disable();
   }
@@ -228,7 +234,7 @@
       if (!budgetResult.success) {
         Toast.error(budgetResult.message || "Failed to load budget");
         window.location.href =
-          "/makueni-west/diocese/budget-management/budget-overview/all-budgets";
+          `${window.BUDGET_CTX.baseUrl}/all-budgets.php`;
         return;
       }
 
@@ -276,7 +282,8 @@
       }
 
       // Extract and render line items
-      budgetLineItems = budgetData.line_items || [];
+      // The API sends the lines as budget_line_items
+      budgetLineItems = budgetData.budget_line_items || budgetData.line_items || [];
       renderBudgetLines();
 
       // Update totals
@@ -517,7 +524,7 @@
     let html = "";
     budgetLineItems.forEach((item, index) => {
       const isExpanded = expandedRowId === item.id;
-      const lineType = item.budget_line?.line_type || item.line_type || "expense";
+      const lineType = lineTypeOf(item);
       const lineName = item.budget_line?.name || item.name || "Unknown Line";
       const badgeClass =
         lineType === "income" ? "badge-income" : "badge-expense";
@@ -702,8 +709,9 @@
     }
 
     // Filter templates by type
+    // Income/expense is the line's category (slug "income" / "expense"), as on the create page
     const filteredLines = budgetLineTemplates.filter(
-      (line) => line.line_type === selectedType
+      (line) => (line.budget_category?.slug || line.line_type) === selectedType
     );
 
     // Exclude already used lines
@@ -723,10 +731,14 @@
       return;
     }
 
-    const options = availableLines.map((line) => ({
-      value: line.id.toString(),
-      label: line.name,
-    }));
+    // The church's own lines first, labelled
+    const isChurch = window.BUDGET_CTX?.scope === "church";
+    const options = [...availableLines]
+      .sort((a, b) => (!!b.territory_id) - (!!a.territory_id))
+      .map((line) => ({
+        value: line.id.toString(),
+        label: line.territory_id ? `${line.name} (Our church)` : isChurch ? `${line.name} (Diocese)` : line.name,
+      }));
 
     newBudgetLineChoices.enable();
     newBudgetLineChoices.setChoices(options, "value", "label", true);
@@ -770,7 +782,7 @@
 
         if (template) {
           newItem.budget_line = template;
-          newItem.line_type = template.line_type;
+          newItem.line_type = template.budget_category?.slug || template.line_type;
           newItem.name = template.name;
         }
 
@@ -890,7 +902,7 @@
     }
     hasUnsavedChanges = false;
     window.location.href =
-      "/makueni-west/diocese/budget-management/budget-overview/all-budgets";
+      `${window.BUDGET_CTX.baseUrl}/all-budgets.php`;
   }
 
   function handleBeforeUnload(e) {
@@ -997,7 +1009,7 @@
     const saved = await saveChanges();
     if (saved) {
       window.location.href =
-        "/makueni-west/diocese/budget-management/budget-overview/all-budgets";
+        `${window.BUDGET_CTX.baseUrl}/all-budgets.php`;
     }
   }
 
@@ -1073,7 +1085,7 @@
     let totalExpense = 0;
 
     budgetLineItems.forEach((item) => {
-      const lineType = item.budget_line?.line_type || item.line_type || "expense";
+      const lineType = lineTypeOf(item);
       const amount = parseFloat(item.budgeted_amount) || 0;
 
       if (lineType === "income") {

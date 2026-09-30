@@ -261,7 +261,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Budget Management Routes (Settings)
     // Budget Types
-    Route::prefix('budget-types')->group(function () {
+    Route::prefix('budget-types')->middleware(\App\Http\Middleware\DenyChurchSettingsWrites::class)->group(function () {
         Route::get('/', [BudgetTypeController::class, 'index']);                      // List all budget types
         Route::post('/', [BudgetTypeController::class, 'store']);                     // Create budget type
         Route::get('/{budgetType}', [BudgetTypeController::class, 'show']);           // Get budget type
@@ -271,7 +271,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // Budget Categories
-    Route::prefix('budget-categories')->group(function () {
+    Route::prefix('budget-categories')->middleware(\App\Http\Middleware\DenyChurchSettingsWrites::class)->group(function () {
         Route::get('/', [BudgetCategoryController::class, 'index']);                      // List all budget categories
         Route::post('/', [BudgetCategoryController::class, 'store']);                     // Create budget category
         Route::get('/{budgetCategory}', [BudgetCategoryController::class, 'show']);       // Get budget category with lines
@@ -303,8 +303,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/{status}/audits', [StatusController::class, 'getAudits']);                 // Get audit trail
     });
 
-    // Budgets (Territory-Agnostic)
-    Route::prefix('budgets')->group(function () {
+    // Budgets (Territory-Agnostic) - who may see/act on which budget: EnsureBudgetAccess
+    Route::prefix('budgets')->middleware(\App\Http\Middleware\EnsureBudgetAccess::class)->group(function () {
         Route::get('/', [BudgetController::class, 'index']);                                    // List all budgets (with filtering)
         Route::get('/export', [BudgetController::class, 'export']);                             // Export budgets to Excel
         Route::post('/', [BudgetController::class, 'store']);                                   // Create budget
@@ -322,7 +322,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
         // Line Items
         Route::get('/{budget}/line-items', [BudgetController::class, 'getLineItems']);          // Get all line items
-        Route::put('/line-items/{lineItem}', [BudgetController::class, 'updateLineItem']);      // Update line item
+        Route::put('/line-items/{lineItem}', [BudgetController::class, 'updateLooseLineItem']); // Update line item (by id alone)
+        Route::post('/{budget}/line-items', [BudgetController::class, 'addLineItem']);          // Add a line to a budget
+        Route::put('/{budget}/line-items/{lineItem}', [BudgetController::class, 'updateLineItem']); // Update line item (edit page)
+        Route::delete('/{budget}/line-items/{lineItem}', [BudgetController::class, 'deleteLineItem']); // Remove a line from a budget
 
         // Audit & Summary
         Route::get('/{budget}/audits', [BudgetController::class, 'getAudits']);                 // Get audit trail
@@ -417,7 +420,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // Budget Deductions
-    Route::prefix('budget-deductions')->group(function () {
+    Route::prefix('budget-deductions')->middleware(\App\Http\Middleware\DenyChurchSettingsWrites::class)->group(function () {
         Route::get('/', [App\Http\Controllers\Api\BudgetDeductionController::class, 'index']);                           // List all deductions
         Route::post('/', [App\Http\Controllers\Api\BudgetDeductionController::class, 'store']);                          // Create deduction
         Route::get('/{budgetDeduction}', [App\Http\Controllers\Api\BudgetDeductionController::class, 'show']);           // Get deduction details
@@ -434,7 +437,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // Budget Periods
-    Route::prefix('budget-periods')->group(function () {
+    Route::prefix('budget-periods')->middleware(\App\Http\Middleware\DenyChurchSettingsWrites::class)->group(function () {
         Route::get('/', [BudgetPeriodController::class, 'index']);                    // List periods (filter by fiscal_year_id, budget_type_id)
         Route::get('/by-year', [BudgetPeriodController::class, 'byYear']);            // Get periods grouped by type for a year
         Route::get('/{id}', [BudgetPeriodController::class, 'show']);                 // Get single period details

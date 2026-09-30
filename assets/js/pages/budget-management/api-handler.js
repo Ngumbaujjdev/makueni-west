@@ -40,11 +40,26 @@
   /**
    * Get default headers for API requests
    */
+  /**
+   * The role the user is acting in, for the budget API (EnsureBudgetAccess):
+   * someone with a church role and a diocese role acts as whichever one
+   * they've switched to, not as every role they hold.
+   */
+  function actingRoleHeader() {
+    try {
+      const role = JSON.parse(localStorage.getItem(Constants.STORAGE_KEYS.CURRENT_ROLE) || "null");
+      return role?.assignment_id ? { "X-Assignment-Id": String(role.assignment_id) } : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
   function getHeaders() {
     return {
       "Content-Type": Constants.HEADERS.CONTENT_TYPE_JSON,
       Accept: Constants.HEADERS.ACCEPT_JSON,
       Authorization: `Bearer ${getAuthToken()}`,
+      ...actingRoleHeader(),
     };
   }
 
@@ -437,6 +452,45 @@
     }
   }
 
+  /** Create a budget line (a church user's line always belongs to their church - the API sets that). */
+  async function createBudgetLine(lineData) {
+    try {
+      const response = await fetch(`${API_BASE}/budget-lines`, {
+        method: Constants.HTTP_METHODS.POST,
+        headers: getHeaders(),
+        body: JSON.stringify(lineData),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
+  async function updateBudgetLine(lineId, lineData) {
+    try {
+      const response = await fetch(`${API_BASE}/budget-lines/${lineId}`, {
+        method: Constants.HTTP_METHODS.PUT,
+        headers: getHeaders(),
+        body: JSON.stringify(lineData),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
+  async function deleteBudgetLine(lineId) {
+    try {
+      const response = await fetch(`${API_BASE}/budget-lines/${lineId}`, {
+        method: Constants.HTTP_METHODS.DELETE,
+        headers: getHeaders(),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
   // ========================================================================
   // BUDGET LINE ITEMS API
   // ========================================================================
@@ -711,6 +765,9 @@
     // Budget Lines
     getBudgetLines,
     getBudgetLine,
+    createBudgetLine,
+    updateBudgetLine,
+    deleteBudgetLine,
 
     // Budget Categories
     getBudgetCategories,

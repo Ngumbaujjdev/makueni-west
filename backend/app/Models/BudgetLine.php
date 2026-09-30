@@ -18,6 +18,8 @@ class BudgetLine extends Model implements Auditable
         'name',
         'slug',
         'territory_scope',
+        'territory_type',
+        'territory_id',
         'description',
         'is_system_default',
         'is_active',
@@ -73,13 +75,38 @@ class BudgetLine extends Model implements Auditable
     }
 
     /**
+     * Shared diocese lines (no owning church).
+     */
+    public function scopeShared($query)
+    {
+        return $query->whereNull('territory_id');
+    }
+
+    /**
+     * The lines a church can use: the shared lines that apply to churches,
+     * plus that church's own lines - never another church's.
+     */
+    public function scopeForChurch($query, int $churchId)
+    {
+        return $query->where(function ($q) use ($churchId) {
+            $q->where(fn ($shared) => $shared->whereNull('territory_id')->whereIn('territory_scope', ['church', 'all']))
+                ->orWhere(fn ($own) => $own->where('territory_type', 'church')->where('territory_id', $churchId));
+        });
+    }
+
+    public function isOwnedBy(int $churchId): bool
+    {
+        return $this->territory_type === 'church' && (int) $this->territory_id === $churchId;
+    }
+
+    /**
      * Scope to filter by territory scope
      */
     public function scopeByTerritoryScope($query, $scope)
     {
         return $query->where(function ($q) use ($scope) {
             $q->where('territory_scope', $scope)
-              ->orWhere('territory_scope', 'all');
+                ->orWhere('territory_scope', 'all');
         });
     }
 
