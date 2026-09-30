@@ -293,6 +293,9 @@
         console.warn("⚠️ Failed to load modules, but continuing with login");
       } else {
         console.log("✅ Modules loaded and cached successfully");
+        // The assignments and modules were just loaded - so the first page
+        // after login doesn't run auth-helpers' refresh chain again.
+        localStorage.setItem("mwd_last_assignment_refresh", new Date().toISOString());
       }
 
       // Sync to PHP session
@@ -318,7 +321,8 @@
       } else {
         // Show success and redirect
         Toast.success(Constants.MESSAGES.LOGIN_SUCCESS);
-        setTimeout(() => redirectToDashboard(), 1000);
+        // Just long enough to see the toast - everything is already loaded.
+        setTimeout(() => redirectToDashboard(), 300);
       }
     } catch (error) {
       console.error("Error handling login success:", error);
