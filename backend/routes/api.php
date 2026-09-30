@@ -376,7 +376,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/', [AttendanceController::class, 'store']);                                // Record one service/event/gathering
         Route::get('/{attendance}', [AttendanceController::class, 'show']);                      // One record (record page)
         Route::get('/{attendance}/audits', [AttendanceController::class, 'audits']);             // Who recorded it and every change
-        Route::put('/{attendance}', [AttendanceController::class, 'update']);                    // Update a record
+        Route::put('/{attendance}', [AttendanceController::class, 'update']);                    // Update a record (counts, notes, or move its date)
+        Route::delete('/{attendance}', [AttendanceController::class, 'destroy']);                // Delete a record entered by mistake (soft)
+        Route::post('/{id}/restore', [AttendanceController::class, 'restore'])->whereNumber('id'); // Undo a delete
     });
 
     // Attendance Analytics (read-only). PDF/Excel attendance reports go through /reports.

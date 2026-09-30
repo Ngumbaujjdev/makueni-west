@@ -137,10 +137,12 @@ const AttendanceGatherings = (function () {
       types,
       icon: PAGE.icon,
       categoryLabel: PAGE.categoryLabel,
+      canDelete: CAN_DELETE_ATTENDANCE,
       onSaved: async (saved) => {
         await loadList();
         UI.flashRow(saved?.id);
       },
+      onDeleted: loadList,
     });
   }
 

@@ -48,6 +48,7 @@ $breadcrumbs = [
             name: '<?= addslashes($userTerritoryName) ?>'
         };
         const CAN_ENTER_ATTENDANCE = <?= $canEnter ? 'true' : 'false' ?>;
+        const CAN_DELETE_ATTENDANCE = <?= hasPermission('attendancemanagement.serviceattendance.delete') ? 'true' : 'false' ?>;
     </script>
 </head>
 

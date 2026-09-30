@@ -18,6 +18,12 @@ $canWrite = [
     'special_event' => hasPermission('attendancemanagement.specialeventsattendance.update') || hasPermission('attendancemanagement.specialeventsattendance.create'),
 ];
 
+$canDelete = [
+    'sunday_service' => hasPermission('attendancemanagement.serviceattendance.delete'),
+    'ministry_gathering' => hasPermission('attendancemanagement.ministryattendance.delete'),
+    'special_event' => hasPermission('attendancemanagement.specialeventsattendance.delete'),
+];
+
 $pageTitle = 'Attendance Record';
 $pageIcon = 'ri-file-list-3-line';
 $breadcrumbs = [
@@ -53,6 +59,7 @@ $breadcrumbs = [
             name: '<?= addslashes($userTerritoryName) ?>'
         };
         const CAN_WRITE_ATTENDANCE = <?= json_encode($canWrite) ?>;
+        const CAN_DELETE_ATTENDANCE = <?= json_encode($canDelete) ?>;
     </script>
 </head>
 
@@ -82,6 +89,7 @@ $breadcrumbs = [
                     </div>
                     <div class="record-actions" id="recordActions">
                         <a href="<?= SITE_URL ?>/church/attendance" class="btn btn-light" id="recordBack"><i class="ri-arrow-left-line me-1"></i>Attendance</a>
+                        <button type="button" class="btn btn-outline-danger" id="recordDelete" hidden><i class="ri-delete-bin-line me-1"></i>Delete</button>
                         <button type="button" class="btn btn-primary" id="recordEdit" hidden><i class="ri-edit-line me-1"></i>Edit</button>
                     </div>
                 </div>

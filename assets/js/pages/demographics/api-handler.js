@@ -277,6 +277,26 @@
     }
   }
 
+  /** Delete a record entered by mistake (soft - restoreAttendance puts it back). */
+  async function deleteAttendance(id) {
+    try {
+      const response = await fetch(`${API_BASE}/attendance/${id}`, { method: "DELETE", headers: getHeaders() });
+      return await handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
+  /** Undo a delete. */
+  async function restoreAttendance(id) {
+    try {
+      const response = await fetch(`${API_BASE}/attendance/${id}/restore`, { method: "POST", headers: getHeaders() });
+      return await handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  }
+
   async function createAttendance(payload) {
     try {
       const response = await fetch(`${API_BASE}/attendance`, {
@@ -540,6 +560,8 @@
     updateAttendance,
     getAttendanceAnalytics,
     getAttendanceRecord,
+    deleteAttendance,
+    restoreAttendance,
     getAttendanceAudits,
     getGatheringDetail,
     getDemographicsReportWidgets,

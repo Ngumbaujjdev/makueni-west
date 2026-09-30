@@ -78,7 +78,9 @@ Base: `backend/routes/api.php`, under `auth:sanctum`.
 | POST | `/attendance` | per `service_type`: `attendancemanagement.{serviceattendance\|specialeventsattendance\|ministryattendance}.create` |
 | GET | `/attendance/{id}` | ownership: one record for the record page |
 | GET | `/attendance/{id}/audits` | ownership: who recorded it and every change (field: old → new) |
-| PUT | `/attendance/{id}` | same prefix, `.update`, resolved from the record's existing `service_type` |
+| PUT | `/attendance/{id}` | same prefix, `.update`, resolved from the record's existing `service_type`. Also moves a record to another date (`service_date`) |
+| DELETE | `/attendance/{id}` | same prefix, `.delete`: a soft delete |
+| POST | `/attendance/{id}/restore` | same prefix, `.delete`: undo a delete |
 | GET | `/demographics-reports/widgets?territory_id=&fiscal_year_id=` | ownership (`userOwnsChurch`) |
 | GET | `/attendance-reports/analytics?territory_id=&fiscal_year_id=<id\|all>&month=<1-12>` or `&from=YYYY-MM&to=YYYY-MM` | ownership (`userOwnsChurch`) |
 
@@ -106,6 +108,13 @@ Base: `backend/routes/api.php`, under `auth:sanctum`.
   - Insights come from `GatheringActivityRule` and `GatheringTrendRule`.
   - It is served by `GET /attendance-reports/gathering`: a gathering type must be this church's (422), and an unknown name returns 404.
   - Export gives that ministry's report.
+
+**Fixing a record entered by mistake (2026-09-30).**
+- **Moving:** `PUT /attendance/{id}` accepts `service_date`. The fiscal year and month are recalculated, and the move is audited, so History shows "Date: 27 Sep 2026 → 13 Sep 2026".
+- **Sunday rule:** a Sunday service must stay on a Sunday that isn't already recorded (422, with `existing_id`). The same rule now also applies when creating one.
+- **Deleting** is a soft delete (`SoftDeletes`), so the record leaves every list, total and report. `POST /attendance/{id}/restore` undoes it; that returns 422 if the Sunday has been recorded again since.
+- **Permission:** `attendancemanagement.{serviceattendance,ministryattendance,specialeventsattendance}.delete`, seeded by `AddAttendanceDeletePermissionsSeeder` to every role that holds the matching `.update`.
+- **Empty counts** are saved as 0. A null used to fail on the NOT NULL columns with a 500.
 
 **One Sunday service per church per Sunday (2026-09-30).** `POST /attendance` for the weekly category returns `422` on `service_date` ("This Sunday is already recorded") when that church already has a Sunday service record for that date, with `existing_id` pointing at it. A second record would count that week twice in every average. The entry form handles this by switching to editing the existing record. Ministry gatherings and special events can still share a date. `PUT /attendance/{id}` doesn't change `service_date`, so the form shows the date as fixed when editing.
 

@@ -362,7 +362,12 @@ const AttendanceOverview = (function () {
       record,
       defaultDate: iso,
       records: sundays(),
+      canDelete: CAN_DELETE_ATTENDANCE,
       onSaved: async () => {
+        await loadRecords();
+        await loadPeriod();
+      },
+      onDeleted: async () => {
         await loadRecords();
         await loadPeriod();
       },

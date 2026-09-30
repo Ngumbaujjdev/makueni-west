@@ -7,6 +7,7 @@ requirePermission('attendancemanagement.overview.read');
 
 $canWrite = hasPermission('attendancemanagement.ministryattendance.create')
     || hasPermission('attendancemanagement.ministryattendance.update');
+$canDelete = hasPermission('attendancemanagement.ministryattendance.delete');
 
 $user = getAuthUser();
 $currentRole = getCurrentRole();

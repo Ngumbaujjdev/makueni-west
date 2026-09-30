@@ -55,6 +55,32 @@ const AttendanceRecord = (function () {
     loadHistory();
   }
 
+  /** After a delete: say so, with Undo and the way back - the record is gone from every list. */
+  function showDeleted() {
+    const list = LIST_FOR[d.record.gathering_category?.slug || "sunday_service"];
+    document.getElementById("recordActions").innerHTML = "";
+    document.getElementById("recordBody").innerHTML = `
+      <div class="card custom-card"><div class="card-body">
+        <div class="list-empty">
+          <span class="list-empty-icon bg-danger text-white"><i class="ri-delete-bin-line"></i></span>
+          <div class="fw-semibold mt-2">This record was deleted</div>
+          <div class="fs-12">It no longer counts in any total, chart or report.</div>
+          <div class="d-flex flex-wrap justify-content-center gap-2 mt-3">
+            <button type="button" class="btn btn-light btn-sm" id="recordUndo"><i class="ri-arrow-go-back-line me-1"></i>Undo</button>
+            <a href="${base()}/${list.href}" class="btn btn-primary btn-sm">${list.label}</a>
+          </div>
+        </div>
+      </div></div>`;
+    document.getElementById("recordUndo").addEventListener("click", async () => {
+      const back = await DemographicsAPIHandler.restoreAttendance(id);
+      if (!back.success) {
+        Toast.error(back.message || "Couldn't put the record back");
+        return;
+      }
+      window.location.reload();
+    });
+  }
+
   function showMissing(text) {
     document.getElementById("recordBody").innerHTML = `
       <div class="card custom-card"><div class="card-body">
@@ -95,6 +121,9 @@ const AttendanceRecord = (function () {
     const editBtn = document.getElementById("recordEdit");
     editBtn.hidden = !canWrite;
     editBtn.onclick = () => openEdit(slug);
+    const deleteBtn = document.getElementById("recordDelete");
+    deleteBtn.hidden = !(CAN_DELETE_ATTENDANCE || {})[slug];
+    deleteBtn.onclick = () => A.deleteRecord(d.record, { onDeleted: showDeleted, onRestored: () => window.location.reload() });
 
     renderCounts();
     renderCompare();
@@ -282,10 +311,13 @@ const AttendanceRecord = (function () {
     A.openEntryModal({
       ...config,
       record: d.record,
+      canDelete: !!(CAN_DELETE_ATTENDANCE || {})[slug],
       onSaved: async () => {
         await load();
         Toast.success("Updated - the page shows the new numbers");
       },
+      onDeleted: showDeleted,
+      onRestored: () => window.location.reload(),
     });
   }
 

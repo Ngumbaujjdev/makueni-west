@@ -25,6 +25,8 @@ class AttendanceController extends Controller
      * own bucket (see the gathering-types-config plan's "Explicitly out of
      * scope").
      */
+    private const COUNTS = ['adults_count', 'youth_count', 'children_male_count', 'children_female_count'];
+
     private const PERMISSION_PREFIXES = [
         'sunday_service' => 'attendancemanagement.serviceattendance',
         'special_event' => 'attendancemanagement.specialeventsattendance',
@@ -130,7 +132,13 @@ class AttendanceController extends Controller
                 // Only the fields people recognise, as "Adults: 80 -> 85".
                 'changes' => collect($audit->new_values)
                     ->only(array_keys($labels))
-                    ->map(fn ($new, $field) => ['field' => $labels[$field], 'old' => $audit->old_values[$field] ?? null, 'new' => $new])
+                    ->map(function ($new, $field) use ($audit, $labels) {
+                        $old = $audit->old_values[$field] ?? null;
+                        // Dates read as "16 Aug 2026", not a timestamp.
+                        $date = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('j M Y') : $v;
+
+                        return ['field' => $labels[$field], 'old' => $field === 'service_date' ? $date($old) : $old, 'new' => $field === 'service_date' ? $date($new) : $new];
+                    })
                     ->values()
                     ->all(),
                 'created_at' => $audit->created_at->toIso8601String(),
@@ -172,6 +180,10 @@ class AttendanceController extends Controller
         }
 
         $data = $validator->validated();
+        // A count left empty is nobody in that group (the columns can't be null).
+        foreach (self::COUNTS as $field) {
+            $data[$field] = (int) ($data[$field] ?? 0);
+        }
 
         $category = GatheringCategory::find($data['gathering_category_id']);
         $permissionPrefix = self::PERMISSION_PREFIXES[$category->slug] ?? null;
@@ -216,31 +228,12 @@ class AttendanceController extends Controller
             ], 422);
         }
 
-        // One Sunday service a week: a second record for the same Sunday
-        // would double that week in every average. The form offers to edit
-        // the existing one instead, using existing_id.
-        if ($category->is_weekly) {
-            $existing = ChurchAttendanceRecord::where('territory_type', 'church')
-                ->where('territory_id', (int) $data['territory_id'])
-                ->where('gathering_category_id', $category->id)
-                ->whereDate('service_date', $data['service_date'])
-                ->first();
-
-            if ($existing) {
-                return response()->json([
-                    'success' => false,
-                    'status' => 422,
-                    'message' => 'This Sunday is already recorded. Edit that record instead.',
-                    'errors' => ['service_date' => ['This Sunday is already recorded.']],
-                    'existing_id' => $existing->id,
-                ], 422);
-            }
+        if ($error = $this->sundayRuleError($category, $data['service_date'], (int) $data['territory_id'])) {
+            return $error;
         }
 
-        $fiscalYear = FiscalYear::where('year', date('Y', strtotime($data['service_date'])))->first();
-        $fiscalMonth = FiscalMonth::where('number', date('n', strtotime($data['service_date'])))->first();
-
-        if (! $fiscalYear || ! $fiscalMonth) {
+        $fiscal = $this->fiscalIdsFor($data['service_date']);
+        if (! $fiscal) {
             return response()->json([
                 'success' => false,
                 'status' => 422,
@@ -250,8 +243,7 @@ class AttendanceController extends Controller
 
         try {
             $data['territory_type'] = 'church';
-            $data['fiscal_year_id'] = $fiscalYear->id;
-            $data['fiscal_month_id'] = $fiscalMonth->id;
+            [$data['fiscal_year_id'], $data['fiscal_month_id']] = $fiscal;
             $data['created_by'] = $user->id;
             $data['updated_by'] = $user->id;
 
@@ -300,6 +292,8 @@ class AttendanceController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
+            // Moving a record entered on the wrong date.
+            'service_date' => 'nullable|date',
             'gathering_type_id' => 'nullable|exists:gathering_types,id',
             'event_name' => 'nullable|string|max:255',
             'adults_count' => 'nullable|integer|min:0',
@@ -319,6 +313,30 @@ class AttendanceController extends Controller
         }
 
         $data = $validator->validated();
+
+        foreach (self::COUNTS as $field) {
+            if (array_key_exists($field, $data)) {
+                $data[$field] = (int) ($data[$field] ?? 0);
+            }
+        }
+
+        if (! empty($data['service_date']) && $data['service_date'] !== $attendance->service_date->toDateString()) {
+            if ($error = $this->sundayRuleError($attendance->gatheringCategory, $data['service_date'], (int) $attendance->territory_id, $attendance->id)) {
+                return $error;
+            }
+            $fiscal = $this->fiscalIdsFor($data['service_date']);
+            if (! $fiscal) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 422,
+                    'message' => 'No fiscal year/month is configured for that date.',
+                    'errors' => ['service_date' => ['No fiscal year is set up for that date.']],
+                ], 422);
+            }
+            [$data['fiscal_year_id'], $data['fiscal_month_id']] = $fiscal;
+        } else {
+            unset($data['service_date']);
+        }
 
         if (array_key_exists('gathering_type_id', $data) && $data['gathering_type_id']) {
             $gatheringType = GatheringType::find($data['gathering_type_id']);
@@ -345,6 +363,120 @@ class AttendanceController extends Controller
             'message' => 'Attendance updated successfully',
             'data' => $attendance->fresh(['gatheringCategory', 'gatheringType']),
         ]);
+    }
+
+    /**
+     * Delete a record entered by mistake. Soft delete: it leaves every list,
+     * total and report, and can be put back with restore() (the Undo on the
+     * page). Needs the category's `.delete` permission.
+     */
+    public function destroy(Request $request, ChurchAttendanceRecord $attendance)
+    {
+        if ($denied = $this->denyUnless($request, $attendance, 'delete')) {
+            return $denied;
+        }
+
+        $attendance->delete();
+
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'message' => 'Attendance record deleted',
+            'data' => ['id' => $attendance->id],
+        ]);
+    }
+
+    /** Put back a deleted record (the Undo after a delete). */
+    public function restore(Request $request, int $id)
+    {
+        $attendance = ChurchAttendanceRecord::onlyTrashed()->with('gatheringCategory')->find($id);
+        if (! $attendance) {
+            return response()->json(['success' => false, 'status' => 404, 'message' => 'That record is not in the deleted records.'], 404);
+        }
+        if ($denied = $this->denyUnless($request, $attendance, 'delete')) {
+            return $denied;
+        }
+        // Someone may have recorded that Sunday again since.
+        if ($error = $this->sundayRuleError($attendance->gatheringCategory, $attendance->service_date->toDateString(), (int) $attendance->territory_id, $attendance->id)) {
+            return $error;
+        }
+
+        $attendance->restore();
+
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'message' => 'Attendance record restored',
+            'data' => $attendance->fresh(['gatheringCategory', 'gatheringType']),
+        ]);
+    }
+
+    /** 403 unless the user holds the category's `$action` permission and owns the church. */
+    private function denyUnless(Request $request, ChurchAttendanceRecord $attendance, string $action)
+    {
+        $prefix = self::PERMISSION_PREFIXES[$attendance->gatheringCategory?->slug] ?? null;
+        if (! $prefix || ! $request->user()->can("{$prefix}.{$action}")) {
+            return response()->json([
+                'success' => false,
+                'status' => 403,
+                'message' => "You do not have permission to {$action} this type of attendance.",
+            ], 403);
+        }
+        if (! $this->userOwnsChurch($request->user(), $attendance->territory_id)) {
+            return response()->json([
+                'success' => false,
+                'status' => 403,
+                'message' => 'You can only change attendance for your own church.',
+            ], 403);
+        }
+
+        return null;
+    }
+
+    /**
+     * A Sunday service must be on a Sunday, and only one per church per
+     * Sunday - a second record would count that week twice in every average.
+     * 422 (with existing_id when it's a duplicate), or null when fine.
+     */
+    private function sundayRuleError(?GatheringCategory $category, string $date, int $territoryId, ?int $ignoreId = null)
+    {
+        if (! $category?->is_weekly) {
+            return null;
+        }
+        if (! \Carbon\Carbon::parse($date)->isSunday()) {
+            return response()->json([
+                'success' => false,
+                'status' => 422,
+                'message' => 'A Sunday service has to be on a Sunday.',
+                'errors' => ['service_date' => ['Pick a Sunday.']],
+            ], 422);
+        }
+        $existing = ChurchAttendanceRecord::where('territory_type', 'church')
+            ->where('territory_id', $territoryId)
+            ->where('gathering_category_id', $category->id)
+            ->whereDate('service_date', $date)
+            ->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))
+            ->first();
+        if ($existing) {
+            return response()->json([
+                'success' => false,
+                'status' => 422,
+                'message' => 'This Sunday is already recorded. Edit that record instead.',
+                'errors' => ['service_date' => ['This Sunday is already recorded.']],
+                'existing_id' => $existing->id,
+            ], 422);
+        }
+
+        return null;
+    }
+
+    /** [fiscal_year_id, fiscal_month_id] for a date, or null when no fiscal year is set up for it. */
+    private function fiscalIdsFor(string $date): ?array
+    {
+        $year = FiscalYear::where('year', date('Y', strtotime($date)))->value('id');
+        $month = FiscalMonth::where('number', date('n', strtotime($date)))->value('id');
+
+        return $year && $month ? [$year, $month] : null;
     }
 
     /**
