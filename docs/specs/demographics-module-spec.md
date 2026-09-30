@@ -76,6 +76,8 @@ Base: `backend/routes/api.php`, under `auth:sanctum`.
 | GET | `/churches/{church}/clergy-summary` | ownership (`userOwnsChurch`) |
 | GET | `/attendance?territory_id=&service_type=&fiscal_year_id=&fiscal_month_id=` | ownership |
 | POST | `/attendance` | per `service_type`: `attendancemanagement.{serviceattendance\|specialeventsattendance\|ministryattendance}.create` |
+| GET | `/attendance/{id}` | ownership: one record for the record page |
+| GET | `/attendance/{id}/audits` | ownership: who recorded it and every change (field: old → new) |
 | PUT | `/attendance/{id}` | same prefix, `.update`, resolved from the record's existing `service_type` |
 | GET | `/demographics-reports/widgets?territory_id=&fiscal_year_id=` | ownership (`userOwnsChurch`) |
 | GET | `/attendance-reports/analytics?territory_id=&fiscal_year_id=<id\|all>&month=<1-12>` or `&from=YYYY-MM&to=YYYY-MM` | ownership (`userOwnsChurch`) |
@@ -90,6 +92,20 @@ Base: `backend/routes/api.php`, under `auth:sanctum`.
 - **Rules:** `SundayCoverageRule`, `AttendanceTrendRule`, `AttendanceVsMembershipRule`, `PeakSundayRule`, `QuietGatheringRule`, `TopGatheringRule`, and `GenderBalanceRule::sundayChildren`.
 - **Members on a Sunday** uses each church's latest *approved* demographics submission up to the end of the period.
 - The attendance PDF and Excel reports use the same class (see `reports-spec.md`).
+
+**Attendance detail pages (2026-09-30).** Both use `attendancemanagement.overview.read`. Edit and Record only show with the matching create/update permission.
+
+- **`church/attendance/record.php?id=`: one Sunday or meeting.**
+  - Shows the four counts and the split.
+  - Compares it with last time, the usual (the average of up to 8 before it), the best (and its rank), and members on the roll for a Sunday.
+  - Also shows the last few meetings, the notes, and the History (the audit trail).
+  - Previous / Next step through the same gathering. For a Sunday they're the Sundays either side, and a missed one offers Record.
+  - Built by `AttendanceRecordDetail`.
+- **`church/attendance/gathering.php?type=` or `?name=`: one ministry or event over the shared period picker.**
+  - Shows times met, average, most, last met, status, every meeting (stacked), who attends, meetings per month, and every meeting linked to its record page.
+  - Insights come from `GatheringActivityRule` and `GatheringTrendRule`.
+  - It is served by `GET /attendance-reports/gathering`: a gathering type must be this church's (422), and an unknown name returns 404.
+  - Export gives that ministry's report.
 
 **One Sunday service per church per Sunday (2026-09-30).** `POST /attendance` for the weekly category returns `422` on `service_date` ("This Sunday is already recorded") when that church already has a Sunday service record for that date, with `existing_id` pointing at it. A second record would count that week twice in every average. The entry form handles this by switching to editing the existing record. Ministry gatherings and special events can still share a date. `PUT /attendance/{id}` doesn't change `service_date`, so the form shows the date as fixed when editing.
 

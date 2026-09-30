@@ -374,12 +374,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('attendance')->group(function () {
         Route::get('/', [AttendanceController::class, 'index']);                                 // List own church's attendance records
         Route::post('/', [AttendanceController::class, 'store']);                                // Record one service/event/gathering
+        Route::get('/{attendance}', [AttendanceController::class, 'show']);                      // One record (record page)
+        Route::get('/{attendance}/audits', [AttendanceController::class, 'audits']);             // Who recorded it and every change
         Route::put('/{attendance}', [AttendanceController::class, 'update']);                    // Update a record
     });
 
     // Attendance Analytics (read-only). PDF/Excel attendance reports go through /reports.
     Route::prefix('attendance-reports')->group(function () {
         Route::get('/analytics', [AttendanceReportController::class, 'analytics']);               // Attendance Analytics page (AttendanceData)
+        Route::get('/gathering', [AttendanceReportController::class, 'gathering']);               // One ministry / event over a period (gathering page)
     });
 
     // Demographics Reports - Spiritual Activities/Monthly Statistics/Growth Analytics pages' stat cards/charts (read-only, computed server-side)

@@ -8,6 +8,7 @@ use App\Models\FiscalMonth;
 use App\Models\FiscalYear;
 use App\Models\GatheringCategory;
 use App\Models\GatheringType;
+use App\Reports\Attendance\AttendanceRecordDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -75,6 +76,68 @@ class AttendanceController extends Controller
             'message' => 'Attendance records retrieved successfully',
             'data' => $records,
         ]);
+    }
+
+    /**
+     * One recorded Sunday or meeting for the record page: its counts, the
+     * meetings either side of it, the usual and the best, and - for a Sunday
+     * - members on the roll and the Sundays before and after.
+     */
+    public function show(Request $request, ChurchAttendanceRecord $attendance)
+    {
+        if (! $this->userOwnsChurch($request->user(), $attendance->territory_id)) {
+            return response()->json([
+                'success' => false,
+                'status' => 403,
+                'message' => 'You do not have access to this church\'s attendance records.',
+            ], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'data' => (new AttendanceRecordDetail($attendance))->toArray(),
+        ]);
+    }
+
+    /**
+     * Who recorded a record and every change since (the model is Auditable),
+     * newest first - the same shape as the Gathering Types audit trail.
+     */
+    public function audits(Request $request, ChurchAttendanceRecord $attendance)
+    {
+        if (! $this->userOwnsChurch($request->user(), $attendance->territory_id)) {
+            return response()->json([
+                'success' => false,
+                'status' => 403,
+                'message' => 'You do not have access to this church\'s attendance records.',
+            ], 403);
+        }
+
+        $labels = [
+            'adults_count' => 'Adults', 'youth_count' => 'Youth', 'children_male_count' => 'Boys',
+            'children_female_count' => 'Girls', 'notes' => 'Notes', 'event_name' => 'Name', 'service_date' => 'Date',
+        ];
+        $audits = $attendance->audits()
+            ->with('user:id,firstname,lastname')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn ($audit) => [
+                'id' => $audit->id,
+                'event' => $audit->event,
+                'user' => $audit->user ? trim("{$audit->user->firstname} {$audit->user->lastname}") : null,
+                // Only the fields people recognise, as "Adults: 80 -> 85".
+                'changes' => collect($audit->new_values)
+                    ->only(array_keys($labels))
+                    ->map(fn ($new, $field) => ['field' => $labels[$field], 'old' => $audit->old_values[$field] ?? null, 'new' => $new])
+                    ->values()
+                    ->all(),
+                'created_at' => $audit->created_at->toIso8601String(),
+                'created_at_human' => $audit->created_at->diffForHumans(),
+            ]);
+
+        return response()->json(['success' => true, 'status' => 200, 'data' => $audits]);
     }
 
     /**
