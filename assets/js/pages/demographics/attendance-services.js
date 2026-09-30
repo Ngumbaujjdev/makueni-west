@@ -198,7 +198,7 @@ const AttendanceServices = (function () {
             return `
               <tr data-row-id="${r ? r.id : ""}" data-date="${s.iso}" class="${s.status === "missing" ? "att-row-missing" : ""}">
                 <td data-order="${s.iso}" data-search="${A.formatDate(s.iso, { weekday: "short", day: "numeric", month: "short" })} ${monthName}">
-                  <div class="fw-semibold">${A.formatDate(s.iso, { day: "numeric", month: "short", year: "numeric" })}</div>
+                  ${r ? `<a class="fw-semibold" href="${AppConfig.FRONTEND_BASE_URL}/church/attendance/record?id=${r.id}">${A.formatDate(s.iso, { day: "numeric", month: "short", year: "numeric" })}</a>` : `<div class="fw-semibold">${A.formatDate(s.iso, { day: "numeric", month: "short", year: "numeric" })}</div>`}
                   <div class="fs-12">${monthName.split(" ")[0]}</div>
                 </td>
                 <td data-search="${meta[0]}">${UI.pill(meta[0], meta[1])}</td>
@@ -350,6 +350,7 @@ const AttendanceServices = (function () {
       series: A.GROUPS.map((g) => Math.round(base.reduce((s, r) => s + (Number(r[g.key]) || 0), 0) / base.length)),
       colors: A.GROUPS.map((g) => g.color),
       centerLabel: "Avg Sunday",
+      centerValue: Math.round(base.reduce((s, r) => s + A.recordTotal(r), 0) / base.length),
     });
   }
 
@@ -392,7 +393,8 @@ const AttendanceServices = (function () {
         }
         openEntry(allRows.find((r) => A.recordIso(r) === info.dateStr) || null, info.dateStr);
       },
-      eventClick: (info) => openEntry(info.event.extendedProps.record),
+      // A recorded Sunday opens its page; an empty Sunday opens the form.
+      eventClick: (info) => (window.location.href = `${AppConfig.FRONTEND_BASE_URL}/church/attendance/record?id=${info.event.extendedProps.record.id}`),
     });
     calendar.render();
     calendar._refreshMissing = () => {

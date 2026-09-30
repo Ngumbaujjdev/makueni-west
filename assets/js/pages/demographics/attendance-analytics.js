@@ -210,7 +210,13 @@ const AttendanceAnalytics = (function () {
     const weekly = sd.weekly;
 
     document.getElementById("sundayTopChips").innerHTML = sd.top.length
-      ? sd.top.map((t, i) => `<span class="soft-chip soft-${["success", "primary", "purple"][i]}">${i === 0 ? "Best" : `#${i + 1}`} <b>${n(t.total)}</b> ${fmtDate(t.date, { day: "numeric", month: "short" })}</span>`).join("")
+      ? sd.top
+          .map((t, i) => {
+            const chip = `${i === 0 ? "Best" : `#${i + 1}`} <b>${n(t.total)}</b> ${fmtDate(t.date, { day: "numeric", month: "short" })}`;
+            const cls = `soft-chip soft-${["success", "primary", "purple"][i]}`;
+            return t.id ? `<a class="${cls}" href="${AppConfig.FRONTEND_BASE_URL}/church/attendance/record?id=${t.id}">${chip}</a>` : `<span class="${cls}">${chip}</span>`;
+          })
+          .join("")
       : "";
 
     if (!weekly.length) {
@@ -230,6 +236,7 @@ const AttendanceAnalytics = (function () {
         series: sd.composition.map((g) => g.average),
         colors: sd.composition.map((g) => GROUP_COLORS[g.key]),
         centerLabel: "Avg Sunday",
+        centerValue: data.summary.sunday_average,
       }));
     }
 
@@ -357,7 +364,7 @@ const AttendanceAnalytics = (function () {
                 <td>
                   <div class="d-flex align-items-center gap-2">
                     ${UI.avatarTile(esc(g.icon || (key === "events" ? "ri-star-line" : "ri-group-line")), UI.colorFor(g.name))}
-                    <span class="fw-semibold">${esc(g.name)}</span>
+                    <a class="fw-semibold text-reset" href="${AppConfig.FRONTEND_BASE_URL}/church/attendance/gathering?${g.type_id ? `type=${g.type_id}` : `name=${encodeURIComponent(g.name)}`}">${esc(g.name)}</a>
                   </div>
                 </td>
                 <td>${g.times}</td>

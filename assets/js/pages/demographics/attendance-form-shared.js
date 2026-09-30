@@ -260,6 +260,8 @@ const AttendanceFormShared = (function () {
         .map(
           (g) => `
         <div class="col-xxl-3 col-xl-4 col-md-6">
+          <div class="gathering-card-wrap">
+          <a class="gathering-card-view" href="${AppConfig.FRONTEND_BASE_URL}/church/attendance/gathering?${g.key.startsWith("t") ? `type=${g.key.substring(1)}` : `name=${encodeURIComponent(g.name)}`}" title="Open ${escapeHtml(g.name)}">View<i class="ri-arrow-right-s-line"></i></a>
           <button type="button" class="gathering-card${g.name === active ? " is-active" : ""}" data-gathering="${escapeHtml(g.name)}">
             <span class="gathering-card-top">
               ${UI.avatarTile(escapeHtml(g.icon), g.color)}
@@ -275,6 +277,7 @@ const AttendanceFormShared = (function () {
               ${g.times ? `<span class="gathering-card-spark" data-spark='${JSON.stringify(g.series).replace(/'/g, "&#39;")}' data-spark-color="${g.color}" data-spark-height="30"></span>` : ""}
             </span>
           </button>
+          </div>
         </div>`,
         )
         .join("") +
@@ -463,6 +466,7 @@ const AttendanceFormShared = (function () {
    *   records: this category's records (for "last time", duplicates, missing Sundays)
    *   types: this category's gathering types (fetched when omitted)
    *   categoryLabel: "Ministry gathering" | "Special event"
+   *   defaultTypeId / defaultName: start a new entry on this gathering (the gathering page)
    *   onSaved(savedRecord)
    */
   async function openEntryModal(config) {
@@ -492,7 +496,7 @@ const AttendanceFormShared = (function () {
     document.getElementById("attendanceServiceDate").max = todayIso();
 
     if (!config.isWeekly) {
-      document.getElementById("attendanceEventName").value = record.gathering_type_id ? "" : record.event_name || "";
+      document.getElementById("attendanceEventName").value = record.gathering_type_id ? "" : record.event_name || config.defaultName || "";
       bootstrap.Modal.getOrCreateInstance(modalEl).show();
       const saveBtn = document.getElementById("attendanceModalSaveBtn");
       saveBtn.disabled = true;
@@ -524,7 +528,9 @@ const AttendanceFormShared = (function () {
     const mostUsed = summarizeGatherings(records(), loadedTypes).find((g) => g.key.startsWith("t") && g.times > 0);
     select.value = record.gathering_type_id
       ? String(record.gathering_type_id)
-      : record.event_name
+      : config.defaultTypeId && loadedTypes.some((t) => t.id === Number(config.defaultTypeId))
+        ? String(config.defaultTypeId)
+        : record.event_name || config.defaultName
         ? OTHER_VALUE
         : mostUsed
           ? mostUsed.key.substring(1)
@@ -921,20 +927,25 @@ const AttendanceFormShared = (function () {
         const previous = rows.slice(index + 1).find((r) => gatheringKey(r) === gatheringKey(row));
         const breakdown = GROUPS.map((g) => (row[g.key] ? `<span><span class="count-dot bg-${g.color}"></span>${row[g.key]} ${Number(row[g.key]) === 1 ? g.one : g.many}</span>` : "")).filter(Boolean).join("");
         const notes = row.notes ? escapeHtml(row.notes) : "";
-        const editBtn = onEdit
-          ? `<button type="button" class="btn btn-sm btn-primary-light" onclick="${onEdit}(${row.id})" title="Edit entry" aria-label="Edit entry"><i class="ri-edit-line"></i></button>`
-          : "";
+        const base = `${AppConfig.FRONTEND_BASE_URL}/church/attendance`;
+        const recordUrl = `${base}/record?id=${row.id}`;
+        const gatheringUrl = `${base}/gathering?${row.gathering_type_id ? `type=${row.gathering_type_id}` : `name=${encodeURIComponent(label)}`}`;
+        const editBtn = `
+          <div class="d-inline-flex gap-1">
+            <a class="btn btn-sm btn-light" href="${recordUrl}" title="Open" aria-label="Open"><i class="ri-eye-line"></i></a>
+            ${onEdit ? `<button type="button" class="btn btn-sm btn-primary-light" onclick="${onEdit}(${row.id})" title="Edit entry" aria-label="Edit entry"><i class="ri-edit-line"></i></button>` : ""}
+          </div>`;
 
         return `
           <tr data-date="${iso}" data-row-id="${row.id}">
             <td data-order="${iso}">
-              <div class="fw-semibold">${formatDate(iso)}</div>
+              <a class="fw-semibold" href="${recordUrl}">${formatDate(iso)}</a>
               <div class="fs-12">${formatDate(iso, { weekday: "long" })}</div>
             </td>
             <td data-search="${escapeHtml(label)}">
               <div class="d-flex align-items-center gap-2">
                 ${UI.avatarTile(escapeHtml(icon), UI.colorFor(label))}
-                <span class="fw-semibold">${escapeHtml(label)}</span>
+                <a class="fw-semibold text-reset" href="${gatheringUrl}">${escapeHtml(label)}</a>
               </div>
             </td>
             <td data-order="${total}">

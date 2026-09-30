@@ -272,6 +272,9 @@ const AttendanceGatheringTypes = (function () {
                     </a></li>
                     <li><hr class="dropdown-divider"></li>
                     ` : ""}
+                    <li><a class="dropdown-item" href="${AppConfig.FRONTEND_BASE_URL}/church/attendance/gathering?type=${t.id}">
+                      <i class="ri-bar-chart-box-line me-2 text-success"></i>View attendance
+                    </a></li>
                     <li><a class="dropdown-item" href="javascript:void(0);" onclick="AttendanceGatheringTypes.openAuditModal(${t.id})">
                       <i class="ri-history-line me-2 text-primary"></i>View activity log
                     </a></li>
