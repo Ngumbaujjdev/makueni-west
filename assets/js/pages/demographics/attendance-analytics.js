@@ -25,13 +25,12 @@ const AttendanceAnalytics = (function () {
   "use strict";
 
   const UI = DemographicsUI;
-  const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const GROUP_COLORS = { adults_count: "primary", youth_count: "success", children_male_count: "purple", children_female_count: "pink" };
   const TABS = ["sunday", "ministries", "events", "children"];
   /** Export gives the open tab's report. */
   const REPORT_FOR_TAB = { sunday: "attendance.sunday", ministries: "attendance.ministries", events: "attendance.events", children: "attendance.children" };
 
-  let years = [];
+  let picker = null;
   let data = null;
   let tab = "sunday";
   const charts = [];
@@ -52,75 +51,28 @@ const AttendanceAnalytics = (function () {
     tab = TABS.includes(params.get("tab")) ? params.get("tab") : "sunday";
 
     const res = await DemographicsAPIHandler.getFiscalYears();
-    const thisYear = new Date().getFullYear();
-    years = (res.success ? res.data || [] : []).filter((y) => y.year <= thisYear).sort((a, b) => b.year - a.year);
-    buildPeriodPicker(params);
+    picker = UI.renderPeriodPicker({ yearId: "periodYear", monthId: "periodMonth", monthWrapId: "periodMonthWrap", years: res.success ? res.data || [] : [], onChange: load });
     wireTabs();
     await load();
   }
 
   // ==========================================================================
-  // PERIOD
+  // PERIOD (shared picker - DemographicsUI.renderPeriodPicker)
   // ==========================================================================
-
-  function buildPeriodPicker(params) {
-    const yearSel = document.getElementById("periodYear");
-    const monthSel = document.getElementById("periodMonth");
-    yearSel.innerHTML =
-      years.map((y) => `<option value="${y.id}" data-year="${y.year}">${y.year}</option>`).join("") + '<option value="all">All time</option>';
-    const wanted = params.get("year");
-    const match = wanted === "all" ? "all" : years.find((y) => String(y.year) === wanted)?.id;
-    yearSel.value = String(match || years.find((y) => y.year === new Date().getFullYear())?.id || years[0]?.id || "all");
-    fillMonths(Number(params.get("month")) || "");
-
-    UI.enhanceSelect(yearSel, { search: false, dropdownAutoWidth: true });
-    UI.enhanceSelect(monthSel, { search: false, dropdownAutoWidth: true });
-    yearSel.addEventListener("change", () => {
-      fillMonths(monthSel.value);
-      load();
-    });
-    monthSel.addEventListener("change", load);
-  }
-
-  /** Months of the chosen year (up to this month for the current year); hidden for All time. */
-  function fillMonths(keep) {
-    const yearSel = document.getElementById("periodYear");
-    const monthSel = document.getElementById("periodMonth");
-    const year = Number(yearSel.selectedOptions[0]?.dataset.year);
-    const now = new Date();
-    const last = year === now.getFullYear() ? now.getMonth() + 1 : 12;
-    monthSel.innerHTML =
-      '<option value="">Whole year</option>' +
-      MONTHS.slice(0, last)
-        .map((m, i) => `<option value="${i + 1}">${m}</option>`)
-        .join("");
-    monthSel.value = keep && Number(keep) <= last ? String(keep) : "";
-    document.getElementById("periodMonthWrap").hidden = yearSel.value === "all";
-    UI.syncSelect(monthSel);
-  }
 
   function syncUrl() {
     const params = new URLSearchParams(window.location.search);
-    const yearSel = document.getElementById("periodYear");
-    const month = document.getElementById("periodMonth").value;
-    const year = yearSel.value === "all" ? "all" : yearSel.selectedOptions[0]?.dataset.year;
-    year && year !== String(new Date().getFullYear()) ? params.set("year", year) : params.delete("year");
-    month && yearSel.value !== "all" ? params.set("month", month) : params.delete("month");
     tab !== "sunday" ? params.set("tab", tab) : params.delete("tab");
     const qs = params.toString();
     history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
-    UI.syncExportButton({ reportKey: REPORT_FOR_TAB[tab], year: year || "", month: yearSel.value === "all" ? "" : month });
+    const { year, month } = picker.state();
+    UI.syncExportButton({ reportKey: REPORT_FOR_TAB[tab], year, month });
   }
 
   async function load() {
-    const yearSel = document.getElementById("periodYear");
-    const month = document.getElementById("periodMonth").value;
     syncUrl();
     document.getElementById("analyticsBody").classList.add("is-loading");
-    const filters = { fiscal_year_id: yearSel.value };
-    if (month && yearSel.value !== "all") filters.month = month;
-
-    const res = await DemographicsAPIHandler.getAttendanceAnalytics(USER_TERRITORY.id, filters);
+    const res = await DemographicsAPIHandler.getAttendanceAnalytics(USER_TERRITORY.id, picker.filters());
     document.getElementById("analyticsBody").classList.remove("is-loading");
     if (!res.success) {
       Toast.error(res.message || "Couldn't load attendance analytics");

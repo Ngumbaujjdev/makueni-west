@@ -79,6 +79,19 @@ $breadcrumbs = [
                     </div>
                 </div>
 
+                <!-- Period filter: everything below follows it -->
+                <div class="att-filter-strip">
+                    <span class="att-filter-label"><i class="ri-filter-3-line"></i>Showing</span>
+                    <div class="att-period-select">
+                        <select id="periodYear" aria-label="Year"></select>
+                    </div>
+                    <div class="att-period-select" id="periodMonthWrap">
+                        <select id="periodMonth" aria-label="Month"></select>
+                    </div>
+                    <span class="soft-chip soft-primary att-filter-period"><i class="ri-calendar-line me-1"></i><b id="periodLabel">-</b></span>
+                </div>
+
+                <div id="overviewBody" class="att-analytics">
                 <div class="row" id="statCardsRow"></div>
 
                 <div class="row">
@@ -87,7 +100,7 @@ $breadcrumbs = [
                             <div class="card-header justify-content-between flex-wrap gap-2">
                                 <div>
                                     <div class="card-title">Sunday attendance</div>
-                                    <span class="card-subtitle-text">The last 12 Sundays recorded, by group</span>
+                                    <span class="card-subtitle-text" id="trendSubtitle">The last 12 Sundays recorded, by group</span>
                                 </div>
                                 <div class="d-flex flex-wrap gap-1" id="trendChips"></div>
                             </div>
@@ -151,6 +164,8 @@ $breadcrumbs = [
                             </div>
                         </div>
                     </div>
+                </div>
+
                 </div>
 
                 <div class="card custom-card">

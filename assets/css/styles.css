@@ -33340,6 +33340,44 @@ tr.list-row-flash > td {
   color: #fff;
 }
 
+/* Attendance Overview: the period filter strip on top */
+.att-filter-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid rgba(var(--primary-rgb), 0.18);
+  border-radius: 0.75rem;
+  background: rgba(var(--primary-rgb), 0.05);
+}
+.att-filter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--v2-heading);
+}
+.att-filter-label i {
+  color: rgb(var(--primary-rgb));
+  font-size: 1rem;
+}
+.att-filter-period {
+  margin-inline-start: auto;
+}
+@media (max-width: 575.98px) {
+  .att-filter-strip .att-period-select {
+    flex: 1 1 40%;
+  }
+  .att-filter-period {
+    margin-inline-start: 0;
+  }
+}
+
 /* Export modal: month picker under the year pills (attendance reports) */
 .rp-month {
   max-width: 220px;
