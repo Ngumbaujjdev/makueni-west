@@ -100,4 +100,36 @@ class BudgetFormTest extends TestCase
         $this->putJson("/api/budgets/{$budget->id}", ['year' => 2026, 'month' => 1, 'lines' => [], 'updated_at' => '2020-01-01T00:00:00Z'])
             ->assertStatus(409);
     }
+
+    public function test_the_list_gives_last_years_figures_and_where_the_money_goes(): void
+    {
+        $this->budgetFor($this->myChurch, 'active', [$this->churchLine, $this->allLine], 2025, 11);
+        $this->budgetFor($this->myChurch, 'draft', [$this->churchLine, $this->allLine, $this->incomeLine], 2026, 1);
+        $this->budgetFor($this->myChurch, 'draft', [$this->churchLine], 2026, 2);
+
+        $body = $this->getJson('/api/budgets?year=2026')->assertOk()->json();
+
+        $this->assertSame(2025, $body['previous_stats']['year']);
+        $this->assertEquals(2000, $body['previous_stats']['out_planned']);
+        $this->assertEquals(3000, $body['stats']['out_planned']);
+        $this->assertSame('Church Rent', $body['top_out'][0]['name']);
+        $this->assertEquals(2000, $body['top_out'][0]['planned']);
+        $this->assertEquals([['name' => 'Tithes', 'planned' => 1000, 'actual' => 0]], $body['top_in']);
+        $this->assertNull($this->getJson('/api/budgets?year=2025')->json('previous_stats')); // 2024 had none
+    }
+
+    public function test_a_budget_shows_the_one_before_it_for_comparison(): void
+    {
+        $this->budgetFor($this->myChurch, 'active', [$this->churchLine], 2026, 1);
+        $february = $this->budgetFor($this->myChurch, 'draft', [$this->churchLine, $this->allLine], 2026, 2);
+
+        $this->getJson("/api/budgets/{$february->id}")->assertOk()
+            ->assertJsonPath('data.previous.period_label', 'January 2026')
+            ->assertJsonPath('data.previous.out_planned', 1000)
+            ->assertJsonPath("data.previous.lines.{$this->churchLine->id}", 1000);
+
+        // A place below sees the comparison too, read-only
+        Sanctum::actingAs($this->overseer);
+        $this->getJson("/api/budgets/{$february->id}")->assertOk()->assertJsonPath('data.previous.period_label', 'January 2026');
+    }
 }
