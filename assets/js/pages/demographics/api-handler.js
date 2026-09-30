@@ -273,23 +273,6 @@
   }
 
   /**
-   * gathering_category_id omitted from filters = the cross-tab combined
-   * summary strip; provided = one tab's stat cards/chart/breakdown.
-   */
-  async function getAttendanceReportWidgets(territoryId, filters = {}) {
-    try {
-      const params = new URLSearchParams({ territory_id: territoryId, ...filters });
-      const response = await fetch(`${API_BASE}/attendance-reports/widgets?${params.toString()}`, {
-        method: Constants.HTTP_METHODS.GET,
-        headers: getHeaders(),
-      });
-      return await handleResponse(response);
-    } catch (error) {
-      return handleError(error);
-    }
-  }
-
-  /**
    * Everything the Attendance Analytics page shows (AttendanceData on the
    * API): filters {fiscal_year_id: id|"all", month: 1-12}.
    */
@@ -301,58 +284,6 @@
         headers: getHeaders(),
       });
       return await handleResponse(response);
-    } catch (error) {
-      return handleError(error);
-    }
-  }
-
-  /**
-   * Streams the branded PDF export from GET /attendance-reports/export-pdf.
-   * Not routed through handleResponse() - that assumes a JSON body, and
-   * this endpoint returns a raw PDF binary - so this returns the Blob
-   * directly on success, in the same {success, ...} shape the rest of
-   * this handler uses so callers don't need a different error-handling
-   * convention for this one call.
-   */
-  async function exportAttendanceReportPdf(territoryId, filters = {}) {
-    try {
-      const params = new URLSearchParams({ territory_id: territoryId, ...filters });
-      const response = await fetch(`${API_BASE}/attendance-reports/export-pdf?${params.toString()}`, {
-        method: Constants.HTTP_METHODS.GET,
-        headers: getHeaders(),
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        return { success: false, message: data.message || "Failed to generate PDF report", status: response.status };
-      }
-
-      return { success: true, blob: await response.blob() };
-    } catch (error) {
-      return handleError(error);
-    }
-  }
-
-  /**
-   * Same shape as exportAttendanceReportPdf(), for
-   * GET /attendance-reports/export-excel - accepts the same filters
-   * (including the optional gathering_type_id drill-down) and returns a
-   * Blob on success.
-   */
-  async function exportAttendanceReportExcel(territoryId, filters = {}) {
-    try {
-      const params = new URLSearchParams({ territory_id: territoryId, ...filters });
-      const response = await fetch(`${API_BASE}/attendance-reports/export-excel?${params.toString()}`, {
-        method: Constants.HTTP_METHODS.GET,
-        headers: getHeaders(),
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        return { success: false, message: data.message || "Failed to generate Excel report", status: response.status };
-      }
-
-      return { success: true, blob: await response.blob() };
     } catch (error) {
       return handleError(error);
     }
@@ -461,9 +392,9 @@
   // ==========================================================================
 
   /** Reports this user can run for a territory (docs/specs/reports-spec.md). */
-  async function getReportCatalogue(territoryId) {
+  async function getReportCatalogue(territoryId, module = null) {
     try {
-      const response = await fetch(`${API_BASE}/reports/catalogue?territory_id=${encodeURIComponent(territoryId)}`, {
+      const response = await fetch(`${API_BASE}/reports/catalogue?territory_id=${encodeURIComponent(territoryId)}${module ? `&module=${encodeURIComponent(module)}` : ""}`, {
         method: Constants.HTTP_METHODS.GET,
         headers: getHeaders(),
       });
@@ -576,10 +507,7 @@
     getAttendance,
     createAttendance,
     updateAttendance,
-    getAttendanceReportWidgets,
     getAttendanceAnalytics,
-    exportAttendanceReportPdf,
-    exportAttendanceReportExcel,
     getDemographicsReportWidgets,
     getGatheringCategories,
     getGatheringTypes,

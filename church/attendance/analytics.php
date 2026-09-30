@@ -123,6 +123,9 @@ function gatheringsPane(string $key, string $noun, string $plural): string
                         <div class="att-period-select" id="periodMonthWrap">
                             <select id="periodMonth" aria-label="Month"></select>
                         </div>
+                        <?php if (canExportAttendanceReports()): ?>
+                        <button type="button" class="btn btn-outline-primary" id="exportReportBtn" data-lock="1" data-module="attendance" data-report-key="attendance.sunday"><i class="ri-download-2-line me-1"></i>Export</button>
+                        <?php endif ?>
                     </div>
                 </div>
 

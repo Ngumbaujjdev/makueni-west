@@ -1,8 +1,11 @@
 /**
  * ============================================================================
- * PAGE - REPORTS (church/demographics-growth/reports.php)
+ * PAGE - REPORTS (church/demographics-growth/reports.php, church/attendance/reports.php)
  * ============================================================================
  * Diocese Management System - Makueni West
+ *
+ * One script for each module's Reports page - the page sets
+ * window.REPORTS_PAGE = {module: "demographics" | "attendance"}.
  *
  * A card per report (what's inside, Generate -> the shared export modal),
  * then "Your recent reports": every run with its status, verification code
@@ -19,6 +22,7 @@ const DemographicsReports = (function () {
   "use strict";
 
   const UI = DemographicsUI;
+  const MODULE = (window.REPORTS_PAGE && window.REPORTS_PAGE.module) || "demographics";
 
   /** What each report holds, shown on its card. */
   const INSIDE = {
@@ -31,6 +35,11 @@ const DemographicsReports = (function () {
     "demographics.departures": { color: "danger", chips: ["By period", "Against new members", "Insights"] },
     "demographics.growth": { color: "info", chips: ["Year over year", "1, 3 or 5 years", "Trends"] },
     "demographics.submission": { color: "pink", chips: ["One period", "Compared with the one before"] },
+    "attendance.summary": { color: "primary", chips: ["Sundays by month", "Ministries", "Events", "Insights"] },
+    "attendance.sunday": { color: "secondary", chips: ["Every Sunday", "Missed Sundays", "Month by month"] },
+    "attendance.ministries": { color: "success", chips: ["Every ministry", "Every meeting", "Quiet ones"] },
+    "attendance.events": { color: "purple", chips: ["Every event", "Who came"] },
+    "attendance.children": { color: "pink", chips: ["Boys and girls", "Share of a Sunday", "Month by month"] },
   };
 
   const STATUS = {
@@ -46,7 +55,7 @@ const DemographicsReports = (function () {
     Object.assign(USER_TERRITORY, UI.resolveUserTerritory(USER_TERRITORY));
     document.getElementById("runsBody").innerHTML = UI.renderTableLoading(6);
 
-    const res = await DemographicsAPIHandler.getReportCatalogue(USER_TERRITORY.id);
+    const res = await DemographicsAPIHandler.getReportCatalogue(USER_TERRITORY.id, MODULE);
     renderCatalogue(res.success ? res.data || [] : []);
     if (!res.success) Toast.error(res.message || "Couldn't load the reports");
 
@@ -54,7 +63,8 @@ const DemographicsReports = (function () {
     // so the filter bar isn't rebuilt under someone typing in it.
     let signature = null;
     document.addEventListener("reports:changed", (e) => {
-      runs = e.detail || [];
+      // Only this module's reports - the header monitor shows them all.
+      runs = (e.detail || []).filter((r) => String(r.report_key || "").startsWith(`${MODULE}.`));
       const next = runs.map((r) => `${r.uuid}:${r.status}:${r.expired}`).join("|");
       if (next === signature) return;
       signature = next;
@@ -101,7 +111,7 @@ const DemographicsReports = (function () {
                     submission
                       ? `<a href="index.php" class="btn btn-outline-primary btn-sm"><i class="ri-history-line me-1"></i>Pick a submission</a>
                          <span class="fs-11">Open one from History, then Export</span>`
-                      : `<button type="button" class="btn btn-primary btn-sm" data-report-key="${r.key}" data-territory-id="${USER_TERRITORY.id}"><i class="ri-file-download-line me-1"></i>Generate</button>
+                      : `<button type="button" class="btn btn-primary btn-sm" data-report-key="${r.key}" data-module="${MODULE}" data-territory-id="${USER_TERRITORY.id}"><i class="ri-file-download-line me-1"></i>Generate</button>
                          <span class="fs-11">PDF or Excel</span>`
                   }
                 </div>

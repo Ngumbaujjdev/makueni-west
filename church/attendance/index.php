@@ -70,6 +70,9 @@ $breadcrumbs = [
                     <div class="page-toolbar-sub">Sunday services, ministries and events at <?= htmlspecialchars($userTerritoryName) ?></div>
                     <div class="page-toolbar-controls">
                         <a href="<?= SITE_URL ?>/church/attendance/analytics" class="btn btn-outline-primary"><i class="ri-bar-chart-box-line me-1"></i>Analytics</a>
+                        <?php if (canExportAttendanceReports()): ?>
+                        <button type="button" class="btn btn-outline-primary" id="exportReportBtn" data-lock="1" data-module="attendance" data-report-key="attendance.summary"><i class="ri-download-2-line me-1"></i>Export</button>
+                        <?php endif ?>
                         <?php if ($canEnter): ?>
                         <button type="button" class="btn btn-primary" id="recordSundayBtn"><i class="ri-add-line me-1"></i>Record Sunday</button>
                         <?php endif; ?>

@@ -76,6 +76,9 @@ $breadcrumbs = [
                             <button type="button" class="seg-btn active" data-value="list"><i class="ri-list-check-2 me-1"></i>List</button>
                             <button type="button" class="seg-btn" data-value="calendar"><i class="ri-calendar-2-line me-1"></i>Calendar</button>
                         </div>
+                        <?php if (canExportAttendanceReports()): ?>
+                        <button type="button" class="btn btn-outline-primary" id="exportReportBtn" data-lock="1" data-module="attendance" data-report-key="attendance.sunday"><i class="ri-download-2-line me-1"></i>Export</button>
+                        <?php endif ?>
                         <?php if ($canWrite): ?>
                         <button type="button" class="btn btn-primary" id="recordNextBtn"><i class="ri-add-line me-1"></i>Record Sunday</button>
                         <?php endif; ?>
