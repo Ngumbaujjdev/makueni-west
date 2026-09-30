@@ -114,29 +114,36 @@ const BudgetsForm = (function () {
   // ------------------------------------------------------------------ period
 
   function renderYears() {
-    const select = document.getElementById("yearInput");
     const now = new Date().getFullYear();
     const years = [...new Set([now - 1, now, now + 1, now + 2, state.year])].sort((a, b) => a - b);
-    select.innerHTML = years.map((y) => `<option value="${y}" ${y === state.year ? "selected" : ""}>${y}</option>`).join("");
-    UI.enhanceSelect(select, { search: false });
-    select.addEventListener("change", () => changePeriod(Number(select.value), state.month));
+    document.getElementById("yearSwitchWrap").innerHTML = UI.renderSegmented("yearSwitch", years.map((y) => ({ value: y, label: String(y) })), state.year, { ariaLabel: "Year" });
+    UI.wireSegmented("yearSwitch", (value) => changePeriod(Number(value), state.month));
   }
 
+  /** Whole year + January..December as chips; a period that already has a budget opens it. */
   function renderPeriods() {
-    const select = document.getElementById("periodInput");
-    const opt = (value, label, taken) =>
-      `<option value="${value}" ${taken ? "disabled" : ""} ${String(value) === String(state.month ?? "") ? "selected" : ""} data-icon="${value === "" ? "ri-calendar-2-line" : "ri-calendar-line"}" data-color="${taken ? "secondary" : value === "" ? "purple" : "primary"}">${label}${taken ? " — already has a budget" : ""}</option>`;
-    select.innerHTML = [
-      opt("", `Whole of ${state.year}`, isTakenYear()),
-      ...B.MONTHS.map((name, i) => opt(i + 1, `${name} ${state.year}`, isTakenMonth(i + 1))),
-    ].join("");
-    if (!select.dataset.wired) {
-      select.dataset.wired = "1";
-      UI.enhanceSelect(select, { search: false });
-      select.addEventListener("change", () => changePeriod(state.year, select.value === "" ? null : Number(select.value)));
-    } else {
-      UI.syncSelect(select);
-    }
+    const chip = (month, label) => {
+      const takenId = month === null ? state.taken.year : state.taken.year ?? state.taken.months[month];
+      const taken = month === null ? isTakenYear() : isTakenMonth(month);
+      const selected = !taken && month === state.month;
+      // The whole year is blocked either by its own budget (open it) or by month budgets (nothing to open).
+      const sub = taken ? (takenId ? "Has a budget - open it" : "Months already planned") : month === null ? "One budget for the year" : selected ? "Selected" : "Free";
+      return `<button type="button" class="budget-period-chip${month === null ? " is-whole" : ""}${selected ? " is-selected" : ""}${taken ? " is-taken" : ""}"
+          data-month="${month ?? ""}" ${taken && takenId ? `data-open="${takenId}"` : ""} ${taken && !takenId ? "disabled" : ""} role="radio" aria-checked="${selected}">
+          <span>${B.esc(label)}</span><small>${sub}</small>
+        </button>`;
+    };
+    const el = document.getElementById("periodChips");
+    el.innerHTML = [chip(null, `Whole of ${state.year}`), ...B.MONTHS.map((name, i) => chip(i + 1, name))].join("");
+    el.querySelectorAll(".budget-period-chip").forEach((btn) =>
+      btn.addEventListener("click", () => {
+        if (btn.dataset.open) {
+          window.location.href = B.url("budget.php", { id: btn.dataset.open });
+          return;
+        }
+        changePeriod(state.year, btn.dataset.month === "" ? null : Number(btn.dataset.month));
+      }),
+    );
     document.getElementById("periodError").hidden = true;
     document.getElementById("summaryTitle").textContent = `${B.periodLabel(state.year, state.month)} budget`;
   }
@@ -146,15 +153,23 @@ const BudgetsForm = (function () {
     state.year = year;
     state.month = month;
     state.dirty = true;
+    let res = await BudgetsAPI.form({ year, month: month ?? "year" });
     // In the budget's own year its own period doesn't block it; elsewhere, ask.
-    const res = await BudgetsAPI.form({ year, month: month ?? "year" });
-    if (res.ok) {
-      state.copy = res.data.copy;
-      state.taken = state.budget && year === state.ownYear ? state.ownTaken : res.data.taken;
+    if (res.ok) state.taken = state.budget && year === state.ownYear ? state.ownTaken : res.data.taken;
+    if (yearChanged && !state.budget) {
+      const picked = pickMonth(month);
+      if (picked !== month) {
+        state.month = picked;
+        res = await BudgetsAPI.form({ year, month: picked ?? "year" });
+      }
     }
-    if (yearChanged && !state.budget) state.month = pickMonth(month);
+    if (res.ok) state.copy = res.data.copy;
     renderPeriods();
     renderCopy();
+    // "Last time" amounts follow the chosen period
+    renderLines("in");
+    renderLines("out");
+    updateTotals();
   }
 
   // ------------------------------------------------------------------ copy
@@ -239,15 +254,19 @@ const BudgetsForm = (function () {
 
   function lineRow(line, side, extra) {
     const value = Number(state.amounts[line.id]) > 0 ? B.amount(state.amounts[line.id]) : "";
+    const last = Number(state.copy?.amounts?.[line.id]) || 0;
     return `
       <div class="budget-line-row${extra ? " is-extra" : ""}" data-name="${B.esc(line.name.toLowerCase())}">
         <label class="budget-line-name" for="amt-${line.id}">
           <span class="fw-semibold">${B.esc(line.name)}</span>${line.is_own ? ' <span class="soft-chip soft-primary">Ours</span>' : ""}
           ${line.description ? `<span class="d-block fs-12">${B.esc(line.description)}</span>` : ""}
         </label>
-        <div class="input-group budget-amount">
-          <span class="input-group-text">KES</span>
-          <input type="text" inputmode="decimal" class="form-control text-end" id="amt-${line.id}" data-amount="${line.id}" data-side="${side}" value="${value}" placeholder="0.00" autocomplete="off">
+        <div class="budget-amount">
+          <div class="input-group">
+            <span class="input-group-text">KES</span>
+            <input type="text" inputmode="decimal" class="form-control text-end" id="amt-${line.id}" data-amount="${line.id}" data-side="${side}" value="${value}" placeholder="0.00" autocomplete="off">
+          </div>
+          ${last ? `<span class="budget-last-time">Last time: ${B.money(last)}</span>` : ""}
         </div>
       </div>`;
   }
@@ -280,6 +299,26 @@ const BudgetsForm = (function () {
     const leftEl = document.getElementById("sumLeft");
     leftEl.textContent = B.money(left);
     leftEl.className = left < 0 ? "text-danger" : "text-success";
+    const both = inT + outT;
+    const bar = document.getElementById("sumBar").children;
+    bar[0].style.width = `${both ? (inT / both) * 100 : 50}%`;
+    bar[1].style.width = `${both ? (outT / both) * 100 : 50}%`;
+
+    // Compared with the last budget
+    const copy = state.copy;
+    const lastSum = (side) => (state.lines[side] || []).reduce((t, l) => t + (Number(copy?.amounts?.[l.id]) || 0), 0);
+    const chip = (label, cur, prev, goodWhenUp) => {
+      const d = B.delta(cur, prev, copy.period_label);
+      if (!d) return "";
+      const tone = d.dir === "flat" ? "primary" : (d.dir === "up") === goodWhenUp ? "success" : "danger";
+      const arrow = d.dir === "up" ? "ri-arrow-up-line" : d.dir === "down" ? "ri-arrow-down-line" : "ri-arrow-right-line";
+      return `<span class="soft-chip soft-${tone}"><i class="${arrow} me-1"></i>${label}: ${d.dir === "flat" ? "no change" : d.text}</span>`;
+    };
+    document.getElementById("sumCompare").innerHTML =
+      copy && (inT || outT)
+        ? `${chip("In", inT, lastSum("in"), true)}${chip("Out", outT, lastSum("out"), false)}<span class="fs-12 align-self-center ms-1">vs ${B.esc(copy.period_label)}</span>`
+        : "";
+
     const count = Object.keys(state.amounts).length;
     document.getElementById("sumHint").textContent = count
       ? `${count} ${count === 1 ? "line" : "lines"} planned.${left < 0 ? " You plan to spend more than comes in." : ""}`
@@ -329,7 +368,7 @@ const BudgetsForm = (function () {
         const err = document.getElementById("periodError");
         err.textContent = [].concat(res.errors.month)[0];
         err.hidden = false;
-        document.getElementById("periodInput").scrollIntoView({ behavior: "smooth", block: "center" });
+        document.getElementById("periodChips").scrollIntoView({ behavior: "smooth", block: "center" });
       }
       Toast.error(res.message);
       return;

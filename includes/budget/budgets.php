@@ -45,9 +45,7 @@ $breadcrumbs = [
                 <div class="page-toolbar">
                     <div class="page-toolbar-sub" id="placeLine">Budgets for <?= htmlspecialchars($budgetCtx['place']['name'] ?: 'your ' . $budgetCtx['level']) ?></div>
                     <div class="page-toolbar-controls">
-                        <div class="budget-year-select">
-                            <select id="yearSelect" aria-label="Year"></select>
-                        </div>
+                        <div id="yearSwitchWrap"></div>
                         <?php if ($budgetCtx['can']['prepare']): ?>
                         <a href="<?= $budgetCtx['baseUrl'] ?>/form.php" class="btn btn-primary" id="newBudgetBtn"><i class="ri-add-line me-1"></i>New budget</a>
                         <?php endif ?>
@@ -61,11 +59,49 @@ $breadcrumbs = [
 
                 <div class="row" id="statCardsRow"></div>
 
+                <div class="row">
+                    <div class="col-xl-7">
+                        <div class="card custom-card">
+                            <div class="card-header justify-content-between flex-wrap gap-2">
+                                <div>
+                                    <div class="card-title" id="flowTitle">Money in and out, month by month</div>
+                                    <span class="card-subtitle-text" id="flowSub">What each month's budget plans to receive and spend</span>
+                                </div>
+                                <div class="d-flex flex-wrap gap-1" id="flowChips"></div>
+                            </div>
+                            <div class="card-body" id="flowBody"><span class="skel" style="height: 300px; display: block;"></span></div>
+                        </div>
+                    </div>
+                    <div class="col-xl-5">
+                        <div class="card custom-card">
+                            <div class="card-header justify-content-between flex-wrap gap-2">
+                                <div>
+                                    <div class="card-title">Where the money goes</div>
+                                    <span class="card-subtitle-text" id="whereSub">The biggest money out lines this year</span>
+                                </div>
+                                <div id="whereSwitchWrap"></div>
+                            </div>
+                            <div class="card-body" id="whereDonut"><span class="skel" style="height: 300px; display: block;"></span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card custom-card">
+                    <div class="card-header justify-content-between flex-wrap gap-2">
+                        <div>
+                            <div class="card-title" id="glanceTitle">The year at a glance</div>
+                            <span class="card-subtitle-text">Each month and its budget - tap one to open it</span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-1" id="glanceChips"></div>
+                    </div>
+                    <div class="card-body" id="yearGrid"><span class="skel" style="height: 10rem; display: block;"></span></div>
+                </div>
+
                 <div class="card custom-card">
                     <div class="card-header justify-content-between flex-wrap gap-2">
                         <div>
                             <div class="card-title" id="listTitle">Budgets</div>
-                            <span class="card-subtitle-text">Each budget covers a month or a whole year</span>
+                            <span class="card-subtitle-text">Search, filter or sort every budget of the year</span>
                         </div>
                     </div>
                     <div class="card-body p-0">

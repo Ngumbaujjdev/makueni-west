@@ -15,6 +15,19 @@ const BudgetsUI = (function () {
   /** "12,345.00" */
   const amount = (n) => kes.format(Number(n) || 0);
 
+  /** "250K", "1.2M" - for chart axes and chips. */
+  function short(n) {
+    const v = Number(n) || 0;
+    const a = Math.abs(v);
+    if (a >= 1e6) return `${(v / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace(/\.0$/, "")}M`;
+    if (a >= 1e3) return `${Math.round(v / 1e3)}K`;
+    return String(Math.round(v));
+  }
+  const shortMoney = (n) => `KES ${short(n)}`;
+
+  /** A change pill "▲ 8% vs 2025" (null when there's nothing to compare with). */
+  const delta = (current, previous, label) => (previous == null ? null : DemographicsUI.periodDelta(Number(current) || 0, Number(previous) || 0, { prevLabel: label }));
+
   const STATUS = {
     draft: { label: "Draft", color: "warning", icon: "ri-draft-line" },
     active: { label: "In use", color: "success", icon: "ri-checkbox-circle-fill" },
@@ -54,7 +67,7 @@ const BudgetsUI = (function () {
     }
   }
 
-  return { CTX, MONTHS, money, amount, STATUS, statusPill, periodLabel, esc, url, flash, showFlash };
+  return { CTX, MONTHS, money, amount, short, shortMoney, delta, STATUS, statusPill, periodLabel, esc, url, flash, showFlash };
 })();
 
 window.BudgetsUI = BudgetsUI;

@@ -63,17 +63,12 @@ $breadcrumbs = [
                                 </div>
                             </div>
                             <div class="card-body">
-                                <div class="row g-3">
-                                    <div class="col-sm-4">
-                                        <label class="form-label" for="yearInput">Year</label>
-                                        <select class="form-select" id="yearInput"></select>
-                                    </div>
-                                    <div class="col-sm-8">
-                                        <label class="form-label" for="periodInput">Month</label>
-                                        <select class="form-select" id="periodInput"></select>
-                                        <div class="invalid-feedback d-block" id="periodError" hidden></div>
-                                    </div>
+                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                                    <span class="fw-semibold">Year</span>
+                                    <div id="yearSwitchWrap"></div>
                                 </div>
+                                <div class="budget-period-chips" id="periodChips" role="radiogroup" aria-label="Which month or year"></div>
+                                <div class="invalid-feedback d-block" id="periodError" hidden></div>
                                 <div class="budget-copy mt-3" id="copyBox" hidden>
                                     <span class="avatar avatar-sm bg-primary text-white flex-shrink-0"><i class="ri-file-copy-line"></i></span>
                                     <div class="flex-fill">
@@ -145,6 +140,8 @@ $breadcrumbs = [
                                 <div class="budget-sum-row"><span><i class="ri-arrow-down-circle-line text-success me-1"></i>Money in</span><b id="sumIn">KES 0.00</b></div>
                                 <div class="budget-sum-row"><span><i class="ri-arrow-up-circle-line text-danger me-1"></i>Money out</span><b id="sumOut">KES 0.00</b></div>
                                 <div class="budget-sum-row is-total"><span>Money left</span><b id="sumLeft">KES 0.00</b></div>
+                                <div class="count-bar composition-bar my-2" id="sumBar" aria-hidden="true"><span class="bg-success" style="width: 50%"></span><span class="bg-danger" style="width: 50%"></span></div>
+                                <div class="d-flex flex-wrap gap-1" id="sumCompare"></div>
                                 <div class="fs-12 mt-2" id="sumHint">Type an amount next to each line you plan for. Lines left empty are left out.</div>
                                 <div class="d-grid gap-2 mt-3" id="saveButtons">
                                     <button type="button" class="btn btn-primary" id="saveStartBtn"><i class="ri-play-circle-line me-1"></i>Save and start using</button>
