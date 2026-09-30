@@ -305,20 +305,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Budgets (Territory-Agnostic) - who may see/act on which budget: EnsureBudgetAccess
     Route::prefix('budgets')->middleware(\App\Http\Middleware\EnsureBudgetAccess::class)->group(function () {
-        Route::get('/', [BudgetController::class, 'index']);                                    // List all budgets (with filtering)
-        Route::get('/export', [BudgetController::class, 'export']);                             // Export budgets to Excel
-        Route::post('/', [BudgetController::class, 'store']);                                   // Create budget
-        Route::get('/{budget}', [BudgetController::class, 'show']);                             // Get budget details
-        Route::put('/{budget}', [BudgetController::class, 'update']);                           // Update budget
-        Route::delete('/{budget}', [BudgetController::class, 'destroy']);                       // Delete budget
-
-        // Workflow Actions
-        Route::post('/{budget}/submit', [BudgetController::class, 'submit']);                   // Submit for review
-        Route::post('/{budget}/approve', [BudgetController::class, 'approve']);                 // Approve budget
-        Route::post('/{budget}/reject', [BudgetController::class, 'reject']);                   // Reject budget
-        Route::post('/{budget}/activate', [BudgetController::class, 'activate']);               // Activate budget
-        Route::post('/{budget}/close', [BudgetController::class, 'close']);                     // Close budget
-        Route::post('/{budget}/clone', [BudgetController::class, 'clone']);                     // Clone to new year
+        // A month or a whole year of one place; no approval (docs/specs/budgets-spec.md)
+        Route::get('/', [BudgetController::class, 'index']);                                    // This place's budgets (or one below, read-only)
+        Route::get('/form', [BudgetController::class, 'form']);                                 // What the New budget form needs
+        Route::post('/', [BudgetController::class, 'store']);                                   // Create, with all its lines
+        Route::get('/{budget}', [BudgetController::class, 'show']);                             // One budget, with its lines
+        Route::get('/{budget}/form', [BudgetController::class, 'formFor']);                     // The form, filled in
+        Route::put('/{budget}', [BudgetController::class, 'update']);                           // Change, with all its lines
+        Route::delete('/{budget}', [BudgetController::class, 'destroy']);                       // Delete a draft
+        Route::post('/{budget}/start', [BudgetController::class, 'start']);                     // Draft -> In use
+        Route::post('/{budget}/close', [BudgetController::class, 'close']);                     // In use -> Closed
+        Route::post('/{budget}/reopen', [BudgetController::class, 'reopen']);                   // Closed -> In use
+        Route::get('/{budget}/history', [BudgetController::class, 'history']);                  // History in plain sentences
 
         // Line Items
         Route::get('/{budget}/line-items', [BudgetController::class, 'getLineItems']);          // Get all line items

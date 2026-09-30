@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use OwenIt\Auditing\Contracts\Auditable;
 
 class BudgetLineItem extends Model implements Auditable
@@ -155,6 +155,7 @@ class BudgetLineItem extends Model implements Auditable
                 if ($this->budgeted_amount == 0) {
                     return 0;
                 }
+
                 return round(($this->variance / $this->budgeted_amount) * 100, 2);
             }
         );
@@ -196,7 +197,7 @@ class BudgetLineItem extends Model implements Auditable
     protected function isEditable(): Attribute
     {
         return Attribute::make(
-            get: fn () => !$this->is_locked && $this->budget && $this->budget->is_editable,
+            get: fn () => ! $this->is_locked && $this->budget && $this->budget->is_editable,
         );
     }
 
@@ -224,34 +225,8 @@ class BudgetLineItem extends Model implements Auditable
      */
     public function updateBudgetTotals()
     {
-        if (!$this->budget) {
-            return;
+        if ($this->budget) {
+            app(\App\Services\Budgets\BudgetBook::class)->recalculate($this->budget);
         }
-
-        $budget = $this->budget;
-
-        // Calculate income totals
-        $incomeBudgeted = $budget->budgetLineItems()
-            ->income()
-            ->sum('budgeted_amount');
-        $incomeActual = $budget->budgetLineItems()
-            ->income()
-            ->sum('actual_amount');
-
-        // Calculate expense totals
-        $expenseBudgeted = $budget->budgetLineItems()
-            ->expense()
-            ->sum('budgeted_amount');
-        $expenseActual = $budget->budgetLineItems()
-            ->expense()
-            ->sum('actual_amount');
-
-        // Update budget
-        $budget->update([
-            'total_income_budgeted' => $incomeBudgeted,
-            'total_income_actual' => $incomeActual,
-            'total_expense_budgeted' => $expenseBudgeted,
-            'total_expense_actual' => $expenseActual,
-        ]);
     }
 }

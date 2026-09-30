@@ -35,4 +35,5 @@ assertion, rewrite it until it can.
 | [demographics-module-spec.md](demographics-module-spec.md) | Outline only — data model shape and territory-level rules are decided (see `../ROADMAP.md`), full contract not yet written |
 | [attendance-pdf-reports-spec.md](attendance-pdf-reports-spec.md) | Complete — `GET /attendance-reports/export-pdf`, one endpoint |
 | [appearance-settings-spec.md](appearance-settings-spec.md) | Complete — `GET`/`PUT`/`DELETE /api/appearance`, self-scoped per-user preferences |
-| [church-budgeting-spec.md](church-budgeting-spec.md) | Complete — churches prepare and submit budgets, diocese approves; church-owned budget lines; acting-role permission checks |
+| [budgets-spec.md](budgets-spec.md) | In progress — budgets for church, region and diocese: a month or a year, no approval, view top to bottom (phase 1 built: model, access, list, form, details) |
+| [church-budgeting-spec.md](church-budgeting-spec.md) | Replaced by budgets-spec.md |

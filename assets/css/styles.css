@@ -33893,3 +33893,119 @@ button.record-nav-btn:hover {
     width: 70px;
   }
 }
+
+/* ==========================================================================
+   BUDGETS (2026-09-30) - docs/specs/budgets-spec.md
+   List, one-page form (numbered steps, one amount per line, totals that
+   stay in view) and the budget page (a progress bar per line).
+   ========================================================================== */
+.budget-year-select {
+  min-width: 8rem;
+}
+.budget-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 50%;
+  background: rgb(var(--primary-rgb));
+  color: #fff;
+  font-weight: 700;
+}
+.budget-copy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.7rem;
+  background: rgba(var(--primary-rgb), 0.07);
+}
+.budget-copy[hidden] {
+  display: none;
+}
+.budget-line-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px dashed var(--default-border);
+}
+.budget-line-row:last-child {
+  border-bottom: 0;
+}
+.budget-line-row.is-extra,
+.budget-line-row.is-filtered {
+  display: none;
+}
+.budget-line-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  cursor: pointer;
+  color: var(--v2-heading);
+}
+.budget-amount {
+  flex: 0 0 13rem;
+  width: 13rem;
+}
+.budget-amount .form-control {
+  font-weight: 600;
+}
+.budget-summary {
+  position: sticky;
+  top: 5.5rem;
+}
+.budget-sum-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.45rem 0;
+  font-weight: 600;
+  color: var(--v2-heading);
+}
+.budget-sum-row.is-total {
+  margin-top: 0.3rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--default-border);
+  font-size: 1.05rem;
+}
+.budget-progress-row {
+  padding: 0.7rem 0;
+  border-bottom: 1px dashed var(--default-border);
+}
+.budget-progress-row:last-child {
+  border-bottom: 0;
+}
+.budget-progress-top,
+.budget-progress-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.budget-progress-top {
+  margin-bottom: 0.4rem;
+  color: var(--v2-heading);
+}
+.budget-progress-foot {
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+}
+@media (max-width: 575.98px) {
+  .budget-line-row {
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .budget-amount {
+    flex-basis: 100%;
+    width: 100%;
+  }
+}
+@media (max-width: 1199.98px) {
+  .budget-summary {
+    position: static;
+  }
+}

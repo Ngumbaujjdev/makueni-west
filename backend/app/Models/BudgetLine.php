@@ -83,15 +83,21 @@ class BudgetLine extends Model implements Auditable
     }
 
     /**
-     * The lines a church can use: the shared lines that apply to churches,
-     * plus that church's own lines - never another church's.
+     * The lines a place can use: the diocese's shared lines that apply to its
+     * level (church, region or diocese), plus that place's own lines - never
+     * another place's.
      */
+    public function scopeForPlace($query, string $type, int $id)
+    {
+        return $query->where(function ($q) use ($type, $id) {
+            $q->where(fn ($shared) => $shared->whereNull('territory_id')->whereIn('territory_scope', [$type, 'all']))
+                ->orWhere(fn ($own) => $own->where('territory_type', $type)->where('territory_id', $id));
+        });
+    }
+
     public function scopeForChurch($query, int $churchId)
     {
-        return $query->where(function ($q) use ($churchId) {
-            $q->where(fn ($shared) => $shared->whereNull('territory_id')->whereIn('territory_scope', ['church', 'all']))
-                ->orWhere(fn ($own) => $own->where('territory_type', 'church')->where('territory_id', $churchId));
-        });
+        return $query->forPlace('church', $churchId);
     }
 
     public function isOwnedBy(int $churchId): bool

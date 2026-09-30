@@ -1,5 +1,7 @@
 # Church Budgeting Spec
 
+> **Replaced by [budgets-spec.md](budgets-spec.md) (2026-09-30).** Budgets no longer have an approval step: every level (church, region, diocese) runs its own, and levels above only look. Kept for history.
+
 A church pastor prepares their church's budget and submits it; the diocese approves or sends it back. A church also keeps its own budget lines next to the diocese's shared ones.
 
 Status: built (2026-09-30). The budget module itself (types, categories, lines, budgets, workflow) predates the spec convention; this spec covers what opening it to churches added and changed.

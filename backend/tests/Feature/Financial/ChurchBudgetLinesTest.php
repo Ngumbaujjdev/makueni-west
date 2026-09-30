@@ -29,7 +29,7 @@ class ChurchBudgetLinesTest extends TestCase
 
         $ids = collect($this->getJson('/api/budget-lines?territory_scope=diocese')->assertOk()->json('data'))->pluck('id');
 
-        $this->assertEqualsCanonicalizing([$this->churchLine->id, $this->allLine->id, $mine->id], $ids->all());
+        $this->assertEqualsCanonicalizing([$this->churchLine->id, $this->allLine->id, $this->incomeLine->id, $mine->id], $ids->all());
         $this->assertNotContains($theirs->id, $ids);
         $this->assertNotContains($this->dioceseLine->id, $ids);
     }
@@ -37,11 +37,11 @@ class ChurchBudgetLinesTest extends TestCase
     public function test_the_diocese_list_shows_shared_lines_only(): void
     {
         $this->ownLine($this->myChurch, 'Choir Robes');
-        Sanctum::actingAs($this->approver);
+        Sanctum::actingAs($this->bishop);
 
         $ids = collect($this->getJson('/api/budget-lines')->assertOk()->json('data'))->pluck('id');
 
-        $this->assertEqualsCanonicalizing([$this->churchLine->id, $this->allLine->id, $this->dioceseLine->id], $ids->all());
+        $this->assertEqualsCanonicalizing([$this->churchLine->id, $this->allLine->id, $this->dioceseLine->id, $this->incomeLine->id], $ids->all());
     }
 
     public function test_a_pastor_adds_a_line_owned_by_their_church(): void
@@ -89,8 +89,8 @@ class ChurchBudgetLinesTest extends TestCase
     public function test_a_church_sees_how_often_its_own_budgets_use_each_line(): void
     {
         $this->budgetFor($this->myChurch, 'draft', [$this->churchLine]);
-        $this->budgetFor($this->otherChurch, 'draft', [$this->churchLine]);
-        $this->budgetFor($this->otherChurch, 'draft', [$this->churchLine]);
+        $this->budgetFor($this->otherChurch, 'draft', [$this->churchLine], 2026, 1);
+        $this->budgetFor($this->otherChurch, 'draft', [$this->churchLine], 2026, 2);
         Sanctum::actingAs($this->pastor);
 
         $line = collect($this->getJson('/api/budget-lines')->json('data'))->firstWhere('id', $this->churchLine->id);
