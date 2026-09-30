@@ -182,6 +182,11 @@ function canAccessTerritoryLevel($requiredLevel) {
  * The export permissions are per submodule, so any one of them is enough -
  * the reports API then checks the user can see the church itself.
  */
+/** Attendance PDF/Excel reports (church/attendance/reports.php and the attendance pages' Export buttons). */
+function canExportAttendanceReports() {
+    return hasGlobalAccess() || hasAnyPermission(['attendancemanagement.attendancereports.export']);
+}
+
 function canExportDemographicsReports() {
     return hasGlobalAccess() || hasAnyPermission([
         'churchdemographicsgrowth.growthanalytics.export',

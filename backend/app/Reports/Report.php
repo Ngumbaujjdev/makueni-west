@@ -62,7 +62,7 @@ abstract class Report
 
     /**
      * Which request params the report reads, for validation and the modal:
-     * 'fiscal_year' | 'years' | 'submission'.
+     * 'fiscal_year' | 'fiscal_month' | 'years' | 'submission' | 'metric' | 'gathering_type'.
      *
      * @return string[]
      */
@@ -86,6 +86,7 @@ abstract class Report
     {
         return [
             'key' => $this->key(),
+            'module' => $this->module(),
             'title' => $this->title(),
             'description' => $this->description(),
             'icon' => $this->icon(),

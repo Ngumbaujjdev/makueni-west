@@ -62,6 +62,9 @@ if (!isset($gatheringPage)) {
                 <div class="page-toolbar">
                     <div class="page-toolbar-sub"><?= htmlspecialchars($toolbarText) ?></div>
                     <div class="page-toolbar-controls">
+                        <?php if (canExportAttendanceReports()): ?>
+                        <button type="button" class="btn btn-outline-primary" id="exportReportBtn" data-lock="1" data-module="attendance" data-report-key="<?= $gatheringPage['slug'] === 'special_event' ? 'attendance.events' : 'attendance.ministries' ?>"><i class="ri-download-2-line me-1"></i>Export</button>
+                        <?php endif ?>
                         <?php if ($canWrite): ?>
                         <button type="button" class="btn btn-primary" id="addEntryBtn"><i class="ri-add-line me-1"></i>Record <?= htmlspecialchars(strtolower($gatheringPage['categoryLabel'])) ?></button>
                         <?php endif; ?>

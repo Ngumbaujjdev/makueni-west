@@ -35,7 +35,7 @@ class BudgetLogController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget logs retrieved successfully',
-                'data' => $logs
+                'data' => $logs,
             ], 200);
 
         } catch (\Exception $e) {
@@ -43,7 +43,7 @@ class BudgetLogController extends Controller
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve budget logs',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -62,7 +62,7 @@ class BudgetLogController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget log retrieved successfully',
-                'data' => $log
+                'data' => $log,
             ], 200);
 
         } catch (\Exception $e) {
@@ -70,7 +70,7 @@ class BudgetLogController extends Controller
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve budget log',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -82,7 +82,7 @@ class BudgetLogController extends Controller
     {
         try {
             $limit = $request->get('limit', 20);
-            
+
             $logs = BudgetLog::with(['budget:id,name', 'performer:id,firstname,lastname,email'])
                 ->recent($limit)
                 ->get();
@@ -91,7 +91,7 @@ class BudgetLogController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Recent budget logs retrieved successfully',
-                'data' => $logs
+                'data' => $logs,
             ], 200);
 
         } catch (\Exception $e) {
@@ -99,7 +99,7 @@ class BudgetLogController extends Controller
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve recent logs',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

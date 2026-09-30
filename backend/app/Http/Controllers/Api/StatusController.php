@@ -14,7 +14,6 @@ class StatusController extends Controller
     /**
      * Display a listing of statuses
      *
-     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function index(Request $request)
@@ -42,8 +41,8 @@ class StatusController extends Controller
                 $search = $request->search;
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('slug', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%");
+                        ->orWhere('slug', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%");
                 });
             }
 
@@ -58,16 +57,17 @@ class StatusController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Statuses retrieved successfully',
-                'data' => $statuses
+                'data' => $statuses,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve statuses: ' . $e->getMessage());
+            Log::error('Failed to retrieve statuses: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve statuses',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -75,7 +75,6 @@ class StatusController extends Controller
     /**
      * Store a newly created status
      *
-     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
@@ -99,7 +98,7 @@ class StatusController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -112,8 +111,8 @@ class StatusController extends Controller
 
             // Check for duplicate slug within category
             $exists = Status::where('category', $data['category'])
-                           ->where('slug', $data['slug'])
-                           ->exists();
+                ->where('slug', $data['slug'])
+                ->exists();
 
             if ($exists) {
                 return response()->json([
@@ -133,16 +132,17 @@ class StatusController extends Controller
                 'success' => true,
                 'status' => 201,
                 'message' => 'Status created successfully',
-                'data' => $status
+                'data' => $status,
             ], 201);
 
         } catch (\Exception $e) {
-            Log::error('Failed to create status: ' . $e->getMessage());
+            Log::error('Failed to create status: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to create status',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -150,7 +150,6 @@ class StatusController extends Controller
     /**
      * Display the specified status
      *
-     * @param Status $status
      * @return \Illuminate\Http\JsonResponse
      */
     public function show(Status $status)
@@ -165,16 +164,17 @@ class StatusController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Status retrieved successfully',
-                'data' => $status
+                'data' => $status,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve status: ' . $e->getMessage());
+            Log::error('Failed to retrieve status: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve status',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -182,8 +182,6 @@ class StatusController extends Controller
     /**
      * Update the specified status
      *
-     * @param Request $request
-     * @param Status $status
      * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, Status $status)
@@ -207,7 +205,7 @@ class StatusController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -219,9 +217,9 @@ class StatusController extends Controller
                 $newCategory = $data['category'] ?? $status->category;
 
                 $exists = Status::where('category', $newCategory)
-                               ->where('slug', $newSlug)
-                               ->where('id', '!=', $status->id)
-                               ->exists();
+                    ->where('slug', $newSlug)
+                    ->where('id', '!=', $status->id)
+                    ->exists();
 
                 if ($exists) {
                     return response()->json([
@@ -239,16 +237,17 @@ class StatusController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Status updated successfully',
-                'data' => $status
+                'data' => $status,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to update status: ' . $e->getMessage());
+            Log::error('Failed to update status: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to update status',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -256,8 +255,6 @@ class StatusController extends Controller
     /**
      * Update display order of a status
      *
-     * @param Request $request
-     * @param Status $status
      * @return \Illuminate\Http\JsonResponse
      */
     public function updateOrder(Request $request, Status $status)
@@ -272,7 +269,7 @@ class StatusController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -282,16 +279,17 @@ class StatusController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Display order updated successfully',
-                'data' => $status
+                'data' => $status,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to update display order: ' . $e->getMessage());
+            Log::error('Failed to update display order: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to update display order',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -299,7 +297,6 @@ class StatusController extends Controller
     /**
      * Remove the specified status
      *
-     * @param Status $status
      * @return \Illuminate\Http\JsonResponse
      */
     public function destroy(Status $status)
@@ -322,16 +319,17 @@ class StatusController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Status deleted successfully',
-                'data' => null
+                'data' => null,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to delete status: ' . $e->getMessage());
+            Log::error('Failed to delete status: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to delete status',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -339,7 +337,6 @@ class StatusController extends Controller
     /**
      * Get audit trail for a status
      *
-     * @param Status $status
      * @return \Illuminate\Http\JsonResponse
      */
     public function getAudits(Status $status)
@@ -355,7 +352,7 @@ class StatusController extends Controller
                         'event' => $audit->event,
                         'user' => $audit->user ? [
                             'id' => $audit->user->id,
-                            'name' => $audit->user->firstname . ' ' . $audit->user->lastname,
+                            'name' => $audit->user->firstname.' '.$audit->user->lastname,
                             'email' => $audit->user->email,
                         ] : null,
                         'old_values' => $audit->old_values,
@@ -371,16 +368,17 @@ class StatusController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Audit trail retrieved successfully',
-                'data' => $audits
+                'data' => $audits,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve audit trail: ' . $e->getMessage());
+            Log::error('Failed to retrieve audit trail: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve audit trail',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

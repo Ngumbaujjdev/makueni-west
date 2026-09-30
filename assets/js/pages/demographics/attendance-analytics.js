@@ -28,6 +28,8 @@ const AttendanceAnalytics = (function () {
   const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const GROUP_COLORS = { adults_count: "primary", youth_count: "success", children_male_count: "purple", children_female_count: "pink" };
   const TABS = ["sunday", "ministries", "events", "children"];
+  /** Export gives the open tab's report. */
+  const REPORT_FOR_TAB = { sunday: "attendance.sunday", ministries: "attendance.ministries", events: "attendance.events", children: "attendance.children" };
 
   let years = [];
   let data = null;
@@ -107,6 +109,7 @@ const AttendanceAnalytics = (function () {
     tab !== "sunday" ? params.set("tab", tab) : params.delete("tab");
     const qs = params.toString();
     history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+    UI.syncExportButton({ reportKey: REPORT_FOR_TAB[tab], year: year || "", month: yearSel.value === "all" ? "" : month });
   }
 
   async function load() {

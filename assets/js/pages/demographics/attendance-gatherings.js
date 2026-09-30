@@ -111,10 +111,19 @@ const AttendanceGatherings = (function () {
     });
     const table = UI.initListDataTable("attendanceTable", { order: [[0, "desc"]], nonSortableColumns: [4], hideDefaultSearch: true, noun: PAGE.plural });
     UI.wireFilterToolbar("filterToolbar", table, [{ id: "gatheringFilter", columnIndex: 1, exact: true }], { noun: PAGE.plural });
-    // Keep the highlighted card in step with the filter.
+    // Keep the highlighted card - and Export - in step with the filter.
     document.getElementById("gatheringFilter")?.addEventListener("change", () => {
       document.querySelectorAll("#gatheringCards .gathering-card").forEach((c) => c.classList.toggle("is-active", c.dataset.gathering === activeFilter()));
+      syncExport();
     });
+    syncExport();
+  }
+
+  /** With one ministry picked, Export gives that ministry's report; otherwise all of them. */
+  function syncExport() {
+    const g = summaries.find((x) => x.name === activeFilter());
+    const typeId = g && g.key.startsWith("t") ? g.key.substring(1) : "";
+    UI.syncExportButton({ gatheringTypeId: typeId, reportTitle: typeId ? g.name : "" });
   }
 
   function openModal(record) {

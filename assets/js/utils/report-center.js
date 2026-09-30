@@ -6,7 +6,12 @@
  *
  * The frontend for docs/specs/reports-spec.md, used by any module:
  *
- *   ReportCenter.open({ territoryId, reportKey, params: { fiscal_year_id, years, demographic_id, metric }, locked, title })
+ *   ReportCenter.open({ territoryId, reportKey, module, params: { fiscal_year_id, year, month, years, demographic_id, metric, gathering_type_id }, locked, title })
+ *
+ * `module` (demographics | attendance) keeps "Choose a different report" to
+ * that module's reports. `year` (a plain year like 2026) is turned into the
+ * fiscal year id; `month` (1-12) narrows a year to one month for reports
+ * that take it.
  *
  * From a page's Export button (data-lock="1") the modal is locked to that
  * page's report: only the period and format are chosen, with a "Choose a
@@ -60,11 +65,17 @@ const ReportCenter = (function () {
     "demographics.growth": "info",
     "demographics.submission": "pink",
     "demographics.metric": "primary",
+    "attendance.summary": "primary",
+    "attendance.sunday": "secondary",
+    "attendance.ministries": "success",
+    "attendance.events": "purple",
+    "attendance.children": "pink",
   };
+  const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const GROUP_SHORT = { "demographics.spiritual": "All four" };
   const STAGES = [
     { key: "queued", label: "Waiting in the queue", at: 0 },
-    { key: "collect", label: "Collecting approved submissions", at: 15 },
+    { key: "collect", label: "Collecting the figures", at: 15 },
     { key: "insights", label: "Working out insights", at: 45 },
     { key: "draw", label: "Drawing the PDF", xlsx: "Building the workbook", at: 70 },
     { key: "ready", label: "Ready", at: 100 },
@@ -78,6 +89,7 @@ const ReportCenter = (function () {
     catalogueFor: null,
     years: null,
     reportKey: null,
+    module: null,
     locked: false,
     lockedTitle: null,
     params: {},
@@ -289,6 +301,7 @@ const ReportCenter = (function () {
   async function open(opts = {}) {
     state.territoryId = opts.territoryId;
     state.reportKey = opts.reportKey || null;
+    state.module = opts.module || (opts.reportKey ? String(opts.reportKey).split(".")[0] : null);
     state.locked = !!opts.locked && !!opts.reportKey;
     state.lockedTitle = opts.title || null;
     state.params = { ...(opts.params || {}) };
@@ -317,12 +330,22 @@ const ReportCenter = (function () {
       const thisYear = new Date().getFullYear();
       state.years = (res.ok ? res.data || [] : []).filter((y) => y.year <= thisYear).sort((a, b) => a.year - b.year).slice(-5);
     }
-    if (!state.reportKey || !state.catalogue.some((r) => r.key === state.reportKey)) state.reportKey = state.catalogue[0]?.key;
+    // A plain year (e.g. from a page's year filter) becomes its fiscal year id.
+    if (state.params.year && !state.params.fiscal_year_id) {
+      state.params.fiscal_year_id = state.params.year === "all" ? "all" : state.years.find((y) => String(y.year) === String(state.params.year))?.id;
+      delete state.params.year;
+    }
+    if (!state.reportKey || !reports().some((r) => r.key === state.reportKey)) state.reportKey = reports().find((r) => !r.locked_only)?.key;
     renderChoose();
   }
 
   function current() {
     return state.catalogue.find((r) => r.key === state.reportKey);
+  }
+
+  /** The catalogue, narrowed to the module the modal was opened for. */
+  function reports() {
+    return (state.catalogue || []).filter((r) => !state.module || !r.module || r.module === state.module);
   }
 
   /** The chosen report's title - a metric report is named after the page's metric. */
@@ -355,14 +378,16 @@ const ReportCenter = (function () {
         <span class="rp-report-text">
           <span class="rp-locked-label">You're exporting</span>
           <strong>${esc(reportTitle(report))}</strong>
-          <small>${esc(report.key === "demographics.metric" ? "This figure over time, from this page." : report.description)}</small>
+          <small>${esc(report.key === "demographics.metric" ? "This figure over time, from this page." : state.params.gathering_type_id ? "This one only - its meetings and who came." : report.description)}</small>
         </span>
         <button type="button" class="rp-edit" id="rpUnlock"><i class="ri-list-check me-1"></i>Choose a different report</button>`;
       lockedBox.hidden = false;
       listWrap.hidden = true;
+      $("reportModalTitle").textContent = `Export · ${reportTitle(report)}`;
       $("rpUnlock").addEventListener("click", () => {
         state.locked = false;
-        if (report.key === "demographics.metric") state.reportKey = state.catalogue.find((r) => !r.locked_only)?.key;
+        if (report.locked_only) state.reportKey = reports().find((r) => !r.locked_only)?.key;
+        delete state.params.gathering_type_id;
         $("reportModalTitle").textContent = "Export a report";
         renderChoose();
       });
@@ -376,7 +401,7 @@ const ReportCenter = (function () {
     // render as one card with pills; the rest as rows.
     const groups = [];
     const cards = [];
-    state.catalogue.forEach((r) => {
+    reports().forEach((r) => {
       if (r.locked_only) return; // reached from its own page (e.g. a metric's report)
       if (r.group) {
         let g = groups.find((x) => x.name === r.group);
@@ -454,14 +479,19 @@ const ReportCenter = (function () {
       $("rpPeriodTitle").textContent = "Period";
       const thisYear = new Date().getFullYear();
       if (!state.params.fiscal_year_id) state.params.fiscal_year_id = (state.years.find((y) => y.year === thisYear) || state.years[state.years.length - 1])?.id;
-      wrap.innerHTML = segmented("year", [...state.years.map((y) => ({ value: y.id, label: y.year })), { value: "all", label: "All time" }], state.params.fiscal_year_id);
+      wrap.innerHTML =
+        segmented("year", [...state.years.map((y) => ({ value: y.id, label: y.year })), { value: "all", label: "All time" }], state.params.fiscal_year_id) +
+        (report.inputs.includes("fiscal_month") ? '<div class="rp-month" id="rpMonthWrap"><select id="rpMonth" aria-label="Month"></select></div>' : "") +
+        gatheringChip(report);
       wrap.querySelectorAll("[data-year]").forEach((btn) =>
         btn.addEventListener("click", () => {
           state.params.fiscal_year_id = btn.dataset.year === "all" ? "all" : Number(btn.dataset.year);
           wrap.querySelectorAll("[data-year]").forEach((b) => b.classList.toggle("active", b === btn));
+          renderMonths();
           updateSummary();
         }),
       );
+      renderMonths();
     } else if (report.inputs.includes("years")) {
       $("rpPeriodTitle").textContent = "Range";
       state.params.years = state.params.years || "3";
@@ -480,12 +510,38 @@ const ReportCenter = (function () {
     updateSummary();
   }
 
+  /** Month picker for reports that take one: "Whole year" or a month of the chosen year (up to now). Hidden for all time. */
+  function renderMonths() {
+    const select = $("rpMonth");
+    if (!select) return;
+    const year = state.years.find((y) => String(y.id) === String(state.params.fiscal_year_id))?.year;
+    const now = new Date();
+    const last = Number(year) === now.getFullYear() ? now.getMonth() + 1 : 12;
+    if (state.params.month && Number(state.params.month) > last) delete state.params.month;
+    select.innerHTML = '<option value="">Whole year</option>' + MONTHS.slice(0, last).map((m, i) => `<option value="${i + 1}">${m}</option>`).join("");
+    select.value = state.params.month ? String(state.params.month) : "";
+    $("rpMonthWrap").hidden = state.params.fiscal_year_id === "all";
+    // Select2 where the page has it (DemographicsUI is a top-level const, not a window property).
+    if (typeof DemographicsUI !== "undefined" && window.jQuery && jQuery.fn.select2) DemographicsUI.enhanceSelect(select, { search: false });
+    select.onchange = () => {
+      state.params.month = select.value ? Number(select.value) : null;
+      updateSummary();
+    };
+  }
+
+  /** The one ministry / event a report is narrowed to (from the page's filter). */
+  function gatheringChip(report) {
+    if (!report.inputs.includes("gathering_type") || !state.params.gathering_type_id) return "";
+    return `<span class="soft-chip soft-success rp-period-chip mt-2"><i class="ri-group-line"></i>Only ${esc(state.lockedTitle || "this gathering")}</span>`;
+  }
+
   function periodText() {
     const report = current();
     if (!report) return "";
     if (report.inputs.includes("fiscal_year")) {
       if (state.params.fiscal_year_id === "all") return "All time";
-      return String(state.years?.find((y) => String(y.id) === String(state.params.fiscal_year_id))?.year || "");
+      const year = String(state.years?.find((y) => String(y.id) === String(state.params.fiscal_year_id))?.year || "");
+      return report.inputs.includes("fiscal_month") && state.params.month ? `${MONTHS[state.params.month - 1]} ${year}` : year;
     }
     if (report.inputs.includes("years")) return state.params.years === "all" ? "All time" : `Last ${state.params.years} year${state.params.years === "1" ? "" : "s"}`;
     return state.params.submission_label || "This submission";
@@ -505,6 +561,8 @@ const ReportCenter = (function () {
     if (report.inputs.includes("years")) body.years = state.params.years;
     if (report.inputs.includes("submission")) body.demographic_id = state.params.demographic_id;
     if (report.inputs.includes("metric")) body.metric = state.params.metric;
+    if (report.inputs.includes("fiscal_month") && state.params.month && state.params.fiscal_year_id !== "all") body.month = state.params.month;
+    if (report.inputs.includes("gathering_type") && state.params.gathering_type_id) body.gathering_type_id = state.params.gathering_type_id;
     return body;
   }
 
@@ -810,12 +868,12 @@ const ReportCenter = (function () {
       if (!trigger) return;
       e.preventDefault();
       const params = {};
-      ["fiscal_year_id", "years", "demographic_id", "submission_label", "metric"].forEach((k) => {
+      ["fiscal_year_id", "year", "month", "years", "demographic_id", "submission_label", "metric", "gathering_type_id"].forEach((k) => {
         const v = trigger.dataset[k.replace(/_([a-z])/g, (_, c) => c.toUpperCase())];
         if (v) params[k] = /^\d+$/.test(v) ? Number(v) : v;
       });
       const territoryId = trigger.dataset.territoryId || (typeof USER_TERRITORY !== "undefined" ? USER_TERRITORY.id : null);
-      open({ territoryId, reportKey: trigger.dataset.reportKey, params, locked: trigger.dataset.lock === "1", title: trigger.dataset.reportTitle });
+      open({ territoryId, reportKey: trigger.dataset.reportKey, module: trigger.dataset.module, params, locked: trigger.dataset.lock === "1", title: trigger.dataset.reportTitle });
     });
   }
 

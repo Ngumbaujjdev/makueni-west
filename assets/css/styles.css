@@ -33340,6 +33340,15 @@ tr.list-row-flash > td {
   color: #fff;
 }
 
+/* Export modal: month picker under the year pills (attendance reports) */
+.rp-month {
+  max-width: 220px;
+  margin-top: 0.6rem;
+}
+.rp-month[hidden] {
+  display: none;
+}
+
 /* Attendance Analytics */
 .att-period-select {
   min-width: 130px;

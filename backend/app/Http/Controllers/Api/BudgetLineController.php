@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\BudgetLine;
 use App\Models\BudgetCategory;
+use App\Models\BudgetLine;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class BudgetLineController extends Controller
 {
@@ -42,23 +42,24 @@ class BudgetLineController extends Controller
 
             // Order by
             $budgetLines = $query->orderBy('budget_category_id', 'asc')
-                                ->orderBy('display_order', 'asc')
-                                ->get();
+                ->orderBy('display_order', 'asc')
+                ->get();
 
             return response()->json([
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget lines retrieved successfully',
-                'data' => $budgetLines
+                'data' => $budgetLines,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve budget lines: ' . $e->getMessage());
+            Log::error('Failed to retrieve budget lines: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve budget lines',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -73,26 +74,27 @@ class BudgetLineController extends Controller
 
             $categories = BudgetCategory::with(['budgetLines' => function ($query) use ($territoryScope) {
                 $query->active()
-                      ->byTerritoryScope($territoryScope)
-                      ->orderBy('display_order', 'asc');
+                    ->byTerritoryScope($territoryScope)
+                    ->orderBy('display_order', 'asc');
             }])
-            ->active()
-            ->get();
+                ->active()
+                ->get();
 
             return response()->json([
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget lines grouped by category retrieved successfully',
-                'data' => $categories
+                'data' => $categories,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve grouped budget lines: ' . $e->getMessage());
+            Log::error('Failed to retrieve grouped budget lines: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve grouped budget lines',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -118,14 +120,14 @@ class BudgetLineController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation error',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $data = $validator->validated();
 
             // Auto-generate slug if not provided
-            if (!isset($data['slug'])) {
+            if (! isset($data['slug'])) {
                 $data['slug'] = Str::slug($data['name']);
             }
 
@@ -136,7 +138,7 @@ class BudgetLineController extends Controller
             $data['created_by'] = auth()->id();
 
             // Auto-generate display_order if not provided
-            if (!isset($data['display_order'])) {
+            if (! isset($data['display_order'])) {
                 $maxOrder = BudgetLine::where('budget_category_id', $data['budget_category_id'])->max('display_order');
                 $data['display_order'] = $maxOrder ? $maxOrder + 1 : 1;
             }
@@ -148,16 +150,17 @@ class BudgetLineController extends Controller
                 'success' => true,
                 'status' => 201,
                 'message' => 'Budget line created successfully',
-                'data' => $budgetLine
+                'data' => $budgetLine,
             ], 201);
 
         } catch (\Exception $e) {
-            Log::error('Failed to create budget line: ' . $e->getMessage());
+            Log::error('Failed to create budget line: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to create budget line',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -174,16 +177,17 @@ class BudgetLineController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget line retrieved successfully',
-                'data' => $budgetLine
+                'data' => $budgetLine,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve budget line: ' . $e->getMessage());
+            Log::error('Failed to retrieve budget line: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve budget line',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -197,7 +201,7 @@ class BudgetLineController extends Controller
             $validator = Validator::make($request->all(), [
                 'budget_category_id' => 'sometimes|required|exists:budget_categories,id',
                 'name' => 'sometimes|required|string|max:255',
-                'slug' => 'nullable|string|max:255|unique:budget_lines,slug,' . $budgetLine->id,
+                'slug' => 'nullable|string|max:255|unique:budget_lines,slug,'.$budgetLine->id,
                 'territory_scope' => 'sometimes|required|in:diocese,region,subregion,church,all',
                 'description' => 'nullable|string|max:1000',
                 'is_active' => 'nullable|boolean',
@@ -209,14 +213,14 @@ class BudgetLineController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation error',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $data = $validator->validated();
 
             // Auto-generate slug if name is updated but slug is not provided
-            if (isset($data['name']) && !isset($data['slug'])) {
+            if (isset($data['name']) && ! isset($data['slug'])) {
                 $data['slug'] = Str::slug($data['name']);
             }
 
@@ -230,16 +234,17 @@ class BudgetLineController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget line updated successfully',
-                'data' => $budgetLine->fresh(['budgetCategory'])
+                'data' => $budgetLine->fresh(['budgetCategory']),
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to update budget line: ' . $e->getMessage());
+            Log::error('Failed to update budget line: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to update budget line',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -259,29 +264,30 @@ class BudgetLineController extends Controller
                     'success' => false,
                     'status' => 422,
                     'message' => 'Validation error',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $budgetLine->update([
                 'display_order' => $request->display_order,
-                'updated_by' => auth()->id()
+                'updated_by' => auth()->id(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget line order updated successfully',
-                'data' => null
+                'data' => null,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to update budget line order: ' . $e->getMessage());
+            Log::error('Failed to update budget line order: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to update budget line order',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -302,7 +308,7 @@ class BudgetLineController extends Controller
                         'event' => $audit->event, // created, updated, deleted
                         'user' => $audit->user ? [
                             'id' => $audit->user->id,
-                            'name' => $audit->user->firstname . ' ' . $audit->user->lastname,
+                            'name' => $audit->user->firstname.' '.$audit->user->lastname,
                             'email' => $audit->user->email,
                         ] : null,
                         'old_values' => $audit->old_values,
@@ -318,16 +324,17 @@ class BudgetLineController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Audit trail retrieved successfully',
-                'data' => $audits
+                'data' => $audits,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to retrieve audit trail: ' . $e->getMessage());
+            Log::error('Failed to retrieve audit trail: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to retrieve audit trail',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -344,7 +351,7 @@ class BudgetLineController extends Controller
                     'success' => false,
                     'status' => 400,
                     'message' => 'Cannot delete system default budget lines.',
-                    'data' => null
+                    'data' => null,
                 ], 400);
             }
 
@@ -367,16 +374,17 @@ class BudgetLineController extends Controller
                 'success' => true,
                 'status' => 200,
                 'message' => 'Budget line deleted successfully',
-                'data' => null
+                'data' => null,
             ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Failed to delete budget line: ' . $e->getMessage());
+            Log::error('Failed to delete budget line: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'status' => 500,
                 'message' => 'Failed to delete budget line',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

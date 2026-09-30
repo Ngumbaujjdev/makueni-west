@@ -127,7 +127,7 @@ $baseUrl = '/makueni-west';
                     <div class="report-tray-head">
                         <p class="mb-0 fs-16 fw-semibold">Reports</p>
                         <?php if ((getCurrentRole()['territory']['territory_type'] ?? null) === 'church') : ?>
-                            <a href="<?= SITE_URL ?>/church/demographics-growth/reports" class="report-tray-all">All reports <i class="ri-arrow-right-line"></i></a>
+                            <a href="<?= SITE_URL ?><?= str_contains($_SERVER['REQUEST_URI'] ?? '', '/church/attendance') ? '/church/attendance/reports' : '/church/demographics-growth/reports' ?>" class="report-tray-all">All reports <i class="ri-arrow-right-line"></i></a>
                         <?php endif ?>
                     </div>
                     <div class="report-tray-list" id="reportTrayList">

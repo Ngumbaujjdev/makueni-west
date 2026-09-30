@@ -243,6 +243,15 @@ const AttendanceServices = (function () {
       ],
       { noun: "Sundays" },
     );
+    document.getElementById("sundayMonthFilter")?.addEventListener("change", syncExport);
+    syncExport();
+  }
+
+  /** Export gives the Sunday report for the year (and month) on screen. */
+  function syncExport() {
+    const monthName = document.getElementById("sundayMonthFilter")?.value || "";
+    const month = monthName ? new Date(`${monthName} 1, ${year}`).getMonth() + 1 : "";
+    UI.syncExportButton({ year, month });
   }
 
   // ==========================================================================

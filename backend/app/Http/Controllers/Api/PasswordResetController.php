@@ -3,17 +3,17 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\SendPasswordResetEmail;
-use App\Jobs\SendPasswordChangedNotification;
 use App\Jobs\SendEmployeeCodeResetEmail;
+use App\Jobs\SendPasswordChangedNotification;
+use App\Jobs\SendPasswordResetEmail;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Carbon\Carbon;
 
 class PasswordResetController extends Controller
 {
@@ -48,7 +48,7 @@ class PasswordResetController extends Controller
                     [
                         'email' => $user->email,
                         'token' => Hash::make($token),
-                        'created_at' => Carbon::now()
+                        'created_at' => Carbon::now(),
                     ]
                 );
 
@@ -64,7 +64,7 @@ class PasswordResetController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to send password reset email', [
                 'email' => $request->email,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to send password reset link');
@@ -78,7 +78,7 @@ class PasswordResetController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
-            'token' => 'required|string'
+            'token' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -90,29 +90,30 @@ class PasswordResetController extends Controller
                 ->where('email', $request->email)
                 ->first();
 
-            if (!$passwordReset) {
+            if (! $passwordReset) {
                 return errorResponse('Invalid or expired password reset token', 400);
             }
 
             // Check if token matches
-            if (!Hash::check($request->token, $passwordReset->token)) {
+            if (! Hash::check($request->token, $passwordReset->token)) {
                 return errorResponse('Invalid password reset token', 400);
             }
 
             // Check if token is not expired (24 hours)
             if (Carbon::parse($passwordReset->created_at)->addHours(24)->isPast()) {
                 DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+
                 return errorResponse('Password reset token has expired', 400);
             }
 
             return successResponse('Password reset token is valid', [
                 'token_valid' => true,
-                'expires_at' => Carbon::parse($passwordReset->created_at)->addHours(24)->toISOString()
+                'expires_at' => Carbon::parse($passwordReset->created_at)->addHours(24)->toISOString(),
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to verify reset token', [
                 'email' => $request->email,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to verify reset token');
@@ -127,7 +128,7 @@ class PasswordResetController extends Controller
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required|string|min:8|confirmed',
-            'token' => 'required|string'
+            'token' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -137,7 +138,7 @@ class PasswordResetController extends Controller
         try {
             $user = User::where('email', $request->email)->first();
 
-            if (!$user) {
+            if (! $user) {
                 return errorResponse('User not found', 404);
             }
 
@@ -150,18 +151,19 @@ class PasswordResetController extends Controller
                 ->where('email', $request->email)
                 ->first();
 
-            if (!$passwordReset) {
+            if (! $passwordReset) {
                 return errorResponse('Invalid or expired password reset token', 400);
             }
 
             // Check if token matches
-            if (!Hash::check($request->token, $passwordReset->token)) {
+            if (! Hash::check($request->token, $passwordReset->token)) {
                 return errorResponse('Invalid password reset token', 400);
             }
 
             // Check if token is not expired (24 hours)
             if (Carbon::parse($passwordReset->created_at)->addHours(24)->isPast()) {
                 DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+
                 return errorResponse('Password reset token has expired', 400);
             }
 
@@ -193,13 +195,13 @@ class PasswordResetController extends Controller
                 [
                     'password_reset' => true,
                     'tokens_revoked' => true,
-                    'email_sent' => true
+                    'email_sent' => true,
                 ]
             );
         } catch (\Exception $e) {
             Log::error('Failed to reset password', [
                 'email' => $request->email,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to reset password');
@@ -243,7 +245,7 @@ class PasswordResetController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to send employee code reset', [
                 'email' => $request->email,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to send employee code reset');
@@ -290,7 +292,7 @@ class PasswordResetController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to change own password', [
                 'user_id' => $request->user()->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to change password');
@@ -315,12 +317,12 @@ class PasswordResetController extends Controller
             $user = $request->user();
 
             // Verify current password
-            if (!Hash::check($request->current_password, $user->password)) {
+            if (! Hash::check($request->current_password, $user->password)) {
                 return errorResponse('Current password is incorrect', 400);
             }
 
             // Validate employee code format (6 digits)
-            if (!preg_match('/^[0-9]{6}$/', $request->new_employee_code)) {
+            if (! preg_match('/^[0-9]{6}$/', $request->new_employee_code)) {
                 return errorResponse('Employee code must be exactly 6 digits', 400);
             }
 
@@ -328,12 +330,12 @@ class PasswordResetController extends Controller
             $user->update(['employee_code' => $request->new_employee_code]);
 
             return successResponse('Employee code changed successfully', [
-                'new_employee_code' => $request->new_employee_code
+                'new_employee_code' => $request->new_employee_code,
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to change own employee code', [
                 'user_id' => $request->user()->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to change employee code');
@@ -363,7 +365,7 @@ class PasswordResetController extends Controller
             $user = User::find($request->user_id);
 
             // Check admin permissions (you might want to add role checking here)
-            if (!$admin->hasGlobalAccess() && !$admin->hasRole(['Global Administrator', 'Bishop'])) {
+            if (! $admin->hasGlobalAccess() && ! $admin->hasRole(['Global Administrator', 'Bishop'])) {
                 return errorResponse('Insufficient permissions to reset user passwords', 403);
             }
 
@@ -385,18 +387,18 @@ class PasswordResetController extends Controller
             Log::info('Admin reset user password', [
                 'admin_id' => $admin->id,
                 'user_id' => $user->id,
-                'user_email' => $user->email
+                'user_email' => $user->email,
             ]);
 
             return successResponse('User password reset successfully', [
                 'user_notified' => true,
-                'force_change_required' => true
+                'force_change_required' => true,
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to admin reset user password', [
                 'admin_id' => $request->user()->id,
                 'user_id' => $request->user_id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to reset user password');
@@ -422,12 +424,12 @@ class PasswordResetController extends Controller
             $user = User::find($request->user_id);
 
             // Check admin permissions
-            if (!$admin->hasGlobalAccess() && !$admin->hasRole(['Global Administrator', 'Bishop'])) {
+            if (! $admin->hasGlobalAccess() && ! $admin->hasRole(['Global Administrator', 'Bishop'])) {
                 return errorResponse('Insufficient permissions to change employee codes', 403);
             }
 
             // Validate employee code format
-            if (!preg_match('/^[0-9]{6}$/', $request->new_employee_code)) {
+            if (! preg_match('/^[0-9]{6}$/', $request->new_employee_code)) {
                 return errorResponse('Employee code must be exactly 6 digits', 400);
             }
 
@@ -437,18 +439,18 @@ class PasswordResetController extends Controller
             Log::info('Admin changed user employee code', [
                 'admin_id' => $admin->id,
                 'user_id' => $user->id,
-                'new_employee_code' => $request->new_employee_code
+                'new_employee_code' => $request->new_employee_code,
             ]);
 
             return successResponse('Employee code changed successfully', [
                 'user_id' => $user->id,
-                'new_employee_code' => $request->new_employee_code
+                'new_employee_code' => $request->new_employee_code,
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to admin change employee code', [
                 'admin_id' => $request->user()->id,
                 'user_id' => $request->user_id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return serverErrorResponse('Failed to change employee code');

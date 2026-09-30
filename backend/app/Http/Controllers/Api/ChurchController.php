@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\TerritoryType;
 use App\Http\Controllers\Controller;
 use App\Models\Territory;
-use App\Enums\TerritoryType;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class ChurchController extends Controller
 {
@@ -39,7 +39,7 @@ class ChurchController extends Controller
 
             // Filter by diocese (get all churches in this diocese)
             if ($request->filled('diocese_id')) {
-                $query->where('full_path', 'like', '%' . Territory::find($request->diocese_id)?->name . '%');
+                $query->where('full_path', 'like', '%'.Territory::find($request->diocese_id)?->name.'%');
             }
 
             // Filter by active status
@@ -49,7 +49,7 @@ class ChurchController extends Controller
 
             // Search by name
             if ($request->filled('search')) {
-                $query->where('name', 'like', '%' . $request->search . '%');
+                $query->where('name', 'like', '%'.$request->search.'%');
             }
 
             // Sorting
@@ -59,20 +59,20 @@ class ChurchController extends Controller
 
             // Pagination
             $perPage = $request->input('per_page', 15);
-            
+
             // ============================================================
             // ✅ SUPPORT FOR ?all=true (for dropdowns)
             // ============================================================
             if ($request->has('all') && $request->boolean('all')) {
                 // Return all churches without pagination
                 $churches = $query->get();
-                
+
                 return successResponse('Churches retrieved successfully', [
                     'churches' => $churches,
-                    'total' => $churches->count()
+                    'total' => $churches->count(),
                 ]);
             }
-            
+
             // Regular pagination
             $churches = $query->paginate($perPage);
 
@@ -83,11 +83,12 @@ class ChurchController extends Controller
                     'last_page' => $churches->lastPage(),
                     'per_page' => $churches->perPage(),
                     'total' => $churches->total(),
-                ]
+                ],
             ]);
 
         } catch (\Exception $e) {
             Log::error('Failed to retrieve churches', ['error' => $e->getMessage()]);
+
             return serverErrorResponse('Failed to retrieve churches', $e->getMessage());
         }
     }
@@ -155,7 +156,7 @@ class ChurchController extends Controller
                 'church_id' => $church->id,
                 'church_name' => $church->name,
                 'parent_subregion' => $parent->name,
-                'created_by' => $authUser->id
+                'created_by' => $authUser->id,
             ]);
 
             return createdResponse($church, 'Church created successfully');
@@ -163,6 +164,7 @@ class ChurchController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to create church', ['error' => $e->getMessage()]);
+
             return serverErrorResponse('Failed to create church', $e->getMessage());
         }
     }
@@ -180,7 +182,7 @@ class ChurchController extends Controller
             $church->load([
                 'parent:id,name,territory_type',
                 'creator:id,firstname,lastname',
-                'updater:id,firstname,lastname'
+                'updater:id,firstname,lastname',
             ]);
 
             // Get full ancestry
@@ -188,7 +190,7 @@ class ChurchController extends Controller
                 return [
                     'id' => $ancestor->id,
                     'name' => $ancestor->name,
-                    'type' => $ancestor->territory_type->value
+                    'type' => $ancestor->territory_type->value,
                 ];
             });
 
@@ -196,6 +198,7 @@ class ChurchController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Failed to retrieve church', ['error' => $e->getMessage()]);
+
             return serverErrorResponse('Failed to retrieve church', $e->getMessage());
         }
     }
@@ -211,7 +214,7 @@ class ChurchController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
-            'code' => 'sometimes|required|string|max:20|unique:territories,code,' . $church->id,
+            'code' => 'sometimes|required|string|max:20|unique:territories,code,'.$church->id,
             'parent_id' => 'sometimes|required|exists:territories,id',
             'address' => 'nullable|string',
             'phone' => 'nullable|string|max:20',
@@ -236,7 +239,7 @@ class ChurchController extends Controller
             $updateData = $request->only([
                 'name', 'code', 'parent_id', 'address', 'phone', 'email',
                 'postal_code', 'town', 'county', 'latitude', 'longitude',
-                'established_date', 'description', 'is_active'
+                'established_date', 'description', 'is_active',
             ]);
             $updateData['updated_by'] = $authUser->id;
 
@@ -244,13 +247,14 @@ class ChurchController extends Controller
 
             Log::info('Church updated successfully', [
                 'church_id' => $church->id,
-                'updated_by' => $authUser->id
+                'updated_by' => $authUser->id,
             ]);
 
             return updatedResponse($church->fresh(), 'Church updated successfully');
 
         } catch (\Exception $e) {
             Log::error('Failed to update church', ['error' => $e->getMessage()]);
+
             return serverErrorResponse('Failed to update church', $e->getMessage());
         }
     }
@@ -270,10 +274,12 @@ class ChurchController extends Controller
             $church->delete();
 
             Log::info('Church deleted successfully', ['church_name' => $churchName]);
+
             return deleteResponse('Church deleted successfully');
 
         } catch (\Exception $e) {
             Log::error('Failed to delete church', ['error' => $e->getMessage()]);
+
             return serverErrorResponse('Failed to delete church', $e->getMessage());
         }
     }

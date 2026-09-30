@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\TerritoryType;
 use App\Http\Controllers\Controller;
 use App\Models\Territory;
-use App\Enums\TerritoryType;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class RegionController extends Controller
 {
@@ -33,7 +33,7 @@ class RegionController extends Controller
 
             // Search by name
             if ($request->filled('search')) {
-                $query->where('name', 'like', '%' . $request->search . '%');
+                $query->where('name', 'like', '%'.$request->search.'%');
             }
 
             // Sorting
@@ -43,28 +43,29 @@ class RegionController extends Controller
 
             // Pagination
             $perPage = $request->input('per_page', 15);
-            
+
             // ============================================================
             // ✅ SUPPORT FOR ?all=true (for dropdowns)
             // ============================================================
             if ($request->has('all') && $request->boolean('all')) {
                 // Return all regions without pagination
                 $regions = $query->get();
-                
+
                 // Add subregions count
                 $regions->transform(function ($region) {
                     $region->subregions_count = $region->children()
                         ->where('territory_type', TerritoryType::SUBREGION)
                         ->count();
+
                     return $region;
                 });
-                
+
                 return successResponse('Regions retrieved successfully', [
                     'regions' => $regions,
-                    'total' => $regions->count()
+                    'total' => $regions->count(),
                 ]);
             }
-            
+
             // Regular pagination
             $regions = $query->paginate($perPage);
 
@@ -73,6 +74,7 @@ class RegionController extends Controller
                 $region->subregions_count = $region->children()
                     ->where('territory_type', TerritoryType::SUBREGION)
                     ->count();
+
                 return $region;
             });
 
@@ -83,11 +85,12 @@ class RegionController extends Controller
                     'last_page' => $regions->lastPage(),
                     'per_page' => $regions->perPage(),
                     'total' => $regions->total(),
-                ]
+                ],
             ]);
 
         } catch (\Exception $e) {
             Log::error('Failed to retrieve regions', ['error' => $e->getMessage()]);
+
             return serverErrorResponse('Failed to retrieve regions', $e->getMessage());
         }
     }
@@ -155,7 +158,7 @@ class RegionController extends Controller
                 'region_id' => $region->id,
                 'region_name' => $region->name,
                 'parent_diocese' => $parent->name,
-                'created_by' => $authUser->id
+                'created_by' => $authUser->id,
             ]);
 
             return createdResponse($region, 'Region created successfully');
@@ -163,6 +166,7 @@ class RegionController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to create region', ['error' => $e->getMessage()]);
+
             return serverErrorResponse('Failed to create region', $e->getMessage());
         }
     }
@@ -184,7 +188,7 @@ class RegionController extends Controller
                 ->where('territory_type', TerritoryType::SUBREGION)
                 ->count();
 
-            $region->total_churches = Territory::where('full_path', 'like', '%' . $region->name . '%')
+            $region->total_churches = Territory::where('full_path', 'like', '%'.$region->name.'%')
                 ->where('territory_type', TerritoryType::CHURCH)
                 ->count();
 
@@ -192,6 +196,7 @@ class RegionController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Failed to retrieve region', ['error' => $e->getMessage()]);
+
             return serverErrorResponse('Failed to retrieve region', $e->getMessage());
         }
     }
@@ -207,7 +212,7 @@ class RegionController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
-            'code' => 'sometimes|required|string|max:20|unique:territories,code,' . $region->id,
+            'code' => 'sometimes|required|string|max:20|unique:territories,code,'.$region->id,
             'parent_id' => 'sometimes|required|exists:territories,id',
             'address' => 'nullable|string',
             'phone' => 'nullable|string|max:20',
@@ -232,7 +237,7 @@ class RegionController extends Controller
             $updateData = $request->only([
                 'name', 'code', 'parent_id', 'address', 'phone', 'email',
                 'postal_code', 'town', 'county', 'latitude', 'longitude',
-                'established_date', 'description', 'is_active'
+                'established_date', 'description', 'is_active',
             ]);
             $updateData['updated_by'] = $authUser->id;
 
@@ -240,13 +245,14 @@ class RegionController extends Controller
 
             Log::info('Region updated successfully', [
                 'region_id' => $region->id,
-                'updated_by' => $authUser->id
+                'updated_by' => $authUser->id,
             ]);
 
             return updatedResponse($region->fresh(), 'Region updated successfully');
 
         } catch (\Exception $e) {
             Log::error('Failed to update region', ['error' => $e->getMessage()]);
+
             return serverErrorResponse('Failed to update region', $e->getMessage());
         }
     }
@@ -269,10 +275,12 @@ class RegionController extends Controller
             $region->delete();
 
             Log::info('Region deleted successfully', ['region_name' => $regionName]);
+
             return deleteResponse('Region deleted successfully');
 
         } catch (\Exception $e) {
             Log::error('Failed to delete region', ['error' => $e->getMessage()]);
+
             return serverErrorResponse('Failed to delete region', $e->getMessage());
         }
     }
@@ -302,16 +310,18 @@ class RegionController extends Controller
                 $subregion->churches_count = $subregion->children()
                     ->where('territory_type', TerritoryType::CHURCH)
                     ->count();
+
                 return $subregion;
             });
 
             return successResponse('SubRegions retrieved successfully', [
                 'region' => ['id' => $region->id, 'name' => $region->name],
-                'subregions' => $subregions
+                'subregions' => $subregions,
             ]);
 
         } catch (\Exception $e) {
             Log::error('Failed to retrieve subregions', ['error' => $e->getMessage()]);
+
             return serverErrorResponse('Failed to retrieve subregions', $e->getMessage());
         }
     }
