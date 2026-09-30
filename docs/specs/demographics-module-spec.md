@@ -80,6 +80,8 @@ Base: `backend/routes/api.php`, under `auth:sanctum`.
 | GET | `/attendance-reports/widgets?territory_id=&fiscal_year_id=&fiscal_month_id=&gathering_category_id=` | ownership (`userOwnsChurch`) |
 | GET | `/demographics-reports/widgets?territory_id=&fiscal_year_id=` | ownership (`userOwnsChurch`) |
 
+**One Sunday service per church per Sunday (2026-09-30).** `POST /attendance` for the weekly category returns `422` on `service_date` ("This Sunday is already recorded") when that church already has a Sunday service record for that date, with `existing_id` pointing at it. A second record would count that week twice in every average. The entry form handles this by switching to editing the existing record. Ministry gatherings and special events can still share a date. `PUT /attendance/{id}` doesn't change `service_date`, so the form shows the date as fixed when editing.
+
 **Deliberately one reused permission string per model covers the entire row** (not split per field group) — `DemographicsController`'s own docblock explains this: the row is submitted/reviewed as one atomic unit.
 
 `GET /demographics/summary/{territory}` response shape (`DemographicsGrowthService::summaryFor()`):
