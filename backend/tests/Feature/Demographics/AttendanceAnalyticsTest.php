@@ -192,6 +192,27 @@ class AttendanceAnalyticsTest extends TestCase
         $this->assertSame(52, $children['girls_share']);
     }
 
+    public function test_a_range_of_months_can_cross_years(): void
+    {
+        $data = $this->analytics(['fiscal_year_id' => '', 'from' => '2025-12', 'to' => '2026-03'])->assertOk()->json('data');
+
+        $this->assertSame('range', $data['period']['mode']);
+        $this->assertSame('Dec 2025 - Mar 2026', $data['period']['label']);
+        $this->assertSame('2025-12-01', $data['period']['start']);
+        $this->assertSame('2026-03-31', $data['period']['end']);
+        $this->assertSame('the previous 4 months', $data['period']['previous_label']);
+        $this->assertSame(115, $data['summary']['sunday_average'], '(100 + 100 + 120 + 140) / 4');
+        $this->assertSame(6, $data['summary']['coverage']['elapsed'], 'From the first record (22 Feb), not December');
+        $this->assertNull($data['summary']['previous_sunday_average'], 'Nothing was recorded in the 4 months before');
+    }
+
+    public function test_a_range_must_run_forwards_and_be_months(): void
+    {
+        $this->analytics(['from' => '2026-03', 'to' => '2026-01'])->assertStatus(422)->assertJsonValidationErrors('to');
+        $this->analytics(['from' => '2026-3-1', 'to' => '2026-04'])->assertStatus(422)->assertJsonValidationErrors('from');
+        $this->analytics(['from' => '2026-01'])->assertStatus(422)->assertJsonValidationErrors('to');
+    }
+
     public function test_another_churchs_attendance_is_refused(): void
     {
         Sanctum::actingAs($this->pastor);

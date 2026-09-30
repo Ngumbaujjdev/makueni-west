@@ -56,7 +56,7 @@ Spiritual activities and its four activity reports share `group: "Spiritual acti
 ### Attendance reports (church scope, 2026-09-30)
 All five build from `App\Reports\Attendance\AttendanceData`, the same class behind the Attendance Analytics page (see `demographics-module-spec.md`). `module()` is `attendance`, and the verification codes start `MWD-ATT-`.
 
-**Inputs.** Every attendance report takes `fiscal_year` (an id, or `"all"`) and `fiscal_month` (`month`: 1-12, ignored for all time). Ministries and events also take `gathering_type` (`gathering_type_id`), which must belong to one of the report's churches or the request returns 422 on `gathering_type_id`.
+**Inputs.** Every attendance report takes `fiscal_year` (an id, or `"all"`) and `fiscal_month` (`month`: 1-12, ignored for all time), or a range of months with `from` / `to` (YYYY-MM), labelled "Jan 2025 - Aug 2026". A page showing a range exports that range: the modal shows it as a chip, with "Use a year instead". Ministries and events also take `gathering_type` (`gathering_type_id`), which must belong to one of the report's churches or the request returns 422 on `gathering_type_id`.
 
 **Totals.** Sunday figures are **averages, never sums**: the same congregation comes every week.
 

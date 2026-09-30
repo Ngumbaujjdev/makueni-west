@@ -78,10 +78,12 @@ Base: `backend/routes/api.php`, under `auth:sanctum`.
 | POST | `/attendance` | per `service_type`: `attendancemanagement.{serviceattendance\|specialeventsattendance\|ministryattendance}.create` |
 | PUT | `/attendance/{id}` | same prefix, `.update`, resolved from the record's existing `service_type` |
 | GET | `/demographics-reports/widgets?territory_id=&fiscal_year_id=` | ownership (`userOwnsChurch`) |
-| GET | `/attendance-reports/analytics?territory_id=&fiscal_year_id=<id\|all>&month=<1-12>` | ownership (`userOwnsChurch`) |
+| GET | `/attendance-reports/analytics?territory_id=&fiscal_year_id=<id\|all>&month=<1-12>` or `&from=YYYY-MM&to=YYYY-MM` | ownership (`userOwnsChurch`) |
 
 **Attendance Analytics (2026-09-30).** `church/attendance/analytics.php` (submodule + `attendancemanagement.attendanceanalytics.read` from `AddAttendanceAnalyticsSubmoduleSeeder`, granted to every role that reads Attendance Reports) is filled by one call to `/attendance-reports/analytics`, built by `App\Reports\Attendance\AttendanceData` over an `AttendancePeriod`:
 - **Period.** A fiscal year, one month of it (`month` or `fiscal_month_id`), or `fiscal_year_id=all` (from the first record to today). It is compared with the year or month before; all time has no comparison, and neither does a previous period with no records.
+  - **A range of months (2026-09-30):** `from` / `to` (YYYY-MM), e.g. "Jan 2025 - Aug 2026". It is compared with the same number of months just before it. `from` must not be after `to` (422 otherwise).
+  - The pages' picker also offers "Last 12 months", which is sent as a range.
 - **Sunday figures are averages per Sunday, not sums.** The same congregation comes back every week. Churches are added up per Sunday, so the same class serves regions later.
 - **Coverage** counts Sundays from each church's first record up to today, so Sundays before a church started recording aren't "missing".
 - **Payload:** `summary`, plus one section each for `sunday`, `ministries`, `events` and `children`. `sunday` holds the weekly series, months, a 12-month heatmap, composition, and the top and lowest Sundays. Each section carries its own `insights` from `InsightEngine`.
