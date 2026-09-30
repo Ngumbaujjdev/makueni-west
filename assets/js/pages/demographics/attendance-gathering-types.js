@@ -19,7 +19,60 @@ const AttendanceGatheringTypes = (function () {
 
   let categories = [];
   let allTypes = [];
+  let usage = {};
   let editingId = null;
+
+  /** Icons to pick from, with words people might search for. */
+  const ICONS = [
+    ["ri-group-line", "group fellowship ministry"],
+    ["ri-team-line", "team members"],
+    ["ri-user-heart-line", "care visitation pastoral"],
+    ["ri-hand-heart-line", "charity giving welfare"],
+    ["ri-heart-line", "love couples marriage"],
+    ["ri-hearts-line", "couples marriage family"],
+    ["ri-moon-line", "night kesha vigil prayer"],
+    ["ri-moon-clear-line", "night kesha vigil"],
+    ["ri-sun-line", "morning sunday service"],
+    ["ri-music-2-line", "choir praise worship music"],
+    ["ri-music-line", "choir music band"],
+    ["ri-mic-line", "preaching sermon speaker"],
+    ["ri-book-open-line", "bible study word"],
+    ["ri-book-read-line", "bible study sunday school"],
+    ["ri-quill-pen-line", "training class writing"],
+    ["ri-lightbulb-line", "seminar training teaching"],
+    ["ri-chat-3-line", "discussion counselling talk"],
+    ["ri-question-answer-line", "discussion forum questions"],
+    ["ri-user-star-line", "youth young people"],
+    ["ri-parent-line", "family parents children"],
+    ["ri-user-smile-line", "children kids"],
+    ["ri-women-line", "women mothers union"],
+    ["ri-men-line", "men fellowship"],
+    ["ri-open-arm-line", "welcome evangelism outreach"],
+    ["ri-community-line", "community outreach village"],
+    ["ri-home-heart-line", "home cell house fellowship"],
+    ["ri-building-line", "church building dedication"],
+    ["ri-drop-line", "baptism water"],
+    ["ri-cup-line", "holy communion"],
+    ["ri-fire-line", "revival crusade fire"],
+    ["ri-star-line", "special event celebration"],
+    ["ri-gift-line", "harvest thanksgiving gift"],
+    ["ri-cake-2-line", "celebration anniversary party"],
+    ["ri-trophy-line", "competition sports award"],
+    ["ri-football-line", "sports football games"],
+    ["ri-walk-line", "walk procession march"],
+    ["ri-road-map-line", "mission trip journey"],
+    ["ri-bus-line", "trip travel camp"],
+    ["ri-map-pin-line", "location visit crusade"],
+    ["ri-seedling-line", "new believers growth planting"],
+    ["ri-plant-line", "farming harvest growth"],
+    ["ri-restaurant-line", "meal fellowship lunch"],
+    ["ri-hospital-line", "hospital visit sick"],
+    ["ri-first-aid-kit-line", "health medical camp"],
+    ["ri-shield-star-line", "leaders elders"],
+    ["ri-flag-line", "launch event rally"],
+    ["ri-calendar-event-line", "event default"],
+    ["ri-hand-coin-line", "offering fundraising harambee"],
+  ];
 
   async function init() {
     Object.assign(USER_TERRITORY, DemographicsUI.resolveUserTerritory(USER_TERRITORY));
@@ -32,10 +85,15 @@ const AttendanceGatheringTypes = (function () {
     if (CAN_WRITE_GATHERING_TYPES) {
       document.getElementById("addGatheringTypeBtn").addEventListener("click", openCreateModal);
       document.getElementById("saveGatheringTypeBtn").addEventListener("click", saveGatheringType);
-      document.getElementById("gatheringTypeIcon").addEventListener("input", updateIconPreview);
+      document.getElementById("iconPickerSearch").addEventListener("input", renderIconGrid);
+      document.getElementById("iconPickerGrid").addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-icon]");
+        if (btn) setIcon(btn.dataset.icon);
+      });
+      document.getElementById("gatheringTypeName").addEventListener("input", updateIconPreview);
     }
 
-    await loadCategories();
+    await Promise.all([loadCategories(), loadUsage()]);
     await loadList();
   }
 
@@ -46,17 +104,34 @@ const AttendanceGatheringTypes = (function () {
     categories = result.success ? (result.data || []).filter((c) => !c.is_weekly) : [];
 
     const select = document.getElementById("gatheringTypeCategory");
-    select.innerHTML = categories.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
+    select.innerHTML = categories
+      .map((c) => `<option value="${c.id}" data-icon="${escapeHtml(c.icon || "ri-calendar-event-line")}" data-color="${DemographicsUI.colorFor(c.name)}">${escapeHtml(c.name)}</option>`)
+      .join("");
+    DemographicsUI.enhanceSelect(select, { search: false });
+  }
+
+  /** How often each type met this year and when it last met, from the church's records. */
+  async function loadUsage() {
+    const result = await DemographicsAPIHandler.getAttendance(USER_TERRITORY.id);
+    const year = new Date().getFullYear();
+    usage = {};
+    (result.success ? result.data || [] : []).forEach((r) => {
+      if (!r.gathering_type_id) return;
+      const u = (usage[r.gathering_type_id] = usage[r.gathering_type_id] || { thisYear: 0, last: null });
+      const iso = String(r.service_date).substring(0, 10);
+      if (Number(iso.substring(0, 4)) === year) u.thisYear++;
+      if (!u.last || iso > u.last) u.last = iso;
+    });
   }
 
   async function loadList() {
     const tbody = document.getElementById("gatheringTypesTableBody");
-    tbody.innerHTML = DemographicsUI.renderTableLoading(4, "Loading gathering types...");
+    tbody.innerHTML = DemographicsUI.renderTableLoading(6, "Loading gathering types...");
 
     const result = await DemographicsAPIHandler.getGatheringTypes(USER_TERRITORY.id, { include_inactive: "true" });
 
     if (!result.success) {
-      tbody.innerHTML = DemographicsUI.renderTableEmpty(4, "Could not load gathering types");
+      tbody.innerHTML = DemographicsUI.renderTableEmpty(6, "Could not load gathering types");
       return;
     }
 
@@ -86,14 +161,14 @@ const AttendanceGatheringTypes = (function () {
     const table = DemographicsUI.initListDataTable("gatheringTypesTable", {
       searchPlaceholder: "Search gathering types...",
       order: [[0, "asc"]],
-      nonSortableColumns: [3],
+      nonSortableColumns: [5],
       hideDefaultSearch: true,
       noun: "types",
     });
 
     DemographicsUI.wireFilterToolbar("filterToolbar", table, [
       { id: "categoryFilter", columnIndex: 1, exact: true },
-      { id: "statusFilter", columnIndex: 2, exact: true },
+      { id: "statusFilter", columnIndex: 4, exact: true },
     ], { noun: "types" });
   }
 
@@ -143,7 +218,7 @@ const AttendanceGatheringTypes = (function () {
 
     if (allTypes.length === 0) {
       tbody.innerHTML = DemographicsUI.renderTableEmpty(
-        4,
+        6,
         "No gathering types configured yet - add your first one",
         "ri-list-check-2",
       );
@@ -156,6 +231,11 @@ const AttendanceGatheringTypes = (function () {
         const icon = t.icon || t.category?.icon || "ri-calendar-event-line";
         const category = t.category?.name || "-";
         const status = t.is_active ? "Active" : "Inactive";
+        const used = usage[t.id] || { thisYear: 0, last: null };
+        const quiet = used.last && (Date.now() - new Date(`${used.last}T00:00:00`)) / 86400000 > 60;
+        const lastHeld = used.last
+          ? `${new Date(`${used.last}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}${quiet && t.is_active ? `<div class="fs-12 text-danger fw-semibold">Quiet for 60+ days</div>` : ""}`
+          : "Never";
         const statusPill = t.is_active
           ? UI.pill("Active", "success", "ri-checkbox-circle-fill")
           : UI.pill("Inactive", "danger", "ri-close-circle-fill");
@@ -174,7 +254,9 @@ const AttendanceGatheringTypes = (function () {
                 <span class="fw-semibold">${escapeHtml(t.name)}</span>
               </div>
             </td>
-            <td data-search="${escapeHtml(category)}">${UI.pill(escapeHtml(category), UI.colorFor(category))}</td>
+            <td data-search="${escapeHtml(category)}"><span class="soft-chip soft-${UI.colorFor(category)}">${escapeHtml(category)}</span></td>
+            <td class="d-none d-md-table-cell" data-order="${used.thisYear}">${used.thisYear ? `<b>${used.thisYear}</b> ${used.thisYear === 1 ? "time" : "times"}` : "Not yet"}</td>
+            <td class="d-none d-md-table-cell" data-order="${used.last || ""}">${lastHeld}</td>
             <td data-search="${status}">${statusPill}</td>
             <td class="text-end">
               <div class="d-inline-flex align-items-center gap-1">
@@ -209,9 +291,10 @@ const AttendanceGatheringTypes = (function () {
     document.getElementById("gatheringTypeId").value = "";
     document.getElementById("gatheringTypeName").value = "";
     document.getElementById("gatheringTypeCategory").value = categories[0]?.id || "";
-    document.getElementById("gatheringTypeIcon").value = "";
+    DemographicsUI.syncSelect("gatheringTypeCategory");
     document.getElementById("gatheringTypeActive").checked = true;
-    updateIconPreview();
+    document.getElementById("iconPickerSearch").value = "";
+    setIcon("");
 
     new bootstrap.Modal(document.getElementById("gatheringTypeModal")).show();
   }
@@ -229,19 +312,47 @@ const AttendanceGatheringTypes = (function () {
     document.getElementById("gatheringTypeId").value = type.id;
     document.getElementById("gatheringTypeName").value = type.name || "";
     document.getElementById("gatheringTypeCategory").value = type.gathering_category_id;
-    document.getElementById("gatheringTypeIcon").value = type.icon || "";
+    DemographicsUI.syncSelect("gatheringTypeCategory");
     document.getElementById("gatheringTypeActive").checked = !!type.is_active;
-    updateIconPreview();
+    document.getElementById("iconPickerSearch").value = "";
+    setIcon(type.icon || "");
 
     new bootstrap.Modal(document.getElementById("gatheringTypeModal")).show();
   }
 
-  /** Live preview so a user picking a Remix Icon class name can confirm
-   * it's the icon they meant before saving, instead of finding out on
-   * the list page afterward. */
+  function setIcon(icon) {
+    document.getElementById("gatheringTypeIcon").value = icon;
+    renderIconGrid();
+    updateIconPreview();
+  }
+
+  /** The icon tile preview, in the colour the type's name will get in lists. */
   function updateIconPreview() {
-    const value = document.getElementById("gatheringTypeIcon").value.trim() || "ri-calendar-event-line";
-    document.getElementById("gatheringTypeIconPreview").innerHTML = `<i class="${value}"></i>`;
+    const icon = document.getElementById("gatheringTypeIcon").value || "ri-calendar-event-line";
+    const name = document.getElementById("gatheringTypeName").value.trim();
+    const color = DemographicsUI.colorFor(name || "Gathering");
+    const preview = document.getElementById("gatheringTypeIconPreview");
+    preview.className = `avatar bg-${color} ${color === "secondary" ? "text-dark" : "text-white"}`;
+    preview.innerHTML = `<i class="${escapeHtml(icon)}"></i>`;
+    document.getElementById("gatheringTypeIconName").textContent = document.getElementById("gatheringTypeIcon").value
+      ? `${name || "This gathering"} will show this icon`
+      : "No icon chosen - the default is used";
+  }
+
+  function renderIconGrid() {
+    const q = document.getElementById("iconPickerSearch").value.trim().toLowerCase();
+    const current = document.getElementById("gatheringTypeIcon").value;
+    const matches = ICONS.filter(([icon, words]) => !q || words.includes(q) || icon.includes(q));
+    document.getElementById("iconPickerGrid").innerHTML = matches.length
+      ? matches
+          .map(
+            ([icon, words]) => `
+          <button type="button" class="icon-pick${icon === current ? " is-selected" : ""}" data-icon="${icon}" role="radio" aria-checked="${icon === current}" title="${words}" aria-label="${words.split(" ")[0]}">
+            <i class="${icon}"></i>
+          </button>`,
+          )
+          .join("")
+      : '<div class="fs-12 py-2">No icon matches - try "prayer", "music" or "youth"</div>';
   }
 
   async function saveGatheringType() {

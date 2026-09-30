@@ -50,6 +50,7 @@
         message: data.message || "Request failed",
         errors: data.errors || null,
         data: data.data || null, // 422 duplicate-period responses carry the existing row here
+        existingId: data.existing_id ?? null, // 422 "this Sunday is already recorded" - the record to edit instead
         status: response.status,
       };
     } catch (error) {

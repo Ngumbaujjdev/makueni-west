@@ -153,6 +153,27 @@ class AttendanceController extends Controller
             ], 422);
         }
 
+        // One Sunday service a week: a second record for the same Sunday
+        // would double that week in every average. The form offers to edit
+        // the existing one instead, using existing_id.
+        if ($category->is_weekly) {
+            $existing = ChurchAttendanceRecord::where('territory_type', 'church')
+                ->where('territory_id', (int) $data['territory_id'])
+                ->where('gathering_category_id', $category->id)
+                ->whereDate('service_date', $data['service_date'])
+                ->first();
+
+            if ($existing) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 422,
+                    'message' => 'This Sunday is already recorded. Edit that record instead.',
+                    'errors' => ['service_date' => ['This Sunday is already recorded.']],
+                    'existing_id' => $existing->id,
+                ], 422);
+            }
+        }
+
         $fiscalYear = FiscalYear::where('year', date('Y', strtotime($data['service_date'])))->first();
         $fiscalMonth = FiscalMonth::where('number', date('n', strtotime($data['service_date'])))->first();
 

@@ -103,6 +103,27 @@ class AttendanceControllerTest extends TestCase
         ]);
     }
 
+    public function test_the_same_sunday_cannot_be_recorded_twice(): void
+    {
+        Sanctum::actingAs($this->pastor);
+
+        $payload = [
+            'territory_id' => $this->myChurch->id,
+            'service_date' => '2026-08-16',
+            'gathering_category_id' => $this->sundayServiceCategoryId,
+            'adults_count' => 40,
+        ];
+
+        $first = $this->postJson('/api/attendance', $payload)->assertStatus(201);
+
+        $this->postJson('/api/attendance', [...$payload, 'adults_count' => 55])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('service_date')
+            ->assertJsonPath('existing_id', $first->json('data.id'));
+
+        $this->assertSame(1, ChurchAttendanceRecord::where('territory_id', $this->myChurch->id)->count());
+    }
+
     public function test_special_event_requires_an_event_name_when_no_gathering_type_is_selected(): void
     {
         Sanctum::actingAs($this->pastor);
