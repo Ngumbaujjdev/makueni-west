@@ -5,28 +5,94 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\BudgetCategory;
 use App\Models\BudgetLine;
+use App\Support\BudgetAccess;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
+/**
+ * Budget lines are either shared (set by the diocese, no owner) or belong to
+ * one church (territory_type/territory_id). A church user sees the shared
+ * lines that apply to churches plus their own, and may only add, change or
+ * delete their own; everyone else works with the shared lines.
+ */
 class BudgetLineController extends Controller
 {
+    private const CHURCH_PERMISSION_PREFIX = 'church.settings.budgetsettings.budgetlines';
+
+    /** Scope a lines query to what the user may see. */
+    private function visibleTo($query, Request $request)
+    {
+        $churchId = BudgetAccess::churchId($request->user());
+        if ($churchId !== null) {
+            return $query->forChurch($churchId);
+        }
+        // Diocese users see the shared lines, or one church's lines with ?church_id=.
+        if ($request->filled('church_id')) {
+            return $query->forChurch((int) $request->church_id);
+        }
+
+        return $query->shared();
+    }
+
+    /** 403 unless a church user holds the action's permission and (for an existing line) owns it. */
+    private function denyChurch(Request $request, string $action, ?BudgetLine $line = null): ?JsonResponse
+    {
+        $churchId = BudgetAccess::churchId($request->user());
+        if ($churchId === null) {
+            return null;
+        }
+        if (! BudgetAccess::has($request->user(), self::CHURCH_PERMISSION_PREFIX.'.'.$action)) {
+            return response()->json(['success' => false, 'status' => 403, 'message' => 'You do not have permission to change budget lines.'], 403);
+        }
+        if ($line && ! $line->isOwnedBy($churchId)) {
+            return response()->json(['success' => false, 'status' => 403, 'message' => 'Diocese budget lines can only be changed by the diocese.'], 403);
+        }
+
+        return null;
+    }
+
+    /** A slug not yet used by the same owner (shared lines, or one church's lines). */
+    private function uniqueSlug(string $name, ?int $churchId, ?int $ignoreId = null): string
+    {
+        $base = Str::slug($name) ?: 'line';
+        $slug = $base;
+        for ($i = 2; ; $i++) {
+            $taken = BudgetLine::withTrashed()
+                ->where('slug', $slug)
+                ->when($churchId, fn ($q) => $q->where('territory_type', 'church')->where('territory_id', $churchId), fn ($q) => $q->whereNull('territory_id'))
+                ->when($ignoreId, fn ($q) => $q->whereKeyNot($ignoreId))
+                ->exists();
+            if (! $taken) {
+                return $slug;
+            }
+            $slug = "{$base}-{$i}";
+        }
+    }
+
     /**
      * Display a listing of budget lines.
      */
     public function index(Request $request)
     {
         try {
-            $query = BudgetLine::with('budgetCategory');
+            // budget_line_items_count: how often budgets use the line - for a church, only its own
+            // budgets (the delete check in destroy() still looks at every budget)
+            $churchId = BudgetAccess::churchId($request->user());
+            $query = $this->visibleTo(BudgetLine::with('budgetCategory')->withCount(['budgetLineItems' => fn ($items) => $items->when(
+                $churchId !== null,
+                fn ($q) => $q->whereHas('budget', fn ($b) => $b->where('territory_type', 'church')->where('territory_id', $churchId)),
+            )]), $request);
 
             // Filter by category
             if ($request->has('category_id')) {
                 $query->where('budget_category_id', $request->category_id);
             }
 
-            // Filter by territory scope
-            if ($request->has('territory_scope')) {
+            // Filter by territory scope (a church's list is already scoped to churches)
+            if ($request->has('territory_scope') && BudgetAccess::churchId($request->user()) === null) {
                 $query->byTerritoryScope($request->territory_scope);
             }
 
@@ -71,10 +137,11 @@ class BudgetLineController extends Controller
     {
         try {
             $territoryScope = $request->get('territory_scope', 'all');
+            $isChurch = BudgetAccess::churchId($request->user()) !== null;
 
-            $categories = BudgetCategory::with(['budgetLines' => function ($query) use ($territoryScope) {
-                $query->active()
-                    ->byTerritoryScope($territoryScope)
+            $categories = BudgetCategory::with(['budgetLines' => function ($query) use ($territoryScope, $request, $isChurch) {
+                $this->visibleTo($query->active(), $request)
+                    ->when(! $isChurch, fn ($q) => $q->byTerritoryScope($territoryScope))
                     ->orderBy('display_order', 'asc');
             }])
                 ->active()
@@ -105,11 +172,16 @@ class BudgetLineController extends Controller
     public function store(Request $request)
     {
         try {
+            if ($denied = $this->denyChurch($request, 'create')) {
+                return $denied;
+            }
+            $churchId = BudgetAccess::churchId($request->user());
+
             $validator = Validator::make($request->all(), [
                 'budget_category_id' => 'required|exists:budget_categories,id',
                 'name' => 'required|string|max:255',
-                'slug' => 'nullable|string|max:255|unique:budget_lines,slug',
-                'territory_scope' => 'required|in:diocese,region,subregion,church,all',
+                'slug' => 'nullable|string|max:255',
+                'territory_scope' => $churchId ? 'nullable' : 'required|in:diocese,region,subregion,church,all',
                 'description' => 'nullable|string|max:1000',
                 'is_active' => 'nullable|boolean',
                 'display_order' => 'nullable|integer|min:0',
@@ -126,10 +198,15 @@ class BudgetLineController extends Controller
 
             $data = $validator->validated();
 
-            // Auto-generate slug if not provided
-            if (! isset($data['slug'])) {
-                $data['slug'] = Str::slug($data['name']);
+            // A church's line belongs to that church and is only ever a church line.
+            if ($churchId) {
+                $data['territory_scope'] = 'church';
+                $data['territory_type'] = 'church';
+                $data['territory_id'] = $churchId;
             }
+
+            // Unique among the same owner's lines, generated from the name when not given
+            $data['slug'] = $this->uniqueSlug($data['slug'] ?? $data['name'], $churchId);
 
             // Set as user-created (not system default)
             $data['is_system_default'] = false;
@@ -168,9 +245,13 @@ class BudgetLineController extends Controller
     /**
      * Display the specified budget line.
      */
-    public function show(BudgetLine $budgetLine)
+    public function show(Request $request, BudgetLine $budgetLine)
     {
         try {
+            $churchId = BudgetAccess::churchId($request->user());
+            if ($churchId !== null && $budgetLine->territory_id !== null && ! $budgetLine->isOwnedBy($churchId)) {
+                return response()->json(['success' => false, 'status' => 404, 'message' => 'Budget line not found'], 404);
+            }
             $budgetLine->load('budgetCategory');
 
             return response()->json([
@@ -198,10 +279,15 @@ class BudgetLineController extends Controller
     public function update(Request $request, BudgetLine $budgetLine)
     {
         try {
+            if ($denied = $this->denyChurch($request, 'update', $budgetLine)) {
+                return $denied;
+            }
+            $ownerId = $budgetLine->territory_id !== null ? (int) $budgetLine->territory_id : null;
+
             $validator = Validator::make($request->all(), [
                 'budget_category_id' => 'sometimes|required|exists:budget_categories,id',
                 'name' => 'sometimes|required|string|max:255',
-                'slug' => 'nullable|string|max:255|unique:budget_lines,slug,'.$budgetLine->id,
+                'slug' => 'nullable|string|max:255',
                 'territory_scope' => 'sometimes|required|in:diocese,region,subregion,church,all',
                 'description' => 'nullable|string|max:1000',
                 'is_active' => 'nullable|boolean',
@@ -219,9 +305,14 @@ class BudgetLineController extends Controller
 
             $data = $validator->validated();
 
-            // Auto-generate slug if name is updated but slug is not provided
-            if (isset($data['name']) && ! isset($data['slug'])) {
-                $data['slug'] = Str::slug($data['name']);
+            // A church's own line stays a church line
+            if ($ownerId !== null) {
+                $data['territory_scope'] = 'church';
+            }
+
+            // Unique among the same owner's lines, regenerated from a new name when not given
+            if (isset($data['slug']) || isset($data['name'])) {
+                $data['slug'] = $this->uniqueSlug($data['slug'] ?? $data['name'], $ownerId, $budgetLine->id);
             }
 
             // Set updated_by to authenticated user
@@ -255,6 +346,9 @@ class BudgetLineController extends Controller
     public function updateOrder(Request $request, BudgetLine $budgetLine)
     {
         try {
+            if ($denied = $this->denyChurch($request, 'update', $budgetLine)) {
+                return $denied;
+            }
             $validator = Validator::make($request->all(), [
                 'display_order' => 'required|integer|min:0',
             ]);
@@ -342,9 +436,13 @@ class BudgetLineController extends Controller
     /**
      * Remove the specified budget line.
      */
-    public function destroy(BudgetLine $budgetLine)
+    public function destroy(Request $request, BudgetLine $budgetLine)
     {
         try {
+            if ($denied = $this->denyChurch($request, 'delete', $budgetLine)) {
+                return $denied;
+            }
+
             // Prevent deletion of system default lines
             if ($budgetLine->is_system_default) {
                 return response()->json([
@@ -355,18 +453,16 @@ class BudgetLineController extends Controller
                 ], 400);
             }
 
-            // TODO: Check if line is being used in any budget line items when that feature is implemented
-            // Note: budgetLineItems() relationship references BudgetLineItem model which doesn't exist yet
-            // Uncomment this check when budget line items functionality is added
-            // $usageCount = $budgetLine->budgetLineItems()->count();
-            // if ($usageCount > 0) {
-            //     return response()->json([
-            //         'success' => false,
-            //         'status' => 400,
-            //         'message' => "Cannot delete budget line. It is being used in {$usageCount} budget(s). Please remove it from budgets first.",
-            //         'data' => null
-            //     ], 400);
-            // }
+            // A line already used in a budget can't go - deactivate it instead
+            $usageCount = $budgetLine->budgetLineItems()->distinct('budget_id')->count('budget_id');
+            if ($usageCount > 0) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 422,
+                    'message' => "This line is used in {$usageCount} ".($usageCount === 1 ? 'budget' : 'budgets').'. Switch it off instead, so it is no longer offered for new budgets.',
+                    'data' => ['usage_count' => $usageCount],
+                ], 422);
+            }
 
             $budgetLine->delete();
 

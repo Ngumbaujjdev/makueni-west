@@ -83,7 +83,11 @@ class BudgetLogController extends Controller
         try {
             $limit = $request->get('limit', 20);
 
+            // A church user only sees their own church's budget activity
+            $churchId = \App\Support\BudgetAccess::churchId($request->user());
+
             $logs = BudgetLog::with(['budget:id,name', 'performer:id,firstname,lastname,email'])
+                ->when($churchId !== null, fn ($q) => $q->whereHas('budget', fn ($b) => $b->where('territory_type', 'church')->where('territory_id', $churchId)))
                 ->recent($limit)
                 ->get();
 
