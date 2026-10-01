@@ -208,12 +208,12 @@ const BudgetsList = (function () {
       return;
     }
     charts.push(
-      UI.renderRingDonut("whereDonut", {
-        labels: lines.map((l) => B.esc(l.name)),
-        series: lines.map((l) => l.planned),
+      B.moneyDonut("whereDonut", {
+        rows: lines.map((l) => ({ name: l.name, value: l.planned })),
         colors: state.whereSide === "out" ? ["danger", "warning", "purple", "pink", "primary", "secondary"] : ["success", "primary", "purple", "warning", "pink", "secondary"],
         centerLabel: state.whereSide === "out" ? "Money out" : "Money in",
-        format: (v) => B.shortMoney(v),
+        sort: false,
+        limit: 6,
       }),
     );
   }

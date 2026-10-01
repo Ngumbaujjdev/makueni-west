@@ -153,16 +153,16 @@ Writing needs `{level}.budgets.spending.record` on the acting place's own budget
   - a filter bar: year, status, search;
   - a table: period, status, planned in, planned out, money left, received, spent, prepared by;
   - a **New budget** button.
-- **Form (one page):**
-  1. Which month or year?
-  2. Money in: one amount per line.
-  3. Money out: one amount per line.
-  4. Notes.
-  - **Copy last budget**, **+ Add a line**, live totals.
-  - Buttons: **Save as draft** and **Save and start using**.
+- **Form, step by step** (the same stepper as recording Demographics, with a live preview beside it):
+  1. **Month or year?** A clear "A month | The whole year" choice and the year. A period that can't be picked says why, e.g. "2026 already has budgets for January, February and March, so it can't also have a whole-year budget". **Copy amounts** from the last budget; afterwards the banner keeps an **Undo**.
+  2. **Money in**: one amount per line, with "Last time" under each.
+  3. **Money out (spending)**: the same. Deductions are not money out; they come from Budget Settings.
+  4. **Check and save**: every planned line with its change against last time, and notes.
+  - The preview shows money in, out and left, the comparison with the last budget, and the biggest money out lines.
+  - Buttons: **Save as draft** (any step) and **Save and start using** (last step). Changing a budget opens at Money in with every step open.
 - **Budget details:**
   - header: period, status, place, prepared by;
-  - Lines and History tabs;
+  - Lines, Spending and History tabs, each opening with a tinted strip of its figures; each line shows an icon, its % used, a bar, and planned / received or spent / left;
   - buttons only where allowed;
   - a "View only" banner for a place below.
 
