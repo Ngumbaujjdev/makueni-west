@@ -8,6 +8,9 @@ use App\Reports\Attendance\ChildrenReport;
 use App\Reports\Attendance\EventsReport;
 use App\Reports\Attendance\MinistriesReport;
 use App\Reports\Attendance\SundayServiceReport;
+use App\Reports\Budget\BudgetSpendingReport;
+use App\Reports\Budget\BudgetStatementReport;
+use App\Reports\Budget\BudgetSummaryReport;
 use App\Reports\Demographics\BaptismsReport;
 use App\Reports\Demographics\ConversionsReport;
 use App\Reports\Demographics\DemographicsSummaryReport;
@@ -38,6 +41,9 @@ final class ReportRegistry
         MinistriesReport::class,
         EventsReport::class,
         ChildrenReport::class,
+        BudgetSummaryReport::class,
+        BudgetSpendingReport::class,
+        BudgetStatementReport::class,
     ];
 
     /** @return Report[] */

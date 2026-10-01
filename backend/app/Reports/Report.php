@@ -3,6 +3,8 @@
 namespace App\Reports;
 
 use App\Enums\TerritoryType;
+use App\Models\Territory;
+use App\Models\User;
 
 /**
  * One class per report, modelled on v1-events-backend's app/Reports/Report.
@@ -62,13 +64,22 @@ abstract class Report
 
     /**
      * Which request params the report reads, for validation and the modal:
-     * 'fiscal_year' | 'fiscal_month' | 'years' | 'submission' | 'metric' | 'gathering_type'.
+     * 'fiscal_year' | 'fiscal_month' | 'years' | 'submission' | 'metric' | 'gathering_type' | 'budget'.
      *
      * @return string[]
      */
     public function inputs(): array
     {
         return ['fiscal_year'];
+    }
+
+    /**
+     * Whether this user may run the report for this territory, beyond seeing
+     * the territory: null when they may, otherwise the reason (403).
+     */
+    public function authorize(User $user, Territory $territory): ?string
+    {
+        return null;
     }
 
     /** Reports sharing a group are shown together in the export modal. */

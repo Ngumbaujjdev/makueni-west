@@ -256,9 +256,9 @@ class DioceseReportPdf extends TCPDF
             $this->tableRow($row);
         }
 
-        $totals = $section->totals();
+        $totals = $section->displayTotals();
         if ($totals !== null) {
-            $this->totalsRow(array_map(fn ($v) => ReportSection::display($v), $totals));
+            $this->totalsRow($totals);
         }
 
         $this->inTable = false;

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\GenerateReportJob;
+use App\Models\Budget;
 use App\Models\FiscalYear;
 use App\Models\GatheringType;
 use App\Models\ReportRun;
@@ -12,6 +13,7 @@ use App\Reports\Demographics\MetricReport;
 use App\Reports\Report;
 use App\Reports\ReportContext;
 use App\Reports\ReportRegistry;
+use App\Support\BudgetAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -29,7 +31,7 @@ use Illuminate\Validation\ValidationException;
  */
 class ReportController extends Controller
 {
-    /** GET /reports/catalogue?territory_id=&module= (module: demographics | attendance, optional) */
+    /** GET /reports/catalogue?territory_id=&module= (module: demographics | attendance | budget, optional) */
     public function catalogue(Request $request): JsonResponse
     {
         $territory = Territory::find((int) $request->query('territory_id'));
@@ -39,7 +41,10 @@ class ReportController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => array_map(fn (Report $r) => $r->toCatalogue(), ReportRegistry::forScope($territory->territory_type, $request->query('module') ?: null)),
+            'data' => array_values(array_map(
+                fn (Report $r) => $r->toCatalogue(),
+                array_filter(ReportRegistry::forScope($territory->territory_type, $request->query('module') ?: null), fn (Report $r) => $r->authorize($request->user(), $territory) === null),
+            )),
         ]);
     }
 
@@ -182,6 +187,8 @@ class ReportController extends Controller
             'from' => ['nullable', 'date_format:Y-m', 'required_with:to'],
             'to' => ['nullable', 'date_format:Y-m', 'required_with:from', 'after_or_equal:from'],
             'gathering_type_id' => 'nullable|integer',
+            // Budget statement: the one budget it's about.
+            'budget_id' => 'nullable|integer',
         ]);
         if ($validator->fails()) {
             return $this->fail(422, $validator->errors()->first(), $validator->errors()->toArray());
@@ -199,6 +206,18 @@ class ReportController extends Controller
         if (! $report->supports($territory->territory_type)) {
             return $this->fail(422, 'This report is not available at this level yet.');
         }
+        if ($reason = $report->authorize($request->user(), $territory)) {
+            return $this->fail(403, $reason);
+        }
+        if (in_array('budget', $report->inputs(), true)) {
+            $budget = Budget::find($request->integer('budget_id'));
+            if (! $budget || (int) $budget->territory_id !== (int) $territory->id) {
+                return $this->fail(422, 'Choose the budget to report on.', ['budget_id' => ['Unknown budget for this place.']]);
+            }
+            if (! BudgetAccess::canSee($request->user(), $budget)) {
+                return $this->fail(403, 'You do not have access to this budget.');
+            }
+        }
         if (in_array('submission', $report->inputs(), true) && ! $request->filled('demographic_id')) {
             return $this->fail(422, 'Choose the submission to report on.', ['demographic_id' => ['Required for this report.']]);
         }
@@ -207,7 +226,10 @@ class ReportController extends Controller
             return $this->fail(422, 'Choose a metric to report on.', ['metric' => ['Unknown metric.']]);
         }
 
-        $params = array_filter($request->only(['fiscal_year_id', 'years', 'demographic_id', 'metric', 'month', 'gathering_type_id', 'from', 'to']), fn ($v) => $v !== null && $v !== '');
+        $params = array_filter($request->only(['fiscal_year_id', 'years', 'demographic_id', 'metric', 'month', 'gathering_type_id', 'from', 'to', 'budget_id']), fn ($v) => $v !== null && $v !== '');
+        if (! in_array('budget', $report->inputs(), true)) {
+            unset($params['budget_id']);
+        }
         // A range only means something to reports that take a month.
         if (! in_array('fiscal_month', $report->inputs(), true)) {
             unset($params['from'], $params['to']);

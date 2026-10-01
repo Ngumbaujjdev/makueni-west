@@ -60,7 +60,8 @@ class BudgetsAccessSeeder extends Seeder
         'read' => ['budgets.budgets.read' => 'budgets', 'budgets.overview.read' => 'overview', 'budgets.spending.read' => 'spending'],
         // Preparing is linked to the New budget page, so only people who can prepare see it in the menu.
         'prepare' => ['budgets.budgets.prepare' => 'new', 'budgets.spending.record' => 'spending'],
-        'export' => ['budgets.budgets.export' => 'budgets'],
+        // Exporting is linked to the Reports page, so only people who can export see it.
+        'export' => ['budgets.budgets.export' => 'reports'],
         'below' => ['budgets.below.read' => 'budgets'],
     ];
 
@@ -69,6 +70,7 @@ class BudgetsAccessSeeder extends Seeder
         'overview' => ['Overview', 'overview.php', 'This month or year at a glance: planned, received, spent, what we noticed'],
         'spending' => ['Spending', 'spending.php', 'Record money in and out, and see every entry'],
         'new' => ['New budget', 'form.php', 'Plan a month or a year, step by step'],
+        'reports' => ['Reports', 'reports.php', 'Budget reports as PDF or Excel: summary, money in and out, one budget'],
     ];
 
     public function run(): void

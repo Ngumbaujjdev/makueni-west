@@ -59,6 +59,16 @@ final class ReportSection
         return $out;
     }
 
+    /** A value as its column shows it: money always with 2 decimals. */
+    public static function displayCell(mixed $value, ?ReportColumn $column): string
+    {
+        if ($column?->format === 'money' && (is_int($value) || is_float($value))) {
+            return number_format((float) $value, 2);
+        }
+
+        return self::display($value);
+    }
+
     public static function display(mixed $value): string
     {
         if ($value === null || $value === '') {
@@ -79,7 +89,26 @@ final class ReportSection
     {
         $rows = $limit === null ? $this->rows : array_slice($this->rows, 0, $limit);
 
-        return array_map(fn (array $row) => array_map(fn ($v) => self::display($v), $row), $rows);
+        return array_map(fn (array $row) => $this->displayRow($row), $rows);
+    }
+
+    /** @param array<int, mixed> $row */
+    private function displayRow(array $row): array
+    {
+        $out = [];
+        foreach ($row as $i => $v) {
+            $out[$i] = self::displayCell($v, $this->columns[$i] ?? null);
+        }
+
+        return $out;
+    }
+
+    /** The totals row formatted for display, or null. */
+    public function displayTotals(): ?array
+    {
+        $totals = $this->totals();
+
+        return $totals === null ? null : $this->displayRow($totals);
     }
 
     public function toPreview(int $limit = 5): array
@@ -93,7 +122,7 @@ final class ReportSection
             'row_count' => count($this->rows),
             'rows' => $this->displayRows($limit),
             'has_totals' => $totals !== null,
-            'totals' => $totals === null ? null : array_map(fn ($v) => self::display($v), $totals),
+            'totals' => $totals === null ? null : $this->displayTotals(),
         ];
     }
 }
