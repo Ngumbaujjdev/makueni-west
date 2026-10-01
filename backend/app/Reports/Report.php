@@ -64,7 +64,7 @@ abstract class Report
 
     /**
      * Which request params the report reads, for validation and the modal:
-     * 'fiscal_year' | 'fiscal_month' | 'years' | 'submission' | 'metric' | 'gathering_type' | 'budget'.
+     * 'fiscal_year' | 'fiscal_month' | 'years' | 'submission' | 'metric' | 'gathering_type' | 'budget' | 'line'.
      *
      * @return string[]
      */

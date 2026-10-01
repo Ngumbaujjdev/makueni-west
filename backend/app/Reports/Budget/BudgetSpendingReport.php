@@ -54,6 +54,7 @@ final class BudgetSpendingReport extends BudgetReport
             ],
             meta: $this->meta($context, ['Period' => $this->periodLabel($d['period'])]),
             sections: [$this->entriesSection($entries, 'in'), $this->entriesSection($entries, 'out')],
+            charts: $d['trend']['kind'] === 'months' ? [$this->monthsChart($d['trend']['points'])] : [],
         );
     }
 }

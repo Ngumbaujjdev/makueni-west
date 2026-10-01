@@ -25,7 +25,15 @@ final class ReportData
         public array $meta = [],
         public array $sections = [],
         public array $insights = [],
+        /** @var ReportChart[] drawn into the PDF after the details panel */
+        public array $charts = [],
     ) {}
+
+    /** @return ReportChart[] the charts with something to draw */
+    public function drawableCharts(): array
+    {
+        return array_values(array_filter($this->charts, fn (ReportChart $c) => $c->hasValues()));
+    }
 
     public function hasInsights(): bool
     {
@@ -49,6 +57,7 @@ final class ReportData
             'meta' => $this->meta,
             'sections' => array_map(fn (ReportSection $s) => $s->toPreview($rowLimit), $this->sections),
             'insights' => array_map(fn (Insight $i) => $i->toArray(), $this->insights),
+            'charts' => array_map(fn (ReportChart $c) => $c->toArray(), $this->drawableCharts()),
         ];
     }
 }

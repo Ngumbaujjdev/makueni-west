@@ -70,7 +70,7 @@ class BudgetReportsTest extends TestCase
         Sanctum::actingAs($this->pastor);
         $keys = collect($this->getJson("/api/reports/catalogue?territory_id={$this->myChurch->id}&module=budget")->assertOk()->json('data'))->pluck('key');
 
-        $this->assertEqualsCanonicalizing(['budget.summary', 'budget.spending', 'budget.statement'], $keys->all());
+        $this->assertEqualsCanonicalizing(['budget.summary', 'budget.spending', 'budget.statement', 'budget.lines', 'budget.year', 'budget.compare', 'budget.exceptions', 'budget.line'], $keys->all());
     }
 
     public function test_the_summary_matches_the_overview_with_money_to_two_decimals(): void
@@ -153,6 +153,81 @@ class BudgetReportsTest extends TestCase
         Sanctum::actingAs($this->pastor);
 
         $this->postJson('/api/reports/preview', $this->body(['fiscal_year_id' => 'all']))->assertStatus(422);
+    }
+
+    public function test_line_by_line_flags_over_plan_and_counts_entries(): void
+    {
+        $this->januaryWithMoney();
+
+        $d = $this->postJson('/api/reports/preview', $this->body(['report_key' => 'budget.lines']))->assertOk()->json('data');
+
+        $out = collect($d['sections'])->firstWhere('heading', 'Money out lines');
+        $this->assertSame(['Church Rent', '1,000.00', '1,200.50', '-200.50', '120%', '1', '10 Jan 2026', 'Over by KES 200.50'], $out['rows'][0]);
+        $this->assertSame('1 line', collect($d['tiles'])->firstWhere('label', 'Over plan')['value']);
+        $this->assertSame(['hbars', 'hbars'], array_column($d['charts'], 'kind'));
+    }
+
+    public function test_year_at_a_glance_has_every_month_and_takes_no_month(): void
+    {
+        $this->januaryWithMoney();
+
+        $d = $this->postJson('/api/reports/preview', $this->body(['report_key' => 'budget.year', 'month' => 3]))->assertOk()->json('data');
+
+        $this->assertSame('Whole of 2026', $d['period_label']);
+        $months = collect($d['sections'])->firstWhere('heading', 'Month by month');
+        $this->assertSame(12, $months['row_count']);
+        $this->assertSame(['Jan', 'In use', '1,000.00', '400.25', '1,000.00', '1,200.50', '-800.25'], $months['rows'][0]);
+        $this->assertSame('bars', $d['charts'][0]['kind']);
+    }
+
+    public function test_compare_puts_a_period_next_to_the_one_before(): void
+    {
+        Sanctum::actingAs($this->pastor);
+        $december = $this->budgetFor($this->myChurch, 'active', [$this->churchLine], 2025, 12);
+        $this->postJson('/api/budget-entries', ['budget_id' => $december->id, 'budget_line_id' => $this->churchLine->id, 'amount' => 800, 'entry_date' => '2025-12-10', 'description' => 'Rent'])->assertCreated();
+        $this->januaryWithMoney();
+
+        $d = $this->postJson('/api/reports/preview', $this->body(['report_key' => 'budget.compare']))->assertOk()->json('data');
+
+        $this->assertSame('January 2026 against December 2025', $d['period_label']);
+        $out = collect($d['sections'])->firstWhere('heading', 'Money out');
+        $this->assertSame(['Church Rent', '1,000.00', '800.00', '1,000.00', '1,200.50', '400.50', '50%'], $out['rows'][0]);
+    }
+
+    public function test_exceptions_list_over_plan_lines_and_unplanned_money(): void
+    {
+        $january = $this->januaryWithMoney();
+        $this->record($january, $this->allLine, 150, 'Water bill');
+
+        $d = $this->postJson('/api/reports/preview', $this->body(['report_key' => 'budget.exceptions']))->assertOk()->json('data');
+
+        $this->assertSame(1, collect($d['sections'])->firstWhere('heading', 'Lines over plan')['row_count']);
+        $unplanned = collect($d['sections'])->firstWhere('heading', 'Money on unplanned lines');
+        $this->assertSame('Water bill', $unplanned['rows'][0][1]);
+        $this->assertSame('150.00', $unplanned['totals'][5]);
+    }
+
+    public function test_a_line_report_needs_a_line_of_that_budget(): void
+    {
+        $january = $this->januaryWithMoney();
+
+        $d = $this->postJson('/api/reports/preview', $this->body(['report_key' => 'budget.line', 'budget_id' => $january->id, 'line_id' => $this->churchLine->id]))->assertOk()->json('data');
+        $this->assertSame('Church Rent', $d['title']);
+        $this->assertSame('1,200.50', collect($d['sections'])->firstWhere('heading', 'Money out')['totals'][7]);
+
+        $this->postJson('/api/reports/preview', $this->body(['report_key' => 'budget.line', 'budget_id' => $january->id, 'line_id' => $this->dioceseLine->id]))->assertStatus(422);
+    }
+
+    public function test_every_budget_report_builds_a_pdf_with_its_charts(): void
+    {
+        $january = $this->januaryWithMoney();
+
+        foreach (['budget.summary', 'budget.lines', 'budget.year', 'budget.compare', 'budget.exceptions', 'budget.statement', 'budget.line'] as $key) {
+            $uuid = $this->postJson('/api/reports', $this->body(['report_key' => $key, 'month' => null, 'budget_id' => $january->id, 'line_id' => $this->churchLine->id]))->assertStatus(202)->json('data.uuid');
+            $run = ReportRun::where('uuid', $uuid)->firstOrFail();
+            $this->assertSame(ReportRun::STATUS_READY, $run->status, "{$key} should build: {$run->error}");
+            $this->assertStringStartsWith('%PDF', Storage::disk('local')->get($run->file_path));
+        }
     }
 
     public function test_the_pdf_and_excel_build_with_a_budget_code_and_numbers_kept_as_numbers(): void

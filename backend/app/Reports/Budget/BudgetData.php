@@ -311,6 +311,41 @@ final class BudgetData
         return ['labels' => $labels, 'in' => $in, 'out' => $out, 'left' => array_map(fn ($a, $b) => round($a - $b, 2), $in, $out)];
     }
 
+    /**
+     * When money moved, by entry date: a whole-year budget month by month (with
+     * the planned twelfth), a month budget day by day (running total, even pace).
+     */
+    public static function moneyOverTime(Budget $budget, $entries, float $planned): array
+    {
+        if ($budget->period_month === null) {
+            $points = [];
+            for ($m = 1; $m <= 12; $m++) {
+                $ofMonth = $entries->filter(fn ($e) => (int) $e->entry_date->month === $m);
+                $points[] = [
+                    'label' => CarbonImmutable::create((int) $budget->fiscal_year, $m, 1)->format('M'),
+                    'month' => $m,
+                    'in' => round((float) $ofMonth->where('direction', 'in')->sum('amount'), 2),
+                    'out' => round((float) $ofMonth->where('direction', 'out')->sum('amount'), 2),
+                    'count' => $ofMonth->count(),
+                    'planned' => round($planned / 12, 2),
+                ];
+            }
+
+            return ['kind' => 'months', 'points' => $points];
+        }
+        $start = CarbonImmutable::parse($budget->start_date);
+        $days = $start->daysInMonth;
+        $points = [];
+        $running = 0.0;
+        for ($d = 1; $d <= $days; $d++) {
+            $day = $start->setDay($d);
+            $running += (float) $entries->filter(fn ($e) => $e->entry_date->isSameDay($day))->sum('amount');
+            $points[] = ['label' => (string) $d, 'actual' => round($running, 2), 'pace' => round($planned * $d / $days, 2)];
+        }
+
+        return ['kind' => 'days', 'points' => $points];
+    }
+
     public static function entryRow(BudgetEntry $e): array
     {
         return [

@@ -42,14 +42,10 @@ final class BudgetSummaryReport extends BudgetReport
         $budget = $d['budget'];
 
         $sections = [$this->inSection($d['lines']['in']), $this->outSection($d['lines']['out'])];
+        $charts = [];
         if ($d['trend']['kind'] === 'months') {
-            // A whole-year budget is shared out in twelfths, rounded to the cent - the last
-            // month takes what rounding left over, so the column adds up to the year's plan.
-            $points = $d['trend']['points'];
-            foreach (['in_planned', 'out_planned'] as $key) {
-                $drift = round($t[$key] - array_sum(array_column($points, $key)), 2);
-                $points[11][$key] = round($points[11][$key] + $drift, 2);
-            }
+            $points = $this->balancedMonths($d);
+            $charts[] = $this->monthsChart($points);
             $sections[] = new ReportSection('Month by month', [
                 ReportColumn::text('Month', true),
                 ReportColumn::money('Planned in'),
@@ -78,6 +74,7 @@ final class BudgetSummaryReport extends BudgetReport
             ]),
             sections: $sections,
             insights: $data->insights(),
+            charts: [...$charts, $this->linesChart($d['lines']['out'], 'out', 8), $this->linesChart($d['lines']['in'], 'in', 8)],
         );
     }
 }

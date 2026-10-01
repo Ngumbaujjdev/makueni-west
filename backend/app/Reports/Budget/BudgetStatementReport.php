@@ -97,6 +97,11 @@ final class BudgetStatementReport extends BudgetReport
                 ], $history->map(fn ($log) => [$log->created_at?->format('j M Y, H:i'), $name($log->performer), $log->description])->all(), 'The latest 15 changes.'),
             ],
             insights: $data->insights(),
+            charts: [
+                ...($d['trend']['kind'] === 'months' ? [$this->monthsChart($d['trend']['points'])] : []),
+                $this->linesChart($d['lines']['out'], 'out'),
+                $this->linesChart($d['lines']['in'], 'in'),
+            ],
         );
     }
 }

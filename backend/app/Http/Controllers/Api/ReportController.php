@@ -189,6 +189,8 @@ class ReportController extends Controller
             'gathering_type_id' => 'nullable|integer',
             // Budget statement: the one budget it's about.
             'budget_id' => 'nullable|integer',
+            // Budget line report: the line of that budget.
+            'line_id' => 'nullable|integer',
         ]);
         if ($validator->fails()) {
             return $this->fail(422, $validator->errors()->first(), $validator->errors()->toArray());
@@ -217,6 +219,9 @@ class ReportController extends Controller
             if (! BudgetAccess::canSee($request->user(), $budget)) {
                 return $this->fail(403, 'You do not have access to this budget.');
             }
+            if (in_array('line', $report->inputs(), true) && ! $budget->budgetLineItems()->where('budget_line_id', $request->integer('line_id'))->exists()) {
+                return $this->fail(422, 'Choose a line of this budget.', ['line_id' => ['That line is not in this budget.']]);
+            }
         }
         if (in_array('submission', $report->inputs(), true) && ! $request->filled('demographic_id')) {
             return $this->fail(422, 'Choose the submission to report on.', ['demographic_id' => ['Required for this report.']]);
@@ -226,9 +231,12 @@ class ReportController extends Controller
             return $this->fail(422, 'Choose a metric to report on.', ['metric' => ['Unknown metric.']]);
         }
 
-        $params = array_filter($request->only(['fiscal_year_id', 'years', 'demographic_id', 'metric', 'month', 'gathering_type_id', 'from', 'to', 'budget_id']), fn ($v) => $v !== null && $v !== '');
+        $params = array_filter($request->only(['fiscal_year_id', 'years', 'demographic_id', 'metric', 'month', 'gathering_type_id', 'from', 'to', 'budget_id', 'line_id']), fn ($v) => $v !== null && $v !== '');
         if (! in_array('budget', $report->inputs(), true)) {
             unset($params['budget_id']);
+        }
+        if (! in_array('line', $report->inputs(), true)) {
+            unset($params['line_id']);
         }
         // A range only means something to reports that take a month.
         if (! in_array('fiscal_month', $report->inputs(), true)) {
