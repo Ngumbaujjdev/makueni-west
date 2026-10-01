@@ -28870,6 +28870,31 @@ a:hover {
     letter-spacing: 0.09rem;
 }
 
+/* One icon column (2026-10-01): category headers and module rows share
+   the same icon left edge, icon box and label start. A row's icon sits at
+   .slide padding (0.75) + row margin (0.5) + row padding (0.75) = 2rem in,
+   in a 1.15rem box with a 0.625rem gap (template .side-menu__icon), so the
+   header copies those numbers instead of the template's 1.65rem inset and
+   a text-sized icon. Specificity stays at two classes so the collapsed /
+   icon-only layouts' own .slide__category padding still wins there. */
+.app-sidebar .slide__category {
+    padding-inline: 2rem 0.75rem;
+}
+
+.app-sidebar .category-name {
+    display: flex;
+    align-items: center;
+}
+
+.app-sidebar .category-icon {
+    flex: 0 0 1.15rem;
+    width: 1.15rem;
+    margin-inline-end: 0.625rem;
+    font-size: 0.9rem;
+    line-height: 1;
+    text-align: center;
+}
+
 .side-menu__label {
     font-size: 0.825rem;
     font-weight: 500;
