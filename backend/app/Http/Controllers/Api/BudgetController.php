@@ -388,7 +388,7 @@ class BudgetController extends Controller
             'previous' => $this->previousOf($budget),
             // A whole-year budget: when its money moved, month by month by entry date.
             'months' => $budget->period_month === null
-                ? BudgetEntryController::moneyOverTime($budget, $budget->entries()->get(['id', 'entry_date', 'direction', 'amount']), 0.0)['points']
+                ? \App\Reports\Budget\BudgetData::moneyOverTime($budget, $budget->entries()->get(['id', 'entry_date', 'direction', 'amount']), 0.0)['points']
                 : null,
             'view_only' => ! $own,
             'can' => [

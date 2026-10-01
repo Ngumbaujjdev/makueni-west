@@ -8,9 +8,14 @@ use App\Reports\Attendance\ChildrenReport;
 use App\Reports\Attendance\EventsReport;
 use App\Reports\Attendance\MinistriesReport;
 use App\Reports\Attendance\SundayServiceReport;
+use App\Reports\Budget\BudgetCompareReport;
+use App\Reports\Budget\BudgetExceptionsReport;
+use App\Reports\Budget\BudgetLineReport;
+use App\Reports\Budget\BudgetLinesReport;
 use App\Reports\Budget\BudgetSpendingReport;
 use App\Reports\Budget\BudgetStatementReport;
 use App\Reports\Budget\BudgetSummaryReport;
+use App\Reports\Budget\BudgetYearReport;
 use App\Reports\Demographics\BaptismsReport;
 use App\Reports\Demographics\ConversionsReport;
 use App\Reports\Demographics\DemographicsSummaryReport;
@@ -44,6 +49,11 @@ final class ReportRegistry
         BudgetSummaryReport::class,
         BudgetSpendingReport::class,
         BudgetStatementReport::class,
+        BudgetLinesReport::class,
+        BudgetYearReport::class,
+        BudgetCompareReport::class,
+        BudgetExceptionsReport::class,
+        BudgetLineReport::class,
     ];
 
     /** @return Report[] */

@@ -59,6 +59,9 @@ class DioceseReportPdf extends TCPDF
 
     private const CELL_INSET = 2.4;
 
+    /** Height of one row of a planned-against-actual chart. */
+    private const HBAR_ROW = 5.8;
+
     private array $teal;
 
     private array $gold;
@@ -197,6 +200,7 @@ class DioceseReportPdf extends TCPDF
         $this->titleBlock($cw);
         $this->tileStrip($cw);
         $this->metaPanel($cw);
+        $this->charts();
 
         foreach ($sections as $i => $section) {
             $this->section($section, $i === 0);
@@ -220,7 +224,8 @@ class DioceseReportPdf extends TCPDF
         $rows = $section->displayRows();
 
         // Don't strand a heading at the foot of a page.
-        if (! $first && $this->GetY() + 40 > $this->getPageHeight() - $this->getBreakMargin()) {
+        // (The first section too: charts above it can leave it near the foot.)
+        if ($this->GetY() + 40 > $this->getPageHeight() - $this->getBreakMargin()) {
             $this->AddPage($this->CurOrientation);
         }
 
@@ -473,6 +478,213 @@ class DioceseReportPdf extends TCPDF
     }
 
     // ───────────────────────────────────────────────────────── layout helpers
+
+    // --------------------------------------------------------------- charts
+
+    /** "At a glance": the report's charts, drawn with plain shapes in the brand tones. */
+    private function charts(): void
+    {
+        $charts = $this->data->drawableCharts();
+        if ($charts === []) {
+            return;
+        }
+        $lm = self::LM;
+        $cw = $this->contentWidth();
+        // Two line charts in a row sit side by side, so they share the space.
+        $rows = [];
+        foreach ($charts as $chart) {
+            $last = count($rows) - 1;
+            if ($chart->kind === 'hbars' && $last >= 0 && count($rows[$last]) === 1 && $rows[$last][0]->kind === 'hbars') {
+                $rows[$last][] = $chart;
+            } else {
+                $rows[] = [$chart];
+            }
+        }
+        foreach ($rows as $r => $row) {
+            $h = max(array_map(fn ($c) => $c->kind === 'hbars' ? 14 + count($c->categories) * self::HBAR_ROW : 62, $row));
+            // Room for the heading line and the note too.
+            if ($this->GetY() + $h + 10 > $this->getPageHeight() - $this->getBreakMargin()) {
+                $this->AddPage($this->CurOrientation);
+            }
+            if ($r === 0) {
+                $this->SetX($lm);
+                $this->eyebrow('At a glance', $cw, 7, $this->teal);
+            }
+            $gap = count($row) > 1 ? 8 : 0;
+            $colW = ($cw - $gap) / count($row);
+            $top = $this->GetY();
+            foreach ($row as $k => $chart) {
+                $x = $lm + $k * ($colW + $gap);
+                $this->SetXY($x, $top);
+                $this->SetFont('helvetica', 'B', count($row) > 1 ? 10 : 11);
+                $this->SetTextColor(...self::INK);
+                $titleW = count($row) > 1 ? $colW : $colW * 0.55;
+                $this->Cell($titleW, 6, $this->fit($chart->title, $titleW, 'B', count($row) > 1 ? 10 : 11), 0, 0, 'L');
+                if (count($row) > 1) {
+                    $this->SetXY($x, $top + 6);
+                    $this->chartLegend($chart, $x, $colW, 'L');
+                    $y = $top + 12;
+                } else {
+                    $this->chartLegend($chart, $x + $colW * 0.55, $colW * 0.45);
+                    $y = $top + 7;
+                }
+                $chart->kind === 'hbars' ? $this->hbars($chart, $x, $y, $colW) : $this->bars($chart, $x, $y, $colW, $h - 8);
+                if ($chart->note) {
+                    $this->SetXY($x, $top + $h + (count($row) > 1 ? 0 : 1));
+                    $this->SetFont('helvetica', 'I', 7.5);
+                    $this->SetTextColor(...self::MUTE);
+                    $this->Cell($colW, 4, $this->fit($chart->note, $colW, 'I', 7.5), 0, 0, 'L');
+                }
+            }
+            $this->SetY($top + $h + 5);
+            $this->Ln(3);
+        }
+    }
+
+    /** The series names with their colour keys, right-aligned on the title line. */
+    private function chartLegend(\App\Reports\ReportChart $chart, float $x, float $w, string $align = 'R'): void
+    {
+        $this->SetFont('helvetica', '', 7.5);
+        $items = array_map(fn ($s) => $s['name'], $chart->series);
+        $total = array_sum(array_map(fn ($n) => $this->GetStringWidth($n) + 7, $items));
+        $cx = $align === 'L' ? $x : $x + max(0, $w - $total);
+        $y = $this->GetY();
+        foreach ($chart->series as $s) {
+            $this->SetFillColor(...$this->tone($s));
+            $this->Rect($cx, $y + 1.8, 2.6, 2.6, 'F');
+            $this->SetXY($cx + 3.4, $y);
+            $this->SetTextColor(...self::INK);
+            $this->Cell($this->GetStringWidth($s['name']) + 2, 6, $s['name'], 0, 0, 'L');
+            $cx += $this->GetStringWidth($s['name']) + 7;
+        }
+        $this->SetXY($x + $w, $y);
+    }
+
+    /** Grouped columns: an axis of short-money ticks, gridlines, one group per category. */
+    private function bars(\App\Reports\ReportChart $chart, float $x, float $y, float $w, float $h): void
+    {
+        $axisW = 14;
+        $labelH = 6;
+        $plotX = $x + $axisW;
+        $plotW = $w - $axisW;
+        $plotH = $h - $labelH;
+        $max = 0.0;
+        foreach ($chart->series as $s) {
+            $max = max($max, ...array_map('floatval', $s['values']));
+        }
+        $top = self::niceCeiling($max);
+
+        // Gridlines and ticks
+        $this->SetFont('helvetica', '', 6.6);
+        for ($t = 0; $t <= 4; $t++) {
+            $gy = $y + $plotH - $plotH * $t / 4;
+            $this->SetDrawColor(...self::LINE);
+            $this->SetLineWidth(0.2);
+            $this->Line($plotX, $gy, $plotX + $plotW, $gy);
+            $this->SetTextColor(...self::MUTE);
+            $this->SetXY($x, $gy - 2);
+            $this->Cell($axisW - 1.5, 4, self::short($top * $t / 4), 0, 0, 'R');
+        }
+
+        $n = max(1, count($chart->categories));
+        $groupW = $plotW / $n;
+        $count = max(1, count($chart->series));
+        $barW = min(7, $groupW * 0.72 / $count);
+        foreach ($chart->categories as $i => $label) {
+            $gx = $plotX + $i * $groupW + ($groupW - $barW * $count) / 2;
+            foreach ($chart->series as $k => $s) {
+                $v = (float) ($s['values'][$i] ?? 0);
+                $bh = $top > 0 ? $plotH * $v / $top : 0;
+                if ($bh > 0) {
+                    $this->SetFillColor(...$this->tone($s));
+                    $this->Rect($gx + $k * $barW, $y + $plotH - $bh, $barW - 0.4, $bh, 'F');
+                }
+            }
+            $this->SetFont('helvetica', 'B', 6.8);
+            $this->SetTextColor(...self::INK);
+            $this->SetXY($plotX + $i * $groupW, $y + $plotH + 1);
+            $this->Cell($groupW, 4, $this->fit((string) $label, $groupW + 2 * self::CELL_INSET, 'B', 6.8), 0, 0, 'C');
+        }
+    }
+
+    /** One row per category: the first series soft and full width behind, the second solid on top. */
+    private function hbars(\App\Reports\ReportChart $chart, float $x, float $y, float $w): void
+    {
+        $labelW = min(50, $w * 0.38);
+        $valueW = 20;
+        $plotX = $x + $labelW;
+        $plotW = $w - $labelW - $valueW;
+        $max = 0.0;
+        foreach ($chart->series as $s) {
+            $max = max($max, ...array_map('floatval', $s['values']));
+        }
+        $max = max($max, 1.0);
+        $back = $chart->series[0] ?? null;
+        $front = $chart->series[1] ?? null;
+        foreach ($chart->categories as $i => $label) {
+            $ry = $y + $i * self::HBAR_ROW;
+            $this->SetXY($x, $ry);
+            $this->SetFont('helvetica', '', 7.6);
+            $this->SetTextColor(...self::INK);
+            $this->Cell($labelW - 1, 5.6, $this->fit((string) $label, $labelW - 1, '', 7.6), 0, 0, 'L');
+            // The track
+            $this->SetFillColor(...self::LINE);
+            $this->Rect($plotX, $ry + 1.2, $plotW, 3.2, 'F');
+            $b = (float) ($back['values'][$i] ?? 0);
+            if ($back && $b > 0) {
+                $this->SetFillColor(...$this->tone($back));
+                $this->Rect($plotX, $ry + 1.2, $plotW * min($b, $max) / $max, 3.2, 'F');
+            }
+            $f = (float) ($front['values'][$i] ?? 0);
+            if ($front && $f > 0) {
+                $over = $chart->overIsBad && $f > $b && $b > 0;
+                $this->SetFillColor(...($over ? self::TONES['danger'] : $this->tone($front)));
+                $this->Rect($plotX, $ry + 2.0, $plotW * min($f, $max) / $max, 1.6, 'F');
+            }
+            $this->SetFont('helvetica', 'B', 7.4);
+            $this->SetTextColor(...(($chart->overIsBad && $f > $b && $b > 0) ? self::TONES['danger'] : self::INK));
+            $this->SetXY($plotX + $plotW + 1, $ry);
+            $this->Cell($valueW - 1, 6, self::short($f).($b > 0 ? ' / '.self::short($b) : ''), 0, 0, 'R');
+        }
+    }
+
+    /** A series' colour; a soft series is its tone mixed 65% with white. */
+    private function tone(array $series): array
+    {
+        $rgb = self::TONES[$series['tone'] ?? 'primary'] ?? self::TONES['primary'];
+
+        return ! empty($series['soft']) ? array_map(fn ($c) => (int) round($c + (255 - $c) * 0.65), $rgb) : $rgb;
+    }
+
+    /** A round number at or above the largest value, for the axis top. */
+    private static function niceCeiling(float $max): float
+    {
+        if ($max <= 0) {
+            return 1;
+        }
+        $pow = 10 ** floor(log10($max));
+        foreach ([1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10] as $step) {
+            if ($step * $pow >= $max) {
+                return $step * $pow;
+            }
+        }
+
+        return 10 * $pow;
+    }
+
+    /** 250K, 1.5M - axis and bar labels. */
+    private static function short(float $v): string
+    {
+        $a = abs($v);
+        $fmt = fn ($n) => rtrim(rtrim(number_format($n, 1, '.', ''), '0'), '.');
+
+        return match (true) {
+            $a >= 1e6 => $fmt($v / 1e6).'M',
+            $a >= 1e4 => round($v / 1e3).'K',
+            $a >= 1e3 => $fmt($v / 1e3).'K',
+            default => (string) round($v),
+        };
+    }
 
     private function contentWidth(): float
     {
