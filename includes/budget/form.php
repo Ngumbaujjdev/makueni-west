@@ -5,7 +5,7 @@ $pageTitle = $editing ? 'Change budget' : 'New budget';
 $pageIcon = $editing ? 'ri-edit-line' : 'ri-add-circle-line';
 $breadcrumbs = [
     'Home' => $budgetCtx['homeUrl'],
-    'Budgets' => $budgetCtx['baseUrl'] . '/budgets.php',
+    'Budgets' => $budgetCtx['baseUrl'].'/budgets.php',
     $pageTitle => null,
 ];
 ?>
@@ -32,20 +32,20 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/js/config/app.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
     <script>window.BUDGET_CTX = <?= json_encode($budgetCtx) ?>;</script>
-    <?php include __DIR__ . '/../start-switcher.php' ?>
-    <?php include __DIR__ . '/../loader.php' ?>
+    <?php include __DIR__.'/../start-switcher.php' ?>
+    <?php include __DIR__.'/../loader.php' ?>
 
     <div class="page">
-        <?php include __DIR__ . '/../header.php' ?>
-        <?php include __DIR__ . '/../sidebar.php' ?>
+        <?php include __DIR__.'/../header.php' ?>
+        <?php include __DIR__.'/../sidebar.php' ?>
 
         <div class="main-content app-content">
             <div class="container-fluid">
 
-                <?php include __DIR__ . '/../page-header.php' ?>
+                <?php include __DIR__.'/../page-header.php' ?>
 
                 <div class="page-toolbar">
-                    <div class="page-toolbar-sub" id="formSub">Plan what comes in and what goes out<?= $budgetCtx['place']['name'] ? ' for ' . htmlspecialchars($budgetCtx['place']['name']) : '' ?></div>
+                    <div class="page-toolbar-sub" id="formSub">Plan what comes in and what goes out<?= $budgetCtx['place']['name'] ? ' for '.htmlspecialchars($budgetCtx['place']['name']) : '' ?></div>
                 </div>
 
 <?php
@@ -62,12 +62,12 @@ $steps = [
                 <div id="budgetForm">
 
                     <nav class="card custom-card intake-steps" id="intakeSteps" aria-label="Steps">
-                        <?php foreach ($steps as $n => [$label, $hint]) : ?>
+                        <?php foreach ($steps as $n => [$label, $hint]) { ?>
                             <button type="button" class="intake-step-btn<?= $n === 1 ? ' is-on' : '' ?>" data-go="<?= $n ?>" <?= $n > 1 ? 'disabled' : '' ?>>
                                 <span class="intake-step-dot"><span><?= $n ?></span><i class="ri-check-line"></i></span>
                                 <span class="intake-step-text"><strong><?= $label ?></strong><small><?= $hint ?></small></span>
                             </button>
-                        <?php endforeach ?>
+                        <?php } ?>
                         <span class="intake-steps-mobile" id="intakeStepsMobile">Step 1 of <?= count($steps) ?> · Month or year?</span>
                         <span class="intake-steps-bar"><i id="intakeStepsBar" style="width: <?= round(100 / count($steps)) ?>%"></i></span>
                     </nav>
@@ -98,16 +98,22 @@ $steps = [
                                             </div>
                                         </div>
                                         <div class="budget-field-label mt-3" id="periodLabel">Which month?</div>
-                                        <div class="budget-period-chips" id="periodChips" role="radiogroup" aria-label="Which month or year"></div>
+                                        <div class="period-grid" id="periodChips" role="radiogroup" aria-label="Which month or year"></div>
+                                        <div class="period-legend" id="periodLegend">
+                                            <span><i class="ri-checkbox-circle-fill text-success"></i>In use</span>
+                                            <span><i class="ri-draft-fill text-warning"></i>Draft</span>
+                                            <span><i class="ri-lock-fill text-purple"></i>Closed</span>
+                                            <span><i class="ri-checkbox-blank-circle-line"></i>Free</span>
+                                        </div>
                                         <div id="periodNote"></div>
                                         <div class="invalid-feedback d-block" id="periodError" hidden></div>
-                                        <div class="budget-copy mt-3" id="copyBox" hidden>
-                                            <span class="avatar avatar-sm bg-primary text-white flex-shrink-0" id="copyIcon"><i class="ri-file-copy-line"></i></span>
-                                            <div class="flex-fill">
-                                                <div class="fw-semibold" id="copyTitle">Start from last budget</div>
-                                                <div class="fs-12" id="copyText"></div>
-                                            </div>
-                                            <button type="button" class="btn btn-sm btn-primary" id="copyBtn"><i class="ri-file-copy-line me-1"></i>Copy amounts</button>
+                                        <div class="intake-prefill mt-3 mb-0" id="copyBox" hidden>
+                                            <span class="intake-prefill-icon" id="copyIcon"><i class="ri-history-line"></i></span>
+                                            <span class="intake-prefill-text">
+                                                <span class="d-block" id="copyTitle">Start from the last budget</span>
+                                                <span class="d-block fs-12" id="copyText"></span>
+                                            </span>
+                                            <button type="button" class="btn btn-sm btn-primary" id="copyBtn"><i class="ri-magic-line me-1"></i>Start from these amounts</button>
                                         </div>
                                     </div>
                                 </section>
@@ -144,10 +150,11 @@ $steps = [
                                 <section class="intake-step" data-step="4" hidden>
                                     <div class="intake-step-head">
                                         <span class="intake-step-num">4</span>
-                                        <div>
+                                        <div class="flex-fill">
                                             <h5>Check and save</h5>
                                             <p>Every line you planned, and how it compares with last time</p>
                                         </div>
+                                        <span class="soft-chip soft-purple"><b id="reviewChip">0 lines</b></span>
                                     </div>
                                     <div class="intake-errors" data-errors-for="4" hidden role="alert"></div>
                                     <div class="intake-step-body">
@@ -177,16 +184,38 @@ $steps = [
                                         <span id="previewStatus"></span>
                                     </div>
                                     <div class="preview-period" id="summaryTitle">Pick a month or year</div>
+                                    <div class="preview-progress">
+                                        <span id="previewFilled">0 lines filled</span>
+                                        <span class="preview-progress-bar"><i id="previewFilledBar" style="width: 0%"></i></span>
+                                    </div>
                                     <div class="preview-section">
-                                        <div class="budget-sum-row"><span><i class="ri-arrow-down-circle-line text-success me-1"></i>Money in</span><b id="sumIn">KES 0.00</b></div>
-                                        <div class="budget-sum-row"><span><i class="ri-arrow-up-circle-line text-danger me-1"></i>Money out</span><b id="sumOut">KES 0.00</b></div>
-                                        <div class="budget-sum-row is-total"><span>Money left</span><b id="sumLeft">KES 0.00</b></div>
-                                        <div class="count-bar composition-bar my-2" id="sumBar" aria-hidden="true"><span class="bg-success" style="width: 50%"></span><span class="bg-danger" style="width: 50%"></span></div>
+                                        <div class="preview-changes budget-preview-totals">
+                                            <div class="preview-change" id="sumInTile">
+                                                <span class="preview-change-icon bg-success text-white"><i class="ri-arrow-down-circle-line"></i></span>
+                                                <span class="preview-change-value" id="sumIn">KES 0</span>
+                                                <span class="preview-change-label">Money in</span>
+                                            </div>
+                                            <div class="preview-change" id="sumOutTile">
+                                                <span class="preview-change-icon bg-danger text-white"><i class="ri-arrow-up-circle-line"></i></span>
+                                                <span class="preview-change-value" id="sumOut">KES 0</span>
+                                                <span class="preview-change-label">Money out</span>
+                                            </div>
+                                            <div class="preview-change" id="sumLeftTile">
+                                                <span class="preview-change-icon bg-purple text-white"><i class="ri-scales-3-line"></i></span>
+                                                <span class="preview-change-value" id="sumLeft">KES 0</span>
+                                                <span class="preview-change-label">Money left</span>
+                                            </div>
+                                        </div>
+                                        <div class="count-bar composition-bar mt-3 mb-2" id="sumBar" aria-hidden="true"><span class="bg-success" style="width: 50%"></span><span class="bg-danger" style="width: 50%"></span></div>
                                         <div class="d-flex flex-wrap gap-1" id="sumCompare"></div>
                                     </div>
                                     <div class="preview-section">
-                                        <div class="preview-section-title">Biggest money out</div>
-                                        <div id="previewTop"></div>
+                                        <div class="preview-section-title">Money in</div>
+                                        <div id="previewIn"></div>
+                                    </div>
+                                    <div class="preview-section">
+                                        <div class="preview-section-title">Money out</div>
+                                        <div id="previewOut"></div>
                                     </div>
                                     <div class="preview-section">
                                         <div class="fs-12" id="sumHint">Type an amount next to each line you plan for. Lines left empty are left out.</div>
@@ -209,7 +238,7 @@ $steps = [
             </div>
         </div>
 
-        <?php include __DIR__ . '/../footer.php' ?>
+        <?php include __DIR__.'/../footer.php' ?>
     </div>
 
     <div class="scrollToTop"><span class="arrow"><i class="ri-arrow-up-s-fill fs-20"></i></span></div>

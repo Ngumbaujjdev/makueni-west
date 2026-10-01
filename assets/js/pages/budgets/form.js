@@ -31,6 +31,7 @@ const BudgetsForm = (function () {
     lines: { in: [], out: [] },
     amounts: {}, // line id -> amount
     taken: { year: null, months: {} },
+    statuses: { year: null, months: {} }, // status of each taken period, for the chip colours
     ownYear: null, // the year the budget being changed had when loaded
     ownTaken: null, // that year's taken periods - without the budget itself
     copy: null,
@@ -73,6 +74,7 @@ const BudgetsForm = (function () {
       state.month = pickMonth(wanted);
     }
     state.kind = state.month === null ? "year" : "month";
+    await loadStatuses();
 
     renderKind();
     renderYears();
@@ -257,21 +259,58 @@ const BudgetsForm = (function () {
     return `${state.year} already has budgets for ${list}, so it can't also have a whole-year budget. Pick another year, or plan by month.`;
   }
 
+  /** In use / Draft / Closed for each taken period of the year, from the year's budget list. */
+  async function loadStatuses() {
+    const res = await BudgetsAPI.list({ year: state.year });
+    state.statuses = { year: null, months: {} };
+    (res.ok ? res.data || [] : []).forEach((b) => {
+      if (b.period_month) state.statuses.months[b.period_month] = b.status;
+      else state.statuses.year = b.status;
+    });
+  }
+
+  // The Demographics period chips: a tint and a status line per state.
+  const CHIP_STATES = {
+    active: { cls: "is-approved", icon: "ri-checkbox-circle-fill", text: "In use" },
+    draft: { cls: "is-draft", icon: "ri-draft-fill", text: "Draft" },
+    closed: { cls: "is-closed", icon: "ri-lock-fill", text: "Closed" },
+    free: { cls: "is-open", icon: "ri-checkbox-blank-circle-line", text: "Free" },
+    blocked: { cls: "is-blocked", icon: "ri-forbid-line", text: "Can't be picked" },
+  };
+
+  function periodChip({ month, name, takenId, status, selected, now }) {
+    const s = CHIP_STATES[status];
+    return `
+      <button type="button" class="period-chip ${s.cls}${selected ? " is-selected" : ""}${now ? " is-now" : ""}"
+              ${month ? `data-month="${month}"` : 'data-year="1"'} ${takenId ? `data-open="${takenId}"` : ""} ${status === "blocked" ? "disabled" : ""}
+              role="radio" aria-checked="${selected}" title="${takenId ? "Open this budget" : s.text}">
+        <span class="period-chip-name">${B.esc(name)}</span>
+        <span class="period-chip-status"><i class="${s.icon}"></i>${s.text}</span>
+        ${takenId ? '<i class="ri-arrow-right-up-line period-chip-go" aria-hidden="true"></i>' : ""}
+        ${now ? `<span class="period-chip-now">${month ? "This month" : "This year"}</span>` : ""}
+      </button>`;
+  }
+
   /** The month chips, or one card for the whole year - with the reason when it can't be picked. */
   function renderPeriods() {
     const el = document.getElementById("periodChips");
     const note = document.getElementById("periodNote");
+    const today = new Date();
     document.getElementById("periodLabel").textContent = state.kind === "year" ? "The year" : "Which month?";
     note.innerHTML = "";
 
     if (state.kind === "year") {
       const blocked = isTakenYear();
       const openId = state.taken.year;
-      el.className = "budget-period-chips is-year";
-      el.innerHTML = `
-        <button type="button" class="budget-period-chip is-whole${!blocked ? " is-selected" : " is-taken"}" ${openId ? `data-open="${openId}"` : ""} ${blocked && !openId ? "disabled" : ""} role="radio" aria-checked="${!blocked}">
-          <span>Whole of ${state.year}</span><small>${openId ? "Has a budget - open it" : blocked ? "Can't be picked" : "One budget for the whole year · Selected"}</small>
-        </button>`;
+      el.className = "period-grid is-single";
+      el.innerHTML = periodChip({
+        month: null,
+        name: `Whole of ${state.year}`,
+        takenId: openId,
+        status: openId ? state.statuses.year || "draft" : blocked ? "blocked" : "free",
+        selected: !blocked,
+        now: state.year === today.getFullYear(),
+      });
       if (blocked && !openId) {
         note.innerHTML = `
           <div class="budget-period-note">
@@ -286,16 +325,19 @@ const BudgetsForm = (function () {
         });
       }
     } else {
-      el.className = "budget-period-chips";
+      el.className = "period-grid";
       el.innerHTML = B.MONTHS.map((name, i) => {
         const month = i + 1;
         const takenId = state.taken.year ?? state.taken.months[month];
         const taken = isTakenMonth(month);
-        const selected = !taken && month === state.month;
-        return `<button type="button" class="budget-period-chip${selected ? " is-selected" : ""}${taken ? " is-taken" : ""}"
-            data-month="${month}" ${taken && takenId ? `data-open="${takenId}"` : ""} role="radio" aria-checked="${selected}">
-            <span>${B.esc(name)}</span><small>${taken ? "Has a budget - open it" : selected ? "Selected" : "Free"}</small>
-          </button>`;
+        return periodChip({
+          month,
+          name,
+          takenId: taken ? takenId : null,
+          status: taken ? (state.taken.year ? state.statuses.year : state.statuses.months[month]) || "draft" : "free",
+          selected: !taken && month === state.month,
+          now: state.year === today.getFullYear() && month === today.getMonth() + 1,
+        });
       }).join("");
       if (state.taken.year) {
         note.innerHTML = `
@@ -307,7 +349,7 @@ const BudgetsForm = (function () {
       }
     }
 
-    el.querySelectorAll(".budget-period-chip").forEach((btn) =>
+    el.querySelectorAll(".period-chip").forEach((btn) =>
       btn.addEventListener("click", () => {
         if (btn.dataset.open) {
           window.location.href = B.url("budget.php", { id: btn.dataset.open });
@@ -338,6 +380,7 @@ const BudgetsForm = (function () {
       }
     }
     if (res.ok) state.copy = res.data.copy;
+    if (yearChanged) await loadStatuses();
     renderPeriods();
     renderCopy();
     // "Last time" amounts follow the chosen period
@@ -348,7 +391,7 @@ const BudgetsForm = (function () {
 
   // ------------------------------------------------------------------ copy
 
-  /** The copy banner - and, once copied, "Filled from ... · Undo" until Undo is pressed. */
+  /** The "start from the last budget" banner - and, once copied, "Filled in · Undo" until Undo is pressed. */
   function renderCopy() {
     const box = document.getElementById("copyBox");
     const btn = document.getElementById("copyBtn");
@@ -356,22 +399,22 @@ const BudgetsForm = (function () {
     box.hidden = !state.copied && (!copy || !Object.keys(copy.amounts || {}).length);
     if (box.hidden) return;
     box.classList.toggle("is-done", !!state.copied);
+    const icon = document.getElementById("copyIcon");
     if (state.copied) {
-      document.getElementById("copyIcon").className = "avatar avatar-sm bg-success text-white flex-shrink-0";
-      document.getElementById("copyIcon").innerHTML = '<i class="ri-check-line"></i>';
-      document.getElementById("copyTitle").textContent = `Filled from the ${state.copied.label} budget`;
+      icon.innerHTML = '<i class="ri-check-line"></i>';
+      document.getElementById("copyTitle").innerHTML = `Filled from the <b>${B.esc(state.copied.label)}</b> budget`;
       document.getElementById("copyText").textContent = "Change any amount in the next steps, or undo to start empty again.";
       btn.className = "btn btn-sm btn-outline-primary";
       btn.innerHTML = '<i class="ri-arrow-go-back-line me-1"></i>Undo';
       return;
     }
     const count = Object.keys(copy.amounts).length;
-    document.getElementById("copyIcon").className = "avatar avatar-sm bg-primary text-white flex-shrink-0";
-    document.getElementById("copyIcon").innerHTML = '<i class="ri-file-copy-line"></i>';
-    document.getElementById("copyTitle").textContent = `Start from the ${copy.period_label} budget`;
-    document.getElementById("copyText").textContent = `Fills all ${count} amounts from it. You can change any of them after.`;
+    const total = sum("in", copy.amounts) - sum("out", copy.amounts);
+    icon.innerHTML = '<i class="ri-history-line"></i>';
+    document.getElementById("copyTitle").innerHTML = `Last budget: <b>${B.esc(copy.period_label)}</b> · ${count} lines · ${B.shortMoney(total)} left`;
+    document.getElementById("copyText").textContent = "Fills every amount from it. You can change any of them after.";
     btn.className = "btn btn-sm btn-primary";
-    btn.innerHTML = '<i class="ri-file-copy-line me-1"></i>Copy amounts';
+    btn.innerHTML = '<i class="ri-magic-line me-1"></i>Start from these amounts';
   }
 
   function copyAmounts() {
@@ -416,8 +459,8 @@ const BudgetsForm = (function () {
 
     el.innerHTML = `
       ${lines.length > EXTRA_AFTER ? `<div class="list-search mb-2"><i class="ri-search-line"></i><input type="search" class="form-control" placeholder="Find a line..." data-line-search="${side}" autocomplete="off"></div>` : ""}
-      <div class="budget-lines" data-side="${side}">
-        ${ordered.map((l, i) => lineRow(l, side, i, i >= visibleCount && !state.expanded[side])).join("")}
+      <div class="budget-tile-grid" data-side="${side}">
+        ${ordered.map((l, i) => lineRow(l, side, i >= visibleCount && !state.expanded[side])).join("")}
       </div>
       ${hiddenCount > 0 ? `<button type="button" class="btn btn-sm btn-outline-primary mt-2" data-show-all="${side}" ${state.expanded[side] ? "hidden" : ""}><i class="ri-add-line me-1"></i>Show ${hiddenCount} more ${hiddenCount === 1 ? "line" : "lines"}</button>` : ""}`;
 
@@ -432,12 +475,12 @@ const BudgetsForm = (function () {
     });
     el.querySelector(`[data-show-all="${side}"]`)?.addEventListener("click", (e) => {
       state.expanded[side] = true;
-      el.querySelectorAll(".budget-line-row.is-extra").forEach((r) => r.classList.remove("is-extra"));
+      el.querySelectorAll(".budget-tile.is-extra").forEach((r) => r.classList.remove("is-extra"));
       e.currentTarget.hidden = true;
     });
     el.querySelector(`[data-line-search="${side}"]`)?.addEventListener("input", (e) => {
       const q = e.target.value.trim().toLowerCase();
-      el.querySelectorAll(".budget-line-row").forEach((r) => {
+      el.querySelectorAll(".budget-tile").forEach((r) => {
         const match = !q || r.dataset.name.includes(q);
         r.classList.toggle("is-filtered", !match);
         if (q && match) r.classList.remove("is-extra");
@@ -445,23 +488,26 @@ const BudgetsForm = (function () {
     });
   }
 
-  function lineRow(line, side, index, extra) {
-    const value = Number(state.amounts[line.id]) > 0 ? B.amount(state.amounts[line.id]) : "";
+  /** A line's colour stays the same wherever it shows: its place in the side's list. */
+  const colorOf = (line, side) => B.lineColor(side, Math.max(0, (state.lines[side] || []).findIndex((l) => l.id === line.id)));
+
+  /** One line as a Demographics-style number tile: coloured icon, name, KES box, "Last time". */
+  function lineRow(line, side, extra) {
+    const amount = Number(state.amounts[line.id]) || 0;
+    const value = amount > 0 ? B.amount(amount) : "";
     const last = Number(state.copy?.amounts?.[line.id]) || 0;
+    const color = colorOf(line, side);
     return `
-      <div class="budget-line-row${extra ? " is-extra" : ""}" data-name="${B.esc(line.name.toLowerCase())}">
-        <span class="avatar avatar-sm bg-${B.lineColor(side, index)} text-white flex-shrink-0"><i class="${B.lineIcon(line.name, side)}"></i></span>
-        <label class="budget-line-name" for="amt-${line.id}">
-          <span class="fw-semibold">${B.esc(line.name)}</span>${line.is_own ? ' <span class="soft-chip soft-primary">Ours</span>' : ""}
-          ${line.description ? `<span class="d-block fs-12">${B.esc(line.description)}</span>` : ""}
+      <div class="num-tile budget-tile${amount > 0 ? " is-filled" : ""}${extra ? " is-extra" : ""}" data-name="${B.esc(line.name.toLowerCase())}" style="--tile-rgb: var(--${color}-rgb)">
+        <label class="num-tile-label" for="amt-${line.id}">
+          <span class="num-tile-icon bg-${color} ${B.tileText(color)}"><i class="${B.lineIcon(line.name, side)}"></i></span>
+          <span class="budget-tile-name"><span>${B.esc(line.name)}</span>${line.is_own ? ' <span class="soft-chip soft-primary">Ours</span>' : ""}${line.description ? `<small>${B.esc(line.description)}</small>` : ""}</span>
         </label>
-        <div class="budget-amount">
-          <div class="input-group">
-            <span class="input-group-text">KES</span>
-            <input type="text" inputmode="decimal" class="form-control text-end" id="amt-${line.id}" data-amount="${line.id}" data-side="${side}" value="${value}" placeholder="0.00" autocomplete="off">
-          </div>
-          ${last ? `<span class="budget-last-time">Last time: ${B.money(last)}</span>` : ""}
+        <div class="input-group">
+          <span class="input-group-text">KES</span>
+          <input type="text" inputmode="decimal" class="form-control text-end" id="amt-${line.id}" data-amount="${line.id}" data-side="${side}" value="${value}" placeholder="0.00" autocomplete="off">
         </div>
+        <div class="num-tile-foot"><span class="num-tile-last">${last ? `Last time <b>${B.money(last)}</b>` : "New this time"}</span></div>
       </div>`;
   }
 
@@ -477,6 +523,7 @@ const BudgetsForm = (function () {
     const v = parseAmount(input.value);
     if (v === null || v === 0) delete state.amounts[input.dataset.amount];
     else state.amounts[input.dataset.amount] = v;
+    input.closest(".budget-tile")?.classList.toggle("is-filled", !!v);
     markDirty();
     updateTotals();
   }
@@ -497,15 +544,26 @@ const BudgetsForm = (function () {
     const left = inT - outT;
     document.getElementById("inTotal").textContent = B.money(inT);
     document.getElementById("outTotal").textContent = B.money(outT);
-    document.getElementById("sumIn").textContent = B.money(inT);
-    document.getElementById("sumOut").textContent = B.money(outT);
-    const leftEl = document.getElementById("sumLeft");
-    leftEl.textContent = B.money(left);
-    leftEl.className = left < 0 ? "text-danger" : "text-success";
+    const tile = (id, value) => {
+      const el = document.getElementById(id);
+      el.textContent = B.shortMoney(value);
+      el.title = B.money(value);
+      el.closest(".preview-change").classList.toggle("is-empty", !value);
+    };
+    tile("sumIn", inT);
+    tile("sumOut", outT);
+    tile("sumLeft", left);
+    document.getElementById("sumLeft").classList.toggle("text-danger", left < 0);
     const both = inT + outT;
     const bar = document.getElementById("sumBar").children;
     bar[0].style.width = `${both ? (inT / both) * 100 : 50}%`;
     bar[1].style.width = `${both ? (outT / both) * 100 : 50}%`;
+
+    // How many lines are filled in
+    const all = (state.lines.in || []).length + (state.lines.out || []).length;
+    const count = Object.keys(state.amounts).length;
+    document.getElementById("previewFilled").textContent = `${count} of ${all} lines filled`;
+    document.getElementById("previewFilledBar").style.width = `${all ? (count / all) * 100 : 0}%`;
 
     // Compared with the last budget
     const copy = state.copy;
@@ -519,25 +577,29 @@ const BudgetsForm = (function () {
     document.getElementById("sumCompare").innerHTML =
       copy && (inT || outT) ? `${chip("In", inT, sum("in", copy.amounts), true)}${chip("Out", outT, sum("out", copy.amounts), false)}<span class="fs-12 align-self-center ms-1">vs ${B.esc(copy.period_label)}</span>` : "";
 
-    // The biggest three money out lines
-    const top = (state.lines.out || [])
-      .map((l) => ({ name: l.name, value: Number(state.amounts[l.id]) || 0 }))
-      .filter((l) => l.value > 0)
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 3);
-    document.getElementById("previewTop").innerHTML = top.length
-      ? `<ul class="composition-list">${top
-          .map(
-            (l) => `<li><span class="composition-name"><i class="${B.lineIcon(l.name, "out")} text-danger me-2"></i>${B.esc(l.name)}</span><span class="composition-value">${B.shortMoney(l.value)} <span>${outT ? Math.round((l.value / outT) * 100) : 0}%</span></span></li>`,
-          )
-          .join("")}</ul>`
-      : '<div class="fs-12">Nothing planned to go out yet.</div>';
+    renderPreviewList("in", inT);
+    renderPreviewList("out", outT);
 
-    const count = Object.keys(state.amounts).length;
     document.getElementById("sumHint").textContent = count
       ? `${count} ${count === 1 ? "line" : "lines"} planned.${left < 0 ? " You plan to spend more than comes in." : ""}`
       : "Type an amount next to each line you plan for. Lines left empty are left out.";
     renderPreviewTitle();
+  }
+
+  /** Each line with its own coloured dot - the biggest five, then "+ n more". "–" until filled. */
+  function renderPreviewList(side, total) {
+    const rows = (state.lines[side] || [])
+      .map((l, i) => ({ name: l.name, value: Number(state.amounts[l.id]) || 0, color: B.lineColor(side, i), i }))
+      .sort((a, b) => b.value - a.value || a.i - b.i);
+    const shown = rows.slice(0, 5);
+    const more = rows.length - shown.length;
+    document.getElementById(side === "in" ? "previewIn" : "previewOut").innerHTML = rows.length
+      ? `<ul class="composition-list budget-preview-list">${shown
+          .map(
+            (r) => `<li class="${r.value ? "" : "is-empty"}"><span class="composition-name"><span class="count-dot bg-${r.color}"></span><span class="text-truncate">${B.esc(r.name)}</span></span><span class="composition-value">${r.value ? B.shortMoney(r.value) : "–"} <span>${total ? Math.round((r.value / total) * 100) : 0}%</span></span></li>`,
+          )
+          .join("")}</ul>${more > 0 ? `<div class="fs-12 mt-1">+ ${more} more ${more === 1 ? "line" : "lines"}</div>` : ""}`
+      : '<div class="fs-12">No lines yet.</div>';
   }
 
   // ------------------------------------------------------------------ check and save
@@ -570,7 +632,7 @@ const BudgetsForm = (function () {
             rows.length
               ? `<ul class="budget-review-list">${rows
                   .map(
-                    (l) => `<li><span class="budget-review-name"><i class="${B.lineIcon(l.name, side)} me-2"></i>${B.esc(l.name)} ${change(l)}</span><b>${B.money(state.amounts[l.id])}</b></li>`,
+                    (l) => `<li><span class="budget-review-name"><span class="budget-review-icon bg-${colorOf(l, side)} ${B.tileText(colorOf(l, side))}"><i class="${B.lineIcon(l.name, side)}"></i></span>${B.esc(l.name)} ${change(l)}</span><b>${B.money(state.amounts[l.id])}</b></li>`,
                   )
                   .join("")}</ul>`
               : `<div class="budget-review-empty">No money ${side} planned.</div>`
@@ -580,6 +642,8 @@ const BudgetsForm = (function () {
     const inT = sum("in");
     const outT = sum("out");
     const none = !Object.keys(state.amounts).length;
+    const planned = Object.keys(state.amounts).length;
+    document.getElementById("reviewChip").textContent = `${planned} ${planned === 1 ? "line" : "lines"}`;
     el.innerHTML = `
       ${none ? '<div class="budget-period-note mb-3"><i class="ri-error-warning-line"></i><span>Nothing is planned yet. Go back and type an amount for at least one line.</span></div>' : ""}
       <div class="budget-review-sum">

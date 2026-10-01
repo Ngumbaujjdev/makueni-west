@@ -284,7 +284,7 @@ const BudgetsDetail = (function () {
         const leftText = over ? `<span class="text-danger">Over ${B.money(l.actual - l.planned)}</span>` : B.money(Math.max(l.left, 0));
         return `
           <li class="budget-item">
-            <span class="avatar avatar-md bg-${B.lineColor(side, i)} text-white flex-shrink-0"><i class="${B.lineIcon(l.name, side)}"></i></span>
+            <span class="avatar avatar-md bg-${B.lineColor(side, i)} ${B.tileText(B.lineColor(side, i))} flex-shrink-0"><i class="${B.lineIcon(l.name, side)}"></i></span>
             <div class="budget-item-main">
               <div class="budget-item-top">
                 <span class="budget-item-name">${B.esc(l.name)}${l.is_unplanned ? ' <span class="soft-chip soft-warning">Unplanned</span>' : ""}${l.is_own ? ' <span class="soft-chip soft-primary">Ours</span>' : ""}${changeChip(l)}</span>
