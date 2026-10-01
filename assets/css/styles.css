@@ -28895,6 +28895,15 @@ a:hover {
     text-align: center;
 }
 
+/* Row icons: the template sizes .side-menu__icon as a 1.15rem box but
+   leaves line-height inherited from the row (~1.5), so Remix Icon's
+   block-level ::before glyph is ~1.7rem tall and hangs ~9px below its own
+   box - the glyph reads as sitting low, outside the icon tile. Pin it to
+   the box like .category-icon above. */
+.app-sidebar .side-menu__icon {
+    line-height: 1;
+}
+
 .side-menu__label {
     font-size: 0.825rem;
     font-weight: 500;
