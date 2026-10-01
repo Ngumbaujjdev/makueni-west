@@ -67,14 +67,17 @@ trait BuildsBudgetWorld
 
         $this->pastor = $this->userWithRole('pastor', 'Test Pastor', 'church', $this->myChurch->id, [
             ...array_map(fn ($a) => "church.budgets.budgets.{$a}", ['read', 'prepare', 'export']),
+            'church.budgets.overview.read', 'church.budgets.spending.read', 'church.budgets.spending.record',
             ...array_map(fn ($a) => "church.settings.budgetsettings.budgetlines.{$a}", ['read', 'create', 'update', 'delete']),
         ]);
         $this->overseer = $this->userWithRole('overseer', 'Test Overseer', 'region', $this->region->id, [
             ...array_map(fn ($a) => "region.budgets.budgets.{$a}", ['read', 'prepare', 'export']),
+            'region.budgets.overview.read', 'region.budgets.spending.read', 'region.budgets.spending.record',
             'region.budgets.below.read',
         ]);
         $this->bishop = $this->userWithRole('bishop', 'Test Bishop', 'diocese', $this->diocese->id, [
             ...array_map(fn ($a) => "diocese.budgets.budgets.{$a}", ['read', 'prepare', 'export']),
+            'diocese.budgets.overview.read', 'diocese.budgets.spending.read', 'diocese.budgets.spending.record',
             'diocese.budgets.below.read',
         ]);
 

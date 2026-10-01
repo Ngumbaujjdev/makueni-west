@@ -20,12 +20,14 @@ class BudgetLineItem extends Model implements Auditable
         'budgeted_amount',
         'actual_amount',
         'notes',
+        'is_unplanned',
         'is_locked',
         'created_by',
         'updated_by',
     ];
 
     protected $casts = [
+        'is_unplanned' => 'boolean',
         'budgeted_amount' => 'decimal:2',
         'actual_amount' => 'decimal:2',
         'is_locked' => 'boolean',
@@ -218,6 +220,12 @@ class BudgetLineItem extends Model implements Auditable
         static::deleted(function ($lineItem) {
             $lineItem->updateBudgetTotals();
         });
+    }
+
+    /** Money recorded against this line. */
+    public function entries(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(BudgetEntry::class);
     }
 
     /**

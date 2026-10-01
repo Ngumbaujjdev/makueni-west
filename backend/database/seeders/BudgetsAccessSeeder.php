@@ -51,11 +51,22 @@ class BudgetsAccessSeeder extends Seeder
         ],
     ];
 
+    /**
+     * What each grant gives - permission => the menu page it belongs to.
+     * Reading budgets includes their Overview and Spending; preparing
+     * includes recording money in and out.
+     */
     private const PERMISSIONS = [
-        'read' => 'budgets.budgets.read',
-        'prepare' => 'budgets.budgets.prepare',
-        'export' => 'budgets.budgets.export',
-        'below' => 'budgets.below.read',
+        'read' => ['budgets.budgets.read' => 'budgets', 'budgets.overview.read' => 'overview', 'budgets.spending.read' => 'spending'],
+        'prepare' => ['budgets.budgets.prepare' => 'budgets', 'budgets.spending.record' => 'spending'],
+        'export' => ['budgets.budgets.export' => 'budgets'],
+        'below' => ['budgets.below.read' => 'budgets'],
+    ];
+
+    /** The Budgets module's pages, per level (the sidebar lists them by title). */
+    private const PAGES = [
+        'overview' => ['Overview', 'overview.php', 'This month or year at a glance: planned, received, spent, what we noticed'],
+        'spending' => ['Spending', 'spending.php', 'Record money in and out, and see every entry'],
     ];
 
     public function run(): void
@@ -67,7 +78,14 @@ class BudgetsAccessSeeder extends Seeder
             if (! $submodule) {
                 continue;
             }
-            $this->permissions($level, $submodule);
+            $pages = ['budgets' => $submodule];
+            foreach (self::PAGES as $key => [$title, $file, $description]) {
+                $pages[$key] = Submodule::updateOrCreate(
+                    ['module_id' => $submodule->module_id, 'path' => dirname($submodule->path).'/'.$file],
+                    ['title' => $title, 'is_active' => true, 'description' => $description],
+                );
+            }
+            $this->permissions($level, $pages);
         }
 
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
@@ -103,7 +121,8 @@ class BudgetsAccessSeeder extends Seeder
         $submodule->fill(['title' => 'Budgets', 'path' => $path, 'is_active' => true, 'description' => 'Every budget of this '.$level.': prepare, start using, close'])->save();
 
         // Placeholder pages that were never built stay out of the menu.
-        Submodule::where('module_id', $module->id)->whereKeyNot($submodule->id)->update(['is_active' => false]);
+        $ours = array_map(fn ($page) => dirname($path).'/'.$page[1], self::PAGES);
+        Submodule::where('module_id', $module->id)->whereKeyNot($submodule->id)->whereNotIn('path', $ours)->update(['is_active' => false]);
         DB::table('sub_submodules')->whereIn('submodule_id', Submodule::where('module_id', $module->id)->pluck('id'))->update(['is_active' => false, 'updated_at' => now()]);
 
         $this->command->info("   ✅ {$level}: Finance → {$module->name} → {$submodule->title} ({$path})");
@@ -111,21 +130,28 @@ class BudgetsAccessSeeder extends Seeder
         return $submodule;
     }
 
-    private function permissions(string $level, Submodule $submodule): void
+    /** @param array<string, Submodule> $pages */
+    private function permissions(string $level, array $pages): void
     {
-        $permissions = collect(self::PERMISSIONS)
-            ->reject(fn ($name, $ability) => $ability === 'below' && $level === 'church')
-            ->map(fn ($name, $ability) => Permission::firstOrCreate(
-                ['name' => "{$level}.{$name}", 'guard_name' => 'web'],
-                ['module_id' => $submodule->module_id, 'submodule_id' => $submodule->id, 'sub_submodule_id' => null, 'action' => $ability === 'below' ? 'read' : $ability, 'territory_scope' => $level],
-            ));
+        $permissions = [];
+        foreach (self::PERMISSIONS as $ability => $names) {
+            if ($ability === 'below' && $level === 'church') {
+                continue;
+            }
+            foreach ($names as $name => $page) {
+                $permissions[$ability][] = Permission::updateOrCreate(
+                    ['name' => "{$level}.{$name}", 'guard_name' => 'web'],
+                    ['module_id' => $pages[$page]->module_id, 'submodule_id' => $pages[$page]->id, 'sub_submodule_id' => null, 'action' => substr(strrchr($name, '.'), 1), 'territory_scope' => $level],
+                );
+            }
+        }
 
         foreach (self::GRANTS[$level] as $roleName => $abilities) {
             $role = Role::where('name', $roleName)->first();
             if (! $role) {
                 continue;
             }
-            $wanted = collect($abilities)->map(fn ($a) => $permissions[$a] ?? null)->filter();
+            $wanted = collect($abilities)->flatMap(fn ($a) => $permissions[$a] ?? []);
             $missing = $wanted->reject(fn ($p) => $role->hasPermissionTo($p));
             if ($missing->isNotEmpty()) {
                 $role->givePermissionTo($missing->all());

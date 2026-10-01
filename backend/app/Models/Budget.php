@@ -161,6 +161,12 @@ class Budget extends Model implements Auditable
         return $this->belongsTo(User::class, 'closed_by');
     }
 
+    /** Money recorded against this budget's lines. */
+    public function entries(): HasMany
+    {
+        return $this->hasMany(BudgetEntry::class);
+    }
+
     public function budgetLogs(): HasMany
     {
         return $this->hasMany(BudgetLog::class);
