@@ -505,8 +505,6 @@ include __DIR__ . '/../../../includes/page-header.php';
     <!-- Auth Helpers -->
     <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js<?= assetVersion('assets/js/utils/auth-helpers.js') ?>"></script>
 
-    <!-- Logout Handler -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js<?= assetVersion('assets/js/pages/authentication/logout.js') ?>"></script>
 
     <!-- jQuery (Required for DataTables) -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>

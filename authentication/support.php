@@ -280,7 +280,6 @@
     </script>
     <script src="https://unpkg.com/filepond@^4/dist/filepond.js"></script>
     <!-- toasts -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js<?= assetVersion('assets/js/pages/authentication/logout.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js<?= assetVersion('assets/js/utils/auth-helpers.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>

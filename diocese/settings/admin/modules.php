@@ -1178,8 +1178,6 @@ include __DIR__ . '/../../../includes/page-header.php';
     <!-- Auth Helpers -->
     <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js<?= assetVersion('assets/js/utils/auth-helpers.js') ?>"></script>
 
-    <!-- Logout Handler -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js<?= assetVersion('assets/js/pages/authentication/logout.js') ?>"></script>
 
     <!-- API Handler -->
     <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/api-handler.js<?= assetVersion('assets/js/pages/system-administration/api-handler.js') ?>"></script>

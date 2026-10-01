@@ -607,8 +607,6 @@ include __DIR__ . '/../../../includes/page-header.php';
     <!-- Auth Helpers -->
     <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js<?= assetVersion('assets/js/utils/auth-helpers.js') ?>"></script>
 
-    <!-- Logout Handler -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js<?= assetVersion('assets/js/pages/authentication/logout.js') ?>"></script>
 
     <!-- Budget Lines Management JS -->
     <script src="<?= SITE_URL ?>/assets/js/pages/budget-settings/budget-line.js<?= assetVersion('assets/js/pages/budget-settings/budget-line.js') ?>"></script>

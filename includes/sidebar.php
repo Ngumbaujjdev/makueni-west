@@ -143,6 +143,39 @@ $userEmail = $currentUser['email'] ?? '';
 </aside>
 <!-- END: Sidebar -->
 
+<!-- START: Log out confirmation - opened by handleLogout() below, from the
+     header avatar menu and the sidebar profile menu alike -->
+<div class="modal fade logout-modal" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body p-4 text-center">
+                <span class="avatar avatar-lg avatar-rounded bg-danger text-white mb-3">
+                    <i class="ri-logout-box-r-line fs-24"></i>
+                </span>
+                <h5 class="fw-semibold mb-1" id="logoutModalTitle">Log out?</h5>
+                <p class="text-body mb-3">You'll need your code or password to sign back in.</p>
+                <div class="soft-primary rounded d-flex align-items-center gap-2 p-2 mb-4 text-start">
+                    <span class="avatar avatar-sm avatar-rounded bg-primary text-white flex-shrink-0"><?= htmlspecialchars($sidebarInitials) ?></span>
+                    <div class="flex-fill text-truncate">
+                        <div class="fw-semibold text-dark text-truncate"><?= htmlspecialchars($userFullName) ?></div>
+                        <?php if ($userEmail !== ''): ?>
+                            <div class="fs-12 text-body text-truncate"><?= htmlspecialchars($userEmail) ?></div>
+                        <?php endif; ?>
+                    </div>
+                    <span class="badge bg-primary flex-shrink-0"><?= htmlspecialchars($userRole) ?></span>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-light border flex-fill" data-bs-dismiss="modal">Stay signed in</button>
+                    <button type="button" class="btn btn-danger flex-fill" id="logoutConfirmBtn">
+                        <i class="ri-logout-box-r-line me-1"></i>Log out
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- END: Log out confirmation -->
+
 <!-- auth-helpers.js defines window.autoRefreshAssignments/forceRefreshModules,
      which the DOMContentLoaded listener below calls to pick up newly granted
      modules without requiring a fresh login - most pages that include this
@@ -784,12 +817,35 @@ $userEmail = $currentUser['email'] ?? '';
         }
     };
 
+    // authentication/logout.php ends the PHP session and revokes the API
+    // token server-side, so clearing this browser's copy is all JS does.
+    function logoutNow() {
+        if (typeof clearAuthData === 'function') clearAuthData();
+        window.location.href = '<?= $baseUrl ?>/authentication/logout';
+    }
+
     window.handleLogout = function() {
-        if (confirm('Are you sure you want to logout?')) {
-            if (typeof clearAuthData === 'function') clearAuthData();
-            window.location.href = '<?= $baseUrl ?>/authentication/logout';
+        const modalEl = document.getElementById('logoutModal');
+        if (!modalEl || typeof bootstrap === 'undefined') {
+            if (confirm('Are you sure you want to log out?')) logoutNow();
+            return;
         }
+        // Rendered inside the page wrapper; a modal belongs on <body> so no
+        // ancestor's stacking context can trap it under the backdrop.
+        if (modalEl.parentElement !== document.body) document.body.appendChild(modalEl);
+        // The header avatar menu is auto-close="outside", so it would stay
+        // open behind the modal - close whichever menu Log Out came from.
+        document.querySelectorAll('[data-bs-toggle="dropdown"].show').forEach(toggle => {
+            bootstrap.Dropdown.getInstance(toggle)?.hide();
+        });
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
     };
+
+    document.getElementById('logoutConfirmBtn')?.addEventListener('click', function() {
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Logging out...';
+        logoutNow();
+    });
 
 })();
 </script>
