@@ -58,7 +58,8 @@ class BudgetsAccessSeeder extends Seeder
      */
     private const PERMISSIONS = [
         'read' => ['budgets.budgets.read' => 'budgets', 'budgets.overview.read' => 'overview', 'budgets.spending.read' => 'spending'],
-        'prepare' => ['budgets.budgets.prepare' => 'budgets', 'budgets.spending.record' => 'spending'],
+        // Preparing is linked to the New budget page, so only people who can prepare see it in the menu.
+        'prepare' => ['budgets.budgets.prepare' => 'new', 'budgets.spending.record' => 'spending'],
         'export' => ['budgets.budgets.export' => 'budgets'],
         'below' => ['budgets.below.read' => 'budgets'],
     ];
@@ -67,6 +68,7 @@ class BudgetsAccessSeeder extends Seeder
     private const PAGES = [
         'overview' => ['Overview', 'overview.php', 'This month or year at a glance: planned, received, spent, what we noticed'],
         'spending' => ['Spending', 'spending.php', 'Record money in and out, and see every entry'],
+        'new' => ['New budget', 'form.php', 'Plan a month or a year, step by step'],
     ];
 
     public function run(): void
