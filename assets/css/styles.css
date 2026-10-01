@@ -34396,6 +34396,15 @@ a.budget-month-tile:hover {
   .budget-hero-left {
     font-size: 1.3rem;
   }
+  /* A long figure and the ring don't fit side by side on a phone: the ring goes below */
+  .budget-hero-side {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .budget-hero-side-text {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
 }
 
 /* Budgets - cards in a row share one height, so a short card leaves no gap below its neighbour */

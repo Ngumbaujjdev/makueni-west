@@ -56,6 +56,7 @@ $breadcrumbs = [
                         <button type="button" class="btn btn-outline-danger" id="deleteBtn" hidden><i class="ri-delete-bin-line me-1"></i>Delete</button>
                         <button type="button" class="btn btn-outline-secondary" id="closeBtn" hidden><i class="ri-lock-line me-1"></i>Close</button>
                         <button type="button" class="btn btn-outline-primary" id="reopenBtn" hidden><i class="ri-lock-unlock-line me-1"></i>Reopen</button>
+                        <button type="button" class="btn btn-outline-primary d-none" id="exportReportBtn" data-lock="1" data-module="budget" data-report-key="budget.statement"><i class="ri-download-2-line me-1"></i>Export</button>
                         <a href="#" class="btn btn-outline-primary" id="editBtn" hidden><i class="ri-edit-line me-1"></i>Change</a>
                         <button type="button" class="btn btn-success" id="startBtn" hidden><i class="ri-play-circle-line me-1"></i>Start using</button>
                         <button type="button" class="btn btn-primary" id="recordBtn" hidden><i class="ri-add-line me-1"></i>Record money</button>

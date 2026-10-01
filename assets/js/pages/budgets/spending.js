@@ -41,6 +41,7 @@ const BudgetsSpending = (function () {
     entries = list.data || [];
     canRecord = !!list.body.can_record;
     budget = dash.ok ? dash.data.budget : null;
+    B.syncExport({ key: "budget.spending", territoryId: list.body.place?.id, year: period.year, month: period.month });
     renderHeader(list.body, dash.ok ? dash.data : null);
     renderStats(list.body.stats, dash.ok ? dash.data : null);
     renderRows();

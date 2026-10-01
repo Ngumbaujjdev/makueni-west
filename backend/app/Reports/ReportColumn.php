@@ -18,6 +18,7 @@ final class ReportColumn
         public ?string $total = null,
         public bool $strong = false,
         public bool $numeric = false,
+        public ?string $format = null,
     ) {}
 
     public static function text(string $header, bool $strong = false): self
@@ -30,8 +31,14 @@ final class ReportColumn
         return new self($header, 'R', $total, $strong, true);
     }
 
+    /** Money: always 2 decimals ("12,345.50") in the PDF and preview, #,##0.00 in Excel. */
+    public static function money(string $header, ?string $total = 'sum', bool $strong = false): self
+    {
+        return new self($header, 'R', $total, $strong, true, 'money');
+    }
+
     public function toArray(): array
     {
-        return ['header' => $this->header, 'align' => $this->align, 'total' => $this->total, 'strong' => $this->strong, 'numeric' => $this->numeric];
+        return ['header' => $this->header, 'align' => $this->align, 'total' => $this->total, 'strong' => $this->strong, 'numeric' => $this->numeric, 'format' => $this->format];
     }
 }

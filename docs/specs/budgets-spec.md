@@ -184,6 +184,34 @@ Writing needs `{level}.budgets.spending.record` on the acting place's own budget
 - **Budget page:** a **Record money** button and a **Spending** tab.
 - Windows everywhere follow the Demographics report window: a white header with one solid coloured icon tile, small uppercase section labels, tinted panels and a tinted footer.
 
+## Reports (phase 4, brought forward)
+
+PDF and Excel, through the shared report engine (`docs/specs/reports-spec.md`): queued on `reports`, verification codes `MWD-BUD-…`, files kept 7 days. The figures come from `BudgetData`, the same as the Overview, so the page and the report agree.
+
+| Key | Title | Period | What's in it |
+|---|---|---|---|
+| `budget.summary` | Budget summary | a month or a whole year (`fiscal_year_id` + optional `month`; fiscal years are calendar years) | Tiles: planned in, received, planned out, spent, money left. Money in by line (planned · received · still to come · %). Money out by line (planned · spent · left · % used · "Over by …"). Month by month for a year (a year budget's twelfths add up to its plan). What we noticed, with recommendations. |
+| `budget.spending` | Money in and out | the same | Money in, then money out: date · what for · line · from/to · how · reference · recorded by · amount, with totals. |
+| `budget.statement` | Budget statement | one budget (`budget_id`), only from its own page | Its lines in and out, every entry recorded against it, and the latest 15 History sentences. |
+
+- **Money** is a `ReportColumn::money()` column: 2 decimals in the PDF and preview, numbers formatted `#,##0.00` in Excel (totals stay `=SUM()`).
+- **Who can export:**
+  - the acting role needs `{level}.budgets.budgets.export`, for the place it acts for or a place below (`BudgetAccess::canView`), checked by `BudgetReport::authorize()`;
+  - the catalogue hides budget reports from anyone else, and a request gets 403;
+  - `budget_id` must belong to the territory asked for (422) and be one the user may see (403);
+  - "All time" is refused (422).
+- **Where:**
+  - an **Export** button on Overview (summary), Budgets (summary for the year), a budget's page (statement) and Spending (money in and out), shown only with export;
+  - a **Reports** page per level (`includes/budget/reports.php`, using `assets/js/pages/demographics/reports.js` with `REPORTS_PAGE.module = 'budget'`).
+  - `budgets.budgets.export` is linked to the Reports page, so the menu shows it only to exporters.
+- **Acceptance:**
+  1. The summary's figures match the Overview's for the same period.
+  2. Money shows with 2 decimals in the PDF, and as numbers in Excel.
+  3. A statement for another place's budget is refused.
+  4. A place below can be exported; upwards or sideways can't.
+  5. A role without export sees no budget reports.
+  6. A ready run has a `MWD-BUD-` code and a real PDF or XLSX file.
+
 ## Look
 
 Every budget page matches the redesigned Demographics pages (reference: `church/demographics-growth/index.php`):

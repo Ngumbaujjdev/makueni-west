@@ -4,6 +4,7 @@ namespace App\Reports\Budget;
 
 use App\Models\Budget;
 use App\Models\BudgetEntry;
+use App\Support\Reports\Insights\Insight;
 use App\Support\Reports\Insights\InsightEngine;
 use App\Support\Reports\Insights\ReportFacts;
 use App\Support\Reports\Insights\Rules\BudgetBalanceRule;
@@ -30,7 +31,29 @@ final class BudgetData
 {
     private const MONTHS = [1 => 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
+    /** @var Insight[] the last dashboard()'s insights, for the PDF reports */
+    private array $insights = [];
+
     public function __construct(private string $type, private int $id, private int $year, private ?int $month) {}
+
+    /** @return Insight[] what we noticed, as built by the last dashboard() */
+    public function insights(): array
+    {
+        return $this->insights;
+    }
+
+    /**
+     * Every entry of the period (newest first), as entryRow() arrays - for the
+     * spending report; narrowed to one budget when asked.
+     */
+    public function periodEntries(?int $budgetId = null): array
+    {
+        [$start, $end] = $this->range($this->year, $this->month);
+
+        return $this->entries($start, $end)
+            ->when($budgetId !== null, fn ($c) => $c->where('budget_id', $budgetId))
+            ->map(fn ($e) => self::entryRow($e))->values()->all();
+    }
 
     /** @return array{0: CarbonImmutable, 1: CarbonImmutable} */
     private function range(int $year, ?int $month): array
@@ -159,7 +182,7 @@ final class BudgetData
             'trend' => $this->month === null ? $this->yearTrend($entries) : $this->monthTrend($entries, $start, $end, $totals),
             'spark' => $this->spark($end),
             'recent' => $entries->take(8)->map(fn ($e) => self::entryRow($e))->values(),
-            'insights' => array_map(fn ($i) => $i->toArray(), InsightEngine::run([
+            'insights' => array_map(fn ($i) => $i->toArray(), $this->insights = InsightEngine::run([
                 new BudgetStatusRule,
                 new BudgetOverPlanRule,
                 new BudgetBalanceRule,

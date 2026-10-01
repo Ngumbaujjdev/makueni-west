@@ -53,9 +53,13 @@ class SectionSheet implements FromArray, ShouldAutoSize, WithEvents, WithHeading
                 $lastCol = Coordinate::stringFromColumnIndex(max(1, count($this->section->columns)));
 
                 foreach ($this->section->columns as $i => $col) {
+                    $letter = Coordinate::stringFromColumnIndex($i + 1);
                     if ($col->align === 'R') {
-                        $letter = Coordinate::stringFromColumnIndex($i + 1);
                         $sheet->getStyle("{$letter}1:{$letter}".($rowCount + 2))->getAlignment()->setHorizontal('right');
+                    }
+                    // Money stays a number, shown with 2 decimals (the totals row too).
+                    if ($col->format === 'money') {
+                        $sheet->getStyle("{$letter}2:{$letter}".($rowCount + 2))->getNumberFormat()->setFormatCode('#,##0.00');
                     }
                 }
 

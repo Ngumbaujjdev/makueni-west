@@ -55,6 +55,7 @@ const BudgetsList = (function () {
       return;
     }
     state.body = res.body;
+    B.syncExport({ key: "budget.summary", territoryId: res.body.place?.id, year: state.year });
     state.viewOnly = !!res.body.view_only;
     const budgets = res.data || [];
     const months = monthsOf(budgets);
