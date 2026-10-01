@@ -153,11 +153,11 @@ const BudgetsUI = (function () {
    * shown to people who can export, and kept on the report, place and period
    * the page is showing. A null value removes that setting.
    */
-  function syncExport({ key, territoryId, year = null, month = null, budgetId = null, title = null }) {
+  function syncExport({ key, territoryId, year = null, month = null, budgetId = null, lineId = null, title = null }) {
     const btn = document.getElementById("exportReportBtn");
     if (!btn) return;
     btn.classList.toggle("d-none", !CTX.can?.export);
-    const set = { reportKey: key, territoryId, year, month, budgetId, reportTitle: title };
+    const set = { reportKey: key, territoryId, year, month, budgetId, lineId, reportTitle: title };
     Object.entries(set).forEach(([k, v]) => {
       if (v === null || v === undefined || v === "") delete btn.dataset[k];
       else btn.dataset[k] = v;

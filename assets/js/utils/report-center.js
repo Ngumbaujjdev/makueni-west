@@ -73,6 +73,11 @@ const ReportCenter = (function () {
     "budget.summary": "primary",
     "budget.spending": "success",
     "budget.statement": "purple",
+    "budget.lines": "warning",
+    "budget.year": "info",
+    "budget.compare": "pink",
+    "budget.exceptions": "danger",
+    "budget.line": "purple",
   };
   const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const GROUP_SHORT = { "demographics.spiritual": "All four" };
@@ -530,7 +535,7 @@ const ReportCenter = (function () {
         }),
       );
     } else if (report.inputs.includes("budget")) {
-      $("rpPeriodTitle").textContent = "Budget";
+      $("rpPeriodTitle").textContent = report.inputs.includes("line") ? "Budget line" : "Budget";
       wrap.innerHTML = `<span class="soft-chip soft-purple rp-period-chip"><i class="ri-wallet-3-line"></i>${esc(state.lockedTitle || "The budget you're viewing")}</span>`;
     } else {
       $("rpPeriodTitle").textContent = "Submission";
@@ -599,6 +604,7 @@ const ReportCenter = (function () {
     if (report.inputs.includes("years")) body.years = state.params.years;
     if (report.inputs.includes("submission")) body.demographic_id = state.params.demographic_id;
     if (report.inputs.includes("budget")) body.budget_id = state.params.budget_id;
+    if (report.inputs.includes("line")) body.line_id = state.params.line_id;
     if (report.inputs.includes("metric")) body.metric = state.params.metric;
     if (report.inputs.includes("fiscal_month") && state.params.from && state.params.to) {
       body.from = state.params.from;
@@ -911,7 +917,7 @@ const ReportCenter = (function () {
       if (!trigger) return;
       e.preventDefault();
       const params = {};
-      ["fiscal_year_id", "year", "month", "from", "to", "years", "demographic_id", "submission_label", "metric", "gathering_type_id", "budget_id"].forEach((k) => {
+      ["fiscal_year_id", "year", "month", "from", "to", "years", "demographic_id", "submission_label", "metric", "gathering_type_id", "budget_id", "line_id"].forEach((k) => {
         const v = trigger.dataset[k.replace(/_([a-z])/g, (_, c) => c.toUpperCase())];
         if (v) params[k] = /^\d+$/.test(v) ? Number(v) : v;
       });

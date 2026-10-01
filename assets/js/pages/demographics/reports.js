@@ -42,6 +42,10 @@ const DemographicsReports = (function () {
     "attendance.children": { color: "pink", chips: ["Boys and girls", "Share of a Sunday", "Month by month"] },
     "budget.summary": { color: "primary", chips: ["Planned vs actual", "Line by line", "Month by month", "Insights"] },
     "budget.spending": { color: "success", chips: ["Every entry", "Money in and out", "Totals"] },
+    "budget.lines": { color: "warning", chips: ["Every line", "% used", "Over or under", "Chart"] },
+    "budget.year": { color: "info", chips: ["All 12 months", "Each month's budget", "Chart"] },
+    "budget.compare": { color: "pink", chips: ["This and the one before", "Change in KES and %", "Chart"] },
+    "budget.exceptions": { color: "danger", chips: ["Over-plan lines", "Unplanned money", "For review"] },
   };
 
   const STATUS = {

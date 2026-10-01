@@ -55,6 +55,7 @@ $breadcrumbs = [
                     </div>
                     <div class="page-toolbar-controls">
                         <a href="<?= $budgetCtx['baseUrl'] ?>/budgets.php" class="btn btn-light" id="backBtn"><i class="ri-arrow-left-line me-1"></i>Back to the budget</a>
+                        <button type="button" class="btn btn-outline-primary d-none" id="exportReportBtn" data-lock="1" data-module="budget" data-report-key="budget.line"><i class="ri-download-2-line me-1"></i>Export</button>
                         <button type="button" class="btn btn-primary" id="recordLineBtn" hidden><i class="ri-add-line me-1"></i>Record money on this line</button>
                     </div>
                 </div>

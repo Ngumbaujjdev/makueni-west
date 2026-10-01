@@ -53,6 +53,7 @@ const BudgetsLine = (function () {
     document.getElementById("lineSub").innerHTML = `<a href="${B.url("budget.php", { id: d.budget.id })}" class="fw-semibold">${B.esc(d.budget.period_label)} budget</a> ${B.statusPill(d.budget.status)}${l.is_unplanned ? ' <span class="soft-chip soft-warning">Unplanned line</span>' : ""}${l.description ? ` <span class="ms-1">${B.esc(l.description)}</span>` : ""}`;
     document.getElementById("backBtn").href = B.url("budget.php", { id: d.budget.id });
     document.getElementById("recordLineBtn").hidden = !d.can.record;
+    B.syncExport({ key: "budget.line", territoryId: d.budget.place?.id, budgetId: d.budget.id, lineId: l.line_id, title: `${l.name} · ${d.budget.period_label}` });
     const banner = document.getElementById("viewOnlyBanner");
     banner.classList.toggle("d-none", !d.view_only);
     banner.classList.toggle("d-flex", !!d.view_only);
