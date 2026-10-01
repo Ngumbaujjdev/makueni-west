@@ -74,7 +74,7 @@ $breadcrumbs = [
 
                 <div class="row" id="statCardsRow"></div>
 
-                <div class="row">
+                <div class="row budget-equal-row">
                     <div class="col-xl-7">
                         <div class="card custom-card">
                             <div class="card-header justify-content-between flex-wrap gap-2">
@@ -127,19 +127,19 @@ $breadcrumbs = [
                                         </div>
                                         <span class="soft-chip soft-success" id="inChip"></span>
                                     </div>
-                                    <div class="card-body" id="linesIn"><span class="skel" style="height: 8rem; display: block;"></span></div>
+                                    <div class="card-body p-0" id="linesIn"><span class="skel" style="height: 8rem; display: block;"></span></div>
                                 </div>
                             </div>
                             <div class="col-xl-6">
                                 <div class="card custom-card">
                                     <div class="card-header justify-content-between flex-wrap gap-2">
                                         <div>
-                                            <div class="card-title">Money out</div>
+                                            <div class="card-title">Money out (spending)</div>
                                             <span class="card-subtitle-text">Planned, and spent so far</span>
                                         </div>
                                         <span class="soft-chip soft-danger" id="outChip"></span>
                                     </div>
-                                    <div class="card-body" id="linesOut"><span class="skel" style="height: 12rem; display: block;"></span></div>
+                                    <div class="card-body p-0" id="linesOut"><span class="skel" style="height: 12rem; display: block;"></span></div>
                                 </div>
                             </div>
                         </div>

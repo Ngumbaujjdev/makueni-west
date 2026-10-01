@@ -63,7 +63,16 @@ const BudgetsDetail = (function () {
       return;
     }
     const canChange = !!d?.can?.record;
-    el.innerHTML = `<ul class="budget-recent">${rows
+    const last = rows[0] ? new Date(`${rows[0].entry_date}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "-";
+    const net = res.body.stats.in - res.body.stats.out;
+    el.innerHTML = `
+      <div class="budget-items-strip soft-primary mx-n3 mt-n3 mb-2">
+        <div><small>Money in</small><b class="text-success">${B.money(res.body.stats.in)}</b></div>
+        <div><small>Money out</small><b class="text-danger">${B.money(res.body.stats.out)}</b></div>
+        <div><small>Difference</small><b class="${net < 0 ? "text-danger" : ""}">${B.money(net)}</b></div>
+        <div><small>Last recorded</small><b>${last}</b></div>
+      </div>
+      <ul class="budget-recent">${rows
       .map((e) => {
         const date = new Date(`${e.entry_date}T00:00:00`);
         const isIn = e.direction === "in";
@@ -195,16 +204,10 @@ const BudgetsDetail = (function () {
       document.getElementById("whereDonut").innerHTML = `<p class="fw-semibold mb-0">No money ${whereSide} planned.</p>`;
       return;
     }
-    const top = lines.slice(0, 5);
-    const rest = lines.slice(5);
-    const labels = [...top.map((l) => B.esc(l.name)), ...(rest.length ? [`Other (${rest.length} lines)`] : [])];
-    const series = [...top.map((l) => l.planned), ...(rest.length ? [rest.reduce((t, l) => t + l.planned, 0)] : [])];
-    donut = UI.renderRingDonut("whereDonut", {
-      labels,
-      series,
+    donut = B.moneyDonut("whereDonut", {
+      rows: lines.map((l) => ({ name: l.name, value: l.planned })),
       colors: whereSide === "out" ? ["danger", "warning", "purple", "pink", "primary", "secondary"] : ["success", "primary", "purple", "warning", "pink", "secondary"],
       centerLabel: whereSide === "out" ? "Money out" : "Money in",
-      format: (v) => B.shortMoney(v),
     });
   }
 
@@ -240,39 +243,72 @@ const BudgetsDetail = (function () {
       </ul>`;
   }
 
+  /**
+   * One card per side: a tinted strip with the side's figures, then a row per
+   * line (icon, name, change chip, % pill, bar, planned / received or spent /
+   * left), and a tinted totals row.
+   */
   function renderLines(side, lines) {
     const el = document.getElementById(side === "in" ? "linesIn" : "linesOut");
+    const isIn = side === "in";
+    const verb = isIn ? "Received" : "Spent";
     const planned = lines.reduce((t, l) => t + l.planned, 0);
-    document.getElementById(side === "in" ? "inChip" : "outChip").innerHTML = `<b>${B.money(planned)}</b>`;
+    const actual = lines.reduce((t, l) => t + l.actual, 0);
+    const pctOf = (a, p) => (p > 0 ? Math.round((a / p) * 100) : a > 0 ? 100 : 0);
+    document.getElementById(isIn ? "inChip" : "outChip").innerHTML = `<b>${B.money(planned)}</b>`;
     if (!lines.length) {
-      el.innerHTML = `<p class="fw-semibold mb-0">No ${side === "in" ? "money in" : "money out"} planned.</p>`;
+      el.innerHTML = `<div class="list-empty py-4"><span class="list-empty-icon bg-${isIn ? "success" : "danger"} text-white"><i class="ri-list-check-2"></i></span><div class="fw-semibold mt-2">No money ${isIn ? "in" : "out"} planned</div></div>`;
       return;
     }
-    const verb = side === "in" ? "received" : "spent";
-    el.innerHTML = `<div class="budget-progress">${lines
-      .map((l) => {
-        const pct = l.planned > 0 ? (l.actual / l.planned) * 100 : l.actual > 0 ? 100 : 0;
-        const over = side === "out" && l.actual > l.planned;
-        const color = side === "in" ? "success" : over ? "danger" : pct >= 80 ? "warning" : "primary";
-        const status = over
-          ? `<span class="text-danger fw-semibold">Over by ${B.money(l.actual - l.planned)}</span>`
-          : side === "in"
-            ? `${B.money(Math.max(l.left, 0))} still to come`
-            : `${B.money(l.left)} left`;
+    const left = planned - actual;
+    const fig = (label, value, cls = "") => `<div><small>${label}</small><b class="${cls}">${value}</b></div>`;
+    const strip = `
+      <div class="budget-items-strip soft-${isIn ? "success" : "danger"}">
+        ${fig("Planned", B.money(planned))}
+        ${fig(verb, B.money(actual))}
+        ${fig(isIn ? "Still to come" : left < 0 ? "Over by" : "Left", B.money(Math.abs(isIn ? Math.max(left, 0) : left)), !isIn && left < 0 ? "text-danger" : "")}
+        ${fig("Done", `${pctOf(actual, planned)}%`)}
+      </div>`;
+    const callout = !actual
+      ? `<div class="budget-items-callout">
+          <i class="ri-information-line"></i>
+          <span>${isIn ? "Nothing received yet." : "Nothing spent yet."} ${d.can?.record ? "Record money as it comes in or goes out, and each line fills up." : d.budget.status === "draft" ? "Money can be recorded once the budget is in use." : ""}</span>
+          ${d.can?.record ? `<button type="button" class="btn btn-sm btn-primary ms-auto flex-shrink-0" data-record-side="${side}"><i class="ri-add-line me-1"></i>Record money</button>` : ""}
+        </div>`
+      : "";
+    const rows = lines
+      .map((l, i) => {
+        const pct = pctOf(l.actual, l.planned);
+        const over = !isIn && l.actual > l.planned;
+        const color = isIn ? "success" : over ? "danger" : pct >= 80 ? "warning" : "primary";
+        const leftText = over ? `<span class="text-danger">Over ${B.money(l.actual - l.planned)}</span>` : B.money(Math.max(l.left, 0));
         return `
-          <div class="budget-progress-row">
-            <div class="budget-progress-top">
-              <span class="fw-semibold">${B.esc(l.name)}${l.is_own ? ' <span class="soft-chip soft-primary">Ours</span>' : ""}${changeChip(l)}</span>
-              <span class="fw-semibold">${B.money(l.planned)}</span>
+          <li class="budget-item">
+            <span class="avatar avatar-md bg-${B.lineColor(side, i)} text-white flex-shrink-0"><i class="${B.lineIcon(l.name, side)}"></i></span>
+            <div class="budget-item-main">
+              <div class="budget-item-top">
+                <span class="budget-item-name">${B.esc(l.name)}${l.is_unplanned ? ' <span class="soft-chip soft-warning">Unplanned</span>' : ""}${l.is_own ? ' <span class="soft-chip soft-primary">Ours</span>' : ""}${changeChip(l)}</span>
+                ${l.actual ? `<span class="badge bg-${color}">${pct}%</span>` : `<span class="soft-chip soft-primary">0%</span>`}
+              </div>
+              <div class="count-bar"><span class="bg-${color}" style="width: ${Math.min(pct, 100)}%"></span></div>
+              <div class="budget-item-figs">
+                <span>Planned <b>${B.money(l.planned)}</b></span>
+                <span>${verb} <b>${B.money(l.actual)}</b></span>
+                <span>${isIn ? "To come" : "Left"} <b>${leftText}</b></span>
+              </div>
             </div>
-            <div class="count-bar"><span class="bg-${color}" style="width: ${Math.min(pct, 100)}%"></span></div>
-            <div class="budget-progress-foot">
-              <span>${l.actual ? `${B.money(l.actual)} ${verb}` : `Nothing ${verb} yet`}</span>
-              <span>${status}</span>
-            </div>
-          </div>`;
+          </li>`;
       })
-      .join("")}</div>`;
+      .join("");
+    el.innerHTML = `
+      ${strip}
+      ${callout}
+      <ul class="budget-items">${rows}</ul>
+      <div class="budget-items-total">
+        <span>${lines.length} ${lines.length === 1 ? "line" : "lines"}</span>
+        <span>Planned <b>${B.money(planned)}</b> · ${verb} <b>${B.money(actual)}</b></span>
+      </div>`;
+    el.querySelector("[data-record-side]")?.addEventListener("click", () => BudgetsEntryModal.open({ budgetId: id, direction: side, onSaved: refresh }));
   }
 
   /** A small "+10% vs Dec" / "New" chip against the budget before. */
@@ -312,7 +348,15 @@ const BudgetsDetail = (function () {
       el.innerHTML = '<p class="fw-semibold mb-0">Nothing recorded yet.</p>';
       return;
     }
-    el.innerHTML = `<ul class="record-history">${items
+    const changes = items.filter((h) => !String(h.action).startsWith("entry_")).length;
+    el.innerHTML = `
+      <div class="budget-items-strip soft-purple mx-n3 mt-n3 mb-3">
+        <div><small>Everything</small><b>${items.length}</b></div>
+        <div><small>Budget changes</small><b>${changes}</b></div>
+        <div><small>Money entries</small><b>${items.length - changes}</b></div>
+        <div><small>Latest</small><b>${B.esc(items[0].when_label || "-")}</b></div>
+      </div>
+      <ul class="record-history">${items
       .map(
         (h) => `
         <li class="is-${h.action === "created" ? "created" : "updated"}">

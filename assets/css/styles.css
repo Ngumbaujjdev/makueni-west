@@ -34357,3 +34357,273 @@ a.budget-month-tile:hover {
     font-size: 1.3rem;
   }
 }
+
+/* Budgets - cards in a row share one height, so a short card leaves no gap below its neighbour */
+.budget-equal-row > [class*="col-"] {
+  display: flex;
+  flex-direction: column;
+}
+.budget-equal-row > [class*="col-"] > .card {
+  flex: 1 1 auto;
+}
+.budget-equal-row > [class*="col-"] > .card > .card-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Budgets - a ring with a compact list beside it (BudgetsUI.moneyDonut) */
+.budget-donut {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  align-items: center;
+  gap: 1.25rem;
+}
+.budget-donut-list {
+  margin: 0;
+}
+.budget-donut-list .composition-name {
+  min-width: 0;
+}
+@media (max-width: 575.98px) {
+  .budget-donut {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Budget page - a tinted strip of figures at the top of a card (Lines, Spending, History) */
+.budget-items-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 0.75rem;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid var(--default-border);
+  color: var(--v2-heading);
+}
+.budget-items-strip small {
+  display: block;
+  margin-bottom: 0.15rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--default-text-color);
+}
+.budget-items-strip b {
+  display: block;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.budget-items-callout {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1rem 1.25rem 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.5rem;
+  background: rgba(var(--primary-rgb), 0.07);
+  font-size: 0.82rem;
+  color: var(--v2-heading);
+}
+.budget-items-callout > i {
+  font-size: 1.1rem;
+  color: rgb(var(--primary-rgb));
+}
+
+/* Budget page - one row per line: icon tile, name, % pill, bar, figures */
+.budget-items {
+  margin: 0;
+  padding: 0.25rem 1.25rem;
+  list-style: none;
+}
+.budget-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px dashed var(--default-border);
+}
+.budget-item:last-child {
+  border-bottom: 0;
+}
+.budget-item-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.budget-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+.budget-item-name {
+  min-width: 0;
+  font-weight: 600;
+  color: var(--v2-heading);
+}
+.budget-item-figs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--default-text-color);
+}
+.budget-item-figs b {
+  color: var(--v2-heading);
+}
+.budget-items-total {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--default-border);
+  background: rgba(var(--primary-rgb), 0.04);
+  border-radius: 0 0 var(--card-border-radius, 0.5rem) var(--card-border-radius, 0.5rem);
+  font-size: 0.82rem;
+  color: var(--v2-heading);
+}
+@media (max-width: 575.98px) {
+  .budget-items-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 0.8rem 1rem;
+  }
+  .budget-items,
+  .budget-items-total {
+    padding-inline: 1rem;
+  }
+  .budget-items-callout {
+    margin-inline: 1rem;
+    flex-wrap: wrap;
+  }
+}
+
+/* Budget form (stepper) - the month-or-year choice, notes, copy-done and the review */
+.budget-kind-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.budget-field-label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--default-text-color);
+}
+.budget-period-chips.is-year .budget-period-chip.is-whole {
+  grid-column: 1 / -1;
+  padding: 0.9rem 1rem;
+}
+.budget-period-note {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 0.5rem;
+  background: rgba(var(--warning-rgb), 0.12);
+  font-size: 0.84rem;
+  color: var(--v2-heading);
+}
+.budget-period-note > i {
+  font-size: 1.15rem;
+  color: rgb(var(--warning-rgb));
+}
+.budget-copy.is-done {
+  background: rgba(var(--success-rgb), 0.08);
+  border-color: rgba(var(--success-rgb), 0.35);
+}
+.budget-line-row > .avatar {
+  align-self: center;
+}
+.budget-review-sum {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.5rem;
+  background: rgba(var(--primary-rgb), 0.06);
+  color: var(--v2-heading);
+}
+.budget-review-sum small {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--default-text-color);
+}
+.budget-review-sum b {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.budget-review {
+  margin-bottom: 1rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+.budget-review-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  font-weight: 600;
+}
+.budget-review-head b {
+  color: var(--v2-heading);
+}
+.budget-review-list {
+  margin: 0;
+  padding: 0 0.9rem;
+  list-style: none;
+}
+.budget-review-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px dashed var(--default-border);
+  font-size: 0.86rem;
+  color: var(--v2-heading);
+}
+.budget-review-list li:last-child {
+  border-bottom: 0;
+}
+.budget-review-name {
+  min-width: 0;
+}
+.budget-review-list b {
+  white-space: nowrap;
+}
+.budget-review-empty {
+  padding: 0.75rem 0.9rem;
+  font-size: 0.84rem;
+}
+@media (max-width: 575.98px) {
+  .budget-review-sum {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .budget-period-note {
+    flex-wrap: wrap;
+  }
+  .budget-kind-row > div {
+    width: 100%;
+  }
+}
