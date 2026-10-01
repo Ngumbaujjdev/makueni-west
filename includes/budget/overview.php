@@ -48,6 +48,7 @@ $breadcrumbs = [
                     <div class="page-toolbar-controls">
                         <div id="yearSwitchWrap"></div>
                         <div class="budget-year-select"><select id="monthSelect" aria-label="Month"></select></div>
+                        <button type="button" class="btn btn-outline-primary d-none" id="exportReportBtn" data-lock="1" data-module="budget" data-report-key="budget.summary"><i class="ri-download-2-line me-1"></i>Export</button>
                         <a href="#" class="btn btn-outline-primary d-none" id="openBudgetBtn"><i class="ri-wallet-3-line me-1"></i>Open budget</a>
                         <div class="btn-group d-none" id="recordGroup">
                             <button type="button" class="btn btn-primary" id="recordOutBtn"><i class="ri-add-line me-1"></i>Record money</button>

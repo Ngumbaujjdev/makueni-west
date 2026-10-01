@@ -148,6 +148,22 @@ const BudgetsUI = (function () {
   /** A line's name with a coloured dot, the colour following the name. */
   const lineDot = (name) => (name ? `<span class="d-inline-flex align-items-center gap-1"><span class="count-dot bg-${DemographicsUI.colorFor(name)}"></span>${esc(name)}</span>` : "-");
 
+  /**
+   * The page's Export button (#exportReportBtn, opened by report-center.js):
+   * shown to people who can export, and kept on the report, place and period
+   * the page is showing. A null value removes that setting.
+   */
+  function syncExport({ key, territoryId, year = null, month = null, budgetId = null, title = null }) {
+    const btn = document.getElementById("exportReportBtn");
+    if (!btn) return;
+    btn.classList.toggle("d-none", !CTX.can?.export);
+    const set = { reportKey: key, territoryId, year, month, budgetId, reportTitle: title };
+    Object.entries(set).forEach(([k, v]) => {
+      if (v === null || v === undefined || v === "") delete btn.dataset[k];
+      else btn.dataset[k] = v;
+    });
+  }
+
   const periodLabel = (year, month) => (month ? `${MONTHS[month - 1]} ${year}` : `Whole of ${year}`);
 
   function esc(value) {
@@ -216,7 +232,7 @@ const BudgetsUI = (function () {
     return state;
   }
 
-    return { CTX, MONTHS, money, amount, short, shortMoney, delta, STATUS, statusPill, moneyDonut, lineIcon, lineColor, tileText, METHODS, methodChip, lineDot, periodLabel, periodControls, esc, url, flash, showFlash };
+    return { CTX, MONTHS, money, amount, short, shortMoney, delta, STATUS, statusPill, moneyDonut, lineIcon, lineColor, tileText, METHODS, methodChip, lineDot, syncExport, periodLabel, periodControls, esc, url, flash, showFlash };
 })();
 
 window.BudgetsUI = BudgetsUI;

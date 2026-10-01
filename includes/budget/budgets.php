@@ -47,6 +47,7 @@ $breadcrumbs = [
                     <div class="page-toolbar-controls">
                         <div id="yearSwitchWrap"></div>
                         <?php if ($budgetCtx['can']['prepare']): ?>
+                        <button type="button" class="btn btn-outline-primary d-none" id="exportReportBtn" data-lock="1" data-module="budget" data-report-key="budget.summary"><i class="ri-download-2-line me-1"></i>Export</button>
                         <a href="<?= $budgetCtx['baseUrl'] ?>/form.php" class="btn btn-primary" id="newBudgetBtn"><i class="ri-add-line me-1"></i>New budget</a>
                         <?php endif ?>
                     </div>

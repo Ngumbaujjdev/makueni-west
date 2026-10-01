@@ -50,6 +50,7 @@ const BudgetsOverview = (function () {
       return;
     }
     d = res.data;
+    B.syncExport({ key: "budget.summary", territoryId: d.place?.id, year: period.year, month: period.month });
     renderHeader();
     renderAlert();
     renderHero();

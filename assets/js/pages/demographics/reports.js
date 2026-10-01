@@ -5,7 +5,7 @@
  * Diocese Management System - Makueni West
  *
  * One script for each module's Reports page - the page sets
- * window.REPORTS_PAGE = {module: "demographics" | "attendance"}.
+ * window.REPORTS_PAGE = {module: "demographics" | "attendance" | "budget"}.
  *
  * A card per report (what's inside, Generate -> the shared export modal),
  * then "Your recent reports": every run with its status, verification code
@@ -40,6 +40,8 @@ const DemographicsReports = (function () {
     "attendance.ministries": { color: "success", chips: ["Every ministry", "Every meeting", "Quiet ones"] },
     "attendance.events": { color: "purple", chips: ["Every event", "Who came"] },
     "attendance.children": { color: "pink", chips: ["Boys and girls", "Share of a Sunday", "Month by month"] },
+    "budget.summary": { color: "primary", chips: ["Planned vs actual", "Line by line", "Month by month", "Insights"] },
+    "budget.spending": { color: "success", chips: ["Every entry", "Money in and out", "Totals"] },
   };
 
   const STATUS = {

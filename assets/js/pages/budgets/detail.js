@@ -135,6 +135,7 @@ const BudgetsDetail = (function () {
     draft.classList.toggle("d-none", !showDraft);
     draft.classList.toggle("d-flex", showDraft);
 
+    B.syncExport({ key: "budget.statement", territoryId: b.place?.id, budgetId: b.id, title: `${b.period_label} budget` });
     renderStats(b);
     renderWhere();
     renderStatusCard(b);
