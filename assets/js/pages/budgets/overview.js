@@ -458,7 +458,7 @@ const BudgetsOverview = (function () {
     const isIn = e.direction === "in";
     return `
       <li data-entry="${e.id}" class="${d.can_record ? "is-clickable" : ""}">
-        <span class="budget-recent-date"><b>${date.getDate()}</b><small>${date.toLocaleDateString("en-GB", { month: "short" })}</small></span>
+        <span class="budget-recent-date is-${isIn ? "in" : "out"}"><b>${date.getDate()}</b><small>${date.toLocaleDateString("en-GB", { month: "short" })}</small></span>
         <span class="flex-fill" style="min-width: 0;">
           <span class="d-block fw-semibold text-truncate">${B.esc(e.description)}</span>
           <span class="d-block fs-12 text-truncate">${B.esc(e.line || "")}${e.counterparty ? ` · ${B.esc(e.counterparty)}` : ""}</span>

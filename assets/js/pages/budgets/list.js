@@ -228,8 +228,8 @@ const BudgetsList = (function () {
     document.getElementById("glanceTitle").textContent = `${state.year} at a glance`;
     document.getElementById("glanceChips").innerHTML = [
       counts.active ? `<span class="soft-chip soft-success">${counts.active} in use</span>` : "",
-      counts.draft ? `<span class="soft-chip soft-secondary">${counts.draft} ${counts.draft === 1 ? "draft" : "drafts"}</span>` : "",
-      counts.closed ? `<span class="soft-chip soft-primary">${counts.closed} closed</span>` : "",
+      counts.draft ? `<span class="soft-chip soft-warning">${counts.draft} ${counts.draft === 1 ? "draft" : "drafts"}</span>` : "",
+      counts.closed ? `<span class="soft-chip soft-purple">${counts.closed} closed</span>` : "",
     ].join("");
 
     if (months.year) {
@@ -244,9 +244,10 @@ const BudgetsList = (function () {
         if (b) return tile(b, label, false, isNow);
         return `
           <div class="budget-month-tile is-empty${isNow ? " is-now" : ""}">
-            <div class="budget-month-top"><span class="fw-semibold">${label}</span>${isNow ? '<span class="soft-chip soft-primary">This month</span>' : ""}</div>
-            <div class="budget-month-figure">Not planned</div>
-            ${canPlan ? `<a href="${B.url("form.php", { year: state.year, month: i + 1 })}" class="budget-month-link"><i class="ri-add-line me-1"></i>Plan it</a>` : '<span class="budget-month-link text-reset">No budget</span>'}
+            ${isNow ? '<span class="period-chip-now">This month</span>' : ""}
+            <div class="budget-month-top"><span class="fw-semibold">${label}</span><span class="budget-month-status"><i class="ri-checkbox-blank-circle-line"></i>Not planned</span></div>
+            <div class="budget-month-figure">No budget yet</div>
+            ${canPlan ? `<a href="${B.url("form.php", { year: state.year, month: i + 1 })}" class="soft-chip soft-primary budget-month-plan"><i class="ri-add-line me-1"></i>Plan it</a>` : '<span class="budget-month-sub">No budget</span>'}
           </div>`;
       })
       .join("")}</div>`;
@@ -255,7 +256,8 @@ const BudgetsList = (function () {
   function tile(b, label, wide, isNow = false) {
     const left = b.left_planned;
     return `
-      <a href="${B.url("budget.php", { id: b.id })}" class="budget-month-tile${wide ? " is-wide" : ""}${isNow ? " is-now" : ""}">
+      <a href="${B.url("budget.php", { id: b.id })}" class="budget-month-tile is-${b.status}${wide ? " is-wide" : ""}${isNow ? " is-now" : ""}">
+        ${isNow ? '<span class="period-chip-now">This month</span>' : ""}
         <div class="budget-month-top"><span class="fw-semibold">${label}</span>${B.statusPill(b.status)}</div>
         <div class="budget-month-figure ${left < 0 ? "text-danger" : "text-success"}">${B.money(left)}</div>
         <div class="budget-month-sub">money left · in ${B.shortMoney(b.in_planned)} · out ${B.shortMoney(b.out_planned)}</div>
@@ -291,7 +293,7 @@ const BudgetsList = (function () {
           <tr data-row-id="${b.id}">
             <td data-order="${sortKey}" data-search="${B.esc(b.period_label)}">
               <a href="${link}" class="d-flex align-items-center gap-2 text-reset">
-                ${UI.avatarTile(b.period_month ? "ri-calendar-line" : "ri-calendar-2-line", b.period_month ? "primary" : "purple")}
+                ${UI.avatarTile(b.period_month ? "ri-calendar-line" : "ri-calendar-2-line", B.STATUS[b.status]?.color || "primary")}
                 <div>
                   <div class="fw-semibold">${B.esc(b.period_label)}</div>
                   <div class="fs-12">${b.period_month ? "Month budget" : "Whole-year budget"}</div>
@@ -300,15 +302,15 @@ const BudgetsList = (function () {
             </td>
             <td data-search="${B.STATUS[b.status]?.label || b.status}">${B.statusPill(b.status)}</td>
             <td class="text-end" data-order="${b.in_planned}">
-              <div class="fw-semibold">${B.amount(b.in_planned)}</div>
-              ${b.in_actual ? `<div class="fs-12">${B.amount(b.in_actual)} received</div>` : ""}
+              <div class="fw-semibold text-success">${B.amount(b.in_planned)}</div>
+              ${miniBar(b.in_actual, b.in_planned, "success", "received")}
             </td>
             <td class="text-end" data-order="${b.out_planned}">
-              <div class="fw-semibold">${B.amount(b.out_planned)}</div>
-              ${b.out_actual ? `<div class="fs-12">${B.amount(b.out_actual)} spent</div>` : ""}
+              <div class="fw-semibold text-danger">${B.amount(b.out_planned)}</div>
+              ${miniBar(b.out_actual, b.out_planned, b.out_actual > b.out_planned ? "danger" : "warning", "spent")}
             </td>
             <td class="text-end fw-semibold ${left < 0 ? "text-danger" : "text-success"}" data-order="${left}">${B.amount(left)}</td>
-            <td class="d-none d-lg-table-cell">${B.esc(b.prepared_by || "-")}</td>
+            <td class="d-none d-lg-table-cell">${b.prepared_by ? `<span class="d-inline-flex align-items-center gap-2"><span class="avatar avatar-xs avatar-rounded bg-${UI.colorFor(b.prepared_by)} ${B.tileText(UI.colorFor(b.prepared_by))}">${B.esc(initials(b.prepared_by))}</span>${B.esc(b.prepared_by)}</span>` : "-"}</td>
             <td class="text-end"><a href="${link}" class="btn btn-sm btn-primary-light">Open<i class="ri-arrow-right-line ms-1"></i></a></td>
           </tr>`;
       })
@@ -321,6 +323,20 @@ const BudgetsList = (function () {
     const table = UI.initListDataTable("budgetsTable", { order: [[0, "desc"]], nonSortableColumns: [6], hideDefaultSearch: true, noun: "budgets", pageLength: 25 });
     UI.wireFilterToolbar("filterToolbar", table, [{ id: "statusFilter", columnIndex: 1, exact: true }], { noun: "budgets" });
   }
+
+  /** "6,000.00 spent" with a thin bar of how much of the plan that is. */
+  function miniBar(actual, planned, color, verb) {
+    const pct = planned > 0 ? Math.min(100, (actual / planned) * 100) : 0;
+    return `<div class="budget-mini-bar"><span class="count-bar"><span class="bg-${color}" style="width: ${pct}%"></span></span><small>${actual ? `${B.amount(actual)} ${verb}` : `Nothing ${verb}`}</small></div>`;
+  }
+
+  const initials = (name) =>
+    String(name)
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0].toUpperCase())
+      .join("");
 
   function emptyState(icon, title, text) {
     return `<div class="list-empty py-5">
