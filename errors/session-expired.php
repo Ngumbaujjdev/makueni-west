@@ -566,9 +566,12 @@
         localStorage.removeItem(Constants.STORAGE_KEYS.TERRITORIAL_ROLES);
         localStorage.removeItem(Constants.STORAGE_KEYS.CURRENT_ROLE);
         localStorage.removeItem(Constants.STORAGE_KEYS.SESSION_EXPIRY);
+        sessionStorage.clear();
 
-        // Redirect to login
-        window.location.href = '../';
+        // Through authentication/logout, not straight to the home page: it
+        // destroys the PHP session and revokes the API token server-side,
+        // then lands on the login page.
+        window.location.href = '<?= SITE_URL ?>/authentication/logout';
     }
     </script>
 
