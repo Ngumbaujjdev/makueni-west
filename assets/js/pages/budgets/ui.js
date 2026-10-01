@@ -20,7 +20,8 @@ const BudgetsUI = (function () {
     const v = Number(n) || 0;
     const a = Math.abs(v);
     if (a >= 1e6) return `${(v / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace(/\.0$/, "")}M`;
-    if (a >= 1e3) return `${Math.round(v / 1e3)}K`;
+    if (a >= 1e4) return `${Math.round(v / 1e3)}K`;
+    if (a >= 1e3) return `${(v / 1e3).toFixed(1).replace(/\.0$/, "")}K`; // 1.5K, not 2K
     return String(Math.round(v));
   }
   const shortMoney = (n) => `KES ${short(n)}`;
@@ -67,7 +68,47 @@ const BudgetsUI = (function () {
     }
   }
 
-  return { CTX, MONTHS, money, amount, short, shortMoney, delta, STATUS, statusPill, periodLabel, esc, url, flash, showFlash };
+  /**
+   * Year buttons (#yearSwitchWrap) + a month picker (#monthSelect: Whole year,
+   * January..December), kept in the URL (?year=&month= / month=year).
+   * Calls onChange({year, month}) when either changes; month null = whole year.
+   */
+  function periodControls({ defaultMonth = true, onChange }) {
+    const p = new URLSearchParams(window.location.search);
+    const now = new Date();
+    const state = {
+      year: Number(p.get("year")) || now.getFullYear(),
+      month: p.has("month") ? (p.get("month") === "year" ? null : Number(p.get("month")) || null) : defaultMonth ? now.getMonth() + 1 : null,
+    };
+    const years = [...new Set([now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1, state.year])].sort((a, b) => a - b);
+    document.getElementById("yearSwitchWrap").innerHTML = DemographicsUI.renderSegmented("yearSwitch", years.map((y) => ({ value: y, label: String(y) })), state.year, { ariaLabel: "Year" });
+    const select = document.getElementById("monthSelect");
+    select.innerHTML = [
+      `<option value="year" data-icon="ri-calendar-2-line" data-color="purple">Whole year</option>`,
+      ...MONTHS.map((m, i) => `<option value="${i + 1}" data-icon="ri-calendar-line" data-color="primary">${m}</option>`),
+    ].join("");
+    select.value = state.month ? String(state.month) : "year";
+    DemographicsUI.enhanceSelect(select, { search: false });
+
+    const changed = () => {
+      const q = new URLSearchParams(window.location.search);
+      q.set("year", state.year);
+      q.set("month", state.month ?? "year");
+      history.replaceState(null, "", `${window.location.pathname}?${q}`);
+      onChange({ ...state });
+    };
+    DemographicsUI.wireSegmented("yearSwitch", (value) => {
+      state.year = Number(value);
+      changed();
+    });
+    select.addEventListener("change", () => {
+      state.month = select.value === "year" ? null : Number(select.value);
+      changed();
+    });
+    return state;
+  }
+
+    return { CTX, MONTHS, money, amount, short, shortMoney, delta, STATUS, statusPill, periodLabel, periodControls, esc, url, flash, showFlash };
 })();
 
 window.BudgetsUI = BudgetsUI;

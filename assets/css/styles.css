@@ -30079,11 +30079,13 @@ tr.list-row-flash > td {
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
 }
 .app-modal .modal-header {
+  /* 2026-10-01: white header with one solid icon tile, like the Demographics
+     report window (.rp-head) - not a solid colour bar across every window. */
   gap: 0.85rem;
-  padding: 1.1rem 1.5rem;
-  border-bottom: 0;
-  background: rgb(var(--primary-rgb));
-  color: #fff;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--default-border);
+  background: var(--custom-white);
+  color: var(--v2-heading);
 }
 .app-modal-icon {
   display: grid;
@@ -30092,22 +30094,22 @@ tr.list-row-flash > td {
   width: 2.6rem;
   height: 2.6rem;
   border-radius: 0.7rem;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgb(var(--primary-rgb));
+  color: #fff;
   font-size: 1.3rem;
 }
 .app-modal .modal-title {
-  color: #fff;
+  color: var(--v2-heading);
   font-size: 1.05rem;
   font-weight: 700;
   line-height: 1.25;
 }
 .app-modal-subtitle {
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--default-text-color);
 }
 .app-modal .btn-close {
-  filter: invert(1) grayscale(1) brightness(2);
-  opacity: 0.85;
+  opacity: 0.75;
 }
 .app-modal .modal-body {
   position: relative;
@@ -30116,7 +30118,7 @@ tr.list-row-flash > td {
 .app-modal .modal-footer {
   padding: 0.9rem 1.5rem;
   border-top: 1px solid var(--default-border);
-  background: rgb(var(--light-rgb));
+  background: rgba(var(--primary-rgb), 0.03);
 }
 .app-modal-section {
   margin-bottom: 1.1rem;
@@ -30574,6 +30576,11 @@ tr.list-row-flash > td {
   }
   .page-toolbar-controls .btn {
     width: 100%;
+  }
+  /* A split button (Record money + its in/out menu): the main button fills, the arrow stays small */
+  .page-toolbar-controls .btn-group > .dropdown-toggle-split {
+    flex: 0 0 auto;
+    width: auto;
   }
   .seg-control {
     width: 100%;
@@ -32911,25 +32918,32 @@ tr.list-row-flash > td {
   margin-bottom: 1.25rem;
 }
 .att-entry-title {
+  /* Small uppercase labels, like the report window's PERIOD / FORMAT. */
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.65rem;
-  font-size: 0.9rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.74rem;
   font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   color: var(--v2-heading);
+}
+.att-entry-title .btn {
+  letter-spacing: normal;
+  text-transform: none;
 }
 .att-entry-title > span:first-child:not(.d-inline-flex),
 .att-entry-title #attendanceCountsStep {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.45rem;
-  height: 1.45rem;
-  border-radius: 50%;
-  background: rgb(var(--primary-rgb));
-  color: #fff;
-  font-size: 0.75rem;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 0.4rem;
+  background: rgba(var(--primary-rgb), 0.12);
+  color: rgb(var(--primary-rgb));
+  font-size: 0.72rem;
 }
 .att-date-row {
   display: flex;
@@ -34128,5 +34142,218 @@ a.budget-month-tile:hover {
   }
   .budget-month-figure {
     font-size: 0.95rem;
+  }
+}
+
+/* Budgets 2 - a list of money in and out (Overview "Recent money",
+   a budget's Spending tab) and the date badge also used in the Spending table. */
+.budget-recent {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.budget-recent li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.25rem;
+  border-bottom: 1px dashed var(--default-border);
+  color: var(--v2-heading);
+}
+.budget-recent li:last-child {
+  border-bottom: 0;
+}
+.budget-recent li.is-clickable {
+  cursor: pointer;
+  border-radius: 0.5rem;
+}
+.budget-recent li.is-clickable:hover {
+  background: rgba(var(--primary-rgb), 0.06);
+}
+.budget-recent-date {
+  display: inline-flex;
+  flex: 0 0 2.6rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.6rem;
+  background: rgba(var(--primary-rgb), 0.1);
+  color: rgb(var(--primary-rgb));
+  line-height: 1;
+}
+.budget-recent-date b {
+  font-size: 1rem;
+}
+.budget-recent-date small {
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Record money window: the preview is tinted by direction, the amount is
+   sized for money, and the footer sums up the entry (like the report window). */
+.budget-entry-preview.is-in {
+  background: rgba(var(--success-rgb), 0.07);
+  border-color: rgba(var(--success-rgb), 0.25);
+}
+.budget-entry-preview.is-out {
+  background: rgba(var(--danger-rgb), 0.06);
+  border-color: rgba(var(--danger-rgb), 0.22);
+}
+.budget-entry-modal .att-preview-total {
+  font-size: 1.45rem;
+  white-space: nowrap;
+}
+/* One sentence ("After this, Tithes has KES 123,200.00 still to come."), not a grid of pieces */
+.budget-entry-modal .att-preview-compare {
+  display: block;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--v2-heading);
+}
+.budget-entry-modal .att-preview-compare b {
+  display: inline;
+  white-space: nowrap;
+}
+.budget-entry-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  font-size: 0.82rem;
+  color: var(--v2-heading);
+}
+@media (max-width: 575.98px) {
+  .budget-entry-summary {
+    display: none;
+  }
+}
+
+/* Budget Overview - the verdict card: how the month (or year) is going */
+.budget-hero > .card-body {
+  display: flex;
+  align-items: stretch;
+  gap: 1.5rem;
+}
+.budget-hero-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.budget-hero-title {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--v2-heading);
+}
+.budget-hero-bar + .budget-hero-bar {
+  margin-top: 0.9rem;
+}
+.budget-hero-bar-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--v2-heading);
+}
+.budget-hero-track {
+  position: relative;
+  height: 0.7rem;
+  border-radius: 999px;
+  background: rgba(var(--primary-rgb), 0.1);
+}
+.budget-hero-track > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+.budget-hero-today,
+.budget-hero-today-key {
+  width: 3px;
+  border-radius: 2px;
+  background: var(--v2-heading);
+}
+.budget-hero-today {
+  position: absolute;
+  top: -0.3rem;
+  bottom: -0.3rem;
+  transform: translateX(-50%);
+}
+.budget-hero-today-key {
+  display: inline-block;
+  height: 0.85rem;
+  margin-inline-end: 0.4rem;
+  vertical-align: -0.12rem;
+}
+.budget-hero-legend {
+  margin-top: 0.85rem;
+  font-size: 0.78rem;
+  color: var(--v2-heading);
+}
+.budget-hero-side {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-inline-start: 1.5rem;
+  border-inline-start: 1px solid var(--default-border);
+}
+.budget-hero-left {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--v2-heading);
+}
+.budget-hero-ring {
+  flex: 0 0 160px;
+  width: 160px;
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.budget-hero-ring {
+  flex-direction: column;
+}
+.budget-hero-ring-cap {
+  margin-top: -0.2rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--v2-heading);
+}
+.budget-hero-ring-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 12px solid rgba(var(--primary-rgb), 0.12);
+  font-size: 1.5rem;
+  color: rgb(var(--primary-rgb));
+}
+@media (max-width: 991.98px) {
+  .budget-hero > .card-body {
+    flex-direction: column;
+  }
+  .budget-hero-side {
+    padding-inline-start: 0;
+    padding-top: 1rem;
+    border-inline-start: 0;
+    border-top: 1px solid var(--default-border);
+    justify-content: space-between;
+  }
+}
+@media (max-width: 575.98px) {
+  .budget-hero-title {
+    font-size: 1.05rem;
+  }
+  .budget-hero-left {
+    font-size: 1.3rem;
   }
 }

@@ -3,6 +3,7 @@
 namespace App\Services\Budgets;
 
 use App\Models\Budget;
+use App\Models\BudgetEntry;
 use App\Models\BudgetLine;
 use App\Models\BudgetLineItem;
 use App\Models\BudgetLog;
@@ -169,6 +170,179 @@ final class BudgetBook
         });
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Money in and out ("Spending")
+    |--------------------------------------------------------------------------
+    | Recorded against a line of a budget that is In use, on a date inside its
+    | period. A line the budget didn't plan for is added as "unplanned".
+    */
+
+    /** The place's budget in use on a date (its month's, or the whole year's). */
+    public function budgetInUseOn(string $type, int $id, string $date): ?Budget
+    {
+        return Budget::where('territory_type', $type)->where('territory_id', $id)
+            ->where('status', 'active')
+            ->whereDate('start_date', '<=', $date)->whereDate('end_date', '>=', $date)
+            ->orderByRaw('period_month IS NULL') // a month's budget before the whole year's
+            ->first();
+    }
+
+    /**
+     * @param  array{budget_line_id: int, amount: numeric, entry_date: string, description: string, counterparty?: ?string, method?: ?string, reference?: ?string}  $data
+     */
+    public function record(User $user, Budget $budget, array $data): BudgetEntry
+    {
+        $this->assertCanRecord($budget, $data['entry_date']);
+
+        return DB::transaction(function () use ($user, $budget, $data) {
+            $item = $this->itemFor($budget, (int) $data['budget_line_id'], $user);
+            $entry = BudgetEntry::create([
+                'budget_id' => $budget->id,
+                'budget_line_item_id' => $item->id,
+                'direction' => $item->budgetCategory?->slug === 'income' ? 'in' : 'out',
+                'amount' => round((float) $data['amount'], 2),
+                'entry_date' => $data['entry_date'],
+                'description' => $data['description'],
+                'counterparty' => $data['counterparty'] ?? null,
+                'method' => $data['method'] ?? null,
+                'reference' => $data['reference'] ?? null,
+                'recorded_by' => $user->id,
+            ]);
+            $this->refreshLine($item);
+            $this->log($budget, $user, 'entry_recorded', $this->entrySentence('Recorded', $entry, $item));
+
+            return $entry->fresh(['lineItem.budgetLine', 'recorder']);
+        });
+    }
+
+    public function changeEntry(User $user, BudgetEntry $entry, array $data): BudgetEntry
+    {
+        $budget = $entry->budget;
+        $this->assertCanRecord($budget, $data['entry_date'] ?? $entry->entry_date->toDateString());
+
+        return DB::transaction(function () use ($user, $entry, $data, $budget) {
+            $oldItem = $entry->lineItem;
+            $item = isset($data['budget_line_id']) ? $this->itemFor($budget, (int) $data['budget_line_id'], $user) : $oldItem;
+            $before = $this->entrySentence('', $entry, $oldItem);
+            $entry->fill([
+                'budget_line_item_id' => $item->id,
+                'direction' => $item->budgetCategory?->slug === 'income' ? 'in' : 'out',
+                'amount' => isset($data['amount']) ? round((float) $data['amount'], 2) : $entry->amount,
+                'entry_date' => $data['entry_date'] ?? $entry->entry_date,
+                'description' => $data['description'] ?? $entry->description,
+                'counterparty' => array_key_exists('counterparty', $data) ? $data['counterparty'] : $entry->counterparty,
+                'method' => array_key_exists('method', $data) ? $data['method'] : $entry->method,
+                'reference' => array_key_exists('reference', $data) ? $data['reference'] : $entry->reference,
+                'updated_by' => $user->id,
+            ])->save();
+            $this->refreshLine($item);
+            if ($oldItem && $oldItem->id !== $item->id) {
+                $this->refreshLine($oldItem);
+            }
+            $this->log($budget, $user, 'entry_changed', 'Changed an entry: '.trim($before).' → '.trim($this->entrySentence('', $entry, $item)));
+
+            return $entry->fresh(['lineItem.budgetLine', 'recorder']);
+        });
+    }
+
+    public function removeEntry(User $user, BudgetEntry $entry): void
+    {
+        $this->assertOpen($entry->budget);
+        DB::transaction(function () use ($user, $entry) {
+            $item = $entry->lineItem;
+            $entry->update(['updated_by' => $user->id]);
+            $entry->delete();
+            $this->refreshLine($item);
+            $this->log($entry->budget, $user, 'entry_removed', $this->entrySentence('Removed', $entry, $item));
+        });
+    }
+
+    public function restoreEntry(User $user, BudgetEntry $entry): BudgetEntry
+    {
+        $this->assertOpen($entry->budget);
+
+        return DB::transaction(function () use ($user, $entry) {
+            $item = BudgetLineItem::withTrashed()->find($entry->budget_line_item_id);
+            if ($item?->trashed()) {
+                $item->restore();
+            }
+            $entry->restore();
+            $this->refreshLine($item);
+            $this->log($entry->budget, $user, 'entry_restored', $this->entrySentence('Brought back', $entry, $item));
+
+            return $entry->fresh(['lineItem.budgetLine', 'recorder']);
+        });
+    }
+
+    /** A line's received/spent amount is the sum of its entries; then the budget's totals follow. */
+    public function refreshLine(?BudgetLineItem $item): void
+    {
+        if (! $item) {
+            return;
+        }
+        $item->actual_amount = BudgetEntry::where('budget_line_item_id', $item->id)->sum('amount');
+        $item->saveQuietly();
+        $this->recalculate(Budget::find($item->budget_id));
+    }
+
+    private function assertCanRecord(Budget $budget, string $date): void
+    {
+        if ($budget->status === 'draft') {
+            throw ValidationException::withMessages(['budget_id' => ["The {$budget->period_label} budget is still a draft. Start using it first."]]);
+        }
+        $this->assertOpen($budget);
+        $day = CarbonImmutable::parse($date)->startOfDay();
+        if ($day->lt($budget->start_date) || $day->gt($budget->end_date)) {
+            throw ValidationException::withMessages(['entry_date' => ["The date must be within {$budget->period_label}."]]);
+        }
+    }
+
+    private function assertOpen(Budget $budget): void
+    {
+        if ($budget->status === 'closed') {
+            throw ValidationException::withMessages(['budget_id' => ["The {$budget->period_label} budget is closed. Reopen it to change its money."]]);
+        }
+    }
+
+    /** The budget's line for this budget line - added as "unplanned" when the budget didn't plan it. */
+    private function itemFor(Budget $budget, int $lineId, User $user): BudgetLineItem
+    {
+        $item = BudgetLineItem::withTrashed()->with('budgetCategory')->where('budget_id', $budget->id)->where('budget_line_id', $lineId)->first();
+        if ($item) {
+            if ($item->trashed()) {
+                $item->restore();
+            }
+
+            return $item;
+        }
+        $line = $this->linesFor($budget->territory_type, (int) $budget->territory_id)->firstWhere('id', $lineId);
+        if (! $line) {
+            throw ValidationException::withMessages(['budget_line_id' => ['That line can\'t be used here.']]);
+        }
+        $item = BudgetLineItem::make([
+            'budget_id' => $budget->id,
+            'budget_line_id' => $line->id,
+            'budgeted_amount' => 0,
+            'actual_amount' => 0,
+            'is_unplanned' => true,
+            'created_by' => $user->id,
+        ]);
+        $item->budget_category_id = $line->budget_category_id;
+        $item->saveQuietly();
+        $this->log($budget, $user, 'updated', "Added {$line->name} as an unplanned line");
+
+        return $item->load('budgetCategory');
+    }
+
+    private function entrySentence(string $verb, BudgetEntry $entry, ?BudgetLineItem $item): string
+    {
+        $what = $entry->direction === 'in' ? 'received' : 'spent';
+        $line = $item?->budgetLine?->name ?? 'a line';
+
+        return trim("{$verb} KES ".number_format((float) $entry->amount, 2)." {$what} on {$line} ({$entry->description}, ".CarbonImmutable::parse($entry->entry_date)->format('j M').')');
+    }
+
     /** Totals, worked out once from the lines: planned and actual, money in and out, money left. */
     public function recalculate(Budget $budget): void
     {
@@ -236,6 +410,7 @@ final class BudgetBook
             }
             $item->budget_category_id = $lines[$lineId]->budget_category_id;
             $item->budgeted_amount = $amount;
+            $item->is_unplanned = false; // it's planned now
             $item->updated_by = $user->id;
             $item->saveQuietly();
         }

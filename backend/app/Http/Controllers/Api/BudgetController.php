@@ -107,6 +107,33 @@ class BudgetController extends Controller
         return $lines;
     }
 
+    /**
+     * The Overview: planned vs received/spent for a month or a year of a
+     * place - your own, or (read-only) one below with ?territory_id=.
+     */
+    public function dashboard(Request $request): JsonResponse
+    {
+        $request->validate(['year' => 'nullable|integer|min:2000|max:2100', 'month' => 'nullable|integer|between:1,12']);
+        $place = BudgetAccess::place($request->user(), $request->integer('territory_id') ?: null);
+        if (! $place) {
+            return $this->forbidden('You can only see your own budgets, or those of places below you.');
+        }
+        $year = $request->integer('year') ?: (int) now()->year;
+        $month = $request->filled('month') ? $request->integer('month') : null;
+        $data = (new \App\Reports\Budget\BudgetData($place['type'], $place['id'], $year, $month))->dashboard();
+
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'data' => [
+                ...$data,
+                'place' => $this->placeInfo($place),
+                'view_only' => ! BudgetAccess::isOwn($request->user(), $place['type'], $place['id']) && ! $request->user()->hasGlobalAccess(),
+                'can_record' => BudgetAccess::isOwn($request->user(), $place['type'], $place['id']) ? BudgetAccess::can($request->user(), 'record') : $request->user()->hasGlobalAccess(),
+            ],
+        ]);
+    }
+
     /** What the New budget form needs: usable lines, periods already taken, and last budget's amounts to copy. */
     public function form(Request $request): JsonResponse
     {
@@ -365,6 +392,7 @@ class BudgetController extends Controller
                 'close' => $own && $budget->status === 'active',
                 'reopen' => $own && $budget->status === 'closed',
                 'delete' => $own && $budget->status === 'draft',
+                'record' => $budget->status === 'active' && BudgetAccess::canWrite($user, $budget, 'record'),
             ],
         ];
     }

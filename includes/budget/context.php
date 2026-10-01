@@ -22,11 +22,17 @@ const BUDGET_LEVELS = [
 /**
  * Check the page's permission and build its context.
  * @param string $level church | region | diocese
- * @param string $needs read | prepare
+ * @param string $needs read | prepare (budgets), overview, spending
  */
 function budgetPageContext(string $level, string $needs = 'read'): array
 {
-    requirePermission("{$level}.budgets.budgets.{$needs}");
+    $permission = [
+        'read' => 'budgets.budgets.read',
+        'prepare' => 'budgets.budgets.prepare',
+        'overview' => 'budgets.overview.read',
+        'spending' => 'budgets.spending.read',
+    ][$needs];
+    requirePermission("{$level}.{$permission}");
 
     $role = getCurrentRole() ?? [];
     $can = fn (string $permission) => hasGlobalAccess() || hasPermission("{$level}.{$permission}");
@@ -44,6 +50,7 @@ function budgetPageContext(string $level, string $needs = 'read'): array
             'prepare' => $can('budgets.budgets.prepare'),
             'export' => $can('budgets.budgets.export'),
             'below' => $level !== 'church' && $can('budgets.below.read'),
+            'record' => $can('budgets.spending.record'),
         ],
     ];
 }
@@ -60,8 +67,8 @@ function budgetPageStyles(bool $withTables = false): void
     echo '<link href="' . $v('assets/css/styles.min.css') . '" rel="stylesheet" />' . "\n";
 }
 
-/** The scripts every budget page loads, then the page's own. */
-function budgetPageScripts(string $pageScript, bool $withTables = false): void
+/** The scripts every budget page loads, then the page's own (one path, or several). */
+function budgetPageScripts(string|array $pageScript, bool $withTables = false): void
 {
     $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
     $base = [
@@ -87,7 +94,7 @@ function budgetPageScripts(string $pageScript, bool $withTables = false): void
             echo '<script src="' . SITE_URL . "/{$src}\"></script>\n";
         }
     }
-    foreach (['assets/js/pages/demographics/api-handler.js', 'assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/budgets/api.js', 'assets/js/pages/budgets/ui.js', $pageScript] as $src) {
+    foreach (['assets/js/pages/demographics/api-handler.js', 'assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/budgets/api.js', 'assets/js/pages/budgets/ui.js', ...(array) $pageScript] as $src) {
         echo '<script src="' . $v($src) . '"></script>' . "\n";
     }
 }

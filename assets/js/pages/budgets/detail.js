@@ -33,6 +33,59 @@ const BudgetsDetail = (function () {
     }
     render(res.data);
     loadHistory();
+    loadSpending();
+  }
+
+  /** After money is recorded, changed or removed: fresh figures, entries and history. */
+  async function refresh() {
+    const res = await BudgetsAPI.get(id);
+    if (res.ok) render(res.data);
+    loadHistory();
+    loadSpending();
+  }
+
+  // ------------------------------------------------------------------ spending
+
+  async function loadSpending() {
+    const el = document.getElementById("budgetSpending");
+    const res = await BudgetsAPI.entries({ budget_id: id, territory_id: d?.view_only ? d.budget.place.id : "" });
+    const rows = res.ok ? res.data || [] : [];
+    document.querySelector('[data-tab-figure="spending"]').textContent = `${rows.length} ${rows.length === 1 ? "entry" : "entries"}`;
+    if (res.ok) {
+      document.getElementById("spendingChips").innerHTML = `
+        <span class="soft-chip soft-success">In ${B.shortMoney(res.body.stats.in)}</span>
+        <span class="soft-chip soft-danger">Out ${B.shortMoney(res.body.stats.out)}</span>`;
+    }
+    if (!rows.length) {
+      el.innerHTML = `<div class="list-empty py-4"><span class="list-empty-icon bg-primary text-white"><i class="ri-exchange-dollar-line"></i></span>
+        <div class="fw-semibold mt-2">Nothing recorded yet</div>
+        <div class="fs-12">${d?.can?.record ? "Press Record money when money comes in or goes out." : d?.budget?.status === "draft" ? "Start using the budget to record money against it." : ""}</div></div>`;
+      return;
+    }
+    const canChange = !!d?.can?.record;
+    el.innerHTML = `<ul class="budget-recent">${rows
+      .map((e) => {
+        const date = new Date(`${e.entry_date}T00:00:00`);
+        const isIn = e.direction === "in";
+        return `
+          <li data-entry="${e.id}" class="${canChange ? "is-clickable" : ""}">
+            <span class="budget-recent-date"><b>${date.getDate()}</b><small>${date.toLocaleDateString("en-GB", { month: "short" })}</small></span>
+            <span class="flex-fill" style="min-width: 0;">
+              <span class="d-block fw-semibold text-truncate">${B.esc(e.description)}</span>
+              <span class="d-block fs-12 text-truncate">${B.esc(e.line || "")}${e.counterparty ? ` · ${B.esc(e.counterparty)}` : ""}${e.recorded_by ? ` · ${B.esc(e.recorded_by)}` : ""}</span>
+            </span>
+            <span class="fw-bold ${isIn ? "text-success" : "text-danger"}">${isIn ? "+" : "−"}${B.amount(e.amount)}</span>
+          </li>`;
+      })
+      .join("")}</ul>`;
+    if (canChange) {
+      el.querySelectorAll("[data-entry]").forEach((li) =>
+        li.addEventListener("click", () => {
+          const entry = rows.find((r) => r.id === Number(li.dataset.entry));
+          BudgetsEntryModal.open({ budgetId: id, entry, onSaved: refresh });
+        }),
+      );
+    }
   }
 
   function render(data) {
@@ -59,6 +112,7 @@ const BudgetsDetail = (function () {
     document.getElementById("closeBtn").hidden = !can.close;
     document.getElementById("reopenBtn").hidden = !can.reopen;
     document.getElementById("deleteBtn").hidden = !can.delete;
+    document.getElementById("recordBtn").hidden = !can.record;
 
     const viewOnly = document.getElementById("viewOnlyBanner");
     viewOnly.classList.toggle("d-none", !d.view_only);
@@ -242,6 +296,10 @@ const BudgetsDetail = (function () {
     reopened: ["ri-lock-unlock-line", "purple"],
     deleted: ["ri-delete-bin-line", "danger"],
     retired: ["ri-archive-line", "secondary"],
+    entry_recorded: ["ri-exchange-dollar-line", "success"],
+    entry_changed: ["ri-edit-line", "warning"],
+    entry_removed: ["ri-delete-bin-line", "danger"],
+    entry_restored: ["ri-arrow-go-back-line", "purple"],
   };
 
   async function loadHistory() {
@@ -271,6 +329,7 @@ const BudgetsDetail = (function () {
   // ------------------------------------------------------------------ actions
 
   function wireActions() {
+    document.getElementById("recordBtn").addEventListener("click", () => BudgetsEntryModal.open({ budgetId: id, onSaved: refresh }));
     const act = (btnId, call, confirm) => {
       document.getElementById(btnId).addEventListener("click", (e) => {
         const btn = e.currentTarget;

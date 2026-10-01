@@ -58,6 +58,7 @@ $breadcrumbs = [
                         <button type="button" class="btn btn-outline-primary" id="reopenBtn" hidden><i class="ri-lock-unlock-line me-1"></i>Reopen</button>
                         <a href="#" class="btn btn-outline-primary" id="editBtn" hidden><i class="ri-edit-line me-1"></i>Change</a>
                         <button type="button" class="btn btn-success" id="startBtn" hidden><i class="ri-play-circle-line me-1"></i>Start using</button>
+                        <button type="button" class="btn btn-primary" id="recordBtn" hidden><i class="ri-add-line me-1"></i>Record money</button>
                     </div>
                 </div>
 
@@ -104,6 +105,10 @@ $breadcrumbs = [
                         <span class="section-tab-icon bg-primary"><i class="ri-list-check-2"></i></span>
                         <span class="section-tab-text"><strong>Lines</strong><small data-tab-figure="lines">&nbsp;</small></span>
                     </button>
+                    <button class="nav-link section-tab" data-bs-toggle="tab" data-bs-target="#tab-spending" data-tab="spending" type="button" role="tab" aria-controls="tab-spending" aria-selected="false">
+                        <span class="section-tab-icon bg-success"><i class="ri-exchange-dollar-line"></i></span>
+                        <span class="section-tab-text"><strong>Spending</strong><small data-tab-figure="spending">&nbsp;</small></span>
+                    </button>
                     <button class="nav-link section-tab" data-bs-toggle="tab" data-bs-target="#tab-history" data-tab="history" type="button" role="tab" aria-controls="tab-history" aria-selected="false">
                         <span class="section-tab-icon bg-purple"><i class="ri-history-line"></i></span>
                         <span class="section-tab-text"><strong>History</strong><small data-tab-figure="history">&nbsp;</small></span>
@@ -143,6 +148,18 @@ $breadcrumbs = [
                             <div class="card-body" id="budgetNotes"></div>
                         </div>
                     </div>
+                    <div class="tab-pane fade" id="tab-spending" role="tabpanel">
+                        <div class="card custom-card">
+                            <div class="card-header justify-content-between flex-wrap gap-2">
+                                <div>
+                                    <div class="card-title">Money in and out</div>
+                                    <span class="card-subtitle-text" id="spendingSub">Everything recorded against this budget</span>
+                                </div>
+                                <div class="d-flex flex-wrap gap-1" id="spendingChips"></div>
+                            </div>
+                            <div class="card-body" id="budgetSpending"><span class="skel" style="height: 8rem; display: block;"></span></div>
+                        </div>
+                    </div>
                     <div class="tab-pane fade" id="tab-history" role="tabpanel">
                         <div class="card custom-card">
                             <div class="card-header">
@@ -165,7 +182,7 @@ $breadcrumbs = [
     <div class="scrollToTop"><span class="arrow"><i class="ri-arrow-up-s-fill fs-20"></i></span></div>
     <div id="responsive-overlay"></div>
 
-    <?php budgetPageScripts('assets/js/pages/budgets/detail.js') ?>
+    <?php budgetPageScripts(['assets/js/pages/budgets/entry-modal.js', 'assets/js/pages/budgets/detail.js']) ?>
     <script>document.addEventListener('DOMContentLoaded', () => window.BudgetsDetail.init());</script>
 </body>
 
