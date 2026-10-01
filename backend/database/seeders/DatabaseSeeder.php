@@ -195,6 +195,13 @@ class DatabaseSeeder extends Seeder
             // page, mirroring Attendance Settings > Gathering Types)
             // ==========================================
             AddDemographicsSettingsSubmoduleSeeder::class,
+
+            // ==========================================
+            // PHASE 26: Role Management / Permissions / Modules / Module
+            // Groups pages on the System Administration menu (built but
+            // never seeded), each behind its own admin-only permission
+            // ==========================================
+            AddSystemAdministrationRolePagesSeeder::class,
         ]);
     }
 }
