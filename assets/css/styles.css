@@ -28904,6 +28904,37 @@ a:hover {
     line-height: 1;
 }
 
+/* Long module names (2026-10-01): "Resource Allocation Management" and
+   friends are wider than the ~150px beside the icon and chevron, and no
+   readable font size fits them. The menu <ul> is a flex item of
+   .main-menu-container, so its default min-width:auto let it grow to the
+   longest label (345px in a 263px sidebar) - which is why the label's own
+   ellipsis never kicked in and the sidebar scrolled sideways. Pin the
+   menu to the sidebar's width and let a long name wrap to a second line
+   instead, so every name stays fully readable. */
+.app-sidebar .main-menu {
+    min-width: 0;
+    width: 100%;
+}
+
+.app-sidebar .slide {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.app-sidebar .side-menu__item {
+    min-width: 0;
+}
+
+.app-sidebar .side-menu__label {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.3;
+}
+
+#sidebar-scroll {
+    overflow-x: hidden;
+}
+
 .side-menu__label {
     font-size: 0.825rem;
     font-weight: 500;

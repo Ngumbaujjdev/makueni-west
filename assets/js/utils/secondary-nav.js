@@ -150,12 +150,17 @@
                 // in the sidebar either (see sidebar.php's renderSubmodules) -
                 // surface it as a dropdown of its sub-submodules instead of
                 // linking straight to a path that may not resolve.
+                // Popper's "fixed" strategy: the tab row is overflow-x:auto
+                // (one scrollable row on a phone), which also clips on the
+                // y axis - an absolutely positioned menu showed only its
+                // top ~6px. A fixed menu is placed against the viewport, so
+                // the row's scroll box can't cut it off.
                 const isActive = pathsMatch(currentPath, ownHref) ||
                     submodule.sub_submodules.some(sub => pathsMatch(currentPath, formatPath(sub.path)));
 
                 html += `
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle${isActive ? ' active' : ''}" href="javascript:void(0);" data-bs-toggle="dropdown" aria-expanded="false">
+                        <a class="nav-link dropdown-toggle${isActive ? ' active' : ''}" href="javascript:void(0);" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false">
                             ${escapeHtml(submodule.title)}
                         </a>
                         <ul class="dropdown-menu">
