@@ -123,9 +123,18 @@ const BudgetsUI = (function () {
     [/mission|evangel|outreach/i, "ri-seedling-line"],
   ];
   const lineIcon = (name, side) => (LINE_ICONS.find(([re]) => re.test(name || "")) || [, side === "in" ? "ri-arrow-down-circle-line" : "ri-arrow-up-circle-line"])[1];
-  /** Money in lines are green; money out lines take turns through the category colours. */
-  const OUT_COLORS = ["danger", "warning", "purple", "pink", "primary", "secondary"];
-  const lineColor = (side, index) => (side === "in" ? "success" : OUT_COLORS[index % OUT_COLORS.length]);
+  /**
+   * Every line gets its own colour from the category palette - money in
+   * starts from green, money out from red - so a list of lines never reads
+   * as one colour. The same line keeps the same colour on every page.
+   */
+  const LINE_COLORS = {
+    in: ["success", "primary", "purple", "pink", "warning", "danger"],
+    out: ["danger", "warning", "purple", "pink", "primary", "success"],
+  };
+  const lineColor = (side, index) => LINE_COLORS[side === "in" ? "in" : "out"][index % 6];
+  /** Gold tiles take dark icons, like the Demographics number tiles. */
+  const tileText = (color) => (color === "warning" || color === "secondary" ? "text-dark" : "text-white");
 
   const periodLabel = (year, month) => (month ? `${MONTHS[month - 1]} ${year}` : `Whole of ${year}`);
 
@@ -195,7 +204,7 @@ const BudgetsUI = (function () {
     return state;
   }
 
-    return { CTX, MONTHS, money, amount, short, shortMoney, delta, STATUS, statusPill, moneyDonut, lineIcon, lineColor, periodLabel, periodControls, esc, url, flash, showFlash };
+    return { CTX, MONTHS, money, amount, short, shortMoney, delta, STATUS, statusPill, moneyDonut, lineIcon, lineColor, tileText, periodLabel, periodControls, esc, url, flash, showFlash };
 })();
 
 window.BudgetsUI = BudgetsUI;

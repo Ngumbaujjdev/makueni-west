@@ -34627,3 +34627,85 @@ a.budget-month-tile:hover {
     width: 100%;
   }
 }
+
+/* Budget form - the Demographics colours: status chips, line tiles, a colourful preview */
+.period-chip.is-closed { background: rgba(var(--purple-rgb), 0.06); }
+.period-chip.is-closed .period-chip-status { color: rgb(var(--purple-rgb)); }
+.period-chip.is-open .period-chip-status { color: var(--default-text-color); }
+.intake-prefill.is-done {
+  border-color: rgba(var(--success-rgb), 0.45);
+  background: rgba(var(--success-rgb), 0.07);
+}
+.intake-prefill.is-done .intake-prefill-icon {
+  background: rgb(var(--success-rgb));
+}
+.budget-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.budget-tile {
+  height: auto;
+}
+.budget-tile.is-extra,
+.budget-tile.is-filtered {
+  display: none;
+}
+.budget-tile.is-filled {
+  border-color: rgba(var(--tile-rgb), 0.55);
+  background: rgba(var(--tile-rgb), 0.07);
+}
+.budget-tile .num-tile-label {
+  align-items: flex-start;
+  margin-bottom: 0.6rem;
+}
+.budget-tile-name {
+  min-width: 0;
+  font-weight: 600;
+  color: var(--v2-heading);
+}
+.budget-tile-name small {
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 400;
+  color: var(--default-text-color);
+}
+.budget-tile .num-tile-foot {
+  margin-top: 0.4rem;
+}
+.budget-preview-totals {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.budget-preview-totals .preview-change {
+  background: rgba(var(--primary-rgb), 0.04);
+}
+.budget-preview-totals .preview-change-value {
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+.budget-preview-list li {
+  padding: 0.4rem 0;
+  font-size: 0.82rem;
+}
+.budget-preview-list .composition-name {
+  min-width: 0;
+}
+.budget-preview-list li.is-empty .composition-value {
+  font-weight: 600;
+}
+.budget-review-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  margin-inline-end: 0.55rem;
+  border-radius: 0.4rem;
+  font-size: 0.85rem;
+  vertical-align: middle;
+}
+@media (max-width: 767.98px) {
+  .budget-tile-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
