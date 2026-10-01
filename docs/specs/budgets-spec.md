@@ -221,6 +221,23 @@ PDF and Excel, through the shared report engine (`docs/specs/reports-spec.md`): 
 | `budget.spending` | Money in and out | the same | Money in, then money out: date · what for · line · from/to · how · reference · recorded by · amount, with totals. |
 | `budget.statement` | Budget statement | one budget (`budget_id`), only from its own page | Its lines in and out, every entry recorded against it, and the latest 15 History sentences. |
 
+- **More reports (phase 2f):**
+
+  | Key | Title | What's in it |
+  |---|---|---|
+  | `budget.lines` | Line by line | Every line: planned · used · % · over or under · entries · last entry |
+  | `budget.year` | Year at a glance | Year only: the 12 months, each month's budget, planned against received and spent, and money left |
+  | `budget.compare` | Compare two periods | A month or year next to the one before: every line, and the change in KES and % |
+  | `budget.exceptions` | Unplanned and over-plan | Lines over plan, and money on unplanned lines |
+  | `budget.line` | Budget line | One line of one budget (`budget_id` + `line_id`, only from the line's page): every amount on it, and when it moved |
+
+- **Charts in the PDF:** `ReportChart` (`bars`: grouped columns; `hbars`: planned soft behind actual, red when over). They are drawn by `DioceseReportPdf` under "At a glance"; two line charts sit side by side, and Excel keeps the tables.
+  - Summary: money by month (a year) and the top lines, in and out.
+  - Statement and Line by line: the lines.
+  - Year at a glance and Money in and out: money by month.
+  - Compare: this period against the one before.
+  - Unplanned and over-plan: lines over plan.
+- **Export window:** "Whole year" is first and the default; a month is preselected only when the page shows one. Year at a glance has no month to pick.
 - **Money** is a `ReportColumn::money()` column: 2 decimals in the PDF and preview, numbers formatted `#,##0.00` in Excel (totals stay `=SUM()`).
 - **Who can export:**
   - the acting role needs `{level}.budgets.budgets.export`, for the place it acts for or a place below (`BudgetAccess::canView`), checked by `BudgetReport::authorize()`;
