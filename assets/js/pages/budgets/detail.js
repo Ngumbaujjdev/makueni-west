@@ -17,6 +17,7 @@ const BudgetsDetail = (function () {
   let d = null;
   let whereSide = "out";
   let donut = null;
+  let monthsChart = null;
 
   async function init() {
     B.showFlash();
@@ -62,9 +63,46 @@ const BudgetsDetail = (function () {
         <div class="fs-12">${d?.can?.record ? "Press Record money when money comes in or goes out." : d?.budget?.status === "draft" ? "Start using the budget to record money against it." : ""}</div></div>`;
       return;
     }
-    const canChange = !!d?.can?.record;
     const last = rows[0] ? new Date(`${rows[0].entry_date}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "-";
     const net = res.body.stats.in - res.body.stats.out;
+    const row = (e) => {
+      const date = new Date(`${e.entry_date}T00:00:00`);
+      const isIn = e.direction === "in";
+      return `
+        <li class="is-clickable" data-href="${B.url("entry.php", { id: e.id })}">
+          <span class="budget-recent-date is-${isIn ? "in" : "out"}"><b>${date.getDate()}</b><small>${date.toLocaleDateString("en-GB", { month: "short" })}</small></span>
+          <span class="flex-fill" style="min-width: 0;">
+            <span class="d-block fw-semibold text-truncate">${B.esc(e.description)}</span>
+            <span class="d-block fs-12 text-truncate">${B.lineDot(e.line)}${e.counterparty ? ` · ${B.esc(e.counterparty)}` : ""}${e.recorded_by ? ` · ${B.esc(e.recorded_by)}` : ""}</span>
+          </span>
+          <span class="fw-bold ${isIn ? "text-success" : "text-danger"}">${isIn ? "+" : "−"}${B.amount(e.amount)}</span>
+        </li>`;
+    };
+    // A whole-year budget: entries under their month, with the month's money in and out.
+    let list;
+    if (d?.budget && !d.budget.period_month) {
+      const groups = [];
+      rows.forEach((e) => {
+        const key = e.entry_date.slice(0, 7);
+        if (!groups.length || groups[groups.length - 1].key !== key) groups.push({ key, items: [] });
+        groups[groups.length - 1].items.push(e);
+      });
+      list = groups
+        .map((g) => {
+          const inn = g.items.filter((e) => e.direction === "in").reduce((t, e) => t + e.amount, 0);
+          const out = g.items.filter((e) => e.direction === "out").reduce((t, e) => t + e.amount, 0);
+          const label = new Date(`${g.key}-01T00:00:00`).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+          return `
+            <div class="budget-month-group" data-month="${Number(g.key.slice(5))}">
+              <span class="fw-semibold">${label}</span>
+              <span class="fs-12">${g.items.length} ${g.items.length === 1 ? "entry" : "entries"}${inn ? ` · <b class="text-success">+${B.amount(inn)}</b>` : ""}${out ? ` · <b class="text-danger">−${B.amount(out)}</b>` : ""}</span>
+            </div>
+            <ul class="budget-recent">${g.items.map(row).join("")}</ul>`;
+        })
+        .join("");
+    } else {
+      list = `<ul class="budget-recent">${rows.map(row).join("")}</ul>`;
+    }
     el.innerHTML = `
       <div class="budget-items-strip soft-primary mx-n3 mt-n3 mb-2">
         <div><small>Money in</small><b class="text-success">${B.money(res.body.stats.in)}</b></div>
@@ -72,30 +110,10 @@ const BudgetsDetail = (function () {
         <div><small>Difference</small><b class="${net < 0 ? "text-danger" : ""}">${B.money(net)}</b></div>
         <div><small>Last recorded</small><b>${last}</b></div>
       </div>
-      <ul class="budget-recent">${rows
-      .map((e) => {
-        const date = new Date(`${e.entry_date}T00:00:00`);
-        const isIn = e.direction === "in";
-        return `
-          <li data-entry="${e.id}" class="${canChange ? "is-clickable" : ""}">
-            <span class="budget-recent-date is-${isIn ? "in" : "out"}"><b>${date.getDate()}</b><small>${date.toLocaleDateString("en-GB", { month: "short" })}</small></span>
-            <span class="flex-fill" style="min-width: 0;">
-              <span class="d-block fw-semibold text-truncate">${B.esc(e.description)}</span>
-              <span class="d-block fs-12 text-truncate">${B.lineDot(e.line)}${e.counterparty ? ` · ${B.esc(e.counterparty)}` : ""}${e.recorded_by ? ` · ${B.esc(e.recorded_by)}` : ""}</span>
-            </span>
-            <span class="fw-bold ${isIn ? "text-success" : "text-danger"}">${isIn ? "+" : "−"}${B.amount(e.amount)}</span>
-          </li>`;
-      })
-      .join("")}</ul>`;
-    if (canChange) {
-      el.querySelectorAll("[data-entry]").forEach((li) =>
-        li.addEventListener("click", () => {
-          const entry = rows.find((r) => r.id === Number(li.dataset.entry));
-          BudgetsEntryModal.open({ budgetId: id, entry, onSaved: refresh });
-        }),
-      );
-    }
+      ${list}`;
+    el.querySelectorAll("li[data-href]").forEach((li) => li.addEventListener("click", () => (window.location.href = li.dataset.href)));
   }
+
 
   function render(data) {
     d = data;
@@ -137,6 +155,7 @@ const BudgetsDetail = (function () {
 
     B.syncExport({ key: "budget.statement", territoryId: b.place?.id, budgetId: b.id, title: `${b.period_label} budget` });
     renderStats(b);
+    renderMonths();
     renderWhere();
     renderStatusCard(b);
     renderLines("in", d.lines.in);
@@ -146,6 +165,54 @@ const BudgetsDetail = (function () {
     const notesCard = document.getElementById("notesCard");
     notesCard.hidden = !b.notes;
     if (b.notes) document.getElementById("budgetNotes").textContent = b.notes;
+  }
+
+  /** A whole-year budget: money in and out per month, by the date each amount was recorded. */
+  function renderMonths() {
+    const card = document.getElementById("monthsCard");
+    const months = d.months;
+    card.hidden = !months;
+    monthsChart?.destroy?.();
+    if (!months) return;
+    const inT = months.reduce((t, m) => t + m.in, 0);
+    const outT = months.reduce((t, m) => t + m.out, 0);
+    const busy = months.filter((m) => m.count).length;
+    document.getElementById("monthsChips").innerHTML = `
+      <span class="soft-chip soft-success">In ${B.shortMoney(inT)}</span>
+      <span class="soft-chip soft-danger">Out ${B.shortMoney(outT)}</span>
+      <span class="soft-chip soft-primary">${busy} of 12 months with money</span>`;
+    monthsChart = UI.renderTrendChart("monthsChart", {
+      categories: months.map((m) => m.label),
+      series: [
+        { name: "Received", data: months.map((m) => m.in) },
+        { name: "Spent", data: months.map((m) => m.out) },
+      ],
+      type: "bar",
+      colors: [UI.cssColor("success"), UI.cssColor("danger")],
+      yFormat: (v, full) => (full ? B.money(v) : B.short(v)),
+      extra: { chart: { type: "bar", height: 240, toolbar: { show: false }, foreColor: UI.chartTextColor() } },
+    });
+    document.getElementById("monthsStrip").innerHTML = months
+      .map(
+        (m) => `
+        <button type="button" class="budget-month-cell${m.count ? " has-money" : ""}" data-month="${m.month}" ${m.count ? "" : "disabled"}>
+          <span>${m.label}</span>
+          <b class="${m.in - m.out < 0 ? "text-danger" : m.count ? "text-success" : ""}">${m.count ? B.short(m.in - m.out) : "-"}</b>
+          <small>${m.count ? `${m.count} ${m.count === 1 ? "entry" : "entries"}` : "nothing"}</small>
+        </button>`,
+      )
+      .join("");
+    document.querySelectorAll("#monthsStrip [data-month]").forEach((btn) =>
+      btn.addEventListener("click", async () => {
+        document.querySelector('#budgetTabs [data-tab="spending"]')?.click();
+        setTimeout(() => {
+          const group = document.querySelector(`#budgetSpending .budget-month-group[data-month="${btn.dataset.month}"]`);
+          group?.scrollIntoView({ behavior: "smooth", block: "start" });
+          group?.classList.add("is-flash");
+          setTimeout(() => group?.classList.remove("is-flash"), 1600);
+        }, 350);
+      }),
+    );
   }
 
   function renderStats(b) {
@@ -284,11 +351,11 @@ const BudgetsDetail = (function () {
         const color = isIn ? "success" : over ? "danger" : pct >= 80 ? "warning" : "primary";
         const leftText = over ? `<span class="text-danger">Over ${B.money(l.actual - l.planned)}</span>` : B.money(Math.max(l.left, 0));
         return `
-          <li class="budget-item">
+          <li class="budget-item is-clickable" data-href="${B.url("line.php", { budget: id, line: l.line_id })}" title="Open ${B.esc(l.name)}">
             <span class="avatar avatar-md bg-${B.lineColor(side, i)} ${B.tileText(B.lineColor(side, i))} flex-shrink-0"><i class="${B.lineIcon(l.name, side)}"></i></span>
             <div class="budget-item-main">
               <div class="budget-item-top">
-                <span class="budget-item-name">${B.esc(l.name)}${l.is_unplanned ? ' <span class="soft-chip soft-warning">Unplanned</span>' : ""}${l.is_own ? ' <span class="soft-chip soft-primary">Ours</span>' : ""}${changeChip(l)}</span>
+                <span class="budget-item-name"><a href="${B.url("line.php", { budget: id, line: l.line_id })}" class="text-reset">${B.esc(l.name)}</a>${l.is_unplanned ? ' <span class="soft-chip soft-warning">Unplanned</span>' : ""}${l.is_own ? ' <span class="soft-chip soft-primary">Ours</span>' : ""}${changeChip(l)}</span>
                 ${l.actual ? `<span class="badge bg-${color}">${pct}%</span>` : `<span class="soft-chip soft-primary">0%</span>`}
               </div>
               <div class="count-bar"><span class="bg-${color}" style="width: ${Math.min(pct, 100)}%"></span></div>
@@ -310,6 +377,11 @@ const BudgetsDetail = (function () {
         <span>Planned <b>${B.money(planned)}</b> · ${verb} <b>${B.money(actual)}</b></span>
       </div>`;
     el.querySelector("[data-record-side]")?.addEventListener("click", () => BudgetsEntryModal.open({ budgetId: id, direction: side, onSaved: refresh }));
+    el.querySelectorAll(".budget-item[data-href]").forEach((li) =>
+      li.addEventListener("click", (ev) => {
+        if (!ev.target.closest("a, button")) window.location.href = li.dataset.href;
+      }),
+    );
   }
 
   /** A small "+10% vs Dec" / "New" chip against the budget before. */
@@ -324,20 +396,6 @@ const BudgetsDetail = (function () {
   }
 
   // ------------------------------------------------------------------ history
-
-  const HISTORY_ICONS = {
-    created: ["ri-add-line", "success"],
-    updated: ["ri-edit-line", "primary"],
-    started: ["ri-play-circle-line", "success"],
-    closed: ["ri-lock-line", "secondary"],
-    reopened: ["ri-lock-unlock-line", "purple"],
-    deleted: ["ri-delete-bin-line", "danger"],
-    retired: ["ri-archive-line", "secondary"],
-    entry_recorded: ["ri-exchange-dollar-line", "success"],
-    entry_changed: ["ri-edit-line", "warning"],
-    entry_removed: ["ri-delete-bin-line", "danger"],
-    entry_restored: ["ri-arrow-go-back-line", "purple"],
-  };
 
   async function loadHistory() {
     const el = document.getElementById("budgetHistory");
@@ -357,18 +415,7 @@ const BudgetsDetail = (function () {
         <div><small>Money entries</small><b>${items.length - changes}</b></div>
         <div><small>Latest</small><b>${B.esc(items[0].when_label || "-")}</b></div>
       </div>
-      <ul class="record-history">${items
-      .map(
-        (h) => `
-        <li class="is-${h.action === "created" ? "created" : "updated"}">
-          <span class="record-history-dot bg-${(HISTORY_ICONS[h.action] || [, "primary"])[1]} text-white"><i class="${(HISTORY_ICONS[h.action] || ["ri-edit-line"])[0]}"></i></span>
-          <div>
-            <strong>${B.esc(h.description)}</strong>
-            <small>${h.who ? `${B.esc(h.who)} · ` : ""}${B.esc(h.when_label || "")}</small>
-          </div>
-        </li>`,
-      )
-      .join("")}</ul>`;
+      ${B.timeline(items)}`;
   }
 
   // ------------------------------------------------------------------ actions

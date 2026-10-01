@@ -426,7 +426,7 @@ const BudgetsOverview = (function () {
     return `
       <div class="budget-progress-row">
         <div class="budget-progress-top">
-          <span class="fw-semibold">${B.esc(l.name)}${l.is_unplanned ? ' <span class="soft-chip soft-warning">Unplanned</span>' : ""}</span>
+          <span class="fw-semibold">${d.budget ? `<a href="${B.url("line.php", { budget: d.budget.id, line: l.line_id })}" class="text-reset">${B.esc(l.name)}</a>` : B.esc(l.name)}${l.is_unplanned ? ' <span class="soft-chip soft-warning">Unplanned</span>' : ""}</span>
           <span class="fw-semibold">${B.money(l.planned)}</span>
         </div>
         <div class="count-bar"><span class="bg-${color}" style="width: ${Math.min(pct, 100)}%"></span></div>
@@ -448,8 +448,8 @@ const BudgetsOverview = (function () {
     el.innerHTML = `<ul class="budget-recent">${d.recent.map((e) => recentRow(e)).join("")}</ul>`;
     el.querySelectorAll("[data-entry]").forEach((row) =>
       row.addEventListener("click", () => {
-        const entry = d.recent.find((e) => e.id === Number(row.dataset.entry));
-        if (entry && d.can_record) BudgetsEntryModal.open({ budgetId: entry.budget_id, entry, onSaved: () => load() });
+        // Each amount has its own page (Change and Delete are there).
+        window.location.href = B.url("entry.php", { id: row.dataset.entry });
       }),
     );
   }
@@ -458,7 +458,7 @@ const BudgetsOverview = (function () {
     const date = new Date(`${e.entry_date}T00:00:00`);
     const isIn = e.direction === "in";
     return `
-      <li data-entry="${e.id}" class="${d.can_record ? "is-clickable" : ""}">
+      <li data-entry="${e.id}" class="is-clickable">
         <span class="budget-recent-date is-${isIn ? "in" : "out"}"><b>${date.getDate()}</b><small>${date.toLocaleDateString("en-GB", { month: "short" })}</small></span>
         <span class="flex-fill" style="min-width: 0;">
           <span class="d-block fw-semibold text-truncate">${B.esc(e.description)}</span>

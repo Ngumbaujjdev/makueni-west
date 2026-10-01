@@ -164,6 +164,75 @@ const BudgetsUI = (function () {
     });
   }
 
+  // ------------------------------------------------------------ the timeline
+
+  /** What each kind of History event looks like: its colour and icon. */
+  const EVENTS = {
+    created: ["primary", "ri-add-line"],
+    updated: ["warning", "ri-edit-2-line"],
+    started: ["success", "ri-play-line"],
+    closed: ["purple", "ri-lock-line"],
+    reopened: ["purple", "ri-lock-unlock-line"],
+    deleted: ["danger", "ri-delete-bin-line"],
+    retired: ["secondary", "ri-archive-line"],
+    entry_changed: ["warning", "ri-edit-2-line"],
+    entry_removed: ["danger", "ri-delete-bin-line"],
+    entry_restored: ["purple", "ri-arrow-go-back-line"],
+  };
+  function eventLook(h) {
+    if (h.action === "entry_recorded") return / received /.test(h.description) ? ["success", "ri-arrow-down-line"] : ["danger", "ri-arrow-up-line"];
+    return EVENTS[h.action] || ["primary", "ri-information-line"];
+  }
+
+  /** "Today", "Yesterday" or "31 Dec 2025" for a day. */
+  function dayLabel(date) {
+    const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const today = new Date();
+    const diff = Math.round((new Date(today.getFullYear(), today.getMonth(), today.getDate()) - day) / 86400000);
+    return diff === 0 ? "Today" : diff === 1 ? "Yesterday" : day.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  /**
+   * History as the template's "Recent Activity" (index-12, .crm-recent-activity):
+   * grouped by day, a coloured dot and dashed connector per event, the
+   * sentence with its amount in colour, who did it, and the time on the right.
+   * An event about one entry links to that entry's page.
+   */
+  function timeline(items) {
+    const groups = [];
+    items.forEach((h) => {
+      const when = h.when ? new Date(h.when) : null;
+      const label = when ? dayLabel(when) : "Earlier";
+      if (!groups.length || groups[groups.length - 1].label !== label) groups.push({ label, items: [] });
+      groups[groups.length - 1].items.push({ ...h, at: when });
+    });
+    return groups
+      .map(
+        (g) => `
+        <div class="budget-timeline-day">${esc(g.label)}</div>
+        <ul class="list-unstyled mb-3 crm-recent-activity budget-timeline">
+          ${g.items
+            .map((h) => {
+              const [color, icon] = eventLook(h);
+              // The amount stands out in the event's colour.
+              const text = esc(h.description).replace(/KES [\d,]+\.\d{2}/g, (m) => `<b class="text-${color === "warning" || color === "secondary" ? "body" : color}">${m}</b>`);
+              const inner = `
+                <div class="d-flex align-items-start gap-3">
+                  <span class="avatar avatar-xs avatar-rounded bg-${color} ${tileText(color)} flex-shrink-0"><i class="${icon}"></i></span>
+                  <div class="crm-timeline-content">
+                    <span class="d-block fw-semibold budget-timeline-text">${text}</span>
+                    <span class="d-block fs-12">${h.who ? esc(h.who) : "System"}${h.entry_id ? ' · <span class="text-primary fw-semibold">Open<i class="ri-arrow-right-s-line"></i></span>' : ""}</span>
+                  </div>
+                  <span class="budget-timeline-time">${h.at ? h.at.toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit", hour12: true }) : ""}</span>
+                </div>`;
+              return `<li class="crm-recent-activity-content" style="--tl-rgb: var(--${color}-rgb)">${h.entry_id ? `<a class="budget-timeline-link" href="${url("entry.php", { id: h.entry_id })}">${inner}</a>` : inner}</li>`;
+            })
+            .join("")}
+        </ul>`,
+      )
+      .join("");
+  }
+
   const periodLabel = (year, month) => (month ? `${MONTHS[month - 1]} ${year}` : `Whole of ${year}`);
 
   function esc(value) {
@@ -232,7 +301,7 @@ const BudgetsUI = (function () {
     return state;
   }
 
-    return { CTX, MONTHS, money, amount, short, shortMoney, delta, STATUS, statusPill, moneyDonut, lineIcon, lineColor, tileText, METHODS, methodChip, lineDot, syncExport, periodLabel, periodControls, esc, url, flash, showFlash };
+    return { CTX, MONTHS, money, amount, short, shortMoney, delta, STATUS, statusPill, moneyDonut, lineIcon, lineColor, tileText, METHODS, methodChip, lineDot, syncExport, timeline, eventLook, periodLabel, periodControls, esc, url, flash, showFlash };
 })();
 
 window.BudgetsUI = BudgetsUI;

@@ -34420,6 +34420,10 @@ a.budget-month-tile:hover {
   flex-direction: column;
   justify-content: center;
 }
+/* ...but bars inside keep their own height */
+.budget-equal-row > [class*="col-"] > .card > .card-body > .count-bar {
+  flex: 0 0 auto;
+}
 
 /* Budgets - a ring with a compact list beside it (BudgetsUI.moneyDonut) */
 .budget-donut {
@@ -34821,4 +34825,215 @@ a.budget-month-tile:hover {
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--default-text-color);
+}
+
+/* Budget History - the template's Recent Activity (index-12), each connector in its event's colour */
+.budget-timeline-day {
+  margin: 0.25rem 0 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--default-text-color);
+}
+.budget-timeline .crm-recent-activity-content::before {
+  border-inline-end: 1px dashed rgba(var(--tl-rgb, var(--primary-rgb)), 0.45) !important;
+  height: calc(100% - 1.6rem) !important;
+  inset-block-start: 1.55rem;
+  inset-inline-start: 0.75rem;
+}
+.budget-timeline .crm-timeline-content {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
+.budget-timeline .avatar-xs {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: 0.75rem;
+}
+.budget-timeline-text {
+  color: var(--v2-heading);
+  line-height: 1.4;
+}
+.budget-timeline-time {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--default-text-color);
+}
+.budget-timeline-link {
+  display: block;
+  margin: -0.35rem -0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.5rem;
+  color: inherit;
+}
+.budget-timeline-link:hover {
+  background: rgba(var(--primary-rgb), 0.05);
+  color: inherit;
+}
+
+/* Budget entry page - the amount, what for and when */
+.budget-entry-hero > .card-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+}
+.budget-entry-hero-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  min-width: 0;
+}
+.budget-entry-hero-kicker {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--default-text-color);
+}
+.budget-entry-hero-title {
+  margin: 0.15rem 0 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--v2-heading);
+}
+.budget-entry-hero-amount {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.budget-entry-hero-amount small {
+  margin-inline-end: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--default-text-color);
+}
+.budget-entry-hero-amount.is-removed {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+/* Before this amount / this amount, as one bar */
+.budget-effect-bar {
+  display: flex;
+  height: 0.85rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(var(--light-rgb));
+}
+.budget-effect-bar > span {
+  display: block;
+  height: 100%;
+}
+.budget-effect-bar > .is-before,
+.budget-effect-key.is-before {
+  background: rgba(var(--primary-rgb), 0.35);
+}
+.budget-effect-key {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  margin-inline-end: 0.35rem;
+  border-radius: 50%;
+  vertical-align: -0.05rem;
+}
+@media (max-width: 575.98px) {
+  .budget-entry-hero-amount {
+    font-size: 1.5rem;
+  }
+  .budget-effect-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.budget-date-hint {
+  margin-top: 0.35rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 0.4rem;
+  background: rgba(var(--warning-rgb), 0.14);
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--v2-heading);
+}
+
+/* Budget line page - the line's name, icon and budget above the cards */
+.budget-line-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: -0.5rem 0 1.25rem;
+}
+tr.is-clickable {
+  cursor: pointer;
+}
+
+/* A whole-year budget: twelve month cells under the chart, and month groups in its Spending tab */
+.budget-month-strip {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+.budget-month-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.45rem 0.25rem;
+  border: 1px dashed var(--default-border);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--v2-heading);
+  font-size: 0.72rem;
+}
+.budget-month-cell b {
+  font-size: 0.8rem;
+}
+.budget-month-cell small {
+  font-size: 0.66rem;
+  color: var(--default-text-color);
+}
+.budget-month-cell.has-money {
+  border-style: solid;
+  border-color: rgba(var(--primary-rgb), 0.35);
+  background: rgba(var(--primary-rgb), 0.05);
+  cursor: pointer;
+}
+.budget-month-cell.has-money:hover {
+  border-color: rgb(var(--primary-rgb));
+}
+.budget-month-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  margin: 0.75rem 0 0.25rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.45rem;
+  background: rgba(var(--primary-rgb), 0.06);
+  color: var(--v2-heading);
+  scroll-margin-top: 6rem;
+  transition: background 0.3s;
+}
+.budget-month-group.is-flash {
+  background: rgba(var(--warning-rgb), 0.3);
+}
+.budget-item.is-clickable {
+  cursor: pointer;
+  border-radius: 0.5rem;
+}
+.budget-item.is-clickable:hover .budget-item-name a {
+  color: rgb(var(--primary-rgb)) !important;
+}
+@media (max-width: 767.98px) {
+  .budget-month-strip {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
 }

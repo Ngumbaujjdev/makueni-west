@@ -112,11 +112,11 @@ const BudgetsSpending = (function () {
               <span class="budget-recent-date is-${isIn ? "in" : "out"}"><b>${date.getDate()}</b><small>${date.toLocaleDateString("en-GB", { month: "short" })}</small></span>
             </td>
             <td data-search="${B.esc(`${e.description} ${e.counterparty || ""} ${e.reference || ""}`)}">
-              <div class="fw-semibold">${B.esc(e.description)}</div>
+              <a href="${B.url("entry.php", { id: e.id })}" class="fw-semibold text-reset">${B.esc(e.description)}</a>
               ${e.counterparty ? `<div class="fs-12">${isIn ? "From" : "To"} ${B.esc(e.counterparty)}</div>` : ""}
             </td>
             <td data-search="${B.esc(`${e.line || ""} · ${isIn ? "Money in" : "Money out"}`)}">
-              <div>${B.lineDot(e.line)}</div>
+              <div>${e.line_id ? `<a href="${B.url("line.php", { budget: e.budget_id, line: e.line_id })}" class="text-reset">${B.lineDot(e.line)}</a>` : B.lineDot(e.line)}</div>
               <span class="soft-chip soft-${isIn ? "success" : "danger"}" data-dir="${isIn ? "Money in" : "Money out"}">${isIn ? "Money in" : "Money out"}</span>
             </td>
             <td class="d-none d-md-table-cell" data-search="${METHODS[e.method] || ""}">
