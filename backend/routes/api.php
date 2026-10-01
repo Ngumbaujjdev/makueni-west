@@ -312,6 +312,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/', [BudgetController::class, 'store']);                                   // Create, with all its lines
         Route::get('/{budget}', [BudgetController::class, 'show']);                             // One budget, with its lines
         Route::get('/{budget}/form', [BudgetController::class, 'formFor']);                     // The form, filled in
+        Route::get('/{budget}/lines/{lineId}', [\App\Http\Controllers\Api\BudgetEntryController::class, 'line']); // One line of a budget, for its page
         Route::put('/{budget}', [BudgetController::class, 'update']);                           // Change, with all its lines
         Route::delete('/{budget}', [BudgetController::class, 'destroy']);                       // Delete a draft
         Route::post('/{budget}/start', [BudgetController::class, 'start']);                     // Draft -> In use
@@ -348,6 +349,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::put('/{entry}', [\App\Http\Controllers\Api\BudgetEntryController::class, 'update']);
         Route::delete('/{entry}', [\App\Http\Controllers\Api\BudgetEntryController::class, 'destroy']);
         Route::post('/{entryId}/restore', [\App\Http\Controllers\Api\BudgetEntryController::class, 'restore']);
+        Route::get('/{entryId}', [\App\Http\Controllers\Api\BudgetEntryController::class, 'show']);         // One entry, for its page
     });
 
     // Budget Logs (Global)

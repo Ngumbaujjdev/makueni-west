@@ -210,7 +210,7 @@ final class BudgetBook
                 'recorded_by' => $user->id,
             ]);
             $this->refreshLine($item);
-            $this->log($budget, $user, 'entry_recorded', $this->entrySentence('Recorded', $entry, $item));
+            $this->log($budget, $user, 'entry_recorded', $this->entrySentence('Recorded', $entry, $item), entry: $entry);
 
             return $entry->fresh(['lineItem.budgetLine', 'recorder']);
         });
@@ -240,7 +240,7 @@ final class BudgetBook
             if ($oldItem && $oldItem->id !== $item->id) {
                 $this->refreshLine($oldItem);
             }
-            $this->log($budget, $user, 'entry_changed', 'Changed an entry: '.trim($before).' → '.trim($this->entrySentence('', $entry, $item)));
+            $this->log($budget, $user, 'entry_changed', 'Changed an entry: '.trim($before).' → '.trim($this->entrySentence('', $entry, $item)), entry: $entry);
 
             return $entry->fresh(['lineItem.budgetLine', 'recorder']);
         });
@@ -254,7 +254,7 @@ final class BudgetBook
             $entry->update(['updated_by' => $user->id]);
             $entry->delete();
             $this->refreshLine($item);
-            $this->log($entry->budget, $user, 'entry_removed', $this->entrySentence('Removed', $entry, $item));
+            $this->log($entry->budget, $user, 'entry_removed', $this->entrySentence('Removed', $entry, $item), entry: $entry);
         });
     }
 
@@ -269,7 +269,7 @@ final class BudgetBook
             }
             $entry->restore();
             $this->refreshLine($item);
-            $this->log($entry->budget, $user, 'entry_restored', $this->entrySentence('Brought back', $entry, $item));
+            $this->log($entry->budget, $user, 'entry_restored', $this->entrySentence('Brought back', $entry, $item), entry: $entry);
 
             return $entry->fresh(['lineItem.budgetLine', 'recorder']);
         });
@@ -466,12 +466,15 @@ final class BudgetBook
         return $slug;
     }
 
-    private function log(Budget $budget, User $user, string $action, string $description, array $old = [], array $new = []): void
+    /** One History sentence; an entry's own events also name the entry, so its page can list them. */
+    private function log(Budget $budget, User $user, string $action, string $description, array $old = [], array $new = [], ?BudgetEntry $entry = null): void
     {
         BudgetLog::create([
             'budget_id' => $budget->id,
             'action' => $action,
             'description' => $description,
+            'affected_model' => $entry ? 'budget_entry' : null,
+            'affected_model_id' => $entry?->id,
             'old_values' => $old ?: null,
             'new_values' => $new ?: null,
             'performed_by' => $user->id,

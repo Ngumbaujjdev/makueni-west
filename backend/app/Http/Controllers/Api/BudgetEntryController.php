@@ -125,6 +125,170 @@ class BudgetEntryController extends Controller
         return response()->json(['success' => true, 'status' => 200, 'message' => 'Brought the entry back', 'data' => BudgetData::entryRow($entry)]);
     }
 
+    /**
+     * One entry, for its own page: the entry, its budget, what it did to its
+     * line (before / after), other money on the line, and its History.
+     */
+    public function show(Request $request, int $entryId): JsonResponse
+    {
+        $entry = BudgetEntry::withTrashed()->with('budget', 'lineItem.budgetLine', 'lineItem.budgetCategory', 'recorder:id,firstname,lastname', 'updater:id,firstname,lastname')->find($entryId);
+        if (! $entry || ! $entry->budget) {
+            return response()->json(['success' => false, 'status' => 404, 'message' => 'Entry not found.'], 404);
+        }
+        $budget = $entry->budget;
+        if (! BudgetAccess::canSee($request->user(), $budget)) {
+            return $this->forbidden('You can only see money of your own place, or of places below you.');
+        }
+        $item = $entry->lineItem;
+        $others = BudgetEntry::with('lineItem.budgetLine', 'recorder:id,firstname,lastname')->where('budget_line_item_id', $entry->budget_line_item_id);
+        // Money on the line before this entry: earlier days, or the same day recorded earlier.
+        $before = (float) (clone $others)->where('id', '!=', $entry->id)
+            ->where(fn ($q) => $q->where('entry_date', '<', $entry->entry_date->toDateString())
+                ->orWhere(fn ($q) => $q->where('entry_date', $entry->entry_date->toDateString())->where('id', '<', $entry->id)))
+            ->sum('amount');
+        $name = fn ($u) => $u ? trim("{$u->firstname} {$u->lastname}") : null;
+        $history = $budget->budgetLogs()->with('performer:id,firstname,lastname')
+            ->where('affected_model', 'budget_entry')->where('affected_model_id', $entry->id)
+            ->orderByDesc('created_at')->orderByDesc('id')->get();
+        $canChange = ! $entry->trashed() && $budget->status === 'active' && BudgetAccess::canWrite($request->user(), $budget, 'record');
+
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'data' => [
+                'entry' => [
+                    ...BudgetData::entryRow($entry),
+                    'recorded_at' => $entry->created_at?->toIso8601String(),
+                    'changed_by' => $entry->updated_by && $entry->updated_by !== $entry->recorded_by ? $name($entry->updater) : null,
+                    'changed_at' => $entry->updated_at && $entry->created_at && $entry->updated_at->gt($entry->created_at->addSeconds(5)) ? $entry->updated_at->toIso8601String() : null,
+                ],
+                'budget' => $this->budgetBrief($budget),
+                'line' => [
+                    'line_id' => $item?->budget_line_id,
+                    'name' => $item?->budgetLine?->name,
+                    'side' => $item?->budgetCategory?->slug === 'income' ? 'in' : 'out',
+                    'planned' => (float) $item?->budgeted_amount,
+                    'actual' => (float) $item?->actual_amount,
+                    'left' => round((float) $item?->budgeted_amount - (float) $item?->actual_amount, 2),
+                    'before' => round($before, 2),
+                    'is_unplanned' => (bool) $item?->is_unplanned,
+                ],
+                'others' => (clone $others)->where('id', '!=', $entry->id)->orderByDesc('entry_date')->orderByDesc('id')->limit(5)->get()->map(fn ($e) => BudgetData::entryRow($e))->values(),
+                'others_count' => (clone $others)->where('id', '!=', $entry->id)->count(),
+                'history' => $history->map(fn ($log) => $this->logRow($log))->values(),
+                'view_only' => ! BudgetAccess::canWrite($request->user(), $budget, 'record'),
+                'can' => ['change' => $canChange],
+            ],
+        ]);
+    }
+
+    /**
+     * One line of a budget, for its own page: planned against what came in or
+     * went out, every amount on it, and when the money moved - month by month
+     * (by entry date) for a whole-year budget, day by day for a month.
+     */
+    public function line(Request $request, Budget $budget, int $lineId): JsonResponse
+    {
+        if (! BudgetAccess::canSee($request->user(), $budget)) {
+            return $this->forbidden('You can only see budgets of your own place, or of places below you.');
+        }
+        $item = $budget->budgetLineItems()->with('budgetLine', 'budgetCategory')->where('budget_line_id', $lineId)->first();
+        if (! $item) {
+            return response()->json(['success' => false, 'status' => 404, 'message' => 'That line is not in this budget.'], 404);
+        }
+        $entries = $item->entries()->with('lineItem.budgetLine', 'recorder:id,firstname,lastname')->orderByDesc('entry_date')->orderByDesc('id')->get();
+        $planned = (float) $item->budgeted_amount;
+        $actual = (float) $item->actual_amount;
+        $previous = $this->book->previous($budget->territory_type, (int) $budget->territory_id, (int) $budget->fiscal_year, $budget->period_month);
+        $previousItem = $previous?->budgetLineItems->firstWhere('budget_line_id', $lineId);
+
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'data' => [
+                'budget' => $this->budgetBrief($budget),
+                'line' => [
+                    'line_id' => $lineId,
+                    'name' => $item->budgetLine?->name ?? "Line {$lineId}",
+                    'description' => $item->budgetLine?->description,
+                    'side' => $item->budgetCategory?->slug === 'income' ? 'in' : 'out',
+                    'planned' => $planned,
+                    'actual' => $actual,
+                    'left' => round($planned - $actual, 2),
+                    'pct' => $planned > 0 ? round($actual / $planned * 100, 1) : null,
+                    'is_unplanned' => (bool) $item->is_unplanned,
+                    'last_date' => $entries->max('entry_date')?->toDateString(),
+                ],
+                'previous' => $previous ? ['id' => $previous->id, 'period_label' => $previous->period_label, 'planned' => $previousItem ? (float) $previousItem->budgeted_amount : null] : null,
+                'entries' => $entries->map(fn ($e) => BudgetData::entryRow($e))->values(),
+                'chart' => self::moneyOverTime($budget, $entries, $planned),
+                'view_only' => ! BudgetAccess::canWrite($request->user(), $budget, 'record'),
+                'can' => ['record' => $budget->status === 'active' && BudgetAccess::canWrite($request->user(), $budget, 'record')],
+            ],
+        ]);
+    }
+
+    /**
+     * When money moved, by entry date: a whole-year budget month by month (with
+     * the planned twelfth), a month budget day by day (running total, even pace).
+     */
+    public static function moneyOverTime(Budget $budget, $entries, float $planned): array
+    {
+        if ($budget->period_month === null) {
+            $points = [];
+            for ($m = 1; $m <= 12; $m++) {
+                $ofMonth = $entries->filter(fn ($e) => (int) $e->entry_date->month === $m);
+                $points[] = [
+                    'label' => CarbonImmutable::create((int) $budget->fiscal_year, $m, 1)->format('M'),
+                    'month' => $m,
+                    'in' => round((float) $ofMonth->where('direction', 'in')->sum('amount'), 2),
+                    'out' => round((float) $ofMonth->where('direction', 'out')->sum('amount'), 2),
+                    'count' => $ofMonth->count(),
+                    'planned' => round($planned / 12, 2),
+                ];
+            }
+
+            return ['kind' => 'months', 'points' => $points];
+        }
+        $start = CarbonImmutable::parse($budget->start_date);
+        $days = $start->daysInMonth;
+        $points = [];
+        $running = 0.0;
+        for ($d = 1; $d <= $days; $d++) {
+            $day = $start->setDay($d);
+            $running += (float) $entries->filter(fn ($e) => $e->entry_date->isSameDay($day))->sum('amount');
+            $points[] = ['label' => (string) $d, 'actual' => round($running, 2), 'pace' => round($planned * $d / $days, 2)];
+        }
+
+        return ['kind' => 'days', 'points' => $points];
+    }
+
+    private function budgetBrief(Budget $budget): array
+    {
+        return [
+            'id' => $budget->id,
+            'period_label' => $budget->period_label,
+            'status' => $budget->status,
+            'is_year' => $budget->period_month === null,
+            'fiscal_year' => (int) $budget->fiscal_year,
+            'start_date' => $budget->start_date?->toDateString(),
+            'end_date' => $budget->end_date?->toDateString(),
+            'place' => ['type' => $budget->territory_type, 'id' => (int) $budget->territory_id, 'name' => \App\Models\Territory::find($budget->territory_id)?->name],
+        ];
+    }
+
+    private function logRow($log): array
+    {
+        return [
+            'id' => $log->id,
+            'action' => $log->action,
+            'description' => $log->description,
+            'who' => $log->performer ? trim("{$log->performer->firstname} {$log->performer->lastname}") : null,
+            'when' => $log->created_at?->toIso8601String(),
+            'when_label' => $log->created_at?->format('j M Y, g:i a'),
+        ];
+    }
+
     /* ---------------------------------------------------------------- */
 
     private function validated(Request $request, bool $creating): array
