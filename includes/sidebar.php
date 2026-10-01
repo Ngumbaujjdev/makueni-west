@@ -349,7 +349,7 @@ $userEmail = $currentUser['email'] ?? '';
             html += `
             <li class="slide__category">
                 <span class="category-name">
-                    <i class="${getIconClass(group.icon)} me-2 ${colorClass}"></i>
+                    <i class="${getIconClass(group.icon)} category-icon ${colorClass}"></i>
                     ${escapeHtml(group.name)}
                 </span>
             </li>`;
