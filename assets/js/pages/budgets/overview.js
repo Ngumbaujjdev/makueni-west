@@ -30,7 +30,8 @@ const BudgetsOverview = (function () {
 
   function init() {
     B.showFlash();
-    period = B.periodControls({ defaultMonth: true, onChange: (p) => ((period = p), load()) });
+    // The whole year first; a month is one pick away (?month= in a link still opens it).
+    period = B.periodControls({ defaultMonth: false, onChange: (p) => ((period = p), load()) });
     document.getElementById("recordOutBtn").addEventListener("click", () => record("out"));
     document.querySelectorAll("[data-record]").forEach((a) => a.addEventListener("click", () => record(a.dataset.record)));
     if (territoryId) document.getElementById("seeAllLink").href = B.url("spending.php", { territory_id: territoryId });
@@ -55,12 +56,19 @@ const BudgetsOverview = (function () {
     renderAlert();
     renderHero();
     renderStats();
+    const before = charts.length;
     renderTrend();
-    UI.renderInsightList("insights", d.insights);
+    if (charts.length > before && charts[charts.length - 1]) charts[charts.length - 1].__trend = true;
+    renderInsights();
     renderPlanVsActual();
     renderSources();
     renderSideSwitch();
     renderLines();
+    // Charts grow to the height of the card beside them, so no card has a gap under it.
+    requestAnimationFrame(() => {
+      fillCard(charts.find((c) => c?.__trend), "trendBody");
+      fillCard(charts.find((c) => c?.__pva), "pvaBody");
+    });
     renderRecent();
   }
 
@@ -366,19 +374,42 @@ const BudgetsOverview = (function () {
       el.innerHTML = `<div class="list-empty py-5"><span class="list-empty-icon bg-success text-white"><i class="ri-pie-chart-line"></i></span><div class="fw-semibold mt-2">No money in for ${B.esc(d.period.label)}</div><div class="fs-12">Plan or record money in to see where it comes from.</div></div>`;
       return;
     }
-    const top = rows.slice(0, 5);
-    const rest = rows.slice(5).reduce((a, r) => a + r.value, 0);
-    if (rest > 0) top.push({ name: "Other", value: rest });
-    el.innerHTML = "";
     charts.push(
-      UI.renderRingDonut("sourceDonut", {
-        labels: top.map((r) => B.esc(r.name)),
-        series: top.map((r) => r.value),
-        colors: ["success", "primary", "secondary", "purple", "pink", "danger"],
+      B.moneyDonut("sourceDonut", {
+        rows,
+        colors: ["success", "primary", "purple", "pink", "warning", "danger"],
         centerLabel: useActual ? "Received" : "Planned",
-        format: (n) => B.shortMoney(n),
       }),
     );
+  }
+
+  /** What we noticed, under a strip of the figures that matter most. */
+  function renderInsights() {
+    const el = document.getElementById("insights");
+    const out = d.lines.out || [];
+    const over = out.filter((l) => l.actual > l.planned && l.planned > 0).length;
+    const unplanned = [...(d.lines.in || []), ...out].filter((l) => l.is_unplanned).length;
+    const last = d.recent[0] ? new Date(`${d.recent[0].entry_date}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "-";
+    const v = d.budget ? verdict() : null;
+    el.innerHTML = `
+      <div class="budget-items-strip soft-${v ? v.color : "primary"} mx-n3 mt-n3 mb-3 budget-insight-strip">
+        <div><small>How it's going</small><b>${v ? v.label : "No budget"}</b></div>
+        <div><small>Over plan</small><b class="${over ? "text-danger" : ""}">${over} ${over === 1 ? "line" : "lines"}</b></div>
+        <div><small>Unplanned</small><b>${unplanned}</b></div>
+        <div><small>Last entry</small><b>${last}</b></div>
+      </div>
+      <div id="insightsList"></div>`;
+    UI.renderInsightList("insightsList", d.insights);
+  }
+
+  /** Grows a chart by the empty space left in its card body (the row's cards share one height). */
+  function fillCard(chart, bodyId) {
+    const body = document.getElementById(bodyId);
+    if (!chart || !body || window.innerWidth < 1200) return;
+    const style = getComputedStyle(body);
+    const used = [...body.children].reduce((h, el) => h + el.offsetHeight, 0) + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+    const spare = body.clientHeight - used;
+    if (spare > 12) chart.updateOptions({ chart: { height: (chart.opts?.chart?.height || 300) + spare - 4 } }, false, false);
   }
 
   // ---------------------------------------------------------------- lines
@@ -394,47 +425,66 @@ const BudgetsOverview = (function () {
     });
   }
 
+  /** Each line as a rich row (icon, % pill, bar, planned / used / left), under a figure strip - like a budget's Lines tab. */
   function renderLines() {
     const el = document.getElementById("lineProgress");
+    const isIn = side === "in";
     const lines = d.lines[side] || [];
-    document.getElementById("linesSub").textContent = side === "out" ? "Each line: planned, and spent so far" : "Each line: planned, and received so far";
+    document.getElementById("linesSub").textContent = isIn ? "Each line: planned, and received so far" : "Each line: planned, and spent so far";
     if (!lines.length) {
-      el.innerHTML = `<p class="fw-semibold mb-0">No money ${side} planned or recorded for ${B.esc(d.period.label)}.</p>`;
+      el.innerHTML = `<div class="list-empty py-5"><span class="list-empty-icon bg-${isIn ? "success" : "danger"} text-white"><i class="ri-list-check-2"></i></span><div class="fw-semibold mt-2">No money ${side} planned or recorded for ${B.esc(d.period.label)}</div></div>`;
       return;
     }
+    const verb = isIn ? "Received" : "Spent";
+    const planned = lines.reduce((t, l) => t + l.planned, 0);
+    const actual = lines.reduce((t, l) => t + l.actual, 0);
+    const left = planned - actual;
+    const pctOf = (a, p) => (p > 0 ? Math.round((a / p) * 100) : a > 0 ? 100 : 0);
     const LIMIT = 6;
     const shown = showAllLines ? lines : lines.slice(0, LIMIT);
+    const fig = (label, value, cls = "") => `<div><small>${label}</small><b class="${cls}">${value}</b></div>`;
     el.innerHTML = `
-      <div class="budget-progress">${shown.map((l) => progressRow(l, side)).join("")}</div>
-      ${lines.length > LIMIT ? `<button type="button" class="btn btn-sm btn-outline-primary w-100 mt-2" id="linesMoreBtn">${showAllLines ? "Show fewer" : `Show all ${lines.length} lines`}</button>` : ""}`;
+      <div class="budget-items-strip soft-${isIn ? "success" : "danger"}">
+        ${fig("Planned", B.money(planned))}
+        ${fig(verb, B.money(actual))}
+        ${fig(isIn ? "Still to come" : left < 0 ? "Over by" : "Left", B.money(Math.abs(isIn ? Math.max(left, 0) : left)), !isIn && left < 0 ? "text-danger" : "")}
+        ${fig(isIn ? "Received" : "Used", `${pctOf(actual, planned)}%`)}
+      </div>
+      <ul class="budget-items">${shown
+        .map((l, i) => {
+          const pct = pctOf(l.actual, l.planned);
+          const over = !isIn && l.actual > l.planned;
+          const color = isIn ? "success" : over ? "danger" : pct >= 80 ? "warning" : "primary";
+          const tile = B.lineColor(side, i);
+          const href = d.budget ? B.url("line.php", { budget: d.budget.id, line: l.line_id }) : "";
+          return `
+            <li class="budget-item${href ? " is-clickable" : ""}" ${href ? `data-href="${href}"` : ""}>
+              <span class="avatar avatar-md bg-${tile} ${B.tileText(tile)} flex-shrink-0"><i class="${B.lineIcon(l.name, side)}"></i></span>
+              <div class="budget-item-main">
+                <div class="budget-item-top">
+                  <span class="budget-item-name">${href ? `<a href="${href}" class="text-reset">${B.esc(l.name)}</a>` : B.esc(l.name)}${l.is_unplanned ? ' <span class="soft-chip soft-warning">Unplanned</span>' : ""}</span>
+                  ${l.actual ? `<span class="badge bg-${color}">${pct}%</span>` : '<span class="soft-chip soft-primary">0%</span>'}
+                </div>
+                <div class="count-bar"><span class="bg-${color}" style="width: ${Math.min(pct, 100)}%"></span></div>
+                <div class="budget-item-figs">
+                  <span>Planned <b>${B.money(l.planned)}</b></span>
+                  <span>${verb} <b>${B.money(l.actual)}</b></span>
+                  <span>${isIn ? "To come" : "Left"} <b>${over ? `<span class="text-danger">Over ${B.money(l.actual - l.planned)}</span>` : B.money(Math.max(l.left, 0))}</b></span>
+                </div>
+              </div>
+            </li>`;
+        })
+        .join("")}</ul>
+      ${lines.length > LIMIT ? `<div class="budget-items-total"><span>${showAllLines ? `All ${lines.length} lines` : `${LIMIT} of ${lines.length} lines`}</span><button type="button" class="btn btn-sm btn-outline-primary" id="linesMoreBtn">${showAllLines ? "Show fewer" : "Show all"}</button></div>` : ""}`;
     document.getElementById("linesMoreBtn")?.addEventListener("click", () => {
       showAllLines = !showAllLines;
       renderLines();
     });
-  }
-
-  function progressRow(l, s) {
-    const pct = l.planned > 0 ? (l.actual / l.planned) * 100 : l.actual > 0 ? 100 : 0;
-    const over = s === "out" && l.actual > l.planned;
-    const color = s === "in" ? "success" : over ? "danger" : pct >= 80 ? "warning" : "primary";
-    const verb = s === "in" ? "received" : "spent";
-    const status = over
-      ? `<span class="text-danger fw-semibold">Over by ${B.money(l.actual - l.planned)}</span>`
-      : s === "in"
-        ? `${B.money(Math.max(l.left, 0))} still to come`
-        : `${B.money(l.left)} left`;
-    return `
-      <div class="budget-progress-row">
-        <div class="budget-progress-top">
-          <span class="fw-semibold">${d.budget ? `<a href="${B.url("line.php", { budget: d.budget.id, line: l.line_id })}" class="text-reset">${B.esc(l.name)}</a>` : B.esc(l.name)}${l.is_unplanned ? ' <span class="soft-chip soft-warning">Unplanned</span>' : ""}</span>
-          <span class="fw-semibold">${B.money(l.planned)}</span>
-        </div>
-        <div class="count-bar"><span class="bg-${color}" style="width: ${Math.min(pct, 100)}%"></span></div>
-        <div class="budget-progress-foot">
-          <span>${l.actual ? `${B.money(l.actual)} ${verb}` : `Nothing ${verb} yet`}</span>
-          <span>${status}</span>
-        </div>
-      </div>`;
+    el.querySelectorAll(".budget-item[data-href]").forEach((li) =>
+      li.addEventListener("click", (ev) => {
+        if (!ev.target.closest("a, button")) window.location.href = li.dataset.href;
+      }),
+    );
   }
 
   // ---------------------------------------------------------------- recent

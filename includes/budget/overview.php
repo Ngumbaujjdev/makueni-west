@@ -89,7 +89,7 @@ $breadcrumbs = [
 
                 <div class="row" id="statCardsRow"></div>
 
-                <div class="row">
+                <div class="row budget-equal-row is-top">
                     <div class="col-xl-8">
                         <div class="card custom-card">
                             <div class="card-header justify-content-between flex-wrap gap-2">
@@ -115,8 +115,8 @@ $breadcrumbs = [
                     </div>
                 </div>
 
-                <div class="row">
-                    <div class="col-xl-7">
+                <div class="row budget-equal-row">
+                    <div class="col-xl-6">
                         <div class="card custom-card">
                             <div class="card-header justify-content-between flex-wrap gap-2">
                                 <div>
@@ -128,7 +128,7 @@ $breadcrumbs = [
                             <div class="card-body" id="pvaBody"><span class="skel" style="height: 300px; display: block;"></span></div>
                         </div>
                     </div>
-                    <div class="col-xl-5">
+                    <div class="col-xl-6">
                         <div class="card custom-card">
                             <div class="card-header">
                                 <div>
@@ -141,7 +141,7 @@ $breadcrumbs = [
                     </div>
                 </div>
 
-                <div class="row">
+                <div class="row budget-equal-row is-top">
                     <div class="col-xl-7">
                         <div class="card custom-card">
                             <div class="card-header justify-content-between flex-wrap gap-2">
@@ -151,7 +151,7 @@ $breadcrumbs = [
                                 </div>
                                 <div id="sideSwitchWrap"></div>
                             </div>
-                            <div class="card-body" id="lineProgress"><span class="skel" style="height: 16rem; display: block;"></span></div>
+                            <div class="card-body p-0" id="lineProgress"><span class="skel" style="height: 16rem; display: block;"></span></div>
                         </div>
                     </div>
                     <div class="col-xl-5">
