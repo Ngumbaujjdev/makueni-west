@@ -715,7 +715,8 @@ const DemographicsUI = (function () {
    *   this param exists to prevent.
    */
   // `yFormat` formats the value axis and tooltips (default: whole numbers) - e.g. money.
-  function renderTrendChart(containerId, { categories, series, type = "area", color = "primary", colors = null, stacked = false, yFormat = null } = {}) {
+  // `extra` - ApexCharts options merged in last (e.g. per-series stroke dashes and markers).
+  function renderTrendChart(containerId, { categories, series, type = "area", color = "primary", colors = null, stacked = false, yFormat = null, extra = null } = {}) {
     const el = document.getElementById(containerId);
     if (!el || typeof ApexCharts === "undefined") return null;
     const hex = brandHex(color);
@@ -794,6 +795,7 @@ const DemographicsUI = (function () {
       options.legend.show = false;
     }
 
+    if (extra) Object.assign(options, extra);
     const chart = new ApexCharts(el, options);
     chart.render();
     return chart;

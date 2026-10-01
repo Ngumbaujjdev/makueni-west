@@ -70,6 +70,12 @@ const BudgetsAPI = (function () {
     start: (id) => request("POST", `/budgets/${id}/start`),
     close: (id) => request("POST", `/budgets/${id}/close`),
     reopen: (id) => request("POST", `/budgets/${id}/reopen`),
+    dashboard: (params) => request("GET", `/budgets/dashboard${qs(params)}`),
+    entries: (params) => request("GET", `/budget-entries${qs(params)}`),
+    record: (body) => request("POST", "/budget-entries", body),
+    changeEntry: (id, body) => request("PUT", `/budget-entries/${id}`, body),
+    removeEntry: (id) => request("DELETE", `/budget-entries/${id}`),
+    restoreEntry: (id) => request("POST", `/budget-entries/${id}/restore`),
   };
 })();
 
