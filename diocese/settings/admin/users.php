@@ -1095,7 +1095,7 @@ include __DIR__ . '/../../../includes/page-header.php';
 
     <!-- Custom JS -->
     <script src="<?= SITE_URL ?>/assets/js/custom.js"></script>
-    <!-- Logout Handler -->
+    <!-- Toasts -->
     <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
 
@@ -1105,8 +1105,6 @@ include __DIR__ . '/../../../includes/page-header.php';
     <!-- Auth Helpers -->
     <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js<?= assetVersion('assets/js/utils/auth-helpers.js') ?>"></script>
 
-    <!-- Logout Handler -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/authentication/logout.js<?= assetVersion('assets/js/pages/authentication/logout.js') ?>"></script>
 
     <!-- Dependencies (existing files) -->
     <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/api-handler.js<?= assetVersion('assets/js/pages/system-administration/api-handler.js') ?>"></script>
