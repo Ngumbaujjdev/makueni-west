@@ -76,6 +76,8 @@ const BudgetsAPI = (function () {
     changeEntry: (id, body) => request("PUT", `/budget-entries/${id}`, body),
     removeEntry: (id) => request("DELETE", `/budget-entries/${id}`),
     restoreEntry: (id) => request("POST", `/budget-entries/${id}/restore`),
+    entry: (id) => request("GET", `/budget-entries/${id}`),
+    line: (budgetId, lineId) => request("GET", `/budgets/${budgetId}/lines/${lineId}`),
   };
 })();
 

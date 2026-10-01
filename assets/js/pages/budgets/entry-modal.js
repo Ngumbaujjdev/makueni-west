@@ -66,6 +66,7 @@ const BudgetsEntryModal = (function () {
                       <div class="col-sm-5">
                         <input type="date" class="form-control" id="entryDate" aria-label="Date">
                         <div class="invalid-feedback" id="entryDateError"></div>
+                        <div class="budget-date-hint" id="entryDateHint" hidden></div>
                       </div>
                     </div>
                   </section>
@@ -152,7 +153,7 @@ const BudgetsEntryModal = (function () {
   }
 
   /** Open the window for a budget (and optionally an entry to change). */
-  async function open({ budgetId, direction = "out", entry = null, onSaved = null } = {}) {
+  async function open({ budgetId, direction = "out", entry = null, lineId = null, onSaved = null } = {}) {
     mount();
     const [detail, form] = await Promise.all([BudgetsAPI.get(budgetId), BudgetsAPI.formFor(budgetId)]);
     if (!detail.ok) {
@@ -172,7 +173,9 @@ const BudgetsEntryModal = (function () {
         extra[side] = form.data.lines[side].filter((l) => !have.has(l.id));
       });
     }
-    ctx = { budget: detail.data.budget, lines: inBudget, extra, entry, direction: entry?.direction || direction, onSaved };
+    // Opened from a line's page, the line is already chosen (and its side with it).
+    const lineSide = lineId && (inBudget.in.some((l) => l.line_id === lineId) ? "in" : inBudget.out.some((l) => l.line_id === lineId) ? "out" : null);
+    ctx = { budget: detail.data.budget, lines: inBudget, extra, entry, lineId, direction: entry?.direction || lineSide || direction, onSaved };
     fill(entry);
     modal.show();
   }
@@ -202,13 +205,21 @@ const BudgetsEntryModal = (function () {
     document.getElementById("entryMethodWrap").innerHTML = UI.renderSegmented("entryMethod", METHODS, entry?.method || "mpesa", { ariaLabel: "How it was paid" });
     UI.wireSegmented("entryMethod", () => {});
 
-    fillLines(entry?.line_id ?? null);
+    fillLines(entry?.line_id ?? ctx.lineId ?? null);
     document.getElementById("entryAmount").value = entry ? B.amount(entry.amount) : "";
     const date = document.getElementById("entryDate");
     date.min = b.start_date;
     date.max = b.end_date;
     const today = new Date().toISOString().slice(0, 10);
-    date.value = entry?.entry_date || (today < b.start_date ? b.start_date : today > b.end_date ? b.end_date : today);
+    // Today when it falls in the budget's period. Otherwise (a past or future
+    // budget) nothing is filled in, so the real day has to be picked - an
+    // amount never quietly lands on the period's last day.
+    const outside = today < b.start_date || today > b.end_date;
+    date.value = entry?.entry_date || (outside ? "" : today);
+    const fmt = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    const hint = document.getElementById("entryDateHint");
+    hint.hidden = !outside || !!entry;
+    hint.innerHTML = `<i class="ri-calendar-event-line me-1"></i>When was it ${ctx.direction === "in" ? "received" : "paid"}? Pick the day, between ${fmt(b.start_date)} and ${fmt(b.end_date)}.`;
     document.getElementById("entryDescription").value = entry?.description || "";
     document.getElementById("entryCounterparty").value = entry?.counterparty || "";
     document.getElementById("entryReference").value = entry?.reference || "";
@@ -300,7 +311,9 @@ const BudgetsEntryModal = (function () {
     invalid("entryLine", !lineId);
     invalid("entryAmount", !amount);
     invalid("entryDescription", !description);
-    if (!lineId || !amount || !description) {
+    invalid("entryDate", !date);
+    if (!date) document.getElementById("entryDateError").textContent = "Pick the day it happened.";
+    if (!lineId || !amount || !description || !date) {
       Toast.warning("Please fill in the highlighted fields.");
       return;
     }

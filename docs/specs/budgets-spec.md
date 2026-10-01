@@ -184,6 +184,33 @@ Writing needs `{level}.budgets.spending.record` on the acting place's own budget
 - **Budget page:** a **Record money** button and a **Spending** tab.
 - Windows everywhere follow the Demographics report window: a white header with one solid coloured icon tile, small uppercase section labels, tinted panels and a tinted footer.
 
+## Detail pages and when money moved (phase 2e)
+
+- **History** is shown as the template's Recent Activity timeline (`.crm-recent-activity`):
+  - grouped by day, with a coloured dot per kind of event and the amount in colour;
+  - an event about one entry links to that entry's page.
+  - From now on, entry events name the entry in `budget_logs.affected_model = 'budget_entry'` / `affected_model_id`.
+- **Entry page** (`entry.php?id=`, from `GET /budget-entries/{id}`):
+  - the amount, what for, when and how;
+  - every recorded detail;
+  - its effect on the line: planned, before this, this amount, left or over;
+  - its own History, and the other money on the line.
+  - Change and Delete (with Undo) for the place itself; a place below is view-only; sideways is 403. A removed entry can still be opened.
+- **Line page** (`line.php?budget=&line=`, from `GET /budgets/{budget}/lines/{lineId}`):
+  - planned against received or spent, and against the budget before;
+  - **when the money moved:** a whole-year budget month by month **by entry date**, against a planned twelfth; a month day by day against an even pace;
+  - every amount on the line;
+  - "Record money on this line" (the window opens with the line chosen).
+- **Whole-year budgets:**
+  - `GET /budgets/{id}` returns `months` (money in and out per month by entry date);
+  - the budget's page shows a Month by month card, and its Spending tab groups entries by month.
+- **Record money window:** when today is outside the budget's period, the date starts empty and must be picked ("When was it paid? Pick the day, between …"), so nothing silently lands on the period's last day.
+- **Acceptance:**
+  1. An entry's "before this" counts the line's earlier entries only.
+  2. An entry's History lists only its own events.
+  3. A year budget's months follow the entry dates.
+  4. A place below sees entries view-only; sideways gets 403.
+
 ## Reports (phase 4, brought forward)
 
 PDF and Excel, through the shared report engine (`docs/specs/reports-spec.md`): queued on `reports`, verification codes `MWD-BUD-…`, files kept 7 days. The figures come from `BudgetData`, the same as the Overview, so the page and the report agree.

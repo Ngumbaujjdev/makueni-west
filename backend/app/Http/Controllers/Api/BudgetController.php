@@ -242,6 +242,7 @@ class BudgetController extends Controller
                 'who' => $log->performer ? trim("{$log->performer->firstname} {$log->performer->lastname}") : null,
                 'when' => $log->created_at?->toIso8601String(),
                 'when_label' => $log->created_at?->format('j M Y, g:i a'),
+                'entry_id' => $log->affected_model === 'budget_entry' ? $log->affected_model_id : null,
             ])->values(),
         ]);
     }
@@ -385,6 +386,10 @@ class BudgetController extends Controller
                 'out' => $items->filter(fn ($i) => $i->budgetCategory?->slug === 'expense')->map($row)->values(),
             ],
             'previous' => $this->previousOf($budget),
+            // A whole-year budget: when its money moved, month by month by entry date.
+            'months' => $budget->period_month === null
+                ? BudgetEntryController::moneyOverTime($budget, $budget->entries()->get(['id', 'entry_date', 'direction', 'amount']), 0.0)['points']
+                : null,
             'view_only' => ! $own,
             'can' => [
                 'edit' => $own && $budget->is_editable,

@@ -37,6 +37,11 @@ class BudgetEntry extends Model
         return $this->belongsTo(BudgetLineItem::class, 'budget_line_item_id');
     }
 
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
     public function recorder(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by');

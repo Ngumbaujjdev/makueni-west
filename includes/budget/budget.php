@@ -101,6 +101,21 @@ $breadcrumbs = [
                     </div>
                 </div>
 
+                <!-- A whole-year budget: when its money moved, month by month (by the date each amount was recorded) -->
+                <div class="card custom-card" id="monthsCard" hidden>
+                    <div class="card-header justify-content-between flex-wrap gap-2">
+                        <div>
+                            <div class="card-title">Month by month</div>
+                            <span class="card-subtitle-text">Money in and out each month, by the date it was recorded - tap a month to see its entries</span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-1" id="monthsChips"></div>
+                    </div>
+                    <div class="card-body">
+                        <div id="monthsChart"></div>
+                        <div class="budget-month-strip" id="monthsStrip"></div>
+                    </div>
+                </div>
+
                 <div class="nav section-tabs" id="budgetTabs" role="tablist" aria-label="Budget">
                     <button class="nav-link section-tab active" data-bs-toggle="tab" data-bs-target="#tab-lines" data-tab="lines" type="button" role="tab" aria-controls="tab-lines" aria-selected="true">
                         <span class="section-tab-icon bg-primary"><i class="ri-list-check-2"></i></span>
