@@ -108,18 +108,18 @@ const BudgetsSpending = (function () {
         return `
           <tr data-row-id="${e.id}">
             <td data-order="${e.entry_date}">
-              <span class="budget-recent-date"><b>${date.getDate()}</b><small>${date.toLocaleDateString("en-GB", { month: "short" })}</small></span>
+              <span class="budget-recent-date is-${isIn ? "in" : "out"}"><b>${date.getDate()}</b><small>${date.toLocaleDateString("en-GB", { month: "short" })}</small></span>
             </td>
             <td data-search="${B.esc(`${e.description} ${e.counterparty || ""} ${e.reference || ""}`)}">
               <div class="fw-semibold">${B.esc(e.description)}</div>
               ${e.counterparty ? `<div class="fs-12">${isIn ? "From" : "To"} ${B.esc(e.counterparty)}</div>` : ""}
             </td>
             <td data-search="${B.esc(`${e.line || ""} · ${isIn ? "Money in" : "Money out"}`)}">
-              <div>${B.esc(e.line || "-")}</div>
+              <div>${B.lineDot(e.line)}</div>
               <span class="soft-chip soft-${isIn ? "success" : "danger"}" data-dir="${isIn ? "Money in" : "Money out"}">${isIn ? "Money in" : "Money out"}</span>
             </td>
             <td class="d-none d-md-table-cell" data-search="${METHODS[e.method] || ""}">
-              ${METHODS[e.method] || "-"}${e.reference ? `<div class="fs-12">${B.esc(e.reference)}</div>` : ""}
+              ${B.methodChip(e.method)}${e.reference ? `<div class="fs-12 mt-1">${B.esc(e.reference)}</div>` : ""}
             </td>
             <td class="text-end fw-bold ${isIn ? "text-success" : "text-danger"}" data-order="${isIn ? e.amount : -e.amount}">${isIn ? "+" : "−"}${B.amount(e.amount)}</td>
             <td class="d-none d-lg-table-cell">${B.esc(e.recorded_by || "-")}</td>

@@ -32,7 +32,7 @@ const BudgetsUI = (function () {
   const STATUS = {
     draft: { label: "Draft", color: "warning", icon: "ri-draft-line" },
     active: { label: "In use", color: "success", icon: "ri-checkbox-circle-fill" },
-    closed: { label: "Closed", color: "secondary", icon: "ri-lock-line" },
+    closed: { label: "Closed", color: "purple", icon: "ri-lock-line" },
   };
 
   function statusPill(status) {
@@ -55,7 +55,8 @@ const BudgetsUI = (function () {
     if (rest.length) shown.push({ name: `Other (${rest.length} ${rest.length === 1 ? "line" : "lines"})`, value: rest.reduce((a, r) => a + r.value, 0) });
     const total = shown.reduce((a, r) => a + r.value, 0);
     // "Other" is a neutral grey, so it never looks like one of the lines.
-    const colorOf = (r, i) => (/^Other \(/.test(r.name) ? "dark" : colors[i % colors.length]);
+    const isOther = (r) => /^Other \(/.test(r.name);
+    const colorOf = (r, i) => (isOther(r) ? null : colors[i % colors.length]);
     const pct = (v) => (total ? (v / total < 0.01 && v > 0 ? "<1%" : `${Math.round((v / total) * 100)}%`) : "0%");
     el.innerHTML = `
       <div class="budget-donut">
@@ -65,7 +66,7 @@ const BudgetsUI = (function () {
             .map(
               (r, i) => `
             <li>
-              <span class="composition-name"><span class="count-dot bg-${colorOf(r, i)}"></span><span class="text-truncate">${esc(r.name)}</span></span>
+              <span class="composition-name">${isOther(r) ? '<span class="count-dot budget-dot-other"></span>' : `<span class="count-dot bg-${colorOf(r, i)}"></span>`}<span class="text-truncate">${esc(r.name)}</span></span>
               <span class="composition-value">${shortMoney(r.value)} <span>${pct(r.value)}</span></span>
             </li>`,
             )
@@ -77,7 +78,7 @@ const BudgetsUI = (function () {
       chart: { type: "donut", height: 230, animations: { enabled: !document.documentElement.classList.contains("app-reduce-motion") } },
       series: shown.map((r) => r.value),
       labels: shown.map((r) => r.name),
-      colors: shown.map((r, i) => DemographicsUI.cssColor(colorOf(r, i))),
+      colors: shown.map((r, i) => (isOther(r) ? DemographicsUI.cssColor("dark", 0.28) : DemographicsUI.cssColor(colorOf(r, i)))),
       stroke: { width: 0 },
       legend: { show: false },
       dataLabels: { enabled: false },
@@ -135,6 +136,17 @@ const BudgetsUI = (function () {
   const lineColor = (side, index) => LINE_COLORS[side === "in" ? "in" : "out"][index % 6];
   /** Gold tiles take dark icons, like the Demographics number tiles. */
   const tileText = (color) => (color === "warning" || color === "secondary" ? "text-dark" : "text-white");
+
+  /** How money was paid, each with its own soft colour. */
+  const METHODS = {
+    cash: { label: "Cash", color: "warning", icon: "ri-money-dollar-circle-line" },
+    mpesa: { label: "M-Pesa", color: "success", icon: "ri-smartphone-line" },
+    bank: { label: "Bank", color: "primary", icon: "ri-bank-line" },
+    cheque: { label: "Cheque", color: "purple", icon: "ri-file-text-line" },
+  };
+  const methodChip = (method) => (METHODS[method] ? `<span class="soft-chip soft-${METHODS[method].color}"><i class="${METHODS[method].icon} me-1"></i>${METHODS[method].label}</span>` : "-");
+  /** A line's name with a coloured dot, the colour following the name. */
+  const lineDot = (name) => (name ? `<span class="d-inline-flex align-items-center gap-1"><span class="count-dot bg-${DemographicsUI.colorFor(name)}"></span>${esc(name)}</span>` : "-");
 
   const periodLabel = (year, month) => (month ? `${MONTHS[month - 1]} ${year}` : `Whole of ${year}`);
 
@@ -204,7 +216,7 @@ const BudgetsUI = (function () {
     return state;
   }
 
-    return { CTX, MONTHS, money, amount, short, shortMoney, delta, STATUS, statusPill, moneyDonut, lineIcon, lineColor, tileText, periodLabel, periodControls, esc, url, flash, showFlash };
+    return { CTX, MONTHS, money, amount, short, shortMoney, delta, STATUS, statusPill, moneyDonut, lineIcon, lineColor, tileText, METHODS, methodChip, lineDot, periodLabel, periodControls, esc, url, flash, showFlash };
 })();
 
 window.BudgetsUI = BudgetsUI;

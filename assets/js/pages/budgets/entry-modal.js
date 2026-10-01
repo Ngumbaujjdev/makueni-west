@@ -92,7 +92,7 @@ const BudgetsEntryModal = (function () {
                 <aside class="att-entry-preview budget-entry-preview" id="entryPreview" aria-live="polite">
                   <div class="att-preview-label">Preview</div>
                   <div class="att-preview-what" id="entryPreviewWhat">-</div>
-                  <div class="att-preview-total"><span id="entryPreviewAmount">KES 0.00</span></div>
+                  <div class="att-preview-total budget-fit-amount" id="entryPreviewTotal"><small>KES</small><span id="entryPreviewAmount">0.00</span></div>
                   <div class="count-bar att-preview-bar" aria-hidden="true"><span id="entryPreviewBar" class="bg-primary" style="width: 0%"></span></div>
                   <ul class="att-preview-list" id="entryPreviewList"></ul>
                   <div class="att-preview-compare" id="entryPreviewNote"></div>
@@ -260,7 +260,10 @@ const BudgetsEntryModal = (function () {
       <span class="avatar avatar-xs bg-${side === "in" ? "success" : "danger"} text-white"><i class="${side === "in" ? "ri-arrow-down-line" : "ri-arrow-up-line"}"></i></span>
       <span><b>Money ${side}</b>${line ? ` · ${B.esc(line.name)}` : ""}${amount ? ` · ${B.money(amount)}` : ""}${day ? ` · ${new Date(`${day}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : ""}</span>`;
     document.getElementById("entryPreviewWhat").textContent = line ? `Money ${side} · ${line.name}` : `Money ${side}`;
-    document.getElementById("entryPreviewAmount").textContent = B.money(amount);
+    // Smaller as the number gets longer, so it always fits the panel.
+    const shown = B.amount(amount);
+    document.getElementById("entryPreviewAmount").textContent = shown;
+    document.getElementById("entryPreviewTotal").dataset.size = shown.length <= 9 ? "l" : shown.length <= 11 ? "m" : "s";
     const bar = document.getElementById("entryPreviewBar");
     const list = document.getElementById("entryPreviewList");
     const note = document.getElementById("entryPreviewNote");

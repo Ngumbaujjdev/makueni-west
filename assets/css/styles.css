@@ -34203,8 +34203,23 @@ a.budget-month-tile:hover {
   border-color: rgba(var(--danger-rgb), 0.22);
 }
 .budget-entry-modal .att-preview-total {
-  font-size: 1.45rem;
   white-space: nowrap;
+}
+.budget-entry-modal .att-preview-total span {
+  font-size: 1.6rem;
+}
+/* "KES" small, the number big - and smaller as the number grows, so it never spills out */
+.budget-fit-amount small {
+  margin-inline-end: 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--default-text-color);
+}
+.budget-entry-modal .budget-fit-amount[data-size="m"] span {
+  font-size: 1.3rem;
+}
+.budget-entry-modal .budget-fit-amount[data-size="s"] span {
+  font-size: 1.1rem;
 }
 /* One sentence ("After this, Tithes has KES 123,200.00 still to come."), not a grid of pieces */
 .budget-entry-modal .att-preview-compare {
@@ -34708,4 +34723,68 @@ a.budget-month-tile:hover {
   .budget-tile-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* Budgets page - year tiles in their budget's colour, like the form's month chips */
+.budget-month-tile {
+  position: relative;
+}
+.budget-month-tile.is-active { background: rgba(var(--success-rgb), 0.06); border-color: rgba(var(--success-rgb), 0.35); }
+.budget-month-tile.is-draft { background: rgba(var(--warning-rgb), 0.09); border-color: rgba(var(--warning-rgb), 0.45); }
+.budget-month-tile.is-closed { background: rgba(var(--purple-rgb), 0.06); border-color: rgba(var(--purple-rgb), 0.35); }
+.budget-month-tile.is-draft .budget-month-figure.text-success { color: #8a6a06 !important; }
+.budget-month-tile.is-closed .budget-month-figure.text-success { color: rgb(var(--purple-rgb)) !important; }
+.budget-month-tile.is-now {
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.15);
+}
+.budget-month-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--default-text-color);
+}
+.budget-month-plan {
+  align-self: flex-start;
+  margin-top: auto;
+}
+.budget-month-plan:hover {
+  background: rgb(var(--primary-rgb));
+  color: #fff;
+}
+
+/* Budgets table - money in / out with a thin bar of how much came in or went out */
+.budget-mini-bar {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  margin-top: 0.25rem;
+}
+.budget-mini-bar .count-bar {
+  width: 5.5rem;
+  height: 4px;
+}
+.budget-mini-bar small {
+  font-size: 0.72rem;
+  color: var(--default-text-color);
+}
+
+/* Money in / out lists - the date tile takes the direction's colour */
+.budget-recent-date.is-in {
+  background: rgba(var(--success-rgb), 0.12);
+  color: rgb(var(--success-rgb));
+}
+.budget-recent-date.is-out {
+  background: rgba(var(--danger-rgb), 0.1);
+  color: rgb(var(--danger-rgb));
+}
+.budget-dot-other {
+  background: rgba(var(--dark-rgb), 0.28);
+}
+.budget-month-tile.is-empty .budget-month-figure {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--default-text-color);
 }

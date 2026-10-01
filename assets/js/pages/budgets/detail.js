@@ -78,10 +78,10 @@ const BudgetsDetail = (function () {
         const isIn = e.direction === "in";
         return `
           <li data-entry="${e.id}" class="${canChange ? "is-clickable" : ""}">
-            <span class="budget-recent-date"><b>${date.getDate()}</b><small>${date.toLocaleDateString("en-GB", { month: "short" })}</small></span>
+            <span class="budget-recent-date is-${isIn ? "in" : "out"}"><b>${date.getDate()}</b><small>${date.toLocaleDateString("en-GB", { month: "short" })}</small></span>
             <span class="flex-fill" style="min-width: 0;">
               <span class="d-block fw-semibold text-truncate">${B.esc(e.description)}</span>
-              <span class="d-block fs-12 text-truncate">${B.esc(e.line || "")}${e.counterparty ? ` · ${B.esc(e.counterparty)}` : ""}${e.recorded_by ? ` · ${B.esc(e.recorded_by)}` : ""}</span>
+              <span class="d-block fs-12 text-truncate">${B.lineDot(e.line)}${e.counterparty ? ` · ${B.esc(e.counterparty)}` : ""}${e.recorded_by ? ` · ${B.esc(e.recorded_by)}` : ""}</span>
             </span>
             <span class="fw-bold ${isIn ? "text-success" : "text-danger"}">${isIn ? "+" : "−"}${B.amount(e.amount)}</span>
           </li>`;
