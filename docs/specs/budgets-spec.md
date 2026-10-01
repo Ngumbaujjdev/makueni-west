@@ -4,7 +4,8 @@ Budgets for a church, a region and the diocese. Each place plans a month or a wh
 
 **Status:** being built in phases (started 2026-09-30).
 - Phase 1: the budget model, access, the list, the form and details.
-- Later phases: spending, the dashboard, deductions, reports and the top-to-bottom views.
+- Phase 2 (2026-10-01): recording money in and out (Spending), the Overview dashboard, and "What we noticed".
+- Later phases: deductions and Budget Settings, reports, and the top-to-bottom views.
 
 This spec replaces `church-budgeting-spec.md`, which described a church → diocese approval that no longer exists.
 
@@ -51,9 +52,17 @@ This spec replaces `church-budgeting-spec.md`, which described a church → dioc
 - The totals on `budgets` are recalculated in one place, `App\Services\Budgets\BudgetBook::recalculate()`.
 - Net money left = money in − money out.
 
+### `budget_entries` (money in and out, phase 2)
+
+- `budget_id`, `budget_line_item_id`, `direction` (`in` | `out`), `amount` decimal(15,2), `entry_date`, `description`, `counterparty` (paid to / received from, optional), `method` (`cash` | `mpesa` | `bank` | `cheque`), `reference` (optional), `recorded_by`, `updated_by`, timestamps, soft deletes.
+- Money can only be recorded on an **In use** budget, with a date inside its period. A draft returns 422 "The X budget is still a draft. Start using it first."; a closed budget can't be changed.
+- A line's `actual_amount` is always the sum of its entries, refreshed by `BudgetBook` on every record, change, delete and restore; then the budget totals are recalculated once.
+- Money recorded on a line the budget didn't plan adds that line with planned 0 and `budget_line_items.is_unplanned = true` ("Added X as an unplanned line" in History).
+- Deleting is a soft delete, so it can be undone.
+
 ### `budget_logs` (History)
 
-- `action` is a string: `created`, `updated`, `started`, `closed`, `reopened`, `deleted`, `retired`.
+- `action` is a string: `created`, `updated`, `started`, `closed`, `reopened`, `deleted`, `retired`, and from phase 2 `entry_recorded`, `entry_changed`, `entry_removed`, `entry_restored` (e.g. "Recorded KES 300.00 spent on Church Rent (Rent for January, 10 Jan)").
 - A save writes **one** entry, listing the amounts that changed, e.g. "Electricity 5,000.00 → 6,000.00".
 - Totals are not logged.
 
@@ -77,10 +86,11 @@ This spec replaces `church-budgeting-spec.md`, which described a church → dioc
 | `{level}.budgets.budgets.prepare` | Create, edit, start using, close, reopen, delete a draft |
 | `{level}.budgets.budgets.export` | Export (reports phase) |
 | `{level}.budgets.below.read` | View budgets of places below (region, diocese) |
-| `{level}.budgets.spending.read` / `.record` | Spending (phase 2) |
+| `{level}.budgets.overview.read` | The Overview dashboard (phase 2) |
+| `{level}.budgets.spending.read` / `.record` | See / record, change and delete money in and out (phase 2) |
 | `{level}.settings.budgetsettings.read` / `.update` | Budget Settings (phase 3) |
 
-Seeded by `BudgetsAccessSeeder`.
+Seeded by `BudgetsAccessSeeder`. Whoever can read budgets can read the Overview and Spending; whoever can prepare budgets can record money.
 
 | Level | Role | Grants |
 |---|---|---|
@@ -115,6 +125,23 @@ All routes are under `auth:sanctum` and `EnsureBudgetAccess`.
 
 The old approval routes (`submit`, `approve`, `reject`, `activate`) and `clone` are removed.
 
+## API Contract (phase 2)
+
+| Method | Path | Does |
+|---|---|---|
+| GET | `/budgets/dashboard?year=&month=&territory_id=` | The Overview, from `App\Reports\Budget\BudgetData` (which the PDF reports will also use). `month` empty = the whole year. Returns `period` (`label`, `start`, `end`, `previous_label`, `time_pct` = how much of the period has gone, null unless it's the current one, `ended`), `budget` (the one covering the period: a month's own, or the whole year's with `share` 1/12 when viewing a month) or null, `budgets`, `totals` (`in_planned`, `in_actual`, `out_planned`, `out_actual`, `left_planned`, `left_actual`, `entries`), `previous` (the same totals for the period before), `lines` (`in` / `out`: name, planned, actual, left, pct, is_unplanned), `trend` (`days`: spent, received and an even pace per day for a month; `months` for a year), `spark` (six months), `recent` (8 entries), `insights`, plus `place`, `view_only` and `can_record`. |
+| GET | `/budget-entries?year=&month=&budget_id=&direction=&territory_id=` | Money in and out for the period, newest first, with `stats` (`in`, `out`, `count`, `biggest_line`, `biggest_amount`). |
+| POST | `/budget-entries` | Body `{budget_id?, budget_line_id, amount, entry_date, description, counterparty?, method?, reference?}`. The line decides money in or out. Without `budget_id`, the budget in use on that date is used (a month's before the year's); none returns 422 "There's no budget in use for April 2026…". Returns the entry and the line's new `planned`, `actual`, `left`. |
+| PUT | `/budget-entries/{id}` | Change it, same body. |
+| DELETE | `/budget-entries/{id}` | Soft delete. |
+| POST | `/budget-entries/{id}/restore` | Undo a delete. |
+
+Writing needs `{level}.budgets.spending.record` on the acting place's own budget; a place below gets 403 "View only".
+
+### What we noticed (insight rules)
+
+`BudgetStatusRule` (no budget for the period, still a draft, nothing recorded, nothing recorded for 14+ days), `BudgetOverPlanRule` (lines spent beyond plan), `BudgetSpendingPaceRule` (spending ahead of the time gone), `BudgetIncomeShortfallRule` (money in behind the time gone), `BudgetBalanceRule` (more out than in), `BudgetUnplannedRule` (money on unplanned lines).
+
 ## Pages (phase 1)
 
 - Same pages for every level:
@@ -139,6 +166,21 @@ The old approval routes (`submit`, `approve`, `reject`, `activate`) and `clone` 
   - buttons only where allowed;
   - a "View only" banner for a place below.
 
+## Pages (phase 2)
+
+- **Finance → Budgets** gains **Overview** and **Spending** for each level.
+- **Overview** (month by default, or the whole year):
+  - a verdict card: **On track** / **Spending ahead** / **Over plan**, one sentence ("You've spent 4% of October's plan with 3% of the month gone"), money in and out bars with a "today" marker, and money left with a spent/left ring;
+  - four cards with "vs last month" and sparklines;
+  - "Spending through the month" (spent, received and an even-pace line) or, for a year, money in and out per month; next to it **What we noticed**;
+  - **Plan vs actual** (the biggest 8 lines, Out/In, red when over plan) and **Money in by source** (a ring donut);
+  - **Where the money is going** (top 6 lines with Show all) and **Recent money**;
+  - no budget → "Prepare it"; a draft → "Start using it".
+- **Spending:** cards, a filter bar (in/out, line, how it was paid, search) and the list; change, and delete with Undo; a note explaining why recording isn't possible when there's no budget in use.
+- **Record money window** (Overview, Spending, a budget's page): in or out, which line (with what's left), amount and date (limited to the period), details and how it was paid; a live preview ("After this, Electricity has KES 800.00 left", or "over plan"); **Record another**.
+- **Budget page:** a **Record money** button and a **Spending** tab.
+- Windows everywhere follow the Demographics report window: a white header with one solid coloured icon tile, small uppercase section labels, tinted panels and a tinted footer.
+
 ## Look
 
 Every budget page matches the redesigned Demographics pages (reference: `church/demographics-growth/index.php`):
@@ -162,3 +204,12 @@ The Budgets page is the year's dashboard, with "The year at a glance" as a tile 
 8. A church user can't read a region's or the diocese's budgets, or another church's.
 9. Saving a budget writes one History entry listing the changed amounts. History shows who did it.
 10. Seeded quarterly budgets are retired by the migration, and the migration can be rolled back.
+
+## Acceptance Criteria (phase 2)
+
+1. Money can be recorded on an In use budget only, dated inside its period; a draft or an outside date returns 422 with a plain message.
+2. Recording, changing, deleting and restoring an entry keeps the line's actual and the budget's totals right, and writes a History sentence.
+3. Money on a line the budget didn't plan adds it as an unplanned line.
+4. Without `budget_id`, money goes to the budget in use on that date; with none, 422.
+5. A place below can read the dashboard and the entries, but recording returns 403.
+6. The dashboard's totals and lines match the entries; a month of a whole-year budget counts a twelfth of its plan.
