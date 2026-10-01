@@ -158,7 +158,10 @@ Writing needs `{level}.budgets.spending.record` on the acting place's own budget
   2. **Money in**: one amount per line, with "Last time" under each.
   3. **Money out (spending)**: the same. Deductions are not money out; they come from Budget Settings.
   4. **Check and save**: every planned line with its change against last time, and notes.
-  - The preview shows money in, out and left, the comparison with the last budget, and the biggest money out lines.
+  - It uses the Demographics form's colours:
+    - month chips tinted by status (In use green, Draft gold, Closed purple, Free white), with a "This month" badge and a legend;
+    - each line as a number tile with its own coloured icon;
+    - a preview with money in / out / left tiles, "x of y lines filled", and every line with its coloured dot.
   - Buttons: **Save as draft** (any step) and **Save and start using** (last step). Changing a budget opens at Money in with every step open.
 - **Budget details:**
   - header: period, status, place, prepared by;
@@ -168,7 +171,7 @@ Writing needs `{level}.budgets.spending.record` on the acting place's own budget
 
 ## Pages (phase 2)
 
-- **Finance → Budgets** gains **Overview** and **Spending** for each level.
+- **Finance → Budgets** gains **Overview** and **Spending** for each level, and **New budget** (the form) for people who can prepare budgets: `budgets.budgets.prepare` is linked to that page, so the menu shows it only to them.
 - **Overview** (month by default, or the whole year):
   - a verdict card: **On track** / **Spending ahead** / **Over plan**, one sentence ("You've spent 4% of October's plan with 3% of the month gone"), money in and out bars with a "today" marker, and money left with a spent/left ring;
   - four cards with "vs last month" and sparklines;
