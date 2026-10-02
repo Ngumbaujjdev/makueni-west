@@ -87,6 +87,7 @@ function settingsPageScripts(bool $withMap = true): void
         'assets/js/pages/settings/sections/profile.js',
         'assets/js/pages/settings/sections/service-times.js',
         'assets/js/pages/settings/sections/team.js',
+        'assets/js/pages/settings/sections/health.js',
         'assets/js/pages/settings/hub.js',
     ] as $src) {
         echo '<script src="' . $v($src) . '"></script>' . "\n";
