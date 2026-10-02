@@ -39,6 +39,8 @@ final class BudgetAccess
         'spending.read' => 'budgets.spending.read',
         'record' => 'budgets.spending.record',
         'settings.read' => 'settings.budgetsettings.read',
+        'settings' => 'settings.budgetsettings.update',
+        'settings.read' => 'settings.budgetsettings.read',
         'settings.update' => 'settings.budgetsettings.update',
     ];
 

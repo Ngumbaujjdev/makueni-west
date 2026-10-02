@@ -69,16 +69,19 @@ trait BuildsBudgetWorld
             ...array_map(fn ($a) => "church.budgets.budgets.{$a}", ['read', 'prepare', 'export']),
             'church.budgets.overview.read', 'church.budgets.spending.read', 'church.budgets.spending.record',
             ...array_map(fn ($a) => "church.settings.budgetsettings.budgetlines.{$a}", ['read', 'create', 'update', 'delete']),
+            'church.settings.budgetsettings.read', 'church.settings.budgetsettings.update',
         ]);
         $this->overseer = $this->userWithRole('overseer', 'Test Overseer', 'region', $this->region->id, [
             ...array_map(fn ($a) => "region.budgets.budgets.{$a}", ['read', 'prepare', 'export']),
             'region.budgets.overview.read', 'region.budgets.spending.read', 'region.budgets.spending.record',
             'region.budgets.below.read',
+            'region.settings.budgetsettings.read', 'region.settings.budgetsettings.update',
         ]);
         $this->bishop = $this->userWithRole('bishop', 'Test Bishop', 'diocese', $this->diocese->id, [
             ...array_map(fn ($a) => "diocese.budgets.budgets.{$a}", ['read', 'prepare', 'export']),
             'diocese.budgets.overview.read', 'diocese.budgets.spending.read', 'diocese.budgets.spending.record',
             'diocese.budgets.below.read',
+            'diocese.settings.budgetsettings.read', 'diocese.settings.budgetsettings.update',
         ]);
 
         $this->type = BudgetType::create(['name' => 'Annual', 'slug' => 'annual', 'duration_months' => 12, 'is_active' => true]);

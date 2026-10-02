@@ -343,6 +343,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // Money in and out against a budget ("Spending") - access checked in the controller
+    // Budget Settings: one place's lines (and deductions), for every level
+    Route::prefix('budget-settings')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\BudgetSettingsController::class, 'index']);
+        Route::post('/lines', [\App\Http\Controllers\Api\BudgetSettingsController::class, 'storeLine']);
+        Route::put('/lines/{line}', [\App\Http\Controllers\Api\BudgetSettingsController::class, 'updateLine']);
+        Route::delete('/lines/{line}', [\App\Http\Controllers\Api\BudgetSettingsController::class, 'destroyLine']);
+    });
+
     Route::prefix('budget-entries')->group(function () {
         Route::get('/', [\App\Http\Controllers\Api\BudgetEntryController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\Api\BudgetEntryController::class, 'store']);
