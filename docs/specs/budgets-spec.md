@@ -2,14 +2,14 @@
 
 Budgets for a church, a region and the diocese. Each place plans a month or a whole year, records the money that actually comes in and goes out, and sees how it's doing.
 
-**Status:** being built in phases (started 2026-09-30).
+**Status:** complete (built in phases, 2026-09-30 to 2026-10-02).
 - Phase 1: the budget model, access, the list, the form and details.
 - Phase 2 (2026-10-01): recording money in and out (Spending), the Overview dashboard, and "What we noticed".
 - Phase 4 (2026-10-02): Budget Settings, with lines and deductions for each level. Reports were brought forward.
 - Phase 5 (2026-10-02): the places below - a region's churches, the diocese's churches and regions - read-only, with the budget.rollup report.
-- Later phases: cleanup.
+- Phase 6 (2026-10-02): cleanup - the approval-era routes, controllers, pages, permissions and columns removed.
 
-This spec replaces `church-budgeting-spec.md`, which described a church → diocese approval that no longer exists.
+This spec replaced `church-budgeting-spec.md` (a church → diocese approval that no longer exists; removed in phase 6).
 
 ## Principles
 
@@ -45,8 +45,8 @@ This spec replaces `church-budgeting-spec.md`, which described a church → dioc
 - `started_at` / `started_by` and `closed_at` / `closed_by` record who moved it and when.
 
 **Other columns**
-- `budget_type_id` and `budget_period_id` are nullable and no longer written. `budget_types` and `budget_periods` stay, because Demographics reads months from them.
-- The approval columns (`submitted_at`, `approved_*`, `approval_notes`, `rejection_reason`) and `status_id` are no longer used. They are dropped in the cleanup phase.
+- `budget_types` and `budget_periods` stay, read-only (`GET /budget-types`, `GET /budget-periods`), because Demographics reads months from them; budgets no longer point at them.
+- Dropped in phase 6: `budget_type_id`, `budget_period_id`, `status_id`, the approval columns (`submitted_at`, `approved_*`, `approval_notes`, `rejection_reason`) and `budget_line_items.is_locked`. `total_deductions` is the sum of the budget's deduction snapshots (`BudgetBook::recalculate()`).
 
 ### `budget_line_items`
 
@@ -371,6 +371,24 @@ PDF and Excel, through the shared report engine (`docs/specs/reports-spec.md`): 
   4. A place below can be exported; upwards or sideways can't.
   5. A role without export sees no budget reports.
   6. A ready run has a `MWD-BUD-` code and a real PDF or XLSX file.
+
+## Cleanup (phase 6)
+
+Removed once nothing live used them:
+- **Routes and code:** the old line-item, audit, summary, deduction and log actions on `/budgets/{id}`; `/budget-deductions`, `/budget-lines`, `/budget-categories`, `/budget-logs` and the write routes of `/budget-types` / `/budget-periods` (several had no permission check); their controllers, `DenyChurchSettingsWrites`, `BudgetsExport`, and the approval-era model methods.
+- **Pages:** the old church Budget Lines and diocese Types / Categories / Lines settings pages are now redirects to Budget Settings, and leave the menu; the empty `diocese/budget-management/*` stubs and the old budget-management scripts are gone. The 301 redirects from the old list / create / edit / details pages stay, for bookmarks.
+- **Permissions:** `BudgetsAccessSeeder` retires the old names on every run (`financialmanagement.budgetmanagement.*`, `diocesebudgetmanagement.*`, `diocese.budgetmanagement.budgetoverview.*`, `church.settings.budgetsettings.budgetlines.*`, `diocese.settings.budgetsettings.{budgettype,budgetcategory,budgetline}.*`). `ChurchBudgetAccessSeeder` and `DioceseBudgetModuleSeeder` are gone.
+- **Seeding:** `BudgetsAccessSeeder` is the last phase of `DatabaseSeeder` (PHASE 27), so a fresh setup gets every level's Budgets and Budget Settings menus; the church-modules focus seeder no longer mutes the module holding the church's Budgets pages.
+- **Columns:** see Data Model → Other columns.
+
+## Handed over
+
+These aren't built by Budgets; they move to `docs/specs/settings-spec.md` and the finance follow-up:
+- the church's **"what we owe upward"** view (diocese share / region share: due, sent, still owed, by month) - built on `BudgetRollup::owedFor()`, with `Deductions::status()` as the one source of due / sent / owed;
+- **receipts on entries** (a `budget_entry_attachments` table; `GET /budget-entries/{id}` keeps returning the entry as now, for a Receipts card on the entry page);
+- **Finance settings:** financial year start, payment methods, M-Pesa and bank details, receipt numbering.
+
+Budget Settings becomes one section of each level's Settings hub, embedding `includes/budget/settings.php` as is.
 
 ## Look
 

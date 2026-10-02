@@ -34,7 +34,7 @@ Reference implementation for a new territory-scoped module: `app/Models/Budget.p
 
 ## Roles & Permissions
 
-Spatie-backed, but with a custom hierarchy layered on top: `Module → ModuleGroup → Submodule → SubSubmodule → Permission`. Permission names follow `<scope>.<module>.<submodule>.<action>` (e.g. `diocese.settings.budgetsettings.budgettype.read`). New modules add their module/submodule/permission rows via a seeder modeled on `database/seeders/DioceseBudgetModuleSeeder.php` — don't hand-create permission rows ad hoc in a controller or migration.
+Spatie-backed, but with a custom hierarchy layered on top: `Module → ModuleGroup → Submodule → SubSubmodule → Permission`. Permission names follow `<scope>.<module>.<submodule>.<action>` (e.g. `church.settings.budgetsettings.read`). New modules add their module/submodule/permission rows via a seeder modeled on `database/seeders/BudgetsAccessSeeder.php` (added to `DatabaseSeeder` as a new phase at the end) — don't hand-create permission rows ad hoc in a controller or migration.
 
 `UserTerritoryAssignment` scopes a user to a territory with `assignment_type` (`PRIMARY`/`SECONDARY`), and flags like `can_see_children`, `can_see_siblings`, `can_manage_users`, `can_manage_finances`. A user can hold multiple assignments (e.g. a Regional Overseer is also a Diocese Council Member) — check `getCurrentRole()` / role-switch behavior in `AuthController` before assuming "one user, one role."
 

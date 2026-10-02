@@ -9,16 +9,16 @@ Deferred implementation work, in priority order. Nothing in this file has been b
 **Locked-in design decisions** (from planning conversation, refined by `docs/design/demographics-mobile-app-design.md` — a mobile PWA design reference, not being built as an app yet, but its screens define real field lists and workflow):
 - Aggregate counts, not an individual member registry — matches the "monitoring system" framing of the original scope, avoids the scope blow-up of a full congregant database (dedup rules, PII handling).
 - **Entry only at Church level**, by the Pastor. Real field list (from the design reference, replaces an earlier guessed set): total members, youth (13–35), women's/men's fellowship, Sunday school, seniors, gender split, new members, transfers out, baptisms, communion participants, conversions.
-- **Not pure read-only above Church**: Subregion Overseer has a real approve/flag/request-changes review action (mirrors Budget's submit/approve/reject pattern). Region and Diocese are summary/analytics-only, no review action. See `docs/specs/demographics-module-spec.md` → Workflow.
+- **Not pure read-only above Church**: Subregion Overseer has a real approve/flag/request-changes review action (Budgets had a submit/approve/reject workflow at the time; it was removed in the 2026-10 overhaul). Region and Diocese are summary/analytics-only, no review action. See `docs/specs/demographics-module-spec.md` → Workflow.
 - Reuse the existing `fiscal_years`/`fiscal_quarters`/`fiscal_months` tables (already built for Budgets) — no new period system.
-- Follow the `Budget.php` / `BudgetController` pattern exactly: `territory_type` + `territory_id` columns, `Auditable` + `SoftDeletes` traits, same route-group shape, and reuse its submit/approve/reject workflow shape for the Subregion review actions.
+- Follow the `Budget.php` / `BudgetController` pattern exactly: `territory_type` + `territory_id` columns, `Auditable` + `SoftDeletes` traits, same route-group shape, and reuse its submit/approve/reject workflow shape for the Subregion review actions (that workflow has since been removed from Budgets; Demographics keeps its own).
 
 **Steps**:
 1. Finish `docs/specs/demographics-module-spec.md` (data model + workflow already decided; API Contract and Acceptance Criteria still need to be written in full).
 2. Migration + `ChurchDemographic` model (or similar name — finalize in the spec).
 3. `DemographicsController` — church-level CRUD (create/update own church only), Subregion review actions (approve/flag/request-changes), and summary/trend/compare read endpoints for Region/Subregion/Diocese.
 4. `routes/api.php` — new `demographics` route group.
-5. New module/submodule/permission rows, seeded the same way `DioceseBudgetModuleSeeder.php` did for Budgets: `diocese.demographics.entry.create|update` (Church), `diocese.demographics.review.approve|flag|request-changes` (Subregion), `diocese.demographics.summary.read` (Region/Subregion/Diocese).
+5. New module/submodule/permission rows, seeded the way Budgets' seeder did at the time (today's reference is `BudgetsAccessSeeder.php`): `diocese.demographics.entry.create|update` (Church), `diocese.demographics.review.approve|flag|request-changes` (Subregion), `diocese.demographics.summary.read` (Region/Subregion/Diocese).
 6. `backend/tests/Feature/Demographics/*` (suite already reserved in `phpunit.xml`) — cover the full permission matrix per the spec's Acceptance Criteria.
 7. Frontend: build out the 6 stub files in `diocese/demographics-analytics/*` + one new church-level data-entry page, in the existing PHP-include + `fetch()` pattern (no new frontend framework — see root `CLAUDE.md` → Project Structure). The mobile PWA in `docs/design/` is a separate, later effort — not part of this step.
 
@@ -63,11 +63,9 @@ Deferred implementation work, in priority order. Nothing in this file has been b
 - Decide a rule level pragmatically — `compass` runs level 9, but that's a mature, already-typed codebase; starting Makueni West at a lower level (5–6) and ratcheting up is more realistic given zero prior static-analysis history here.
 - Not blocking on demographics (item 1) — do this whenever there's a natural pause, it's independent of everything else in this roadmap.
 
-## 6. Remaining budget stub pages
+## 6. Remaining budget stub pages — done (2026-10)
 
-**Why**: the only real gap left in an otherwise fully-built module. See `AUDIT-2026-08.md` → Frontend → Stub.
-
-- `diocese/budget-management/{index,monitoring,planning,reports}.php` — landing dashboard + monitoring/planning/reporting views. Same build pattern as the demographics analytics pages (item 1, step 7) — do this right after demographics as a natural follow-on, reusing whatever frontend conventions get established there.
+The budgets overhaul replaced them (`docs/specs/budgets-spec.md`): Overview, Budgets, Spending, Reports and the read-only places-below pages for every level. The empty `diocese/budget-management/*` stubs were removed in the cleanup.
 
 ## Deferred, not forgotten
 
