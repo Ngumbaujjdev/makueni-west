@@ -164,8 +164,9 @@
       <div class="soft-primary rounded p-3">
         ${copy("Employee code", creds.employee_code)}
         ${copy("Temporary password", creds.temporary_password)}
+        ${creds.pin ? copy("PIN", creds.pin) : ""}
       </div>
-      <div class="fs-12 mt-2">They sign in on the login page's password tab with the employee code (or their email) and this password. Keep the employee code private - treat it like a password.</div>`;
+      <div class="fs-12 mt-2">They sign in either with the employee code and PIN (the Employee Code tab), or with the employee code (or email) and the password (the password tab). They'll choose their own password at first sign-in. Keep all three private.</div>`;
   }
 
   function wireCopy(el) {

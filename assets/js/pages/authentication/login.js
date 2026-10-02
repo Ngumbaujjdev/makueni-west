@@ -85,8 +85,11 @@
 
     if (!form || !codeInput) return;
 
-    // Auto-format employee code input (numbers only)
+    // Auto-format employee code and PIN inputs (numbers only)
     codeInput.addEventListener("input", function (e) {
+      this.value = this.value.replace(/[^0-9]/g, "");
+    });
+    document.getElementById("employee-pin")?.addEventListener("input", function () {
       this.value = this.value.replace(/[^0-9]/g, "");
     });
 
@@ -130,6 +133,15 @@
       return;
     }
 
+    // The code alone no longer signs in - the PIN is checked too.
+    const pinInput = document.getElementById("employee-pin");
+    const pin = (pinInput?.value || "").trim();
+    if (!/^\d{4,6}$/.test(pin)) {
+      Toast.error("Please enter your PIN (4 to 6 digits)");
+      pinInput?.focus();
+      return;
+    }
+
     // Show loading state
     const originalBtnText = submitBtn.innerHTML;
     setButtonLoading(submitBtn, true);
@@ -146,6 +158,7 @@
           },
           body: JSON.stringify({
             employee_code: employeeCode,
+            pin: pin,
           }),
         }
       );
