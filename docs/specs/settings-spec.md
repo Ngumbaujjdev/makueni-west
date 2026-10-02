@@ -2,13 +2,13 @@
 
 One **Settings** page for each level: church, region and diocese. Each place fills in its own profile, service times, team, finance details and communication there, and the module settings (Budgets, Attendance, Demographics) live under it. The diocese's global admins also get the system settings: email and SMS, health, security, documents, access control, the audit log and maintenance.
 
-**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (PR #165); S2 done (PR #166); S3 done (PR #168); S4a done (PR #170, Email, SMS, System health); S4b done (Security, Documents & PDF, Maintenance, Audit log, Access control). S5 (finance details and communication) next.
+**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (PR #165); S2 done (PR #166); S3 done (PR #168); S4a done (PR #170, Email, SMS, System health); S4b done (PR #173, Security, Documents & PDF, Maintenance, Audit log, Access control); S5 done (Payment details for regions and the diocese). Deferred until something reads them: church payment details, a church/region Communication section, and a currency setting (see "S5 as built").
 - **S0:** lock down the access-control APIs.
 - **S1:** the hub, Overview, Profile and Service times.
 - **S2:** Leadership & team.
 - **S3:** the module settings move in. This waits for Budgets phase 6.
 - **S4:** the diocese's system settings.
-- **S5:** finance details and communication.
+- **S5:** payment details for regions and the diocese (church payment details and a Communication section deferred until something reads them).
 - **Later:** message templates, notification switches, and leaders without a login.
 
 ## Principles
@@ -101,9 +101,9 @@ One **Settings** page for each level: church, region and diocese. Each place fil
 | Our place | Profile (custom) | ✓ | ✓ | ✓ |
 | | Service times (custom) | ✓ | — | ✓ |
 | | Leadership & team (custom) | ✓ | ✓ | ✓ |
-| Money | Finance details (form) | ✓ | ✓ | ✓ |
+| Money | Payment details (form, S5) | later | ✓ | ✓ |
 | | Budgets (link → Budget Settings) | ✓ | ✓ | ✓ |
-| Messages | Communication (form) | reply-to, display name, SMS signature | same | email server, SMS gateway, sender ID |
+| Messages | Email, SMS (forms, S4a) | — | — | email server, SMS gateway, sender ID (global admins) |
 | Ministry | Attendance: gathering types (link) | ✓ | — | — |
 | | Demographics: recording cadence (link) | ✓ | — | — |
 | System | Security, Documents & PDF, Maintenance (form); Audit log, Access control (custom) | — | — | ✓, global admins (Access control: anyone who can open one of its pages) |
@@ -143,19 +143,14 @@ Subregions inherit settings but get no Settings page of their own.
 - `maintenance.notice_tone`
 - `maintenance.notice_until`
 
-**S5, every level:**
+**S5, region and diocese (as built):**
 
-*Finance details:*
-- `finance.currency` (the diocese can lock it)
-- `finance.payment_methods` (list)
-- `finance.mpesa_paybill`, `finance.mpesa_account`, `finance.mpesa_till`
+*Payment details* (each place's own; `'inherits' => false`):
+- `finance.mpesa_type` (none, paybill or till), `finance.mpesa_number`, `finance.mpesa_account` (`{code}` becomes the sending church's code)
 - `finance.bank_name`, `finance.bank_branch`, `finance.bank_account_name`, `finance.bank_account_number`
-- `finance.receipt_footer`
+- `finance.payment_note`
 
-*Communication:*
-- `messages.reply_to`
-- `messages.display_name`
-- `messages.sms_signature`
+*Planned, deferred until something reads them:* `finance.currency`, `finance.payment_methods`, `finance.receipt_footer`, and church payment details; Communication `messages.reply_to`, `messages.display_name`, `messages.sms_signature`.
 
 ### System settings as built (S4a)
 - **Where they're stored:** Email, SMS and System health are kept at the **diocese** (`Settings::systemPlace()`, the single diocese territory) rather than at `territory_id NULL`. They're marked `global_only` in the registry, so only global admins see or change them; `SettingsAccess::can()` refuses everyone else, and there's no hub permission.
@@ -181,6 +176,18 @@ Subregions inherit settings but get no Settings page of their own.
   - `SettingsHubSeeder` moves "Diocese Settings > System Administration" (found by the `absorbs` path) under Settings, renamed Access control and pointing at `?section=access`. It switches off the empty General Configuration, Compliance, Notifications, Help and Support, Security Settings and System Maintenance rows (`RETIRED`), and then the emptied "Diocese Settings" module. Permission names don't change.
   - The old empty pages (`diocese/settings/general.php` and the others) redirect to the matching hub section.
 - **Rail fix:** the open item is brought into view by scrolling the rail only. `scrollIntoView` also scrolled the page sideways and down once the diocese rail grew to 13 items.
+
+### S5 as built
+- **Payment details** is a form section at **region and diocese**, the places that receive a share. Its fields are `'inherits' => false`: `Settings::resolve()` reads only the place's own row (no locks or values from above), and "reset" goes back to the default. A region that hasn't filled them in must never show the diocese's paybill as its own.
+- **Reader:** `GET /budgets/contributions` returns `pay_to`, built by `App\Support\Settings\PaymentDetails::for($to, $from)` for each place this place's shares go to (`to_id` on each row). The Contributions page shows it in a **How to send it** card with copy buttons.
+- **Overview:** a Payment details item in the checklist, and the rail's attention dot.
+- **Grants:** the section's `'grants'` give Regional Treasurer and Diocese Treasurer update.
+- **Validation messages** for every registry form now use the field's label ("The Paybill or till number field format is invalid.") instead of the dotted key. This fixes S1 behaviour.
+- **Deferred, by the rule that a field ships with the code that reads it:**
+  - Church payment details and a receipt footer: nothing prints receipts or shows a church's payment details yet.
+  - A currency setting: every amount is KES.
+  - The church/region Communication section: the system only sends account messages, from the diocese's Email/SMS settings.
+  - These come with the first page or message that needs them.
 
 ## Resolution
 
@@ -380,7 +387,9 @@ S4a (PR #170) covers email, SMS and Health; S4b covers the rest.
 - [ ] Audit log: every place's changes are listed with who, where and the old and new values, with secrets masked.
 - [ ] Access control: a role with one of the System Administration read permissions sees the section with only those pages; the seeder moves System Administration under Settings as Access control without renaming any permission.
 
-### S5: finance details and communication
-- [ ] A currency locked by the diocese shows as locked to a church and can't be saved by it.
-- [ ] A church's M-Pesa paybill and receipt footer are returned by `GET /settings/sections/finance` and shown where `used_by` says they're used.
-- [ ] A church's reply-to address is used as Reply-To on mail sent on its behalf.
+### S5: payment details
+- [ ] A church's Contributions page shows how to pay each place its share goes to (M-Pesa and bank details, and the note), with `{code}` in the account number replaced by the church's code. A place with nothing filled in shows "hasn't added its payment details yet".
+- [ ] Payment details are never inherited: a region without its own details doesn't show the diocese's.
+- [ ] A paybill or till number that isn't 5 to 7 digits is refused, and the error names the field as the screen does.
+- [ ] The Overview checklist at a region and the diocese includes Payment details, and the rail shows a dot until they're filled in. Regional and Diocese Treasurers can change them.
+- Deferred, not built: a currency setting (the system is KES only), church payment details and receipt footer (nothing prints receipts or shows a church's payment details yet), and the church/region Communication section (nothing sends email or SMS on a place's behalf yet; every current message is an account message from the diocese's Email/SMS settings).
