@@ -46,7 +46,7 @@ final class SettingsRegistry
                 $fields[$key] = ['key' => $key] + $field + [
                     'type' => 'text', 'rules' => [], 'default' => null, 'levels' => self::LEVELS,
                     'lockable' => false, 'secret' => false, 'help' => null, 'used_by' => null, 'span' => 6,
-                    'options' => null, 'card' => 'General',
+                    'options' => null, 'card' => 'General', 'inherits' => true,
                 ];
             }
         }

@@ -91,6 +91,13 @@ final class Settings
             'secret_set' => ! empty($field['secret']) && $value !== null && $value !== '',
         ];
 
+        // A place's own details (payment details): only its own row counts.
+        if (($field['inherits'] ?? true) === false) {
+            $row = $this->rows($self['id'])->get($key);
+
+            return $row ? $result($this->decode($row, $field), 'own', null, null) : $result($default, 'default', null, null);
+        }
+
         foreach (array_reverse($above) as $up) {
             $row = $this->rows($up['id'])->get($key);
             if ($row && $row->is_locked) {
@@ -130,6 +137,9 @@ final class Settings
     public function inherited(string $key, ?Territory $place): array
     {
         $chain = $this->chain($place);
+        if ((SettingsRegistry::field($key)['inherits'] ?? true) === false) {
+            return $this->resolve($key, null, [['id' => -1, 'type' => 'default', 'name' => 'Default']]);
+        }
 
         return $place ? $this->resolve($key, null, array_slice($chain, 1)) : $this->resolve($key, null, [['id' => -1, 'type' => 'default', 'name' => 'Default']]);
     }
@@ -429,7 +439,12 @@ final class Settings
                 $rules[$name] = [...(array) $rules[$name], 'in:'.implode(',', array_keys($field['options']))];
             }
         }
-        $validator = Validator::make($input, $rules);
+        // Messages name the field as the screen does ("Paybill or till number"), not "finance  mpesa number".
+        $attributes = [];
+        foreach (array_keys($input) as $name) {
+            $attributes[$name] = $fields[str_replace('__', '.', $name)]['label'] ?? $name;
+        }
+        $validator = Validator::make($input, $rules, [], $attributes);
         if ($validator->fails()) {
             $errors = [];
             foreach ($validator->errors()->toArray() as $name => $messages) {
