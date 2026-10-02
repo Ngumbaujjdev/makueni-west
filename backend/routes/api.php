@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\Settings\HubController as SettingsHubController;
 use App\Http\Controllers\Api\Settings\ProfileController as SettingsProfileController;
 use App\Http\Controllers\Api\Settings\SectionController as SettingsSectionController;
 use App\Http\Controllers\Api\Settings\ServiceTimesController as SettingsServiceTimesController;
+use App\Http\Controllers\Api\Settings\SystemController as SettingsSystemController;
 use App\Http\Controllers\Api\Settings\TeamController as SettingsTeamController;
 use App\Http\Controllers\Api\StatusController;
 use App\Http\Controllers\Api\SupportTicketController;
@@ -87,6 +88,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::put('team/{assignment}', [SettingsTeamController::class, 'update'])->whereNumber('assignment');
         Route::delete('team/{assignment}', [SettingsTeamController::class, 'destroy'])->whereNumber('assignment');
         Route::post('team/{assignment}/reset-access', [SettingsTeamController::class, 'resetAccess'])->whereNumber('assignment');
+        Route::get('health', [SettingsSystemController::class, 'health']);
+        Route::post('test/email', [SettingsSystemController::class, 'testEmail'])->middleware('throttle:5,1');
+        Route::post('test/sms', [SettingsSystemController::class, 'testSms'])->middleware('throttle:5,1');
+        Route::post('maintenance/retry-failed', [SettingsSystemController::class, 'retryFailed']);
     });
 
     // Authentication Routes

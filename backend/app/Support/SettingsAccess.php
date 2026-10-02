@@ -102,6 +102,10 @@ final class SettingsAccess
             return true;
         }
         $level = self::level($place);
+        // The diocese's system settings (S4) are for global admins only.
+        if (SettingsRegistry::section($section)['global_only'] ?? false) {
+            return false;
+        }
         // A linked page (S3) keeps its own permission; only reading applies.
         $linked = SettingsRegistry::section($section)['permission'] ?? null;
         if ($linked) {

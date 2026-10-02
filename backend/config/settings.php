@@ -78,6 +78,43 @@ return [
             'sentence' => 'The people who serve here, and what each one can do in the system.',
         ],
 
+        // The diocese's system settings (S4) - global admins only.
+        'health' => [
+            'label' => 'System health',
+            'icon' => 'ri-pulse-line',
+            'colour' => 'success',
+            'group' => 'system',
+            'levels' => ['diocese'],
+            'kind' => 'custom',
+            'actions' => [],
+            'global_only' => true,
+            'sentence' => 'Whether email, SMS, background jobs and the scheduler are working right now.',
+        ],
+        'email' => [
+            'label' => 'Email',
+            'icon' => 'ri-mail-send-line',
+            'colour' => 'primary',
+            'group' => 'messages',
+            'levels' => ['diocese'],
+            'kind' => 'form',
+            'actions' => [],
+            'global_only' => true,
+            'test' => 'email',
+            'sentence' => 'The mail server every email goes out through - saved here, it takes over from the server file.',
+        ],
+        'sms' => [
+            'label' => 'SMS',
+            'icon' => 'ri-message-3-line',
+            'colour' => 'pink',
+            'group' => 'messages',
+            'levels' => ['diocese'],
+            'kind' => 'form',
+            'actions' => [],
+            'global_only' => true,
+            'test' => 'sms',
+            'sentence' => "The SMS gateway (Africa's Talking). Until it's set up, messages are only written to the log.",
+        ],
+
         // Existing settings pages, shown inside the hub (S3). 'permission' is
         // the page's own read permission ("{level}." is added); 'absorbs' is
         // the page's menu row, which SettingsHubSeeder moves under Settings.
@@ -132,6 +169,25 @@ return [
 
     'fields' => [
         // Added phase by phase with the code that reads them (S4, S5).
+        // 'config' = the Laravel config key it takes over at runtime
+        // (Settings::applyToConfig); secrets are stored encrypted.
+
+        // ---- Email (S4) - read by Settings::applyToConfig -> every Mailable
+        'mail.mailer' => ['section' => 'email', 'card' => 'How email is sent', 'label' => 'Send email with', 'type' => 'select', 'options' => ['smtp' => 'A mail server (SMTP)', 'log' => "Don't send - write to the log"], 'default' => env('MAIL_MAILER', 'log') === 'smtp' ? 'smtp' : 'log', 'levels' => ['diocese'], 'config' => 'mail.default', 'used_by' => 'Every email (password resets, reports, support)'],
+        'mail.host' => ['section' => 'email', 'card' => 'How email is sent', 'label' => 'Server', 'rules' => ['nullable', 'string', 'max:255'], 'default' => env('MAIL_HOST'), 'levels' => ['diocese'], 'config' => 'mail.mailers.smtp.host', 'help' => 'e.g. smtp.office365.com'],
+        'mail.port' => ['section' => 'email', 'card' => 'How email is sent', 'label' => 'Port', 'type' => 'number', 'rules' => ['nullable', 'integer', 'between:1,65535'], 'default' => env('MAIL_PORT') ? (int) env('MAIL_PORT') : 587, 'levels' => ['diocese'], 'config' => 'mail.mailers.smtp.port', 'span' => 6],
+        'mail.scheme' => ['section' => 'email', 'card' => 'How email is sent', 'label' => 'Security', 'type' => 'select', 'options' => ['' => 'Automatic (STARTTLS)', 'smtps' => 'SSL (port 465)'], 'default' => env('MAIL_SCHEME') ?: '', 'levels' => ['diocese'], 'config' => 'mail.mailers.smtp.scheme', 'span' => 6],
+        'mail.username' => ['section' => 'email', 'card' => 'Signing in to the server', 'label' => 'Username', 'rules' => ['nullable', 'string', 'max:255'], 'default' => env('MAIL_USERNAME'), 'levels' => ['diocese'], 'config' => 'mail.mailers.smtp.username'],
+        'mail.password' => ['section' => 'email', 'card' => 'Signing in to the server', 'label' => 'Password', 'type' => 'secret', 'secret' => true, 'rules' => ['nullable', 'string', 'max:255'], 'default' => env('MAIL_PASSWORD'), 'levels' => ['diocese'], 'config' => 'mail.mailers.smtp.password'],
+        'mail.from_address' => ['section' => 'email', 'card' => 'Who email comes from', 'label' => 'From address', 'type' => 'email', 'rules' => ['nullable', 'email', 'max:255'], 'default' => env('MAIL_FROM_ADDRESS'), 'levels' => ['diocese'], 'config' => 'mail.from.address'],
+        'mail.from_name' => ['section' => 'email', 'card' => 'Who email comes from', 'label' => 'From name', 'rules' => ['nullable', 'string', 'max:120'], 'default' => env('MAIL_FROM_NAME', 'Makueni West Diocese'), 'levels' => ['diocese'], 'config' => 'mail.from.name'],
+
+        // ---- SMS (S4) - read by App\Services\Sms\Sms
+        'sms.driver' => ['section' => 'sms', 'card' => 'Gateway', 'label' => 'Send SMS with', 'type' => 'select', 'options' => ['log' => "Don't send - write to the log", 'africastalking' => "Africa's Talking"], 'default' => 'log', 'levels' => ['diocese'], 'used_by' => 'Every SMS'],
+        'sms.username' => ['section' => 'sms', 'card' => 'Gateway', 'label' => "Africa's Talking username", 'rules' => ['nullable', 'string', 'max:100'], 'default' => null, 'levels' => ['diocese'], 'help' => "'sandbox' for testing"],
+        'sms.api_key' => ['section' => 'sms', 'card' => 'Gateway', 'label' => 'API key', 'type' => 'secret', 'secret' => true, 'rules' => ['nullable', 'string', 'max:200'], 'default' => null, 'levels' => ['diocese']],
+        'sms.sandbox' => ['section' => 'sms', 'card' => 'Gateway', 'label' => 'Use the sandbox (no real messages)', 'type' => 'switch', 'default' => false, 'levels' => ['diocese']],
+        'sms.sender_id' => ['section' => 'sms', 'card' => 'Who SMS comes from', 'label' => 'Sender ID', 'rules' => ['nullable', 'string', 'max:11', 'regex:/^[A-Za-z0-9 ]*$/'], 'default' => null, 'levels' => ['diocese'], 'help' => 'Up to 11 letters or digits, approved by your provider. Leave empty for their default.', 'used_by' => 'Every SMS - churches send under it'],
     ],
 
 ];

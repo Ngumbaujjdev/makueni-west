@@ -139,6 +139,7 @@ class HubController extends SettingsController
         return match ($section) {
             'profile' => PlaceProfile::completeness($place)['percent'] < 100,
             'servicetimes' => ServiceTimesController::normalize($place->metadata['service_times'] ?? []) === [],
+            'health' => collect(app(\App\Support\Settings\Health::class)->report(false)['tiles'])->contains('status', 'check'),
             default => false,
         };
     }

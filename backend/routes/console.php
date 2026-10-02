@@ -23,3 +23,8 @@ Artisan::command('reports:prune', function () {
 })->purpose('Delete report files older than a week');
 
 Schedule::command('reports:prune')->daily();
+
+// Settings > System health checks this heartbeat to tell whether the
+// scheduler (php artisan schedule:work, or cron) is running.
+Schedule::call(fn () => \Illuminate\Support\Facades\Cache::forever(\App\Support\Settings\Health::HEARTBEAT, now()->toIso8601String()))
+    ->everyMinute()->name('settings-heartbeat');

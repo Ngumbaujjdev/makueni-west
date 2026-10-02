@@ -37,6 +37,10 @@ final class Settings
     /** @var array<string, Collection> rows per "v{version}:{scope}" for this request */
     private array $memo = [];
 
+    private ?Territory $systemPlace = null;
+
+    private ?int $applied = null;
+
     public function version(): int
     {
         try {
@@ -253,6 +257,45 @@ final class Settings
             'user_agent' => mb_substr((string) $request?->userAgent(), 0, 1023),
             'tags' => "settings,{$section}",
         ])->save();
+    }
+
+    /** The place system settings are kept at: the diocese (there is one). */
+    public function systemPlace(): ?Territory
+    {
+        return $this->systemPlace ??= Territory::where('territory_type', 'diocese')->orderBy('id')->first();
+    }
+
+    /**
+     * Saved email and other system settings take over from .env for this
+     * process (each field's 'config' key). Values still at their default
+     * leave the .env value alone. Safe at boot: a missing table or database
+     * just means .env applies.
+     */
+    public function applyToConfig(): void
+    {
+        $place = $this->systemPlace();
+        $chain = $this->chain($place);
+        foreach (SettingsRegistry::fields() as $key => $field) {
+            if (empty($field['config'])) {
+                continue;
+            }
+            $r = $this->resolve($key, $place, $chain);
+            if ($r['source'] !== 'default') {
+                config([$field['config'] => $r['value'] === '' ? null : $r['value']]);
+            }
+        }
+        if (app()->resolved('mail.manager')) {
+            app('mail.manager')->forgetMailers();
+        }
+        $this->applied = $this->version();
+    }
+
+    /** For long-running queue workers: re-apply when a setting changed since. */
+    public function applyIfStale(): void
+    {
+        if ($this->applied !== $this->version()) {
+            $this->applyToConfig();
+        }
     }
 
     /** The most recent settings change at a place (or the system). */
