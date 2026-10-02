@@ -406,16 +406,9 @@
       // Fetch audit trail separately using the correct API
       let auditTrail = [];
       try {
-        // Use the same token retrieval method as APIHandler
-        const authToken = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
-        
         const auditResponse = await fetch(`${AppConfig.API_BASE_URL}/auth/user/${userId}/audits`, {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': `Bearer ${authToken}`
-          }
+          headers: APIHandler.getHeaders()
         });
         
         if (auditResponse.ok) {
