@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\SupportTicketController;
 use App\Http\Controllers\Api\TerritoryController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\UserTerritoryAssignmentController;
+use App\Http\Middleware\RequireAdminPermission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -90,7 +91,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // Role Management Routes
-    Route::prefix('roles')->group(function () {
+    Route::prefix('roles')->middleware(RequireAdminPermission::class.':rolemanagement,usermanagement,permissions')->group(function () {
         Route::get('/', [RoleController::class, 'index']);                    // List all roles with territorial filtering
         Route::post('/', [RoleController::class, 'store']);                   // Create new role
         Route::get('/{role}', [RoleController::class, 'show']);               // Show role with detailed permissions
@@ -105,7 +106,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // Permission Management Routes
-    Route::prefix('permissions')->group(function () {
+    Route::prefix('permissions')->middleware(RequireAdminPermission::class.':permissions,rolemanagement')->group(function () {
         Route::get('/', [PermissionController::class, 'index']);                        // List all permissions with filtering
         Route::post('/', [PermissionController::class, 'store']);                       // Create new permission
         Route::get('/grouped', [PermissionController::class, 'getGroupedPermissions']); // Get permissions grouped by module structure (for role assignment)
@@ -116,7 +117,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // Module Group Management Routes
-    Route::prefix('module-groups')->group(function () {
+    Route::prefix('module-groups')->middleware(RequireAdminPermission::class.':modulegroups,modules,rolemanagement')->group(function () {
         Route::get('/', [ModuleGroupController::class, 'index']);                                      // List all module groups (filterable by territory)
         Route::post('/', [ModuleGroupController::class, 'store']);                                     // Create module group
         Route::get('/territory/{territoryScope}', [ModuleGroupController::class, 'getByTerritory']);   // Get module groups by territory scope
@@ -127,10 +128,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // Module Management Routes
-    Route::prefix('modules')->group(function () {
+    // Every login builds its sidebar from this - open to any signed-in user.
+    Route::get('modules/for-role', [ModuleController::class, 'getModulesForRole']);
+
+    Route::prefix('modules')->middleware(RequireAdminPermission::class.':modules,modulegroups,rolemanagement')->group(function () {
         // Basic Module CRUD
         Route::get('/', [ModuleController::class, 'index']);                              // List all modules
-        Route::get('/for-role', [ModuleController::class, 'getModulesForRole']);          // Get modules filtered by user's role permissions
         Route::get('/groups', [ModuleController::class, 'getModuleGroups']);              // List module groups for selection
         Route::post('/', [ModuleController::class, 'store']);                             // Create module
         Route::get('/{module}', [ModuleController::class, 'show']);                       // Show module with full hierarchy
@@ -155,11 +158,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // Submodule Management (outside modules prefix for cleaner routing)
-    Route::patch('/submodules/{submodule}/move', [ModuleController::class, 'moveSubmodule']); // Move submodule to different module
-    Route::get('/submodules/{submodule}', [ModuleController::class, 'showSubmodule']);         // Get single submodule details
+    Route::patch('/submodules/{submodule}/move', [ModuleController::class, 'moveSubmodule'])->middleware(RequireAdminPermission::class.':modules'); // Move submodule to different module
+    Route::get('/submodules/{submodule}', [ModuleController::class, 'showSubmodule'])->middleware(RequireAdminPermission::class.':modules,modulegroups,rolemanagement');         // Get single submodule details
 
     // Diocese Management Routes (Type-Specific)
-    Route::prefix('dioceses')->group(function () {
+    Route::prefix('dioceses')->middleware(RequireAdminPermission::class.':open-reads')->group(function () {
         Route::get('/', [App\Http\Controllers\Api\DioceseController::class, 'index']);                      // List all dioceses
         Route::post('/', [App\Http\Controllers\Api\DioceseController::class, 'store']);                     // Create diocese
         Route::get('/{diocese}', [App\Http\Controllers\Api\DioceseController::class, 'show']);              // Get diocese details
@@ -170,7 +173,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // Region Management Routes (Type-Specific)
-    Route::prefix('regions')->group(function () {
+    Route::prefix('regions')->middleware(RequireAdminPermission::class.':open-reads')->group(function () {
         Route::get('/', [App\Http\Controllers\Api\RegionController::class, 'index']);                        // List all regions
         Route::post('/', [App\Http\Controllers\Api\RegionController::class, 'store']);                       // Create region
         Route::get('/{region}', [App\Http\Controllers\Api\RegionController::class, 'show']);                 // Get region details
@@ -180,7 +183,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // Church Management Routes (Type-Specific)
-    Route::prefix('churches')->group(function () {
+    Route::prefix('churches')->middleware(RequireAdminPermission::class.':open-reads')->group(function () {
         Route::get('/', [App\Http\Controllers\Api\ChurchController::class, 'index']);                        // List all churches
         Route::post('/', [App\Http\Controllers\Api\ChurchController::class, 'store']);                       // Create church
         Route::get('/{church}', [App\Http\Controllers\Api\ChurchController::class, 'show']);                 // Get church details
@@ -189,7 +192,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // Territory Management Routes
-    Route::prefix('territories')->group(function () {
+    Route::prefix('territories')->middleware(RequireAdminPermission::class.':open-reads')->group(function () {
         // Basic Territory CRUD
         Route::get('/', [TerritoryController::class, 'index']);                     // List territories with filtering
         Route::post('/', [TerritoryController::class, 'store']);                    // Create territory
@@ -203,7 +206,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // User Management Routes
-    Route::prefix('users')->group(function () {
+    Route::prefix('users')->middleware(RequireAdminPermission::class.':usermanagement,self')->group(function () {
         // Basic User CRUD
         Route::get('/', [UserController::class, 'index']);                           // List users with territorial filtering
         Route::post('/', [UserController::class, 'store']);                          // Create user (with optional territorial assignment)
@@ -217,7 +220,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // User Territorial Assignment Routes
-    Route::prefix('user-assignments')->group(function () {
+    Route::prefix('user-assignments')->middleware(RequireAdminPermission::class.':usermanagement,self')->group(function () {
         // Assignment CRUD
         Route::get('/', [UserTerritoryAssignmentController::class, 'index']);                    // List assignments with filtering
         Route::post('/', [UserTerritoryAssignmentController::class, 'store']);                   // Create assignment
@@ -238,14 +241,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // ✅ NEW: User Assignment History (placed outside user-assignments prefix for cleaner routing)
-    Route::get('/users/{userId}/assignment-history', [UserTerritoryAssignmentController::class, 'getUserAssignmentHistory']); // Get user's complete assignment audit history
+    Route::get('/users/{userId}/assignment-history', [UserTerritoryAssignmentController::class, 'getUserAssignmentHistory'])->middleware(RequireAdminPermission::class.':usermanagement,self'); // Get user's complete assignment audit history
     // user assignement
     // ✅ ADD THESE AUDIT ROUTES:
-    Route::get('/auth/user/{id}/audits', [AuthController::class, 'getUserAudits']);
-    Route::get('/auth/user/{id}/audits/login-history', [AuthController::class, 'getLoginHistory']);
-    Route::get('/auth/user/{id}/audits/password-changes', [AuthController::class, 'getPasswordChangeHistory']);
-    Route::get('/auth/user/{id}/audits/profile-changes', [AuthController::class, 'getProfileChangeHistory']);
-    Route::get('/auth/user/{id}/audits/status-changes', [AuthController::class, 'getStatusChangeHistory']);
+    Route::get('/auth/user/{id}/audits', [AuthController::class, 'getUserAudits'])->middleware(RequireAdminPermission::class.':usermanagement,self');
+    Route::get('/auth/user/{id}/audits/login-history', [AuthController::class, 'getLoginHistory'])->middleware(RequireAdminPermission::class.':usermanagement,self');
+    Route::get('/auth/user/{id}/audits/password-changes', [AuthController::class, 'getPasswordChangeHistory'])->middleware(RequireAdminPermission::class.':usermanagement,self');
+    Route::get('/auth/user/{id}/audits/profile-changes', [AuthController::class, 'getProfileChangeHistory'])->middleware(RequireAdminPermission::class.':usermanagement,self');
+    Route::get('/auth/user/{id}/audits/status-changes', [AuthController::class, 'getStatusChangeHistory'])->middleware(RequireAdminPermission::class.':usermanagement,self');
     // support tickets
     // Protected routes (Add these inside your existing auth:sanctum middleware group)
     Route::get('/support-tickets', [SupportTicketController::class, 'index']);
