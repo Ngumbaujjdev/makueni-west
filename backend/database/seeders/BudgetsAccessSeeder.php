@@ -82,7 +82,7 @@ class BudgetsAccessSeeder extends Seeder
      * includes recording money in and out.
      */
     private const PERMISSIONS = [
-        'read' => ['budgets.budgets.read' => 'budgets', 'budgets.overview.read' => 'overview', 'budgets.spending.read' => 'spending'],
+        'read' => ['budgets.budgets.read' => 'budgets', 'budgets.overview.read' => 'overview', 'budgets.spending.read' => 'spending', 'budgets.contributions.read' => 'contributions'],
         // Preparing is linked to the New budget page, so only people who can prepare see it in the menu.
         'prepare' => ['budgets.budgets.prepare' => 'new', 'budgets.spending.record' => 'spending'],
         // Exporting is linked to the Reports page, so only people who can export see it.
@@ -99,6 +99,7 @@ class BudgetsAccessSeeder extends Seeder
         'spending' => ['Money in and out', 'spending.php', 'Every amount received and spent: search, filter, receipts, export'],
         'new' => ['New budget', 'form.php', 'Plan a month or a year, step by step'],
         'reports' => ['Reports', 'reports.php', 'Budget reports as PDF or Excel: summary, money in and out, one budget'],
+        'contributions' => ['Contributions', 'contributions.php', 'What we send up - the diocese share: due on tithes received, sent, still to send'],
         'below' => ['Churches\' budgets', 'below.php', 'The budgets of the places below, read-only: who has one, received, spent, still owed'],
     ];
 

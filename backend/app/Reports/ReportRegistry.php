@@ -9,6 +9,7 @@ use App\Reports\Attendance\EventsReport;
 use App\Reports\Attendance\MinistriesReport;
 use App\Reports\Attendance\SundayServiceReport;
 use App\Reports\Budget\BudgetCompareReport;
+use App\Reports\Budget\BudgetContributionsReport;
 use App\Reports\Budget\BudgetExceptionsReport;
 use App\Reports\Budget\BudgetLineReport;
 use App\Reports\Budget\BudgetLinesReport;
@@ -56,6 +57,7 @@ final class ReportRegistry
         BudgetExceptionsReport::class,
         BudgetLineReport::class,
         BudgetRollupReport::class,
+        BudgetContributionsReport::class,
     ];
 
     /** @return Report[] */

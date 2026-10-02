@@ -244,6 +244,71 @@ final class BudgetRollup
         return array_values(array_map(fn ($r) => [...$r, 'planned' => round($r['planned'], 2), 'due' => round($r['due'], 2), 'sent' => round($r['sent'], 2), 'owed' => round($r['owed'], 2)], $rows));
     }
 
+    /**
+     * What a place sends up for a year (Contributions): one row per budget and
+     * deduction - tithes (or money) received, due, sent, still to send - with
+     * a status from the budget's period:
+     *   sent     - something was due and all of it was sent
+     *   pending  - still to send, and the period is still running
+     *   late     - still to send after the period ended
+     *   none     - nothing due yet (nothing received on the lines it counts)
+     * Due, sent and owed come from Deductions::status(), the one source.
+     */
+    public function contributionsOf(string $type, int $id, int $year): array
+    {
+        $today = CarbonImmutable::today();
+        $budgets = Budget::where('territory_type', $type)->where('territory_id', $id)->where('fiscal_year', $year)
+            ->whereIn('id', BudgetDeductionItem::query()->select('budget_id'))
+            ->orderByRaw('period_month IS NULL DESC, period_month')->get();
+        $rows = [];
+        foreach ($budgets as $b) {
+            foreach ($this->deductions->status($b) as $d) {
+                $owner = $d['owner_id'] ? $this->territories()->get($d['owner_id']) : null;
+                $ended = $today->gt(CarbonImmutable::parse($b->end_date));
+                $rows[] = [
+                    'budget_id' => $b->id,
+                    'budget_status' => $b->status,
+                    'label' => $b->period_label,
+                    'month' => $b->period_month,
+                    'end' => CarbonImmutable::parse($b->end_date)->toDateString(),
+                    'deduction_id' => $d['id'],
+                    'name' => $d['name'],
+                    'rule' => $d['rule'],
+                    'line_id' => $d['line_id'],
+                    'line' => $d['line'],
+                    'to' => $owner?->name,
+                    'received' => $d['base_received'],
+                    'due' => $d['due'],
+                    'sent' => $d['sent'],
+                    'owed' => $d['owed'],
+                    'status' => $d['due'] <= 0 && $d['sent'] <= 0 ? 'none' : ($d['owed'] <= 0 ? 'sent' : ($ended ? 'late' : 'pending')),
+                ];
+            }
+        }
+
+        return $rows;
+    }
+
+    /** One place's contribution totals for a year: received, due, sent, still to send, late periods, and an overall status. */
+    public static function contributionTotals(array $rows): array
+    {
+        $sum = fn (string $k) => round(array_sum(array_column($rows, $k)), 2);
+        $late = count(array_filter($rows, fn ($r) => $r['status'] === 'late'));
+        $owed = $sum('owed');
+        $due = $sum('due');
+
+        return [
+            'received' => $sum('received'), 'due' => $due, 'sent' => $sum('sent'), 'owed' => $owed, 'late' => $late,
+            'status' => $late ? 'late' : ($owed > 0 ? 'pending' : ($due > 0 ? 'sent' : 'none')),
+        ];
+    }
+
+    /** The churches below a region or the diocese, each with its contribution totals for a year. */
+    public function contributionsBelow(Territory $place, int $year): array
+    {
+        return array_map(fn ($p) => [...$p, ...self::contributionTotals($this->contributionsOf('church', $p['id'], $year))], $this->placesBelow($place, 'church'));
+    }
+
     /** In use / draft / closed for one budget; for several month budgets the liveliest; "none" when there is none. */
     private function statusOf(Collection $plans): string
     {

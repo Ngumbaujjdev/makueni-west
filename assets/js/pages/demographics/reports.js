@@ -47,6 +47,7 @@ const DemographicsReports = (function () {
     "budget.compare": { color: "pink", chips: ["This and the one before", "Change in KES and %", "Chart"] },
     "budget.exceptions": { color: "danger", chips: ["Over-plan lines", "Unplanned money", "For review"] },
     "budget.rollup": { color: "pink", chips: ["Every church", "Who has a budget", "Still owed"] },
+    "budget.contributions": { color: "purple", chips: ["Due", "Sent", "Still to send"] },
   };
 
   const STATUS = {

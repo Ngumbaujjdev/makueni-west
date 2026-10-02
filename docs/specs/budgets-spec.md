@@ -408,7 +408,14 @@ Built here, on the budgets engine (the Settings session keeps Finance *settings*
 
 Acceptance (`BudgetReceiptsTest`): attach, stream, list and remove; a level above views but can't add; another place gets 403; a wrong type, too big a file or a 4th receipt gets 422.
 
-**Still to build here:** F3 Contributions (what each place sends up: due, sent, still to send, Late) and F5 clean-up of the empty finance menus and files.
+**F3. Contributions** - a page per level in the Budgets menu (`contributions.php`, permission `{level}.budgets.contributions.read`, granted with read). Neutral wording: "the share", "sent", "still to send".
+- **A church - month by month:** for each budget of the year that works out a share - received on the lines it counts, due, sent, still to send - and a status: **Sent** (all of it sent), **Still to send** (the month is still running), **Late** (the month ended with something unsent), **Nothing due** (nothing received on those lines). "Record what was sent" opens Record money on the share's line. Cards: received, due, sent, still to send.
+- **A region / the diocese:** its own share (if any), and **Our churches** - every church below (grouped by region for the diocese) with due, sent, still to send, late months and a status; filters, search, and Open → that church's months, view only.
+- `GET /budgets/contributions?year=&territory_id=` - `BudgetRollup::contributionsOf()` (rows), `contributionTotals()`, `contributionsBelow()` (with "below"); due / sent / owed from `Deductions::status()`.
+- Report `budget.contributions` (PDF/Excel): month by month for a church; the churches (by region) above.
+- Acceptance (`BudgetContributionsTest`): statuses Sent / Late / Still to send / Nothing due on dated months; a region sees only its churches, the diocese all; view only below, never upward; the report builds for a church and a region.
+
+**Still to build here:** F5 clean-up of the empty finance menus and files.
 
 **Stays with the Settings work:** Finance settings - financial year start, payment methods, M-Pesa and bank details, receipt numbering.
 
