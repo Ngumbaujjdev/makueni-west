@@ -54,6 +54,8 @@ class AddSystemAdministrationRolePagesSeeder extends Seeder
         $submodule = $module
             ? Submodule::where('module_id', $module->id)->where('title', self::SUBMODULE_TITLE)->first()
             : null;
+        // SettingsHubSeeder moves it under Settings as "Access control" - find it by its Users page then.
+        $submodule ??= SubSubmodule::where('path', '/diocese/settings/admin/users')->first()?->submodule;
 
         if (! $submodule) {
             $this->command->error('   ❌ '.self::MODULE_NAME.' > '.self::SUBMODULE_TITLE.' not found - run DioceseSystemSeeder first');

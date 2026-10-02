@@ -267,4 +267,5 @@ $baseUrl = '/makueni-west';
 <script src="<?= $baseUrl ?>/assets/js/utils/secondary-nav.js<?= assetVersion('assets/js/utils/secondary-nav.js') ?>"></script>
 <script src="<?= $baseUrl ?>/assets/js/utils/global-search.js<?= assetVersion('assets/js/utils/global-search.js') ?>"></script>
 <script src="<?= $baseUrl ?>/assets/js/utils/report-center.js<?= assetVersion('assets/js/utils/report-center.js') ?>"></script>
+<script src="<?= $baseUrl ?>/assets/js/utils/system-notice.js<?= assetVersion('assets/js/utils/system-notice.js') ?>"></script>
 

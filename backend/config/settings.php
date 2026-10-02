@@ -115,6 +115,72 @@ return [
             'sentence' => "The SMS gateway (Africa's Talking). Until it's set up, messages are only written to the log.",
         ],
 
+        'security' => [
+            'label' => 'Security',
+            'icon' => 'ri-shield-keyhole-line',
+            'colour' => 'danger',
+            'group' => 'system',
+            'levels' => ['diocese'],
+            'kind' => 'form',
+            'actions' => [],
+            'global_only' => true,
+            'sentence' => 'How sign-in is protected: PIN tries, password rules and how long people stay signed in.',
+        ],
+        'documents' => [
+            'label' => 'Documents & PDF',
+            'icon' => 'ri-file-pdf-2-line',
+            'colour' => 'secondary',
+            'group' => 'system',
+            'levels' => ['diocese'],
+            'kind' => 'form',
+            'actions' => [],
+            'global_only' => true,
+            'sentence' => 'What every report PDF says at the top and bottom, and how long report files are kept.',
+        ],
+        'maintenance' => [
+            'label' => 'Maintenance',
+            'icon' => 'ri-tools-line',
+            'colour' => 'purple',
+            'group' => 'system',
+            'levels' => ['diocese'],
+            'kind' => 'form',
+            'actions' => [],
+            'global_only' => true,
+            'tools' => ['clear-cache', 'prune-reports', 'forget-failed'],
+            'sentence' => 'A notice everyone sees at the top of every page, and housekeeping tools.',
+        ],
+        'audit' => [
+            'label' => 'Audit log',
+            'icon' => 'ri-history-line',
+            'colour' => 'pink',
+            'group' => 'system',
+            'levels' => ['diocese'],
+            'kind' => 'custom',
+            'actions' => [],
+            'global_only' => true,
+            'sentence' => 'Every settings change at every church, region and the diocese: who, when and what.',
+        ],
+        // The access-control pages (moved here from "Diocese Settings > System
+        // Administration"). Anyone who can open one of them sees this section.
+        'access' => [
+            'label' => 'Access control',
+            'icon' => 'ri-shield-user-line',
+            'colour' => 'primary',
+            'group' => 'system',
+            'levels' => ['diocese'],
+            'kind' => 'custom',
+            'actions' => [],
+            'absorbs' => ['diocese' => '/diocese/settings/admin'],
+            'links' => [
+                'users' => ['label' => 'Users', 'icon' => 'ri-user-settings-line', 'colour' => 'primary', 'url' => 'diocese/settings/admin/users', 'permission' => 'diocesesettings.systemadministration.usermanagement.read', 'sentence' => 'Everyone with a login, their roles and where they serve.'],
+                'roles' => ['label' => 'Roles', 'icon' => 'ri-shield-star-line', 'colour' => 'purple', 'url' => 'diocese/settings/admin/role-management', 'permission' => 'diocesesettings.systemadministration.rolemanagement.read', 'sentence' => 'What each role can see and do.'],
+                'permissions' => ['label' => 'Permissions', 'icon' => 'ri-key-2-line', 'colour' => 'success', 'url' => 'diocese/settings/admin/permissions', 'permission' => 'diocesesettings.systemadministration.permissions.read', 'sentence' => 'Every permission and the roles that hold it.'],
+                'modules' => ['label' => 'Modules', 'icon' => 'ri-apps-2-line', 'colour' => 'pink', 'url' => 'diocese/settings/admin/modules', 'permission' => 'diocesesettings.systemadministration.modules.read', 'sentence' => 'The pages on the menu, and which are switched on.'],
+                'groups' => ['label' => 'Module groups', 'icon' => 'ri-folders-line', 'colour' => 'secondary', 'url' => 'diocese/settings/admin/module-groups', 'permission' => 'diocesesettings.systemadministration.modulegroups.read', 'sentence' => 'How the menu is grouped at each level.'],
+            ],
+            'sentence' => 'Who can sign in and what each role can see and do.',
+        ],
+
         // Existing settings pages, shown inside the hub (S3). 'permission' is
         // the page's own read permission ("{level}." is added); 'absorbs' is
         // the page's menu row, which SettingsHubSeeder moves under Settings.
@@ -188,6 +254,23 @@ return [
         'sms.api_key' => ['section' => 'sms', 'card' => 'Gateway', 'label' => 'API key', 'type' => 'secret', 'secret' => true, 'rules' => ['nullable', 'string', 'max:200'], 'default' => null, 'levels' => ['diocese']],
         'sms.sandbox' => ['section' => 'sms', 'card' => 'Gateway', 'label' => 'Use the sandbox (no real messages)', 'type' => 'switch', 'default' => false, 'levels' => ['diocese']],
         'sms.sender_id' => ['section' => 'sms', 'card' => 'Who SMS comes from', 'label' => 'Sender ID', 'rules' => ['nullable', 'string', 'max:11', 'regex:/^[A-Za-z0-9 ]*$/'], 'default' => null, 'levels' => ['diocese'], 'help' => 'Up to 11 letters or digits, approved by your provider. Leave empty for their default.', 'used_by' => 'Every SMS - churches send under it'],
+
+        // Security (S4b) - read by User::verifyPin, the password rules in AuthController and Sanctum.
+        'security.pin_attempts' => ['section' => 'security', 'card' => 'Employee code + PIN', 'label' => 'Wrong PINs before it locks', 'type' => 'number', 'rules' => ['required', 'integer', 'between:1,10'], 'default' => 3, 'levels' => ['diocese'], 'used_by' => 'Sign-in with employee code and PIN'],
+        'security.pin_lock_minutes' => ['section' => 'security', 'card' => 'Employee code + PIN', 'label' => 'Minutes it stays locked', 'type' => 'number', 'rules' => ['required', 'integer', 'between:1,1440'], 'default' => 15, 'levels' => ['diocese'], 'help' => 'Password sign-in keeps working while the PIN is locked.'],
+        'security.password_min' => ['section' => 'security', 'card' => 'Passwords', 'label' => 'Shortest password allowed', 'type' => 'number', 'rules' => ['required', 'integer', 'between:8,64'], 'default' => 8, 'levels' => ['diocese'], 'help' => 'Characters. Applies the next time someone sets a password.', 'used_by' => 'Changing a password (first sign-in, profile, users)'],
+        'security.password_months' => ['section' => 'security', 'card' => 'Passwords', 'label' => 'Ask for a new password every', 'type' => 'select', 'options' => ['0' => 'Never', '3' => '3 months', '6' => '6 months', '12' => '12 months'], 'rules' => ['required'], 'default' => '6', 'levels' => ['diocese'], 'used_by' => 'Changing a password'],
+        'security.session_hours' => ['section' => 'security', 'card' => 'Staying signed in', 'label' => 'Sign people out after', 'type' => 'select', 'options' => ['0' => 'Never - until they sign out', '8' => '8 hours', '24' => '1 day', '168' => '7 days', '720' => '30 days'], 'rules' => ['required'], 'default' => '0', 'levels' => ['diocese'], 'config' => 'sanctum.expiration', 'config_scale' => 60, 'help' => 'Counted from when they signed in. Applies to sign-ins from now on as well as existing ones.', 'used_by' => 'Every signed-in page'],
+
+        // Documents & PDF (S4b) - read by DioceseReportPdf and ReportGenerator.
+        'documents.org_name' => ['section' => 'documents', 'card' => 'Top of every page', 'label' => 'Name', 'rules' => ['required', 'string', 'max:80'], 'default' => 'Makueni West Diocese', 'levels' => ['diocese'], 'used_by' => 'Every report PDF (header and footer)'],
+        'documents.org_subtitle' => ['section' => 'documents', 'card' => 'Top of every page', 'label' => 'Line under the name', 'rules' => ['nullable', 'string', 'max:80'], 'default' => 'Christian Church International', 'levels' => ['diocese']],
+        'documents.footer_note' => ['section' => 'documents', 'card' => 'Bottom of every page', 'label' => 'Footer note', 'rules' => ['nullable', 'string', 'max:120'], 'default' => 'Computer-generated from the diocese system - no signature needed.', 'levels' => ['diocese'], 'span' => 12, 'help' => 'Shown under the verification code and who generated it.'],
+        'documents.keep_days' => ['section' => 'documents', 'card' => 'Report files', 'label' => 'Keep report files for', 'type' => 'select', 'options' => ['1' => '1 day', '7' => '7 days', '30' => '30 days', '90' => '90 days'], 'rules' => ['required'], 'default' => '7', 'levels' => ['diocese'], 'help' => 'After this the file is removed, but a printed copy can still be verified.', 'used_by' => 'Reports (download link)'],
+
+        // Maintenance (S4b) - the notice banner on every page (GET /settings/notice).
+        'maintenance.notice' => ['section' => 'maintenance', 'card' => 'Notice for everyone', 'label' => 'Message', 'type' => 'textarea', 'rules' => ['nullable', 'string', 'max:300'], 'default' => null, 'levels' => ['diocese'], 'span' => 12, 'help' => 'e.g. "The system will be down for updates on Saturday from 6 to 8 am." Leave empty for no notice.', 'used_by' => 'A banner at the top of every page'],
+        'maintenance.notice_tone' => ['section' => 'maintenance', 'card' => 'Notice for everyone', 'label' => 'Colour', 'type' => 'select', 'options' => ['primary' => 'Blue - for information', 'warning' => 'Gold - plan around it', 'danger' => 'Red - urgent'], 'rules' => ['required'], 'default' => 'warning', 'levels' => ['diocese']],
     ],
 
 ];

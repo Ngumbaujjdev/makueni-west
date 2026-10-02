@@ -6,6 +6,7 @@ use App\Enums\DioceseBranding;
 use App\Reports\ReportColumn;
 use App\Reports\ReportData;
 use App\Reports\ReportSection;
+use App\Services\Settings\Settings;
 use App\Support\Reports\Insights\Insight;
 use TCPDF;
 
@@ -77,6 +78,9 @@ class DioceseReportPdf extends TCPDF
 
     private float $rowHeight = 8.6;
 
+    /** The name, line under it and footer note from Settings > Documents & PDF. */
+    private array $words;
+
     public function __construct(
         private ReportData $data,
         private string $verificationCode = '',
@@ -88,9 +92,15 @@ class DioceseReportPdf extends TCPDF
         $this->teal = $this->rgb(DioceseBranding::PRIMARY_TEAL->value);
         $this->gold = $this->rgb(DioceseBranding::SECONDARY_GOLD->value);
         $this->portraitWidth = $this->getPageWidth();
+        $settings = app(Settings::class);
+        $this->words = [
+            'name' => (string) $settings->system('documents.org_name'),
+            'subtitle' => (string) $settings->system('documents.org_subtitle'),
+            'note' => (string) $settings->system('documents.footer_note'),
+        ];
 
         $this->SetCreator('Makueni West Diocese Management System');
-        $this->SetAuthor('Makueni West Diocese');
+        $this->SetAuthor($this->words['name']);
         $this->SetTitle($data->title.' - '.$data->scopeLabel);
         $this->SetSubject($data->periodLabel);
         $this->setCellPaddings(self::CELL_INSET, 0, self::CELL_INSET, 0);
@@ -122,10 +132,10 @@ class DioceseReportPdf extends TCPDF
         $this->SetXY($lm + 20, 10.5);
         $this->SetFont('helvetica', 'B', 10);
         $this->SetTextColor(...self::INK);
-        $this->Cell(90, 5, 'Makueni West Diocese', 0, 2, 'L');
+        $this->Cell(90, 5, $this->fit($this->words['name'], 90, 'B', 10), 0, 2, 'L');
         $this->SetFont('helvetica', '', 7.2);
         $this->SetTextColor(...self::MUTE);
-        $this->Cell(90, 4, 'Christian Church International', 0, 0, 'L');
+        $this->Cell(90, 4, $this->fit($this->words['subtitle'], 90, '', 7.2), 0, 0, 'L');
 
         $this->SetXY($w / 2, 10.5);
         $this->SetFont('helvetica', 'B', 9);
@@ -168,19 +178,21 @@ class DioceseReportPdf extends TCPDF
         $this->SetXY($textX, $top + 4);
         $this->SetFont('helvetica', 'B', 7.4);
         $this->SetTextColor(...self::INK);
-        $this->Cell(110, 3.9, $this->verifyUrl !== '' ? 'Scan to verify this report is genuine' : 'Makueni West Diocese', 0, 2, 'L');
+        $this->Cell(110, 3.9, $this->verifyUrl !== '' ? 'Scan to verify this report is genuine' : $this->words['name'], 0, 2, 'L');
         $this->SetFont('helvetica', '', 6.9);
         $this->SetTextColor(...self::MUTE);
         if ($this->verificationCode !== '') {
             $this->Cell(110, 3.5, 'Verification code '.$this->verificationCode, 0, 2, 'L');
         }
         $this->Cell(110, 3.5, 'Generated '.now()->format('j M Y \a\t H:i').' by '.$this->generatedBy, 0, 2, 'L');
-        $this->Cell(110, 3.5, 'Computer-generated from the diocese system - no signature needed.', 0, 0, 'L');
+        if ($this->words['note'] !== '') {
+            $this->Cell(110, 3.5, $this->fit($this->words['note'], 110, '', 6.9), 0, 0, 'L');
+        }
 
         $this->SetXY($w - $lm - 60, $top + 4);
         $this->SetFont('helvetica', 'B', 7.4);
         $this->SetTextColor(...$this->teal);
-        $this->Cell(60, 3.9, 'Makueni West Diocese', 0, 2, 'R');
+        $this->Cell(60, 3.9, $this->fit($this->words['name'], 60, 'B', 7.4), 0, 2, 'R');
         $this->SetFont('helvetica', 'B', 7.4);
         $this->SetTextColor(...self::INK);
         $this->Cell(60, 3.9, 'Page '.$this->getAliasNumPage().' / '.$this->getAliasNbPages(), 0, 0, 'R');

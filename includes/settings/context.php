@@ -79,6 +79,7 @@ function settingsPageScripts(bool $withMap = true): void
     if ($withMap) {
         echo '<script src="' . SITE_URL . '/assets/libs/leaflet/leaflet.js"></script>' . "\n";
     }
+    echo '<script src="' . SITE_URL . '/assets/libs/apexcharts/apexcharts.min.js"></script>' . "\n";
     echo '<script src="' . $v('assets/js/pages/demographics/ui-helpers.js') . '"></script>' . "\n";
     settingsRailScripts();
     foreach ([
@@ -88,6 +89,8 @@ function settingsPageScripts(bool $withMap = true): void
         'assets/js/pages/settings/sections/service-times.js',
         'assets/js/pages/settings/sections/team.js',
         'assets/js/pages/settings/sections/health.js',
+        'assets/js/pages/settings/sections/audit.js',
+        'assets/js/pages/settings/sections/access.js',
         'assets/js/pages/settings/hub.js',
     ] as $src) {
         echo '<script src="' . $v($src) . '"></script>' . "\n";

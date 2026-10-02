@@ -7,6 +7,7 @@ use App\Jobs\SendEmployeeCodeResetEmail;
 use App\Jobs\SendPasswordChangedNotification;
 use App\Jobs\SendPasswordResetEmail;
 use App\Models\User;
+use App\Support\PasswordPolicy;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -127,7 +128,7 @@ class PasswordResetController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
-            'password' => 'required|string|min:8|confirmed',
+            'password' => 'required|string|min:'.PasswordPolicy::min().'|confirmed',
             'token' => 'required|string',
         ]);
 
@@ -178,7 +179,7 @@ class PasswordResetController extends Controller
                 'password_changed_at' => now(),
                 'must_change_password' => false,
                 'login_attempts' => 0,
-                'password_expires_at' => now()->addMonths(6), // Diocese users get 6 months
+                'password_expires_at' => PasswordPolicy::expiresAt(), // Settings > Security
             ]);
 
             // Delete the used token
@@ -262,7 +263,7 @@ class PasswordResetController extends Controller
     public function changeOwnPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'new_password' => 'required|string|min:8|confirmed',
+            'new_password' => 'required|string|min:'.PasswordPolicy::min().'|confirmed',
         ]);
 
         if ($validator->fails()) {
@@ -282,7 +283,7 @@ class PasswordResetController extends Controller
                 'password' => Hash::make($request->new_password),
                 'password_changed_at' => now(),
                 'must_change_password' => false,
-                'password_expires_at' => now()->addMonths(6),
+                'password_expires_at' => PasswordPolicy::expiresAt(),
             ]);
 
             // Send password change confirmation
@@ -353,7 +354,7 @@ class PasswordResetController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'user_id' => 'required|exists:users,id',
-            'new_password' => 'required|string|min:8|confirmed',
+            'new_password' => 'required|string|min:'.PasswordPolicy::min().'|confirmed',
         ]);
 
         if ($validator->fails()) {
@@ -375,7 +376,7 @@ class PasswordResetController extends Controller
                 'password_changed_at' => now(),
                 'must_change_password' => true, // Force user to change on next login
                 'login_attempts' => 0,
-                'password_expires_at' => now()->addMonths(6),
+                'password_expires_at' => PasswordPolicy::expiresAt(),
             ]);
 
             // Revoke all existing tokens

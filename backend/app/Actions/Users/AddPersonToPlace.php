@@ -6,6 +6,7 @@ use App\Models\Role;
 use App\Models\Territory;
 use App\Models\User;
 use App\Models\UserTerritoryAssignment;
+use App\Support\PasswordPolicy;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -51,7 +52,7 @@ final class AddPersonToPlace
                     'status' => 'active',
                     'must_change_password' => true,
                     'password_changed_at' => now(),
-                    'password_expires_at' => now()->addMonths(6),
+                    'password_expires_at' => PasswordPolicy::expiresAt(),
                 ]);
                 $credentials = ['employee_code' => $user->employee_code, 'temporary_password' => $password, 'pin' => $pin];
             }

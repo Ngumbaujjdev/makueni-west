@@ -3,21 +3,36 @@
 namespace App\Http\Controllers\Api\Settings;
 
 use App\Models\MessageLog;
+use App\Models\Module;
+use App\Models\ModuleGroup;
+use App\Models\Permission;
+use App\Models\User;
+use App\Services\Settings\Settings;
 use App\Services\Sms\Sms;
 use App\Support\Settings\Health;
+use App\Support\SettingsAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Spatie\Permission\Models\Role;
 
 /**
  * The diocese's system settings (docs/specs/settings-spec.md, S4) -
- * global admins only: System health, sending a test email or SMS, and
- * retrying failed background jobs.
+ * global admins only: System health, sending a test email or SMS,
+ * retrying failed background jobs and the Maintenance tools - plus the
+ * notice banner every signed-in page reads, and the Access control links.
  */
 class SystemController extends SettingsController
 {
+    /** Settings > Maintenance's tools, as the audit log names them. */
+    public const TOOLS = [
+        'clear-cache' => 'Clear saved lookups',
+        'prune-reports' => 'Remove expired report files',
+        'forget-failed' => 'Remove failed jobs',
+    ];
+
     /** GET /settings/health */
     public function health(Request $request, Health $health): JsonResponse
     {
@@ -79,13 +94,82 @@ class SystemController extends SettingsController
         return $this->ok(['retried' => $count], $count ? "{$count} failed job(s) put back in the queue." : 'There were no failed jobs.');
     }
 
-    private function denySystem(Request $request): ?JsonResponse
+    /**
+     * POST /settings/maintenance/{tool} - clear-cache, prune-reports or
+     * forget-failed. Each run is written to the audit log.
+     */
+    public function maintenance(Request $request, Settings $settings, string $tool): JsonResponse
+    {
+        if ($deny = $this->denySystem($request, 'maintenance')) {
+            return $deny;
+        }
+        $message = match ($tool) {
+            'clear-cache' => $this->run('cache:clear', 'Saved lookups cleared - the next pages rebuild them.'),
+            'prune-reports' => $this->run('reports:prune'),
+            'forget-failed' => (function () {
+                $count = DB::table('failed_jobs')->count();
+                Artisan::call('queue:flush');
+
+                return $count ? "{$count} failed job(s) removed." : 'There were no failed jobs.';
+            })(),
+            default => null,
+        };
+        if ($message === null) {
+            return response()->json(['success' => false, 'status' => 404, 'message' => 'There is no such maintenance tool.'], 404);
+        }
+        $settings->audit($settings->systemPlace(), 'maintenance', [self::TOOLS[$tool] => ['old' => null, 'new' => $message]], $request->user(), 'settings.maintenance');
+
+        return $this->ok(['tool' => $tool], $message);
+    }
+
+    /** GET /settings/notice - the notice banner every signed-in page shows (Settings > Maintenance). */
+    public function notice(Settings $settings): JsonResponse
+    {
+        $message = trim((string) $settings->system('maintenance.notice'));
+
+        return $this->ok($message === '' ? null : ['message' => $message, 'tone' => $settings->system('maintenance.notice_tone') ?: 'warning']);
+    }
+
+    /** GET /settings/access - Access control's pages this role can open, with how many of each there are. */
+    public function access(Request $request): JsonResponse
+    {
+        $place = $this->place($request);
+        if ($place instanceof JsonResponse) {
+            return $place;
+        }
+        if (SettingsAccess::level($place) !== 'diocese') {
+            return $this->forbidden('Access control is part of the diocese\'s Settings.');
+        }
+        if ($deny = $this->deny($request, $place, 'access')) {
+            return $deny;
+        }
+        $counts = [
+            'users' => fn () => User::count(),
+            'roles' => fn () => Role::count(),
+            'permissions' => fn () => Permission::count(),
+            'modules' => fn () => Module::where('is_active', true)->count(),
+            'groups' => fn () => ModuleGroup::count(),
+        ];
+        $links = array_map(fn ($link) => $link + ['count' => isset($counts[$link['key']]) ? $counts[$link['key']]() : null], SettingsAccess::links($request->user(), 'access'));
+
+        return $this->ok(['links' => $links]);
+    }
+
+    /** Run an artisan command and return what it said (or $said). */
+    private function run(string $command, ?string $said = null): string
+    {
+        Artisan::call($command);
+
+        return $said ?? (trim(Artisan::output()) ?: 'Done.');
+    }
+
+    private function denySystem(Request $request, string $section = 'health'): ?JsonResponse
     {
         $place = $this->place($request);
         if ($place instanceof JsonResponse) {
             return $place;
         }
 
-        return $this->deny($request, $place, 'health');
+        return $this->deny($request, $place, $section);
     }
 }

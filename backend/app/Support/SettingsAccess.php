@@ -92,6 +92,22 @@ final class SettingsAccess
         return $place->territory_type->value;
     }
 
+    /**
+     * The links of a section like Access control that this user may open,
+     * each {key, label, icon, colour, url, sentence}.
+     */
+    public static function links(?User $user, string $section): array
+    {
+        $links = [];
+        foreach (SettingsRegistry::section($section)['links'] ?? [] as $key => $link) {
+            if ($user && ($user->hasGlobalAccess() || BudgetAccess::has($user, $link['permission']))) {
+                $links[] = ['key' => $key] + array_diff_key($link, ['permission' => true]);
+            }
+        }
+
+        return $links;
+    }
+
     /** read: the section's read OR update permission; update/manage: that exact permission. */
     public static function can(?User $user, Territory $place, string $section, string $action = 'read'): bool
     {
@@ -105,6 +121,10 @@ final class SettingsAccess
         // The diocese's system settings (S4) are for global admins only.
         if (SettingsRegistry::section($section)['global_only'] ?? false) {
             return false;
+        }
+        // Access control (S4b): whoever can open one of its pages can see it - and only those links.
+        if (isset(SettingsRegistry::section($section)['links'])) {
+            return $action === 'read' && self::links($user, $section) !== [];
         }
         // A linked page (S3) keeps its own permission; only reading applies.
         $linked = SettingsRegistry::section($section)['permission'] ?? null;

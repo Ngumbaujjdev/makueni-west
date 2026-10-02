@@ -2,7 +2,7 @@
 
 One **Settings** page for each level: church, region and diocese. Each place fills in its own profile, service times, team, finance details and communication there, and the module settings (Budgets, Attendance, Demographics) live under it. The diocese's global admins also get the system settings: email and SMS, health, security, documents, access control, the audit log and maintenance.
 
-**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (PR #165); S2 done (PR #166); S3 done (PR #168); S4a done (Email, SMS, System health). S4b (Security, Documents & PDF, Maintenance, Audit log, Access control) next.
+**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (PR #165); S2 done (PR #166); S3 done (PR #168); S4a done (PR #170, Email, SMS, System health); S4b done (Security, Documents & PDF, Maintenance, Audit log, Access control). S5 (finance details and communication) next.
 - **S0:** lock down the access-control APIs.
 - **S1:** the hub, Overview, Profile and Service times.
 - **S2:** Leadership & team.
@@ -106,7 +106,7 @@ One **Settings** page for each level: church, region and diocese. Each place fil
 | Messages | Communication (form) | reply-to, display name, SMS signature | same | email server, SMS gateway, sender ID |
 | Ministry | Attendance: gathering types (link) | ✓ | — | — |
 | | Demographics: recording cadence (link) | ✓ | — | — |
-| System | Security, Documents & PDF (form); Access control, Audit log, Maintenance (custom) | — | — | ✓, global admins |
+| System | Security, Documents & PDF, Maintenance (form); Audit log, Access control (custom) | — | — | ✓, global admins (Access control: anyone who can open one of its pages) |
 
 Subregions inherit settings but get no Settings page of their own.
 
@@ -164,6 +164,24 @@ Subregions inherit settings but get no Settings page of their own.
 - **Message log:** every email (the `LogSentEmail` listener on `MessageSent`) and every SMS is written to `message_logs`.
 - **Health tiles:** Email, SMS, Background jobs (`jobs` / `failed_jobs`; "Retry failed"), Scheduler (a heartbeat cached every minute by `routes/console.php`, OK if under 3 minutes old) and Storage (free %). There's also a count of messages this month and a "What's running" card.
 
+### System settings as built (S4b)
+- **Security** fields are read where the rule applies:
+  - `User::verifyPin` reads the PIN tries and lock minutes.
+  - `App\Support\PasswordPolicy` provides the shortest password and the expiry. It's used by `AuthController`, `PasswordResetController`, `UserController` and `AddPersonToPlace`.
+  - `security.session_hours` maps to `sanctum.expiration`, multiplied by `config_scale` = 60.
+  - `Settings::system($key)` reads a diocese system setting, falling back to the default when there's no table.
+- **`applyToConfig()` remembers each config value from before it changed anything.** A setting put back to its default restores that value, so long-running queue workers don't keep a stale override.
+- **Documents & PDF:** `DioceseReportPdf` takes its header name, the line under it, the footer note and the PDF author from settings. `ReportRun::keepDays()` replaces the fixed 7 days.
+- **Maintenance:**
+  - It's a form section with a `tools` key. `fields.js` draws a Housekeeping card for it: Clear saved lookups (`cache:clear`), Remove expired report files (`reports:prune`) and Remove failed jobs (`queue:flush`, after a confirm).
+  - Each tool run writes a `settings.maintenance` audit row.
+  - `assets/js/utils/system-notice.js`, loaded by `includes/header.php`, shows the notice at the top of every signed-in page. The notice is cached for 5 minutes per tab and can be closed until the message changes.
+- **Access control:**
+  - The section's `links` each name their page's own permission. `SettingsAccess::links()` filters them, and `can()` lets anyone with at least one of them read the section.
+  - `SettingsHubSeeder` moves "Diocese Settings > System Administration" (found by the `absorbs` path) under Settings, renamed Access control and pointing at `?section=access`. It switches off the empty General Configuration, Compliance, Notifications, Help and Support, Security Settings and System Maintenance rows (`RETIRED`), and then the emptied "Diocese Settings" module. Permission names don't change.
+  - The old empty pages (`diocese/settings/general.php` and the others) redirect to the matching hub section.
+- **Rail fix:** the open item is brought into view by scrolling the rail only. `scrollIntoView` also scrolled the page sideways and down once the diocese rail grew to 13 items.
+
 ## Resolution
 
 `Settings::resolve($key, ?Territory $place)` builds the chain `[place, parents… (via parent_territory_id, at most 6), system]` and returns `{value, source: own|inherited|default, from: {type, name}, locked_by: {type, name}|null, changed}`. It decides the value in this order:
@@ -200,7 +218,9 @@ All routes are under `/api/settings`, inside `auth:sanctum`, with a FormRequest 
 | GET | `/settings/health` | — | tiles `{key,label,status ok\|check,detail,actions}` + counts + app | `diocese.settings.hub.system.read` |
 | POST | `/settings/test/email`, `/settings/test/sms` | `{to}` | `{ok, error?}` (runs immediately, throttle 5/min) | `diocese.settings.hub.system.update` |
 | POST | `/settings/maintenance/{retry-failed\|forget-failed\|clear-cache\|prune-reports}` | — | `{ok, message}` | `diocese.settings.hub.system.update` |
-| GET | `/settings/audit` | section, user_id, from, to, page | paged changes | `.overview.read` (own place; the diocese also sees system rows) |
+| GET | `/settings/audit` | section, territory, user, from, to | the latest 500 changes everywhere, newest first, plus filter options | global admins (S4b) |
+| GET | `/settings/notice` | — | `{message, tone}` or null | any signed-in user |
+| GET | `/settings/access` | — | Access control's pages this role can open, with counts | global admin or the page's own read permission |
 | GET | `/settings/reference` | — | counties, weekdays, the place's gathering types | `.overview.read` |
 
 **Team rules:**
@@ -304,7 +324,7 @@ The pages themselves include `includes/settings/shell-start.php` / `shell-end.ph
   - At the diocese, Health tiles with solid status pills (Working / Check) and action buttons, plus "What's running".
 - **Profile:** Identity, Contact and Location cards, with a county Select2, a Leaflet map pin and a FilePond logo, next to a sticky "how others see us" preview card.
 - **Team:** a DataTable with initials avatars and role pills. Adding someone opens an `.app-modal`; its done state shows the code and temporary password with copy buttons.
-- **Audit log:** a filter toolbar and the YNEX `.crm-recent-activity` timeline.
+- **Audit log:** KPI cards (changes this month with a sparkline, people, places, last change), then the shared filter toolbar (section, place, person, date range) over a DataTable of changes. Each change shows the old value in a soft red chip and the new one in a soft green chip. Built as a table rather than the planned timeline so it reuses the shared list helpers (filter in place, paging, URL state).
 - **Loading:** skeletons on first load; spinners only inside buttons.
 
 ## Acceptance Criteria
@@ -348,11 +368,17 @@ The pages themselves include `includes/settings/shell-start.php` / `shell-end.ph
 - [ ] Re-running `SettingsHubSeeder` changes nothing; the page's permission stays on the same submodule under the Settings module.
 
 ### S4: diocese system settings
+S4a (PR #170) covers email, SMS and Health; S4b covers the rest.
 - [ ] Saved mail settings override `.env` on the next request. A test email goes to `to` and adds a `message_logs` row.
 - [ ] With `sms.driver = log`, a test SMS writes the log and a `logged` row. With Africa's Talking (faked HTTP), the right form fields are posted and a `sent` row is stored; a provider error comes back on screen and is stored as `failed`.
 - [ ] Health returns Email, SMS, Queue, Scheduler and Storage tiles. Scheduler shows "check" when the heartbeat is more than 3 minutes old; Queue shows "check" when `failed_jobs` isn't empty.
 - [ ] Retry failed re-queues failed jobs. A non-global user gets 403 on Health, the tests and Maintenance.
 - [ ] The diocese's dead General Configuration, Security, Maintenance, Compliance and Notifications menu items are switched off.
+- [ ] Security: the PIN tries and lock minutes are what `User::verifyPin` uses; the shortest password applies to every password form (first sign-in, profile, users, reset); "never" leaves `password_expires_at` empty; the session length becomes `sanctum.expiration` in minutes, and going back to the default restores the `.env` value.
+- [ ] Documents & PDF: the name, the line under it and the footer note appear on report PDFs; report files are kept for the chosen number of days.
+- [ ] Maintenance: a notice shows on every signed-in page until it's cleared; each tool runs straight away and is written to the audit log; an unknown tool is 404.
+- [ ] Audit log: every place's changes are listed with who, where and the old and new values, with secrets masked.
+- [ ] Access control: a role with one of the System Administration read permissions sees the section with only those pages; the seeder moves System Administration under Settings as Access control without renaming any permission.
 
 ### S5: finance details and communication
 - [ ] A currency locked by the diocese shows as locked to a church and can't be saved by it.
