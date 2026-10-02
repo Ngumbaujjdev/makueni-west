@@ -12,7 +12,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // One Settings hub service per request, so its per-request row cache is shared.
+        $this->app->singleton(\App\Services\Settings\Settings::class);
     }
 
     /**
@@ -72,6 +73,9 @@ class AppServiceProvider extends ServiceProvider
 
             // Support
             'support_ticket' => 'App\Models\SupportTicket',
+
+            // Settings hub - system-level setting changes are audited on "setting" 0
+            'setting' => 'App\Models\Setting',
         ]);
     }
 }

@@ -211,6 +211,13 @@ class DatabaseSeeder extends Seeder
             // Last, so it builds on every menu group and role above.
             // ==========================================
             BudgetsAccessSeeder::class,
+
+            // ==========================================
+            // PHASE 28: the Settings hub - one Settings page per church,
+            // region and diocese, its section pages and the
+            // {level}.settings.hub.* permissions (docs/specs/settings-spec.md)
+            // ==========================================
+            SettingsHubSeeder::class,
         ]);
     }
 }

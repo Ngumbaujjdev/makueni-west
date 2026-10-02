@@ -13,6 +13,7 @@
             <exclude>tests/Feature/Diocese</exclude>
             <exclude>tests/Feature/Financial</exclude>
             <exclude>tests/Feature/Demographics</exclude>
+            <exclude>tests/Feature/Settings</exclude>
         </testsuite>
         <testsuite name="Diocese">
             <directory>tests/Feature/Diocese</directory>
@@ -22,6 +23,9 @@
         </testsuite>
         <testsuite name="Demographics">
             <directory>tests/Feature/Demographics</directory>
+        </testsuite>
+        <testsuite name="Settings">
+            <directory>tests/Feature/Settings</directory>
         </testsuite>
     </testsuites>
     <source>
