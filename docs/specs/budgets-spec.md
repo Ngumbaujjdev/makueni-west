@@ -5,7 +5,8 @@ Budgets for a church, a region and the diocese. Each place plans a month or a wh
 **Status:** being built in phases (started 2026-09-30).
 - Phase 1: the budget model, access, the list, the form and details.
 - Phase 2 (2026-10-01): recording money in and out (Spending), the Overview dashboard, and "What we noticed".
-- Later phases: deductions and Budget Settings, reports, and the top-to-bottom views.
+- Phase 4 (2026-10-02): Budget Settings, with lines and deductions for each level. Reports were brought forward.
+- Later phases: the top-to-bottom views and cleanup.
 
 This spec replaces `church-budgeting-spec.md`, which described a church → diocese approval that no longer exists.
 
@@ -237,7 +238,62 @@ One simple page per level: **Settings → Budget Settings → Lines and deductio
   - diocese: Bishop, Treasurer, Finance Officer, Administrator.
 - A place may only change its own lines (and the diocese the shared ones); anything else gets 403.
 
-**Deductions tab:** next phase.
+### Deductions (2026-10-02)
+
+A deduction is a share sent up out of money in, worked out for you. For example, the diocese sets "Diocese share: 10% of all money in, for every church". A church planning KES 100,000 in sees KES 10,000 already filled in on its "Diocese share" money-out line. When KES 40,000 has actually come in, its budget shows **due KES 4,000 · sent KES 2,500 · still owed KES 1,500**.
+
+**The rule:**
+- **How:** a % of money in, or a fixed amount each month. A fixed amount counts 12 times on a whole-year budget.
+- **On:** all money in, or only some money-in lines (`basis` = `all` | `lines`, `basis_line_ids`).
+- **Paid through:** a money-out line (`budget_line_id`). What was sent is just money recorded on that line, so nothing is counted twice. The add window can make that line ("make a new line called …"). A diocese line made this way is shared with whoever the deduction applies to. A region can't make lines for its churches; it picks an existing line instead.
+- **Applies to** (`applies_to_level`):
+  - church: its own only;
+  - region: its own, or its churches;
+  - diocese: its own, every church, every region, or everyone.
+- **On or off:** a switched-off deduction is left out of budgets saved after. It can only be deleted when no budget uses it; otherwise 422 "switch it off instead".
+
+**Owner:** `budget_deductions.territory_type` / `territory_id`, with the slug unique per owner. A deduction set above is shown **locked** on the page below, with "Set by the diocese / region".
+
+**Which apply to a place:** its own (applies own or all), plus those set by the places above it that apply to its level or to all. Only active ones count.
+
+**Worked out on every save** (`BudgetBook::save`, `App\Services\Budgets\Deductions`):
+- base = planned money in (all, or the chosen lines);
+- amount = % × base, or the fixed amount (×12 for a year);
+- written as the planned amount of the paid-through line (added if the budget lacks it), with `budget_line_items.budget_deduction_id` set;
+- a snapshot is kept in `budget_deduction_items` (`rate_type`, `rate_value`, `base_amount`, `deduction_amount`), so a later change to the rule doesn't rewrite old budgets until they're saved again;
+- History: "Worked out Diocese share: 10% of all money in (KES 100,000.00) = KES 10,000.00".
+
+**Due · sent · still owed** (budget details, Overview, reports):
+- due = the snapshot's % × money in **received** (a fixed amount is due as planned);
+- sent = what was spent on the paid-through line;
+- still owed = due − sent, never below 0.
+
+**API:**
+
+| Method | Path | Does |
+|---|---|---|
+| GET | `/budget-settings` | Also returns `deductions` (own and inherited, with `editable`), `applies_choices` and `paid_through` (money-out lines, with the levels each can serve) |
+| POST | `/budget-settings/deductions` | `{name, deduction_type: percentage\|fixed_amount, deduction_value, basis: all\|lines, basis_line_ids?, applies_to_level, budget_line_id? \| new_line_name?, description?}`; a % is at most 100 |
+| PUT | `/budget-settings/deductions/{id}` | The same fields, or just `{is_active}` to switch it on or off |
+| DELETE | `/budget-settings/deductions/{id}` | Only when no budget uses it |
+
+`GET /budgets/form` returns the place's `deductions` rules; `GET /budgets/{id}` returns `deductions` with planned / due / sent / owed per deduction; `GET /budgets/dashboard` returns their totals when whole budgets are in view.
+
+**Where it shows:**
+- Budget Settings → Deductions tab: one card per deduction with its rule, paid-through line, who it applies to, an on/off switch and Edit. The add window shows a live example ("On KES 100,000 → KES 10,000").
+- The budget form, step 3: a locked "Worked out" tile per deduction that updates as money in is typed, and a Deductions note in the preview.
+- A budget's page: a Deductions tab (planned · due on money in · sent · still owed, with a bar per deduction) and "Record what was sent".
+- Overview: "KES x still owed in deductions" in What we noticed (`BudgetDeductionsOwedRule`).
+- Reports: Budget summary and One budget get a Deductions section.
+
+**Acceptance criteria** (`BudgetDeductionsTest`):
+1. A diocese deduction for every church is worked out on a church budget, locked for the church, and tracked as due / sent / owed. History names it, and the Overview notices what's still owed.
+2. A deduction on only some lines uses only those lines.
+3. A fixed amount is per month, and 12 times that on a year budget.
+4. A switched-off deduction is left out of budgets saved after; a used one can't be deleted.
+5. A region's deduction reaches only its own churches.
+6. A region can't make lines for its churches, and a church can't set deductions for others. A % over 100 is refused.
+7. The summary report lists the deductions.
 
 ## Reports (phase 4, brought forward)
 
