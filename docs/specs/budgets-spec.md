@@ -253,7 +253,11 @@ A deduction is a share sent up out of the money a place **actually receives** - 
   - diocese: its own, every church, every region, or everyone.
 - **On or off:** a switched-off deduction is left out of budgets saved after. It can only be deleted when no budget uses it; otherwise 422 "switch it off instead".
 
-**Owner:** `budget_deductions.territory_type` / `territory_id`, with the slug unique per owner. A deduction set above is shown **locked** on the page below, with "Set by the diocese / region".
+**Owner:** `budget_deductions.territory_type` / `territory_id`, with the slug unique per owner. A deduction from above is shown **locked** on the page below as **"Standard"** - worded neutrally on purpose (2026-10-02): it's the system's standard, not one level ordering another. Standard lines read "Standard · Everyone" the same way.
+
+**The standard share** (`StandardDeductionsSeeder`, DatabaseSeeder phase 28, only created when missing): "Diocese share: 10% of Tithes received", every church, paid through the standard "Diocesan Tithe" line.
+
+**Reaching budgets already in use:** when a deduction is added, changed or switched on/off, every **Draft or In use** budget it reaches works it out again at once (`Deductions::openBudgetsFor()` + `BudgetBook::reapplyDeductions()`), past months included; History says "Added Diocese share: 10% of Tithes received (estimate from the plan KES x)" or "… no longer applies". **Closed** budgets are frozen and left as they were.
 
 **Which apply to a place:** its own (applies own or all), plus those set by the places above it that apply to its level or to all. Only active ones count.
 
@@ -289,7 +293,8 @@ A deduction is a share sent up out of the money a place **actually receives** - 
 - Reports: Budget summary and One budget get a Deductions section (due on received · sent · still owed · estimate).
 
 **Acceptance criteria** (`BudgetDeductionsTest`):
-1. A diocese deduction for every church is worked out on a church budget, locked for the church, and tracked as due / sent / owed. History names it, and the Overview notices what's still owed.
+1. A diocese deduction for every church is worked out on a church budget, shown as "Standard" and locked for the church, and tracked as due / sent / owed. History names it, and the Overview notices what's still owed.
+1a. A new deduction reaches budgets already in use at once (not closed ones), and switching it off removes it from them.
 2. A deduction on only some lines uses only those lines: 10% of Tithes counts only the tithes recorded, not offerings.
 3. A fixed amount is per month, and 12 times that on a year budget.
 4. A switched-off deduction is left out of budgets saved after; a used one can't be deleted.
