@@ -2,7 +2,12 @@
 
 Real credentials produced by the current seeders (`backend/database/seeders/`), extracted directly from source — not invented. **Dev/local database only. Never use these values in a production seed.**
 
-Login accepts either **email + password**, or **employee code + PIN** (dual-mode, see `authentication/login.php`). Calling the API directly (`POST /api/auth/login`), the field is named `identifier` — not `email` — and accepts either the email or the employee code:
+Login accepts either **email/username + password**, or **employee code + PIN** (dual-mode, see `authentication/login.php`).
+
+- `POST /api/auth/login`: the field is named `identifier` (not `email`) and matches the **email or the username**. People added through Settings > Leadership & team have their employee code as their username, so their code works here too.
+- `POST /api/auth/login-code`: `{"employee_code": "...", "pin": "..."}`. **Both are required** since 2026-10-02 (the code alone used to sign anyone in). Three wrong PINs lock the PIN for 15 minutes, and the route allows 10 tries a minute.
+
+Password sign-in, for example:
 
 ```bash
 curl -X POST http://127.0.0.1:8004/api/auth/login \
