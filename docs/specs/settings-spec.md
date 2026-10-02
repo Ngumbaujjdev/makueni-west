@@ -2,7 +2,7 @@
 
 One **Settings** page for each level: church, region and diocese. Each place fills in its own profile, service times, team, finance details and communication there, and the module settings (Budgets, Attendance, Demographics) live under it. The diocese's global admins also get the system settings: email and SMS, health, security, documents, access control, the audit log and maintenance.
 
-**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (the hub, Overview, Profile, Service times).
+**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (PR #165); S2 done (Leadership & team).
 - **S0:** lock down the access-control APIs.
 - **S1:** the hub, Overview, Profile and Service times.
 - **S2:** Leadership & team.
@@ -197,12 +197,17 @@ All routes are under `/api/settings`, inside `auth:sanctum`, with a FormRequest 
 | GET | `/settings/reference` | — | counties, weekdays, the place's gathering types | `.overview.read` |
 
 **Team rules:**
-- A new person is created through `App\Actions\Users\CreateUserWithAssignment`, which `UserController@store` also uses. They get:
-  - a unique 6-digit employee code;
-  - a random 10-character temporary password (no longer `Diocese@{year}`);
-  - `must_change_password = true`.
+- A new person is created through `App\Actions\Users\AddPersonToPlace` (the diocese's own `UserController@store` is unchanged). They get:
+  - a unique 6-digit employee code, which is also their **username**: password sign-in matches email or username, so "employee code + password" works on the password tab;
+  - a random 10-character temporary password with no look-alike characters (no longer `Diocese@{year}`);
+  - `must_change_password = true`;
+  - the role as a Spatie role as well as the assignment.
 - The code and temporary password come back once and are never stored in plain text.
-- Someone who already exists, matched by phone or email, gets a new assignment rather than a second account.
+- **The employee code is a secret.** `AuthController::loginWithCode` signs a person in with the code alone, so the team list never shows codes; they appear only with the one-time password.
+- "Reset access" issues a **new employee code** and a new temporary password, and ends every existing sign-in, so whoever knew the old code is locked out.
+- Someone who already exists, matched by email or phone (the last 9 digits, so `+254 7…` and `07…` match), gets a new assignment rather than a second account, and keeps their own login.
+- Removing someone ends the assignment (`is_active = false`, `expires_at = now`) and takes off the Spatie role once no other active assignment uses it. Their account stays.
+- `users.email` is optional (migration `2026_10_03_100000`), because many church people only have a phone.
 
 ## Permission Rules
 
@@ -306,11 +311,11 @@ Global admins can grant any role at any place.
 - [ ] Only global admins can use `?territory_id=`.
 
 ### S2: Leadership & team
-- [ ] A Senior Pastor adds a Church Secretary. The response holds an employee code and a temporary password; the user has `must_change_password = true`; `GET /settings/team` never returns the password.
+- [ ] A Senior Pastor adds a Church Secretary. The response holds an employee code and a temporary password; the user has `must_change_password = true` and can sign in with that code and password; `GET /settings/team` never returns the password or the code.
 - [ ] A Church Administrator trying to add a Senior Pastor gets 422, and so does a region-level role.
 - [ ] Nobody can change their own role or remove themselves (422). The last manager can't be removed (422).
 - [ ] Adding someone whose phone already exists gives that user a new assignment, not a second user.
-- [ ] `reset-access` issues a new temporary password, and the old one stops working.
+- [ ] `reset-access` issues a new employee code and temporary password, the old password stops working, and existing sign-ins end.
 - [ ] Adding, role changes and removals appear in the audit log.
 
 ### S3: module settings in the hub

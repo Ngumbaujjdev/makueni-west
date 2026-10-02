@@ -35621,3 +35621,36 @@ tr.is-clickable {
     display: none;
   }
 }
+.team-credential {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 0.45rem 0;
+}
+.team-credential + .team-credential {
+  border-top: 1px dashed rgba(var(--primary-rgb), 0.3);
+}
+.team-credential-label {
+  min-width: 9.5rem;
+  font-weight: 600;
+  color: var(--default-text-color);
+}
+.team-credential-value {
+  flex: 1;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--default-text-color);
+  background: var(--custom-white, #fff);
+  border-radius: 0.35rem;
+  padding: 0.3rem 0.6rem;
+}
+.team-table td,
+.team-table th {
+  white-space: nowrap;
+}
+.team-table td:first-child {
+  white-space: normal;
+  min-width: 14rem;
+}

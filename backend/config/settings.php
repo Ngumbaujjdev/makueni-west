@@ -67,6 +67,16 @@ return [
             'kind' => 'custom',
             'sentence' => 'When you meet, so visitors and the diocese know.',
         ],
+        'team' => [
+            'label' => 'Leadership & team',
+            'icon' => 'ri-team-line',
+            'colour' => 'pink',
+            'group' => 'our-place',
+            'levels' => ['church', 'region', 'diocese'],
+            'kind' => 'custom',
+            'actions' => ['read', 'manage'],
+            'sentence' => 'The people who serve here, and what each one can do in the system.',
+        ],
     ],
 
     'fields' => [
