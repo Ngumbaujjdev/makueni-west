@@ -70,6 +70,16 @@ $breadcrumbs = [
                     <div class="card-body p-0" id="ownBody"><div class="p-3"><span class="skel" style="height: 12rem; display: block;"></span></div></div>
                 </div>
 
+                <div class="card custom-card" id="payToCard" hidden>
+                    <div class="card-header justify-content-between flex-wrap gap-2">
+                        <div>
+                            <div class="card-title">How to send it</div>
+                            <span class="card-subtitle-text">Where the share goes - from their Settings &gt; Payment details</span>
+                        </div>
+                    </div>
+                    <div class="card-body" id="payToBody"></div>
+                </div>
+
                 <div class="card custom-card" id="belowCard" hidden>
                     <div class="card-header justify-content-between flex-wrap gap-2">
                         <div>

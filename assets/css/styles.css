@@ -35768,3 +35768,16 @@ tr.is-clickable {
   white-space: nowrap;
   vertical-align: bottom;
 }
+
+/* Contributions: "How to send it" - each receiving place's M-Pesa and bank details (Settings S5) */
+.pay-to-way {
+  height: 100%;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.6rem;
+}
+.pay-to-place + .pay-to-place {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--default-border);
+}
