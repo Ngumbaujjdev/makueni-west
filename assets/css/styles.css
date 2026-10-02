@@ -35095,3 +35095,64 @@ tr.is-clickable {
   font-size: 0.68rem;
   vertical-align: 0.1rem;
 }
+
+/* Budget Settings - deductions */
+.budget-deduction-intro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.15rem;
+  border: 1px dashed rgba(var(--purple-rgb), 0.4);
+  border-radius: 0.75rem;
+  background: rgba(var(--purple-rgb), 0.06);
+  color: var(--v2-heading);
+}
+.budget-deduction-rule {
+  margin: 0.2rem 0 0.5rem;
+  font-weight: 600;
+  color: rgb(var(--purple-rgb));
+}
+.budget-deduction-card.is-off .avatar {
+  opacity: 0.45;
+}
+.budget-deduction-example {
+  padding: 0.9rem 1rem;
+  border-radius: 0.6rem;
+  background: rgba(var(--purple-rgb), 0.06);
+  color: var(--v2-heading);
+}
+.budget-example-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px dashed var(--default-border);
+}
+.budget-example-row.is-out b {
+  color: rgb(var(--danger-rgb));
+}
+.budget-tile.is-deduction .form-control[readonly] {
+  background: rgba(var(--purple-rgb), 0.06);
+}
+.budget-preview-deductions {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.5rem;
+  background: rgba(var(--purple-rgb), 0.07);
+  color: var(--v2-heading);
+  font-size: 0.82rem;
+}
+.budget-preview-deductions > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.15rem 0;
+}
+.budget-preview-deductions small {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.7rem;
+  color: var(--default-text-color);
+}

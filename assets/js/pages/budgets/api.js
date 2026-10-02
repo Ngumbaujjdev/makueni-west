@@ -81,6 +81,9 @@ const BudgetsAPI = (function () {
     addLine: (body) => request("POST", "/budget-settings/lines", body),
     changeLine: (id, body) => request("PUT", `/budget-settings/lines/${id}`, body),
     removeLine: (id) => request("DELETE", `/budget-settings/lines/${id}`),
+    addDeduction: (body) => request("POST", "/budget-settings/deductions", body),
+    changeDeduction: (id, body) => request("PUT", `/budget-settings/deductions/${id}`, body),
+    removeDeduction: (id) => request("DELETE", `/budget-settings/deductions/${id}`),
     line: (budgetId, lineId) => request("GET", `/budgets/${budgetId}/lines/${lineId}`),
   };
 })();

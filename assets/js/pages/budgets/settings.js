@@ -5,7 +5,8 @@
  * One simple page per place. Lines: the money in and money out lines its
  * budgets are built from - the diocese's shared ones (locked, unless this
  * is the diocese) and the place's own. Add, rename, switch off, or delete a
- * line no budget has used. Deductions arrive in the next tab.
+ * line no budget has used. Deductions: shares of money in, worked out for
+ * you - the place's own, and those set above it (locked).
  * ============================================================================
  */
 const BudgetsSettings = (function () {
@@ -21,10 +22,23 @@ const BudgetsSettings = (function () {
   let editing = null; // the line being changed, or null for a new one
   let side = "out";
   let modal = null;
+  let dedModal = null;
+  let dedEditing = null;
+  const ded = { type: "percentage", basis: "all" };
 
   async function init() {
     B.showFlash();
     modal = new bootstrap.Modal(document.getElementById("lineModal"));
+    dedModal = new bootstrap.Modal(document.getElementById("deductionModal"));
+    document.getElementById("addDeductionBtn").addEventListener("click", () => openDeduction(null));
+    document.getElementById("dedSaveBtn").addEventListener("click", saveDeduction);
+    ["dedName", "dedValue", "dedNewLine"].forEach((elId) => document.getElementById(elId).addEventListener("input", example));
+    document.getElementById("dedApplies").addEventListener("change", () => (fillPaidThrough(), example()));
+    document.getElementById("dedLine").addEventListener("change", () => {
+      document.getElementById("dedNewLine").hidden = document.getElementById("dedLine").value !== "new";
+      example();
+    });
+    document.getElementById("dedLines").addEventListener("change", example);
     document.getElementById("addLineBtn").addEventListener("click", () => openLine(null));
     document.getElementById("lineSaveBtn").addEventListener("click", saveLine);
     ["lineName", "lineDescription"].forEach((elId) => document.getElementById(elId).addEventListener("input", preview));
@@ -49,6 +63,7 @@ const BudgetsSettings = (function () {
     banner.classList.toggle("d-flex", !d.can.update);
     renderStats();
     renderLists();
+    renderDeductions();
   }
 
   const isDiocese = () => d?.place?.type === "diocese";
@@ -242,6 +257,175 @@ const BudgetsSettings = (function () {
       null,
       { title: "Delete line", confirmText: "Delete", type: "error" },
     );
+  }
+
+  // ---------------------------------------------------------------- deductions
+
+  const ruleLabel = (r) => r.rule;
+
+  function renderDeductions() {
+    document.getElementById("addDeductionBtn").hidden = !d.can.update;
+    const list = d.deductions || [];
+    const on = list.filter((x) => x.is_active).length;
+    document.querySelector('[data-tab-figure="deductions"]').textContent = list.length ? `${on} on` : "None yet";
+    const el = document.getElementById("deductionsList");
+    if (!list.length) {
+      el.innerHTML = `<div class="col-12"><div class="card custom-card"><div class="card-body"><div class="list-empty py-4">
+        <span class="list-empty-icon bg-purple text-white"><i class="ri-percent-line"></i></span>
+        <div class="fw-semibold mt-2">No deductions yet</div>
+        <div class="fs-12">${d.can.update ? "Add one - e.g. a share of money in that goes to the diocese." : "None has been set for you."}</div></div></div></div></div>`;
+      return;
+    }
+    el.innerHTML = list
+      .map((x) => {
+        const color = x.is_own ? "purple" : "primary";
+        const example = x.deduction_type === "percentage" ? `On KES 100,000 in → <b>${B.money(x.example)}</b>` : `<b>${B.money(x.deduction_value)}</b> a month · <b>${B.money(x.deduction_value * 12)}</b> a year`;
+        return `
+          <div class="col-xl-6">
+            <div class="card custom-card budget-deduction-card${x.is_active ? "" : " is-off"}">
+              <div class="card-body">
+                <div class="d-flex align-items-start gap-3">
+                  <span class="avatar avatar-md bg-${color} text-white flex-shrink-0"><i class="ri-percent-line"></i></span>
+                  <div class="flex-fill" style="min-width: 0;">
+                    <div class="d-flex flex-wrap align-items-center gap-1">
+                      <span class="fw-bold fs-15">${B.esc(x.name)}</span>
+                      ${x.is_own ? '<span class="soft-chip soft-success">Ours</span>' : `<span class="soft-chip soft-purple"><i class="ri-lock-line me-1"></i>${B.esc(x.set_by)}</span>`}
+                      ${x.is_active ? "" : '<span class="soft-chip soft-warning">Switched off</span>'}
+                    </div>
+                    <div class="budget-deduction-rule">${B.esc(ruleLabel(x))}${x.basis === "lines" && x.basis_lines.length ? `: ${B.esc(x.basis_lines.join(", "))}` : ""}</div>
+                    <ul class="list-unstyled mb-0 budget-facts">
+                      <li><span>Paid through</span><span class="fw-semibold">${x.line ? B.lineDot(x.line) : '<span class="text-danger">No line yet</span>'}</span></li>
+                      <li><span>Applies to</span><span class="fw-semibold">${B.esc(x.is_own ? x.applies_label : "This place")}</span></li>
+                      <li><span>Example</span><span>${example}</span></li>
+                      <li><span>Worked out in</span><span class="fw-semibold">${x.used} ${x.used === 1 ? "budget" : "budgets"}</span></li>
+                    </ul>
+                  </div>
+                  ${x.editable ? `
+                    <span class="d-inline-flex flex-column align-items-end gap-2 flex-shrink-0">
+                      <span class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" role="switch" data-ded-switch="${x.id}" ${x.is_active ? "checked" : ""} aria-label="On or off"></span>
+                      <span class="d-inline-flex gap-1">
+                        <button type="button" class="btn btn-sm btn-primary-light" data-ded-edit="${x.id}" title="Change" aria-label="Change"><i class="ri-edit-line"></i></button>
+                        ${x.used === 0 ? `<button type="button" class="btn btn-sm btn-danger-light" data-ded-delete="${x.id}" title="Delete" aria-label="Delete"><i class="ri-delete-bin-line"></i></button>` : ""}
+                      </span>
+                    </span>` : ""}
+                </div>
+              </div>
+            </div>
+          </div>`;
+      })
+      .join("");
+    el.querySelectorAll("[data-ded-switch]").forEach((sw) =>
+      sw.addEventListener("change", async () => {
+        const res = await BudgetsAPI.changeDeduction(Number(sw.dataset.dedSwitch), { is_active: sw.checked });
+        res.ok ? Toast.success(res.message) : (Toast.error(res.message), (sw.checked = !sw.checked));
+        await load();
+      }),
+    );
+    el.querySelectorAll("[data-ded-edit]").forEach((b) => b.addEventListener("click", () => openDeduction(list.find((x) => x.id === Number(b.dataset.dedEdit)))));
+    el.querySelectorAll("[data-ded-delete]").forEach((b) =>
+      b.addEventListener("click", () => {
+        const x = list.find((y) => y.id === Number(b.dataset.dedDelete));
+        Toast.confirm(`Delete ${x.name}? No budget has used it yet.`, async () => {
+          const res = await BudgetsAPI.removeDeduction(x.id);
+          res.ok ? Toast.success(res.message) : Toast.error(res.message);
+          await load();
+        }, null, { title: "Delete deduction", confirmText: "Delete", type: "error" });
+      }),
+    );
+  }
+
+  function openDeduction(x) {
+    dedEditing = x;
+    ded.type = x?.deduction_type || "percentage";
+    ded.basis = x?.basis || "all";
+    document.getElementById("deductionModalTitle").textContent = x ? `Change ${x.name}` : "Add a deduction";
+    document.getElementById("dedName").value = x?.name || "";
+    document.getElementById("dedName").classList.remove("is-invalid");
+    document.getElementById("dedValue").value = x ? String(x.deduction_value) : "";
+    document.getElementById("dedTypeWrap").innerHTML = UI.renderSegmented("dedType", [{ value: "percentage", label: "% of money in" }, { value: "fixed_amount", label: "Fixed each month" }], ded.type, { ariaLabel: "How it's worked out" });
+    UI.wireSegmented("dedType", (v) => ((ded.type = v), example()));
+    document.getElementById("dedBasisWrap").innerHTML = UI.renderSegmented("dedBasis", [{ value: "all", label: "All money in" }, { value: "lines", label: "Only some lines" }], ded.basis, { ariaLabel: "On which money in" });
+    UI.wireSegmented("dedBasis", (v) => ((ded.basis = v), example()));
+    const lines = document.getElementById("dedLines");
+    lines.innerHTML = d.lines.filter((l) => l.side === "in" && l.is_active).map((l) => `<option value="${l.id}" ${x?.basis_line_ids?.includes(l.id) ? "selected" : ""}>${B.esc(l.name)}</option>`).join("");
+    UI.enhanceSelect(lines, { search: true });
+    const applies = document.getElementById("dedApplies");
+    applies.innerHTML = d.applies_choices.map((c) => `<option value="${c.value}">${B.esc(c.label)}</option>`).join("");
+    applies.value = x?.applies_to_level || d.applies_choices[d.applies_choices.length > 1 ? 1 : 0].value;
+    document.getElementById("dedAppliesWrap").hidden = d.applies_choices.length < 2; // a church's deductions are always its own
+    UI.enhanceSelect(applies, { search: false });
+    UI.syncSelect(applies);
+    fillPaidThrough(x?.budget_line_id);
+    example();
+    dedModal.show();
+  }
+
+  /** The money out lines this deduction can be paid through, for who it applies to - or a new line. */
+  function fillPaidThrough(selected) {
+    const level = document.getElementById("dedApplies").value;
+    const select = document.getElementById("dedLine");
+    const keep = selected ?? (select.value && select.value !== "new" ? Number(select.value) : null);
+    const choices = d.paid_through.filter((l) => l.for.includes(level));
+    const canNew = level === "own" || isDiocese();
+    select.innerHTML = [
+      '<option value="">Choose the line</option>',
+      ...choices.map((l) => `<option value="${l.id}" ${l.id === keep ? "selected" : ""}>${B.esc(l.name)}</option>`),
+      canNew ? '<option value="new" data-icon="ri-add-line" data-color="success">+ Make a new line…</option>' : "",
+    ].join("");
+    UI.enhanceSelect(select, { search: choices.length > 8 });
+    UI.syncSelect(select);
+    document.getElementById("dedNewLine").hidden = select.value !== "new";
+  }
+
+  function example() {
+    const isPct = ded.type === "percentage";
+    document.getElementById("dedPrefix").textContent = isPct ? "%" : "KES";
+    document.getElementById("dedTypeHint").textContent = isPct ? "A share of the money in planned - and, once money comes in, of what was received." : "The same amount every month - twelve times that on a whole-year budget.";
+    document.getElementById("dedBasisBlock").hidden = !isPct;
+    document.getElementById("dedLinesWrap").hidden = ded.basis !== "lines";
+    const value = Number(String(document.getElementById("dedValue").value).replace(/[^0-9.]/g, "")) || 0;
+    const name = document.getElementById("dedName").value.trim() || "This deduction";
+    const lineSel = document.getElementById("dedLine");
+    const line = lineSel.value === "new" ? document.getElementById("dedNewLine").value.trim() || name : lineSel.selectedOptions[0]?.value ? lineSel.selectedOptions[0].text : "its line";
+    document.getElementById("dedExample").innerHTML = isPct
+      ? `<div class="budget-example-row"><span>Money in planned</span><b>KES 100,000.00</b></div>
+         <div class="budget-example-row is-out"><span>${B.esc(name)} (${value || 0}%)</span><b>${B.money((100000 * value) / 100)}</b></div>
+         <div class="fs-12 mt-2">Filled in on <b>${B.esc(line)}</b>. If KES 40,000 actually comes in, <b>${B.money((40000 * value) / 100)}</b> is due.</div>`
+      : `<div class="budget-example-row"><span>A month budget</span><b>${B.money(value)}</b></div>
+         <div class="budget-example-row is-out"><span>A whole-year budget</span><b>${B.money(value * 12)}</b></div>
+         <div class="fs-12 mt-2">Filled in on <b>${B.esc(line)}</b>.</div>`;
+  }
+
+  async function saveDeduction() {
+    const name = document.getElementById("dedName").value.trim();
+    document.getElementById("dedName").classList.toggle("is-invalid", !name);
+    const value = Number(String(document.getElementById("dedValue").value).replace(/[^0-9.]/g, ""));
+    const lineVal = document.getElementById("dedLine").value;
+    if (!name || !value || !lineVal) {
+      Toast.warning(!name ? "Give the deduction a name." : !value ? "Type the % or the amount." : "Choose the line it's paid through.");
+      return;
+    }
+    const body = {
+      name,
+      deduction_type: ded.type,
+      deduction_value: value,
+      basis: ded.type === "percentage" ? ded.basis : "all",
+      basis_line_ids: ded.basis === "lines" ? [...document.getElementById("dedLines").selectedOptions].map((o) => Number(o.value)) : [],
+      applies_to_level: document.getElementById("dedApplies").value,
+      budget_line_id: lineVal === "new" ? null : Number(lineVal),
+      new_line_name: lineVal === "new" ? document.getElementById("dedNewLine").value.trim() || name : null,
+    };
+    const btn = document.getElementById("dedSaveBtn");
+    UI.setButtonLoading(btn, "Saving...");
+    const res = dedEditing ? await BudgetsAPI.changeDeduction(dedEditing.id, body) : await BudgetsAPI.addDeduction(body);
+    UI.restoreButton(btn);
+    if (!res.ok) {
+      Toast.error(res.message);
+      return;
+    }
+    dedModal.hide();
+    Toast.success(res.message);
+    await load();
   }
 
   return { init };

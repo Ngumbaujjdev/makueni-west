@@ -208,6 +208,7 @@ $steps = [
                                         </div>
                                         <div class="count-bar composition-bar mt-3 mb-2" id="sumBar" aria-hidden="true"><span class="bg-success" style="width: 50%"></span><span class="bg-danger" style="width: 50%"></span></div>
                                         <div class="d-flex flex-wrap gap-1" id="sumCompare"></div>
+                                        <div id="previewDeductions"></div>
                                     </div>
                                     <div class="preview-section">
                                         <div class="preview-section-title">Money in</div>
