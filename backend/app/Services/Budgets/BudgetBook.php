@@ -387,6 +387,8 @@ final class BudgetBook
             'total_expense_actual' => $sums->out_actual,
             'net_income_budgeted' => $sums->in_planned - $sums->out_planned,
             'net_income_actual' => $sums->in_actual - $sums->out_actual,
+            // The deductions worked out on this budget (their snapshots).
+            'total_deductions' => DB::table('budget_deduction_items')->where('budget_id', $budget->id)->whereNull('deleted_at')->sum('deduction_amount'),
         ]);
         $budget->refresh();
     }

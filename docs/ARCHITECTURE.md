@@ -32,7 +32,7 @@ This is real, working infrastructure — the user has explicitly asked that it b
 
 Folder names in this repo are misleading if you go by name alone:
 
-- **`diocese/`** — the real, built-out custom application. `diocese/settings/admin/*` (users, roles, modules, module-groups, permissions, role-management — all wired to the API, 300–1200+ lines each) and `diocese/budget-management/*` + `diocese/settings/budget-settings/*` (full budget CRUD + approval workflow UI).
+- **`diocese/`** — the real, built-out custom application. `diocese/settings/admin/*` (users, roles, modules, module-groups, permissions, role-management — all wired to the API, 300–1200+ lines each) Budgets (rebuilt 2026-10, `docs/specs/budgets-spec.md`) are shared page bodies in `includes/budget/*.php` with thin wrappers per level in `church/budget/`, `region/budgets/` and `diocese/budgets/`, plus `{level}/settings/budget-settings/index.php`; there is no approval workflow.
 - **`administration/`** — despite the name, this is a near-empty duplicate of what `diocese/settings/admin/*` already does. Don't build here; it looks like scaffolding that was abandoned once `diocese/settings/admin/*` was built instead.
 - **`church/`, `region/`** — almost entirely 0-byte placeholder files. The one non-empty file in each (`dashboard/index.php`) is still the unmodified YNEX demo "Ecommerce" content, just wrapped in a real `requirePermission()` call.
 - **`diocese/demographics-analytics/*`** — 6 files, all empty stubs. This is where the Demographics module's analytics pages will go.

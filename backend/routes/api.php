@@ -4,10 +4,7 @@ use App\Http\Controllers\Api\AppearanceController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AttendanceReportController;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\BudgetCategoryController;
 use App\Http\Controllers\Api\BudgetController;
-use App\Http\Controllers\Api\BudgetLineController;
-use App\Http\Controllers\Api\BudgetLogController;
 use App\Http\Controllers\Api\BudgetPeriodController;
 use App\Http\Controllers\Api\BudgetTypeController;
 use App\Http\Controllers\Api\DemographicsController;
@@ -262,38 +259,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/support-tickets/{id}/resolve', [SupportTicketController::class, 'resolveTicket']);
     Route::put('/support-tickets/{id}/close', [SupportTicketController::class, 'closeTicket']);
 
-    // Budget Management Routes (Settings)
-    // Budget Types
-    Route::prefix('budget-types')->middleware(\App\Http\Middleware\DenyChurchSettingsWrites::class)->group(function () {
-        Route::get('/', [BudgetTypeController::class, 'index']);                      // List all budget types
-        Route::post('/', [BudgetTypeController::class, 'store']);                     // Create budget type
-        Route::get('/{budgetType}', [BudgetTypeController::class, 'show']);           // Get budget type
-        Route::get('/{budgetType}/audits', [BudgetTypeController::class, 'getAudits']); // Get audit trail
-        Route::put('/{budgetType}', [BudgetTypeController::class, 'update']);         // Update budget type
-        Route::delete('/{budgetType}', [BudgetTypeController::class, 'destroy']);     // Delete budget type
-    });
-
-    // Budget Categories
-    Route::prefix('budget-categories')->middleware(\App\Http\Middleware\DenyChurchSettingsWrites::class)->group(function () {
-        Route::get('/', [BudgetCategoryController::class, 'index']);                      // List all budget categories
-        Route::post('/', [BudgetCategoryController::class, 'store']);                     // Create budget category
-        Route::get('/{budgetCategory}', [BudgetCategoryController::class, 'show']);       // Get budget category with lines
-        Route::get('/{budgetCategory}/audits', [BudgetCategoryController::class, 'getAudits']); // Get audit trail
-        Route::put('/{budgetCategory}', [BudgetCategoryController::class, 'update']);     // Update budget category
-        Route::delete('/{budgetCategory}', [BudgetCategoryController::class, 'destroy']); // Delete budget category
-    });
-
-    // Budget Lines
-    Route::prefix('budget-lines')->group(function () {
-        Route::get('/', [BudgetLineController::class, 'index']);                                // List all budget lines (with filtering)
-        Route::get('/grouped', [BudgetLineController::class, 'getGroupedByCategory']);          // Get lines grouped by category
-        Route::post('/', [BudgetLineController::class, 'store']);                               // Create budget line
-        Route::get('/{budgetLine}', [BudgetLineController::class, 'show']);                     // Get budget line
-        Route::get('/{budgetLine}/audits', [BudgetLineController::class, 'getAudits']);         // Get audit trail
-        Route::put('/{budgetLine}', [BudgetLineController::class, 'update']);                   // Update budget line
-        Route::patch('/{budgetLine}/order', [BudgetLineController::class, 'updateOrder']);      // Update display order
-        Route::delete('/{budgetLine}', [BudgetLineController::class, 'destroy']);               // Delete budget line
-    });
+    // Budget types - read-only; Demographics tracking uses them to find the fiscal months
+    Route::get('/budget-types', [BudgetTypeController::class, 'index']);
 
     // Statuses (System-wide)
     Route::prefix('statuses')->group(function () {
@@ -323,27 +290,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/{budget}/close', [BudgetController::class, 'close']);                     // In use -> Closed
         Route::post('/{budget}/reopen', [BudgetController::class, 'reopen']);                   // Closed -> In use
         Route::get('/{budget}/history', [BudgetController::class, 'history']);                  // History in plain sentences
-
-        // Line Items
-        Route::get('/{budget}/line-items', [BudgetController::class, 'getLineItems']);          // Get all line items
-        Route::put('/line-items/{lineItem}', [BudgetController::class, 'updateLooseLineItem']); // Update line item (by id alone)
-        Route::post('/{budget}/line-items', [BudgetController::class, 'addLineItem']);          // Add a line to a budget
-        Route::put('/{budget}/line-items/{lineItem}', [BudgetController::class, 'updateLineItem']); // Update line item (edit page)
-        Route::delete('/{budget}/line-items/{lineItem}', [BudgetController::class, 'deleteLineItem']); // Remove a line from a budget
-
-        // Audit & Summary
-        Route::get('/{budget}/audits', [BudgetController::class, 'getAudits']);                 // Get audit trail
-        Route::get('/{budget}/summary', [BudgetController::class, 'getSummary']);               // Get financial summary
-
-        // Deductions
-        Route::get('/{budget}/deductions', [BudgetController::class, 'getDeductions']);          // Get all deductions for budget
-        Route::post('/{budget}/deductions', [BudgetController::class, 'applyDeduction']);        // Apply deduction to budget
-        Route::post('/{budget}/deductions/{deductionItem}/reverse', [BudgetController::class, 'reverseDeduction']); // Reverse deduction
-        Route::post('/{budget}/recalculate-deductions', [BudgetController::class, 'recalculateDeductions']); // Recalculate totals
-
-        // Budget Logs
-        Route::get('/{budget}/logs', [BudgetLogController::class, 'index']);                     // Get all logs for budget
-        Route::get('/{budget}/logs/{log}', [BudgetLogController::class, 'show']);                // Get specific log entry
     });
 
     // Money in and out against a budget ("Spending") - access checked in the controller
@@ -365,11 +311,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('/{entry}', [\App\Http\Controllers\Api\BudgetEntryController::class, 'destroy']);
         Route::post('/{entryId}/restore', [\App\Http\Controllers\Api\BudgetEntryController::class, 'restore']);
         Route::get('/{entryId}', [\App\Http\Controllers\Api\BudgetEntryController::class, 'show']);         // One entry, for its page
-    });
-
-    // Budget Logs (Global)
-    Route::prefix('budget-logs')->group(function () {
-        Route::get('/recent', [BudgetLogController::class, 'recent']);                           // Get recent logs across all budgets
     });
 
     // Demographics (Church-level entry - Phase 3 of the Demographics module plan)
@@ -444,27 +385,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::put('/{gatheringType}', [GatheringTypeController::class, 'update']);
     });
 
-    // Budget Deductions
-    Route::prefix('budget-deductions')->middleware(\App\Http\Middleware\DenyChurchSettingsWrites::class)->group(function () {
-        Route::get('/', [App\Http\Controllers\Api\BudgetDeductionController::class, 'index']);                           // List all deductions
-        Route::post('/', [App\Http\Controllers\Api\BudgetDeductionController::class, 'store']);                          // Create deduction
-        Route::get('/{budgetDeduction}', [App\Http\Controllers\Api\BudgetDeductionController::class, 'show']);           // Get deduction details
-        Route::put('/{budgetDeduction}', [App\Http\Controllers\Api\BudgetDeductionController::class, 'update']);         // Update deduction
-        Route::patch('/{budgetDeduction}/order', [App\Http\Controllers\Api\BudgetDeductionController::class, 'updateOrder']); // Update display order
-        Route::delete('/{budgetDeduction}', [App\Http\Controllers\Api\BudgetDeductionController::class, 'destroy']);     // Delete deduction
-        Route::get('/{budgetDeduction}/audits', [App\Http\Controllers\Api\BudgetDeductionController::class, 'getAudits']); // Get audit trail
-    });
-
     // Fiscal Year Management
     Route::prefix('fiscal-years')->group(function () {
         Route::get('/', [FiscalYearController::class, 'index']);                      // List all fiscal years
         Route::get('/{id}', [FiscalYearController::class, 'show']);                   // Get fiscal year with quarters/semi-annuals
     });
 
-    // Budget Periods
-    Route::prefix('budget-periods')->middleware(\App\Http\Middleware\DenyChurchSettingsWrites::class)->group(function () {
-        Route::get('/', [BudgetPeriodController::class, 'index']);                    // List periods (filter by fiscal_year_id, budget_type_id)
-        Route::get('/by-year', [BudgetPeriodController::class, 'byYear']);            // Get periods grouped by type for a year
-        Route::get('/{id}', [BudgetPeriodController::class, 'show']);                 // Get single period details
-    });
+    // Budget periods - read-only; Demographics tracking uses them to find the fiscal months
+    Route::get('/budget-periods', [BudgetPeriodController::class, 'index']);
 });

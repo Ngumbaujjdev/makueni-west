@@ -63,7 +63,29 @@ class BudgetAccessTest extends TestCase
             $this->getJson("/api/budgets/{$budget->id}/history")->assertForbidden();
         }
         $this->getJson("/api/budgets?territory_id={$this->region->id}")->assertForbidden();
-        $this->getJson("/api/budgets/{$sibling->id}/logs")->assertForbidden();
+    }
+
+    /** The approval-era and old settings routes are gone (phase 6); Demographics' two lookups stay. */
+    public function test_the_old_budget_routes_are_gone(): void
+    {
+        $budget = $this->budgetFor($this->myChurch);
+        Sanctum::actingAs($this->bishop);
+
+        foreach ([
+            ['GET', "/api/budgets/{$budget->id}/logs"],
+            ['GET', "/api/budgets/{$budget->id}/line-items"],
+            ['GET', "/api/budgets/{$budget->id}/summary"],
+            ['POST', "/api/budgets/{$budget->id}/deductions"],
+            ['GET', '/api/budget-deductions'],
+            ['GET', '/api/budget-lines'],
+            ['GET', '/api/budget-categories'],
+            ['GET', '/api/budget-logs/recent'],
+            ['POST', '/api/budget-types'],
+        ] as [$method, $url]) {
+            $this->assertContains($this->json($method, $url)->status(), [404, 405], "{$method} {$url}");
+        }
+        $this->getJson('/api/budget-types')->assertOk();
+        $this->getJson('/api/budget-periods')->assertOk();
     }
 
     public function test_a_region_prepares_its_own_budget_and_never_sees_another_region(): void

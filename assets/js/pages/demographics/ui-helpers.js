@@ -1318,7 +1318,7 @@ const DemographicsUI = (function () {
   //
   // One shared init function instead of every list page hand-rolling the
   // jQuery DataTables setup + pagination/search styling block that
-  // assets/js/pages/budget-settings/budget-type.js originally proved out
+  // the old budget settings pages originally proved out
   // per-page. Callers just need a real <table id="..."> with a <thead>.
   // ==========================================================================
 

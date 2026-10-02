@@ -165,7 +165,7 @@ Two layers, kept in sync:
 2. **JS-side, backend-driven** — `assets/js/utils/auth-helpers.js` fetches `/api/modules/for-role` (or `/api/modules` for global admins), caches the permission-filtered module list in `localStorage`, and `includes/sidebar.php` renders the nav from that cache — never a hardcoded menu.
 3. **Sync bridge** — `authentication/ajax/sync-session.php` pushes the JS-side token/permissions into PHP `$_SESSION` so layer 1 and layer 2 agree.
 
-Permission names follow `<territory-scope>.<module>.<submodule>.<action>`, e.g. `diocese.settings.budgetsettings.budgettype.read`. When adding a new module, add its module/submodule/permission rows the same way the Budget module did — see `backend/database/seeders/DioceseBudgetModuleSeeder.php` as the reference pattern.
+Permission names follow `<territory-scope>.<module>.<submodule>.<action>`, e.g. `church.settings.budgetsettings.read`. When adding a new module, add its module/submodule/permission rows the same way the Budgets module does — see `backend/database/seeders/BudgetsAccessSeeder.php` as the reference pattern (idempotent: menu pages per level, permissions linked to the page they open, grants per role, and retired names cleaned up).
 
 ## Test Logins
 

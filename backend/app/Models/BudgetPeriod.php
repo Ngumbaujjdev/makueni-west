@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class BudgetPeriod extends Model
 {
@@ -55,11 +54,6 @@ class BudgetPeriod extends Model
         return $this->belongsTo(FiscalSemiAnnual::class);
     }
 
-    public function budgets(): HasMany
-    {
-        return $this->hasMany(Budget::class);
-    }
-
     // =========================================================================
     // SCOPES
     // =========================================================================
@@ -97,7 +91,7 @@ class BudgetPeriod extends Model
     public function scopeYearly($query)
     {
         return $query->whereNull('fiscal_month_id')
-                     ->whereNull('fiscal_quarter_id')
-                     ->whereNull('fiscal_semi_annual_id');
+            ->whereNull('fiscal_quarter_id')
+            ->whereNull('fiscal_semi_annual_id');
     }
 }

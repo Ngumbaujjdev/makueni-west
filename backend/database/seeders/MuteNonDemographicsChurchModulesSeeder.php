@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Module;
+use Illuminate\Database\Seeder;
 
 class MuteNonDemographicsChurchModulesSeeder extends Seeder
 {
@@ -21,7 +21,7 @@ class MuteNonDemographicsChurchModulesSeeder extends Seeder
      */
     private const MUTED_CHURCH_MODULE_IDS = [
         26, // Members
-        29, // Finance
+        29, // Finance - becomes Budgets (BudgetsAccessSeeder, the last phase, switches it back on)
         30, // Diocesan Contributions
         31, // Ministries
         32, // Service Management
@@ -45,6 +45,12 @@ class MuteNonDemographicsChurchModulesSeeder extends Seeder
 
         $muted = 0;
         foreach (Module::whereIn('id', self::MUTED_CHURCH_MODULE_IDS)->get() as $module) {
+            // Budgets is built and live (docs/specs/budgets-spec.md): never mute the module holding its pages.
+            if ($module->submodules()->where('path', 'like', '/church/budget/%')->exists()) {
+                $this->command->info("   🔊 Kept: {$module->name} (ID: {$module->id}) - the church's Budgets");
+
+                continue;
+            }
             if ($module->is_active) {
                 $module->is_active = false;
                 $module->save();
@@ -56,7 +62,7 @@ class MuteNonDemographicsChurchModulesSeeder extends Seeder
         }
 
         foreach (Module::whereIn('id', self::KEPT_ACTIVE_CHURCH_MODULE_IDS)->get() as $module) {
-            if (!$module->is_active) {
+            if (! $module->is_active) {
                 $module->is_active = true;
                 $module->save();
                 $this->command->info("   🔊 Re-activated: {$module->name} (ID: {$module->id})");
@@ -64,7 +70,7 @@ class MuteNonDemographicsChurchModulesSeeder extends Seeder
         }
 
         $this->command->info('');
-        $this->command->info("✅ Focus mode applied - {$muted} module(s) muted, " . count(self::KEPT_ACTIVE_CHURCH_MODULE_IDS) . ' kept active.');
+        $this->command->info("✅ Focus mode applied - {$muted} module(s) muted, ".count(self::KEPT_ACTIVE_CHURCH_MODULE_IDS).' kept active.');
         $this->command->info('   Active for church tier: Church Dashboard, Growth, Attendance');
     }
 }

@@ -5,7 +5,6 @@ namespace Tests\Feature\Financial;
 use App\Models\Budget;
 use App\Models\BudgetCategory;
 use App\Models\BudgetLine;
-use App\Models\BudgetType;
 use App\Models\Church;
 use App\Models\Diocese;
 use App\Models\Permission;
@@ -17,10 +16,10 @@ use App\Services\Budgets\BudgetBook;
 
 /**
  * A diocese with two regions; region A has two churches, region B one.
- * A pastor of church 1 (church budgets + budget lines, as the seeders
+ * A pastor of church 1 (church budgets + Budget Settings, as the seeders
  * grant), an overseer of region A and a bishop - each with read, prepare
- * and (above church) viewing the places below. One budget type, the two
- * categories, and shared lines for churches, regions, the diocese and all.
+ * and (above church) viewing the places below. The two categories, and
+ * shared lines for churches, regions, the diocese and all.
  */
 trait BuildsBudgetWorld
 {
@@ -41,8 +40,6 @@ trait BuildsBudgetWorld
     protected User $overseer;
 
     protected User $bishop;
-
-    protected BudgetType $type;
 
     protected BudgetCategory $category;
 
@@ -68,7 +65,6 @@ trait BuildsBudgetWorld
         $this->pastor = $this->userWithRole('pastor', 'Test Pastor', 'church', $this->myChurch->id, [
             ...array_map(fn ($a) => "church.budgets.budgets.{$a}", ['read', 'prepare', 'export']),
             'church.budgets.overview.read', 'church.budgets.spending.read', 'church.budgets.spending.record',
-            ...array_map(fn ($a) => "church.settings.budgetsettings.budgetlines.{$a}", ['read', 'create', 'update', 'delete']),
             'church.settings.budgetsettings.read', 'church.settings.budgetsettings.update',
         ]);
         $this->overseer = $this->userWithRole('overseer', 'Test Overseer', 'region', $this->region->id, [
@@ -84,7 +80,6 @@ trait BuildsBudgetWorld
             'diocese.settings.budgetsettings.read', 'diocese.settings.budgetsettings.update',
         ]);
 
-        $this->type = BudgetType::create(['name' => 'Annual', 'slug' => 'annual', 'duration_months' => 12, 'is_active' => true]);
         $this->incomeCategory = BudgetCategory::create(['name' => 'Income', 'slug' => 'income', 'is_active' => true]);
         $this->category = BudgetCategory::create(['name' => 'Expense', 'slug' => 'expense', 'is_active' => true]);
         $this->churchLine = $this->sharedLine('Church Rent', 'church');

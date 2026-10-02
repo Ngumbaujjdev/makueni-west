@@ -7,7 +7,7 @@
  * Centralized fetch() layer for both the Demographics (monthly snapshot)
  * and Attendance (weekly/event) models - one shared module since they're
  * one cohesive feature area, mirrored on
- * assets/js/pages/budget-management/api-handler.js's shape.
+ * the old budget-management API handler's shape.
  *
  * Dependencies: config/app.js (AppConfig), config/constants.js (Constants)
  * ============================================================================
