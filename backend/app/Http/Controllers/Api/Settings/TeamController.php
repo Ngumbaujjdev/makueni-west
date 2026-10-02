@@ -134,9 +134,9 @@ class TeamController extends SettingsController
     }
 
     /**
-     * POST /settings/team/{assignment}/reset-access - a new employee code AND
-     * a new temporary password (the code alone also signs in, so a reset has
-     * to replace it too); every existing sign-in ends.
+     * POST /settings/team/{assignment}/reset-access - a new employee code, a
+     * new temporary password and a new PIN, so whoever knew the old details is
+     * locked out; every existing sign-in ends.
      */
     public function resetAccess(Request $request, int $assignment, Settings $settings): JsonResponse
     {
@@ -146,12 +146,17 @@ class TeamController extends SettingsController
         }
         $user = $target->user;
         $password = AddPersonToPlace::temporaryPassword();
+        $pin = AddPersonToPlace::temporaryPin();
         $code = AddPersonToPlace::employeeCode();
         $usernameWasCode = $user->username !== null && $user->username === $user->employee_code;
         $user->forceFill([
             'employee_code' => $code,
             'username' => $usernameWasCode || $user->username === null ? $code : $user->username,
             'password' => Hash::make($password),
+            'pin' => Hash::make($pin),
+            'pin_changed_at' => now(),
+            'failed_pin_attempts' => 0,
+            'pin_locked_until' => null,
             'must_change_password' => true,
             'password_changed_at' => now(),
             'login_attempts' => 0,
@@ -162,7 +167,7 @@ class TeamController extends SettingsController
 
         return $this->ok([
             'person' => $this->person($target, $request, $place),
-            'credentials' => ['employee_code' => $user->employee_code, 'temporary_password' => $password],
+            'credentials' => ['employee_code' => $code, 'temporary_password' => $password, 'pin' => $pin],
         ], "New sign-in details for {$name}.");
     }
 

@@ -49,7 +49,7 @@ Route::get('reports/verify/{code}', [ReportController::class, 'verify'])->middle
 
 Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
-    Route::post('login-code', [AuthController::class, 'loginWithCode']);
+    Route::post('login-code', [AuthController::class, 'loginWithCode'])->middleware('throttle:10,1');
     Route::post('force-password-change', [AuthController::class, 'forcePasswordChange']);
 });
 // PUBLIC ROUTES (No Authentication Required)

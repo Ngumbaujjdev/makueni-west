@@ -483,13 +483,23 @@ class AuthController extends Controller
     */
 
     /**
-     * Church user login with employee code only (no password needed)
+     * Sign in with the 6-digit employee code AND the person's PIN.
+     *
+     * The code used to be enough on its own - anyone who knew or guessed a
+     * code was signed in as that person, with no limit on guesses. Now the
+     * PIN is checked too (User::verifyPin locks it for 15 minutes after 3
+     * wrong tries), a wrong code and a wrong PIN get the same message so
+     * codes can't be fished for, and the route is rate-limited.
      * ✅ AUDIT: Updates last_login_at
      */
     public function loginWithCode(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'employee_code' => 'required|string|size:6',
+            'pin' => 'required|string|regex:/^\d{4,6}$/',
+        ], [
+            'pin.required' => 'Enter your PIN.',
+            'pin.regex' => 'Your PIN is 4 to 6 digits.',
         ]);
 
         if ($validator->fails()) {
@@ -497,9 +507,20 @@ class AuthController extends Controller
         }
 
         $user = User::where('employee_code', $request->employee_code)->first();
+        $wrong = 'Wrong employee code or PIN.';
 
-        if (! $user) {
-            return errorResponse('Invalid employee code', 401);
+        if (! $user || ! $user->pin) {
+            return errorResponse($wrong, 401);
+        }
+        if ($user->isPinLocked()) {
+            $minutes = max(1, $user->getRemainingPinLockMinutes());
+
+            return errorResponse("Too many wrong PINs. Try again in {$minutes} minute".($minutes === 1 ? '' : 's').', or sign in with your password.', 423);
+        }
+        if (! $user->verifyPin((string) $request->pin)) {
+            return $user->fresh()->isPinLocked()
+                ? errorResponse('Too many wrong PINs. Try again in 15 minutes, or sign in with your password.', 423)
+                : errorResponse($wrong, 401);
         }
 
         // Check account status
@@ -507,7 +528,6 @@ class AuthController extends Controller
             return errorResponse('Account is inactive. Please contact administrator.', 403);
         }
 
-        // Create access token directly (no password or OTP needed)
         $accessToken = $user->createToken('Api-Access')->plainTextToken;
 
         // Get territorial data
