@@ -5,7 +5,7 @@ require_once __DIR__ . '/../../../includes/auth-check.php';
 require_once __DIR__ . '/../../../includes/permission-check.php';
 
 // 2. Check specific permission (same as users.php)
-requirePermission('diocese.dashboard.dashboardoverview.read');
+requirePermission('diocesesettings.systemadministration.usermanagement.update');
 
 // 3. Get user data
 $user = getAuthUser();

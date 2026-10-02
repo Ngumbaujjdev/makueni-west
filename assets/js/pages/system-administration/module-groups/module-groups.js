@@ -109,16 +109,9 @@
             const queryParams = currentTerritoryLevel ? `territory_scope=${currentTerritoryLevel}` : '';
             const url = `${API_BASE}/module-groups${queryParams ? '?' + queryParams : ''}`;
 
-            // Get auth token using Constants
-            const authToken = localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN);
-
             const response = await fetch(url, {
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                }
+                headers: APIHandler.getHeaders()
             });
 
             const result = await response.json();
