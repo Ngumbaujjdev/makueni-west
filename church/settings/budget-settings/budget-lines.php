@@ -3,6 +3,10 @@ require_once __DIR__ . '/../../../includes/session-manager.php';
 require_once __DIR__ . '/../../../includes/auth-check.php';
 require_once __DIR__ . '/../../../includes/permission-check.php';
 
+// Budget Settings is now one page for lines and deductions (includes/budget/settings.php).
+header('Location: ' . SITE_URL . '/church/settings/budget-settings/index.php');
+exit;
+
 requirePermission('church.settings.budgetsettings.budgetlines.read');
 
 $canCreate = hasPermission('church.settings.budgetsettings.budgetlines.create');

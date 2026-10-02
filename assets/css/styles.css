@@ -35085,3 +35085,13 @@ tr.is-clickable {
 .budget-insight-strip {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+
+/* Budget Settings - a switched-off line reads quieter, its name stays readable */
+.budget-item.is-off .avatar {
+  opacity: 0.45;
+}
+.budget-settings-lines .budget-item-name .soft-chip {
+  margin-inline-start: 0.25rem;
+  font-size: 0.68rem;
+  vertical-align: 0.1rem;
+}
