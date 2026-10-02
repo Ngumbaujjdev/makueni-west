@@ -96,6 +96,59 @@ const SettingsFields = (function () {
     });
   }
 
+  /** Settings > Maintenance's housekeeping tools (config 'tools'), each run straight away. */
+  const TOOLS = {
+    "clear-cache": { label: "Clear saved lookups", icon: "ri-eraser-line", colour: "primary", sentence: "Forgets what the system has stored to load pages faster. Use it if a page shows something out of date." },
+    "prune-reports": { label: "Remove expired report files", icon: "ri-file-reduce-line", colour: "secondary", sentence: "Deletes report files past how long they're kept. Printed copies can still be verified." },
+    "forget-failed": { label: "Remove failed jobs", icon: "ri-delete-bin-6-line", colour: "danger", sentence: "Throws away background jobs that failed, without running them again. Use Retry failed on System health to run them instead." },
+  };
+
+  function toolsCard(tools) {
+    return card({
+      id: "card-tools",
+      title: "Housekeeping",
+      icon: "ri-tools-line",
+      colour: "purple",
+      sub: "Each one runs straight away and is written to the Audit log.",
+      body: `<div class="d-flex flex-column gap-3">${tools
+        .filter((t) => TOOLS[t])
+        .map((t) => {
+          const tool = TOOLS[t];
+          return `
+          <div class="d-flex align-items-center gap-3 flex-wrap settings-tool">
+            <span class="avatar avatar-md bg-${tool.colour} ${textOn(tool.colour)} flex-shrink-0"><i class="${tool.icon}"></i></span>
+            <div class="flex-fill">
+              <div class="fw-semibold">${tool.label}</div>
+              <div class="fs-13">${tool.sentence}</div>
+            </div>
+            <button type="button" class="btn btn-sm ${t === "forget-failed" ? "btn-danger" : "btn-primary"}" data-tool="${t}">Run</button>
+          </div>`;
+        })
+        .join("")}</div>`,
+    });
+  }
+
+  function wireTools(root) {
+    root.querySelectorAll("[data-tool]").forEach((btn) =>
+      btn.addEventListener("click", () => {
+        const tool = TOOLS[btn.dataset.tool];
+        const go = async () => {
+          UI.setButtonLoading(btn, "Running…");
+          const res = await SettingsAPI.maintenance(btn.dataset.tool);
+          UI.restoreButton(btn);
+          res.ok ? Toast.success(res.message, { title: tool.label }) : Toast.error(res.message);
+        };
+        if (btn.dataset.tool !== "forget-failed") return go();
+        Toast.confirm("Remove every failed background job without running it again? This can't be undone.", go, null, {
+          title: tool.label,
+          confirmText: "Remove them",
+          cancelText: "Keep them",
+          type: "danger",
+        });
+      }),
+    );
+  }
+
   function wireTest(root) {
     const btn = root.querySelector("#testSend");
     if (!btn) return;
@@ -215,10 +268,13 @@ const SettingsFields = (function () {
       );
       if (payload.section?.test) root.insertAdjacentHTML("beforeend", testCard(payload.section.test));
       wireTest(root);
+      if (payload.section?.tools?.length) root.insertAdjacentHTML("beforeend", toolsCard(payload.section.tools));
+      wireTools(root);
       root.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((t) => window.bootstrap && new bootstrap.Tooltip(t));
       SettingsHub.subLinks([
         ...payload.cards.map((c) => ({ id: `card-${slug(c.title)}`, label: c.title })),
         ...(payload.section?.test ? [{ id: "card-test", label: "Check it works" }] : []),
+        ...(payload.section?.tools?.length ? [{ id: "card-tools", label: "Housekeeping" }] : []),
       ]);
     }
 
@@ -255,6 +311,13 @@ const SettingsFields = (function () {
         }
         payload = res.data;
         draw();
+        if (key === "maintenance") {
+          try {
+            sessionStorage.removeItem("mwd_system_notice"); // show the new notice straight away (system-notice.js)
+          } catch (e) {
+            /* it refreshes within 5 minutes anyway */
+          }
+        }
         Toast.success(res.message || "Saved.");
         return true;
       },

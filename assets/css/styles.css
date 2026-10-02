@@ -35730,3 +35730,41 @@ tr.is-clickable {
   white-space: normal;
   min-width: 14rem;
 }
+
+/* Settings > Access control: each page as a card that is one big link (S4b) */
+.settings-link-card {
+  color: inherit;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.settings-link-card:hover,
+.settings-link-card:focus-visible {
+  color: inherit;
+  border-color: rgb(var(--primary-rgb));
+  transform: translateY(-2px);
+}
+
+/* Settings > Maintenance: one row per housekeeping tool */
+.settings-tool + .settings-tool {
+  border-top: 1px solid var(--default-border);
+  padding-top: 1rem;
+}
+
+/* Settings > Audit log: what changed, old value -> new value */
+.audit-table td:last-child {
+  white-space: normal;
+  min-width: 18rem;
+}
+.audit-changes li + li {
+  margin-top: 0.35rem;
+}
+.audit-changes .soft-chip {
+  margin-left: 0.25rem;
+}
+.audit-value {
+  display: inline-block;
+  max-width: 22rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}

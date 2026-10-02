@@ -94,7 +94,15 @@ const SettingsRail = (function () {
         onSelect(a.dataset.section);
       });
     });
-    rail.querySelector(".settings-rail-item.is-active")?.scrollIntoView({ block: "nearest", inline: "center" });
+    // Bring the open section into view inside the rail only (the chip row on a
+    // phone, the list on a desktop) - scrollIntoView would scroll the page too.
+    const openItem = rail.querySelector(".settings-rail-item.is-active");
+    if (openItem) {
+      const r = rail.getBoundingClientRect();
+      const a = openItem.getBoundingClientRect();
+      if (rail.scrollWidth > rail.clientWidth) rail.scrollLeft += a.left - r.left - (r.width - a.width) / 2;
+      if (rail.scrollHeight > rail.clientHeight && (a.top < r.top || a.bottom > r.bottom)) rail.scrollTop += a.top - r.top - (r.height - a.height) / 2;
+    }
   }
 
   /** Load (cached first, then fresh) and draw. Resolves to the sections data, or null when refused. */
