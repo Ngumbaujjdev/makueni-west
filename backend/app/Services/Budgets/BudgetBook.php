@@ -89,7 +89,17 @@ final class BudgetBook
             $amounts[$lineId] = ($amounts[$lineId] ?? 0) + $amount;
         }
 
-        return DB::transaction(function () use ($user, $type, $id, $data, $budget, $year, $month, $amounts) {
+        // Deductions are worked out from the planned money in and fill their own lines.
+        $deductions = app(Deductions::class);
+        $planned = array_filter(
+            $deductions->plan($deductions->applicable($type, $id), $amounts, $month),
+            fn ($p) => $p['amount'] > 0,
+        );
+        foreach ($planned as $p) {
+            $amounts[$p['line_id']] = $p['amount'];
+        }
+
+        return DB::transaction(function () use ($user, $type, $id, $data, $budget, $year, $month, $amounts, $planned, $deductions) {
             [$start, $end] = $this->dates($year, $month);
             $isNew = $budget === null;
             $before = $isNew ? [] : $this->amountsOf($budget);
@@ -115,7 +125,9 @@ final class BudgetBook
             }
             $budget->save();
 
+            $wasWorkedOut = $isNew ? [] : $budget->budgetDeductionItems()->pluck('deduction_amount', 'budget_deduction_id')->map(fn ($v) => (float) $v)->all();
             $this->writeLines($budget, $amounts, $user);
+            $deductions->remember($budget, $planned, $user->id);
             $this->recalculate($budget);
 
             if ($isNew) {
@@ -128,6 +140,17 @@ final class BudgetBook
                 }
                 if ($changes) {
                     $this->log($budget, $user, 'updated', 'Changed '.implode('; ', $changes), $before, $after);
+                }
+            }
+
+            // "Worked out Diocese share: 10% of KES 100,000.00 = KES 10,000.00", when it changed.
+            foreach ($planned as $deductionId => $p) {
+                if (abs(($wasWorkedOut[$deductionId] ?? -1) - $p['amount']) >= 0.005) {
+                    $d = $p['deduction'];
+                    $how = $d->deduction_type === 'percentage'
+                        ? $deductions->ruleText('percentage', (float) $d->deduction_value, $d->basis).' (KES '.number_format($p['base'], 2).')'
+                        : $deductions->ruleText('fixed_amount', (float) $d->deduction_value, 'all', $month === null);
+                    $this->log($budget, $user, 'deduction', "Worked out {$d->name}: {$how} = KES ".number_format($p['amount'], 2));
                 }
             }
 

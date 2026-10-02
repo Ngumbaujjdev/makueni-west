@@ -21,6 +21,12 @@ class BudgetDeduction extends Model implements Auditable
         'deduction_value',
         'applies_to',
         'territory_scope',
+        'territory_type',
+        'territory_id',
+        'applies_to_level',
+        'budget_line_id',
+        'basis',
+        'basis_line_ids',
         'is_mandatory',
         'is_active',
         'display_order',
@@ -30,6 +36,7 @@ class BudgetDeduction extends Model implements Auditable
 
     protected $casts = [
         'deduction_value' => 'decimal:2',
+        'basis_line_ids' => 'array',
         'is_mandatory' => 'boolean',
         'is_active' => 'boolean',
         'display_order' => 'integer',
@@ -38,6 +45,12 @@ class BudgetDeduction extends Model implements Auditable
     // ========================================================================
     // RELATIONSHIPS
     // ========================================================================
+
+    /** The money-out line it is paid through. */
+    public function budgetLine(): BelongsTo
+    {
+        return $this->belongsTo(BudgetLine::class);
+    }
 
     /**
      * Get all deduction items using this deduction
@@ -90,7 +103,7 @@ class BudgetDeduction extends Model implements Auditable
     {
         return $query->where(function ($q) use ($scope) {
             $q->where('territory_scope', $scope)
-              ->orWhere('territory_scope', 'all');
+                ->orWhere('territory_scope', 'all');
         });
     }
 
@@ -101,7 +114,7 @@ class BudgetDeduction extends Model implements Auditable
     {
         return $query->where(function ($q) use ($type) {
             $q->where('applies_to', $type)
-              ->orWhere('applies_to', 'both');
+                ->orWhere('applies_to', 'both');
         });
     }
 

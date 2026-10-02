@@ -306,6 +306,8 @@ class BudgetController extends Controller
                     'out' => $lines->filter(fn ($l) => $l->budgetCategory?->slug === 'expense')->map($shape)->values(),
                 ],
                 'taken' => $this->book->takenPeriods($place['type'], $place['id'], $year, $budget?->id),
+                // The deductions that apply, so the form can work them out as amounts are typed.
+                'deductions' => $this->deductionRules($place),
                 'copy' => $previous ? [
                     'budget_id' => $previous->id,
                     'period_label' => $previous->period_label,
@@ -386,6 +388,7 @@ class BudgetController extends Controller
                 'out' => $items->filter(fn ($i) => $i->budgetCategory?->slug === 'expense')->map($row)->values(),
             ],
             'previous' => $this->previousOf($budget),
+            'deductions' => app(\App\Services\Budgets\Deductions::class)->status($budget),
             // A whole-year budget: when its money moved, month by month by entry date.
             'months' => $budget->period_month === null
                 ? \App\Reports\Budget\BudgetData::moneyOverTime($budget, $budget->entries()->get(['id', 'entry_date', 'direction', 'amount']), 0.0)['points']
@@ -400,6 +403,27 @@ class BudgetController extends Controller
                 'record' => $budget->status === 'active' && BudgetAccess::canWrite($user, $budget, 'record'),
             ],
         ];
+    }
+
+    /** The rules the form works out live (the server works them out again on save). */
+    private function deductionRules(array $place): array
+    {
+        $deductions = app(\App\Services\Budgets\Deductions::class);
+
+        return $deductions->applicable($place['type'], $place['id'])
+            ->filter(fn ($d) => $d->budget_line_id)
+            ->map(fn ($d) => [
+                'id' => $d->id,
+                'name' => $d->name,
+                'deduction_type' => $d->deduction_type,
+                'deduction_value' => (float) $d->deduction_value,
+                'basis' => $d->basis,
+                'basis_line_ids' => array_map('intval', $d->basis_line_ids ?? []),
+                'line_id' => (int) $d->budget_line_id,
+                'line' => $d->budgetLine?->name,
+                'rule' => $deductions->ruleText($d->deduction_type, (float) $d->deduction_value, $d->basis),
+                'set_by' => $d->territory_type === $place['type'] && (int) $d->territory_id === $place['id'] ? 'Our own' : 'Set by the '.($d->territory_type === 'diocese' ? 'diocese' : 'region'),
+            ])->values()->all();
     }
 
     /** The place's budget just before this one, for "vs December 2025". */

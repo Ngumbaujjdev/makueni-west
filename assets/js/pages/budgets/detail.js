@@ -155,6 +155,7 @@ const BudgetsDetail = (function () {
 
     B.syncExport({ key: "budget.statement", territoryId: b.place?.id, budgetId: b.id, title: `${b.period_label} budget` });
     renderStats(b);
+    renderDeductions();
     renderMonths();
     renderWhere();
     renderStatusCard(b);
@@ -165,6 +166,55 @@ const BudgetsDetail = (function () {
     const notesCard = document.getElementById("notesCard");
     notesCard.hidden = !b.notes;
     if (b.notes) document.getElementById("budgetNotes").textContent = b.notes;
+  }
+
+  /** Deductions: each one's rule, planned, due on what came in, sent, still owed. */
+  function renderDeductions() {
+    const rows = d.deductions || [];
+    document.getElementById("deductionsTabBtn").hidden = !rows.length;
+    if (!rows.length) return;
+    const owed = rows.reduce((t, r) => t + r.owed, 0);
+    document.querySelector('[data-tab-figure="deductions"]').textContent = owed > 0 ? `${B.shortMoney(owed)} still owed` : "All sent";
+    const fig = (label, value, cls = "") => `<div><small>${label}</small><b class="${cls}">${value}</b></div>`;
+    const total = (k) => rows.reduce((t, r) => t + r[k], 0);
+    document.getElementById("budgetDeductions").innerHTML = `
+      <div class="budget-items-strip soft-warning">
+        ${fig("Planned", B.money(total("planned")))}
+        ${fig("Due on money in", B.money(total("due")))}
+        ${fig("Sent", B.money(total("sent")), "text-success")}
+        ${fig("Still owed", B.money(owed), owed > 0 ? "text-danger" : "")}
+      </div>
+      <ul class="budget-items">${rows
+        .map((r) => {
+          const pct = r.due > 0 ? Math.min(100, (r.sent / r.due) * 100) : r.sent > 0 ? 100 : 0;
+          const href = r.line_id ? B.url("line.php", { budget: id, line: r.line_id }) : "";
+          return `
+            <li class="budget-item${href ? " is-clickable" : ""}" ${href ? `data-href="${href}"` : ""}>
+              <span class="avatar avatar-md bg-purple text-white flex-shrink-0"><i class="ri-percent-line"></i></span>
+              <div class="budget-item-main">
+                <div class="budget-item-top">
+                  <span class="budget-item-name">${B.esc(r.name)} <span class="soft-chip soft-purple">${B.esc(r.set_by)}</span></span>
+                  ${r.owed > 0 ? `<span class="badge bg-danger">${B.money(r.owed)} owed</span>` : r.due > 0 ? '<span class="badge bg-success">All sent</span>' : '<span class="soft-chip soft-primary">Nothing due yet</span>'}
+                </div>
+                <div class="fs-12 mb-1">${B.esc(r.rule)} · paid through ${href ? `<a href="${href}">${B.esc(r.line || "")}</a>` : B.esc(r.line || "-")}</div>
+                <div class="count-bar"><span class="bg-${r.owed > 0 ? "warning" : "success"}" style="width: ${pct}%"></span></div>
+                <div class="budget-item-figs">
+                  <span>Planned <b>${B.money(r.planned)}</b></span>
+                  <span>Due <b>${B.money(r.due)}</b></span>
+                  <span>Sent <b>${B.money(r.sent)}</b></span>
+                </div>
+              </div>
+            </li>`;
+        })
+        .join("")}</ul>
+      <div class="budget-items-total"><span>Due is worked out on the money actually received.</span>${d.can?.record && owed > 0 ? '<button type="button" class="btn btn-sm btn-primary" id="sendDeductionBtn"><i class="ri-send-plane-line me-1"></i>Record what was sent</button>' : ""}</div>`;
+    document.querySelectorAll("#budgetDeductions .budget-item[data-href]").forEach((li) =>
+      li.addEventListener("click", (ev) => {
+        if (!ev.target.closest("a, button")) window.location.href = li.dataset.href;
+      }),
+    );
+    const owedRow = rows.find((r) => r.owed > 0);
+    document.getElementById("sendDeductionBtn")?.addEventListener("click", () => BudgetsEntryModal.open({ budgetId: id, lineId: owedRow.line_id, direction: "out", onSaved: refresh }));
   }
 
   /** A whole-year budget: money in and out per month, by the date each amount was recorded. */

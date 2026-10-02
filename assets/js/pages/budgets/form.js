@@ -32,6 +32,7 @@ const BudgetsForm = (function () {
     amounts: {}, // line id -> amount
     taken: { year: null, months: {} },
     statuses: { year: null, months: {} }, // status of each taken period, for the chip colours
+    deductions: [], // shares of money in that fill their own money out line
     ownYear: null, // the year the budget being changed had when loaded
     ownTaken: null, // that year's taken periods - without the budget itself
     copy: null,
@@ -53,6 +54,7 @@ const BudgetsForm = (function () {
     const d = res.data;
     state.lines = d.lines;
     state.copy = d.copy;
+    state.deductions = d.deductions || [];
     state.taken = d.taken;
 
     if (d.budget) {
@@ -450,7 +452,7 @@ const BudgetsForm = (function () {
       el.innerHTML = `<p class="fw-semibold mb-0">No ${side === "in" ? "money in" : "money out"} lines yet. Add lines in Budget Settings.</p>`;
       return;
     }
-    const filled = (l) => Number(state.amounts[l.id]) > 0;
+    const filled = (l) => Number(state.amounts[l.id]) > 0 || !!ruleFor(l.id);
     const anyFilled = lines.some(filled);
     // Filled lines first; the rest behind "Show all" once something is filled in.
     const ordered = anyFilled ? [...lines.filter(filled), ...lines.filter((l) => !filled(l))] : lines;
@@ -492,7 +494,37 @@ const BudgetsForm = (function () {
   const colorOf = (line, side) => B.lineColor(side, Math.max(0, (state.lines[side] || []).findIndex((l) => l.id === line.id)));
 
   /** One line as a Demographics-style number tile: coloured icon, name, KES box, "Last time". */
+  /** The deduction that fills a line, if any. */
+  const ruleFor = (lineId) => state.deductions.find((r) => r.line_id === lineId);
+
+  /**
+   * Works every deduction out from the money in typed so far (the server
+   * works them out again on save) and fills its locked line.
+   */
+  function applyDeductions() {
+    const inLines = (state.lines.in || []).map((l) => l.id);
+    state.deductions.forEach((r) => {
+      let amount;
+      if (r.deduction_type === "percentage") {
+        const on = r.basis === "lines" ? r.basis_line_ids : inLines;
+        const base = on.reduce((t, id) => t + (Number(state.amounts[id]) || 0), 0);
+        amount = Math.round(base * r.deduction_value) / 100;
+      } else {
+        amount = r.deduction_value * (state.month === null ? 12 : 1);
+      }
+      if (amount > 0) state.amounts[r.line_id] = amount;
+      else delete state.amounts[r.line_id];
+      const input = document.getElementById(`amt-${r.line_id}`);
+      if (input) {
+        input.value = amount > 0 ? B.amount(amount) : "";
+        input.closest(".budget-tile")?.classList.toggle("is-filled", amount > 0);
+      }
+    });
+  }
+
   function lineRow(line, side, extra) {
+    const rule = ruleFor(line.id);
+    if (rule) return deductionTile(line, side, rule, extra);
     const amount = Number(state.amounts[line.id]) || 0;
     const value = amount > 0 ? B.amount(amount) : "";
     const last = Number(state.copy?.amounts?.[line.id]) || 0;
@@ -508,6 +540,23 @@ const BudgetsForm = (function () {
           <input type="text" inputmode="decimal" class="form-control text-end" id="amt-${line.id}" data-amount="${line.id}" data-side="${side}" value="${value}" placeholder="0.00" autocomplete="off">
         </div>
         <div class="num-tile-foot"><span class="num-tile-last">${last ? `Last time <b>${B.money(last)}</b>` : "New this time"}</span></div>
+      </div>`;
+  }
+
+  /** A deduction's line: locked, worked out from money in. */
+  function deductionTile(line, side, rule, extra) {
+    const amount = Number(state.amounts[line.id]) || 0;
+    return `
+      <div class="num-tile budget-tile is-deduction${amount > 0 ? " is-filled" : ""}${extra ? " is-extra" : ""}" data-name="${B.esc(line.name.toLowerCase())}" style="--tile-rgb: var(--purple-rgb)">
+        <label class="num-tile-label" for="amt-${line.id}">
+          <span class="num-tile-icon bg-purple text-white"><i class="ri-percent-line"></i></span>
+          <span class="budget-tile-name"><span>${B.esc(line.name)}</span> <span class="soft-chip soft-purple"><i class="ri-lock-line me-1"></i>Worked out</span><small>${B.esc(rule.name)}: ${B.esc(rule.rule)} · ${B.esc(rule.set_by)}</small></span>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">KES</span>
+          <input type="text" class="form-control text-end fw-semibold" id="amt-${line.id}" value="${amount > 0 ? B.amount(amount) : ""}" placeholder="0.00" readonly tabindex="-1" aria-label="${B.esc(line.name)}, worked out">
+        </div>
+        <div class="num-tile-foot"><span class="num-tile-last">Fills itself as you type money in</span></div>
       </div>`;
   }
 
@@ -539,6 +588,7 @@ const BudgetsForm = (function () {
   const sum = (side, amounts = state.amounts) => (state.lines[side] || []).reduce((t, l) => t + (Number(amounts?.[l.id]) || 0), 0);
 
   function updateTotals() {
+    applyDeductions();
     const inT = sum("in");
     const outT = sum("out");
     const left = inT - outT;
@@ -577,6 +627,11 @@ const BudgetsForm = (function () {
     document.getElementById("sumCompare").innerHTML =
       copy && (inT || outT) ? `${chip("In", inT, sum("in", copy.amounts), true)}${chip("Out", outT, sum("out", copy.amounts), false)}<span class="fs-12 align-self-center ms-1">vs ${B.esc(copy.period_label)}</span>` : "";
 
+    document.getElementById("previewDeductions").innerHTML = state.deductions.length
+      ? `<div class="budget-preview-deductions">${state.deductions
+          .map((r) => `<div><span><i class="ri-percent-line me-1"></i>${B.esc(r.name)}</span><b>${B.money(Number(state.amounts[r.line_id]) || 0)}</b></div>`)
+          .join("")}<small>Deductions are worked out from money in and included in money out.</small></div>`
+      : "";
     renderPreviewList("in", inT);
     renderPreviewList("out", outT);
 
@@ -614,6 +669,7 @@ const BudgetsForm = (function () {
       const rows = (state.lines[side] || []).filter((l) => Number(state.amounts[l.id]) > 0);
       const total = sum(side);
       const change = (l) => {
+        if (ruleFor(l.id)) return '<span class="soft-chip soft-purple">Worked out</span>';
         if (!state.copy) return "";
         const prev = Number(lastAmounts[l.id]) || 0;
         const cur = Number(state.amounts[l.id]) || 0;

@@ -16,6 +16,9 @@ class BudgetDeductionItem extends Model implements Auditable
         'budget_id',
         'budget_deduction_id',
         'deduction_amount',
+        'rate_type',
+        'rate_value',
+        'base_amount',
         'notes',
         'is_applied',
         'applied_at',
@@ -121,7 +124,7 @@ class BudgetDeductionItem extends Model implements Auditable
     public function scopeActive($query)
     {
         return $query->where('is_applied', true)
-                     ->where('is_reversed', false);
+            ->where('is_reversed', false);
     }
 
     // ========================================================================

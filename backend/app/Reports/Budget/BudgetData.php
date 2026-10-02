@@ -4,10 +4,12 @@ namespace App\Reports\Budget;
 
 use App\Models\Budget;
 use App\Models\BudgetEntry;
+use App\Services\Budgets\Deductions;
 use App\Support\Reports\Insights\Insight;
 use App\Support\Reports\Insights\InsightEngine;
 use App\Support\Reports\Insights\ReportFacts;
 use App\Support\Reports\Insights\Rules\BudgetBalanceRule;
+use App\Support\Reports\Insights\Rules\BudgetDeductionsOwedRule;
 use App\Support\Reports\Insights\Rules\BudgetIncomeShortfallRule;
 use App\Support\Reports\Insights\Rules\BudgetOverPlanRule;
 use App\Support\Reports\Insights\Rules\BudgetSpendingPaceRule;
@@ -149,6 +151,7 @@ final class BudgetData
         $label = $this->label($this->year, $this->month);
         $budget = $this->budgetInView($plans);
 
+        $deductions = $this->deductionsOf($plans);
         $lastEntry = $entries->max('entry_date');
         $facts = new ReportFacts([
             'period_label' => $label,
@@ -161,6 +164,7 @@ final class BudgetData
                 ->map(fn ($l) => ['name' => $l['name'], 'over' => round($l['actual'] - $l['planned'], 2)])->sortByDesc('over')->values()->all(),
             'unplanned' => collect([...$lines['in'], ...$lines['out']])->where('is_unplanned', true)->values()->all(),
             'days_since_entry' => $lastEntry ? (int) CarbonImmutable::parse($lastEntry)->diffInDays($today) : null,
+            'deductions' => $deductions['rows'],
         ]);
 
         return [
@@ -177,6 +181,7 @@ final class BudgetData
             'budget' => $budget,
             'budgets' => $plans->map(fn ($p) => ['id' => $p['budget']->id, 'period_label' => $p['budget']->period_label, 'status' => $p['budget']->status])->values(),
             'totals' => $totals,
+            'deductions' => $deductions,
             'previous' => $previous,
             'lines' => $lines,
             'trend' => $this->month === null ? $this->yearTrend($entries) : $this->monthTrend($entries, $start, $end, $totals),
@@ -189,7 +194,39 @@ final class BudgetData
                 new BudgetSpendingPaceRule,
                 new BudgetIncomeShortfallRule,
                 new BudgetUnplannedRule,
+                new BudgetDeductionsOwedRule,
             ], $facts, 6)),
+        ];
+    }
+
+    /**
+     * The deductions of the budgets in view: planned (a twelfth when one
+     * month of a whole-year budget is looked at), and - when whole budgets
+     * are in view - due on what came in, sent and still owed.
+     */
+    private function deductionsOf(Collection $plans): array
+    {
+        $rows = [];
+        $whole = $plans->every(fn ($p) => $p['share'] >= 1);
+        foreach ($plans as $p) {
+            foreach (app(Deductions::class)->status($p['budget']) as $r) {
+                $key = $r['id'];
+                $rows[$key] ??= [...$r, 'planned' => 0.0, 'due' => 0.0, 'sent' => 0.0, 'owed' => 0.0];
+                $rows[$key]['planned'] += $r['planned'] * $p['share'];
+                foreach (['due', 'sent', 'owed'] as $k) {
+                    $rows[$key][$k] += $whole ? $r[$k] : 0.0;
+                }
+            }
+        }
+        $rows = array_values(array_map(fn ($r) => [...$r, 'planned' => round($r['planned'], 2), 'due' => round($r['due'], 2), 'sent' => round($r['sent'], 2), 'owed' => round($r['owed'], 2)], $rows));
+
+        return [
+            'rows' => $whole ? $rows : [],
+            'planned' => round(array_sum(array_column($rows, 'planned')), 2),
+            'due' => $whole ? round(array_sum(array_column($rows, 'due')), 2) : null,
+            'sent' => $whole ? round(array_sum(array_column($rows, 'sent')), 2) : null,
+            'owed' => $whole ? round(array_sum(array_column($rows, 'owed')), 2) : null,
+            'count' => count($rows),
         ];
     }
 

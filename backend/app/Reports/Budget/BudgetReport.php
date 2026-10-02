@@ -206,6 +206,20 @@ abstract class BudgetReport extends Report
         return $out;
     }
 
+    /** Deductions: the rule, planned, due on what came in, sent, still owed. */
+    protected function deductionsSection(array $rows): ReportSection
+    {
+        return new ReportSection('Deductions', [
+            ReportColumn::text('Deduction', true),
+            ReportColumn::text('How it is worked out'),
+            ReportColumn::text('Paid through'),
+            ReportColumn::money('Planned'),
+            ReportColumn::money('Due'),
+            ReportColumn::money('Sent'),
+            ReportColumn::money('Still owed'),
+        ], array_map(fn ($r) => [$r['name'], $r['rule'], $r['line'], $r['planned'], $r['due'], $r['sent'], $r['owed']], $rows), 'Due is worked out on the money actually received; sent is what was recorded on the line it is paid through.');
+    }
+
     protected static function day(?string $date): ?string
     {
         return $date ? date('j M Y', strtotime($date)) : null;

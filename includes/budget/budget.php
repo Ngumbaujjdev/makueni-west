@@ -125,6 +125,10 @@ $breadcrumbs = [
                         <span class="section-tab-icon bg-success"><i class="ri-exchange-dollar-line"></i></span>
                         <span class="section-tab-text"><strong>Spending</strong><small data-tab-figure="spending">&nbsp;</small></span>
                     </button>
+                    <button class="nav-link section-tab" data-bs-toggle="tab" data-bs-target="#tab-deductions" data-tab="deductions" type="button" role="tab" aria-controls="tab-deductions" aria-selected="false" hidden id="deductionsTabBtn">
+                        <span class="section-tab-icon bg-warning text-dark"><i class="ri-percent-line"></i></span>
+                        <span class="section-tab-text"><strong>Deductions</strong><small data-tab-figure="deductions">&nbsp;</small></span>
+                    </button>
                     <button class="nav-link section-tab" data-bs-toggle="tab" data-bs-target="#tab-history" data-tab="history" type="button" role="tab" aria-controls="tab-history" aria-selected="false">
                         <span class="section-tab-icon bg-purple"><i class="ri-history-line"></i></span>
                         <span class="section-tab-text"><strong>History</strong><small data-tab-figure="history">&nbsp;</small></span>
@@ -174,6 +178,17 @@ $breadcrumbs = [
                                 <div class="d-flex flex-wrap gap-1" id="spendingChips"></div>
                             </div>
                             <div class="card-body" id="budgetSpending"><span class="skel" style="height: 8rem; display: block;"></span></div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="tab-deductions" role="tabpanel">
+                        <div class="card custom-card">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">Deductions</div>
+                                    <span class="card-subtitle-text">Shares of money in, worked out for you: due on what came in, and what was sent</span>
+                                </div>
+                            </div>
+                            <div class="card-body p-0" id="budgetDeductions"></div>
                         </div>
                     </div>
                     <div class="tab-pane fade" id="tab-history" role="tabpanel">

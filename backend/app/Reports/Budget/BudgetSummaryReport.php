@@ -42,6 +42,9 @@ final class BudgetSummaryReport extends BudgetReport
         $budget = $d['budget'];
 
         $sections = [$this->inSection($d['lines']['in']), $this->outSection($d['lines']['out'])];
+        if ($d['deductions']['rows'] !== []) {
+            $sections[] = $this->deductionsSection($d['deductions']['rows']);
+        }
         $charts = [];
         if ($d['trend']['kind'] === 'months') {
             $points = $this->balancedMonths($d);

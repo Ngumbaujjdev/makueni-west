@@ -102,15 +102,15 @@ $breadcrumbs = [
                         </div>
                     </div>
                     <div class="tab-pane fade" id="tab-deductions" role="tabpanel">
-                        <div class="card custom-card">
-                            <div class="card-body" id="deductionsBody">
-                                <div class="list-empty py-5">
-                                    <span class="list-empty-icon bg-purple text-white"><i class="ri-percent-line"></i></span>
-                                    <div class="fw-semibold mt-2">Deductions are coming next</div>
-                                    <div class="fs-12 mx-auto" style="max-width: 34rem;">A deduction is a share sent up out of money in, worked out for you - for example "Diocese share: 10% of money in". On KES 100,000 planned in, the budget fills in KES 10,000 to send.</div>
-                                </div>
+                        <div class="budget-deduction-intro">
+                            <span class="avatar avatar-md bg-purple text-white flex-shrink-0"><i class="ri-percent-line"></i></span>
+                            <div class="flex-fill">
+                                <div class="fw-semibold">A deduction is a share sent up out of money in - worked out for you.</div>
+                                <div class="fs-13">For example <b>"Diocese share: 10% of money in"</b>: on KES 100,000 planned in, the budget fills in KES 10,000 on the line it's paid through. What was actually sent is money out recorded on that line.</div>
                             </div>
+                            <button type="button" class="btn btn-primary flex-shrink-0" id="addDeductionBtn" hidden><i class="ri-add-line me-1"></i>Add a deduction</button>
                         </div>
+                        <div class="row" id="deductionsList"><div class="col-12"><span class="skel" style="height: 10rem; display: block;"></span></div></div>
                     </div>
                 </div>
 
@@ -156,6 +156,67 @@ $breadcrumbs = [
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-primary" id="lineSaveBtn"><i class="ri-check-line me-1"></i>Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add or change a deduction -->
+    <div class="modal fade app-modal" id="deductionModal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="deductionModalTitle">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg modal-fullscreen-sm-down">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span class="app-modal-icon bg-purple"><i class="ri-percent-line"></i></span>
+                    <div class="flex-fill" style="min-width: 0;">
+                        <h5 class="modal-title" id="deductionModalTitle">Add a deduction</h5>
+                        <div class="app-modal-subtitle" id="deductionModalSub">A share of money in, worked out on every budget saved from now on</div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-lg-7">
+                            <label class="budget-field-label" for="dedName">Name</label>
+                            <input type="text" class="form-control" id="dedName" maxlength="255" placeholder="e.g. Diocese share">
+                            <div class="invalid-feedback">Give the deduction a name.</div>
+
+                            <div class="budget-field-label mt-3">How is it worked out?</div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <div id="dedTypeWrap"></div>
+                                <div class="input-group" style="max-width: 13rem;">
+                                    <span class="input-group-text" id="dedPrefix">%</span>
+                                    <input type="text" inputmode="decimal" class="form-control text-end fw-semibold" id="dedValue" placeholder="10">
+                                </div>
+                            </div>
+                            <div class="fs-12 mt-1" id="dedTypeHint"></div>
+
+                            <div id="dedBasisBlock">
+                                <div class="budget-field-label mt-3">On which money in?</div>
+                                <div id="dedBasisWrap"></div>
+                                <div class="mt-2" id="dedLinesWrap" hidden>
+                                    <select class="form-select" id="dedLines" multiple aria-label="Money in lines"></select>
+                                </div>
+                            </div>
+
+                            <div id="dedAppliesWrap">
+                                <div class="budget-field-label mt-3">Who does it apply to?</div>
+                                <select class="form-select" id="dedApplies" aria-label="Who it applies to"></select>
+                            </div>
+
+                            <div class="budget-field-label mt-3">Paid through which money out line?</div>
+                            <select class="form-select" id="dedLine" aria-label="Paid through"></select>
+                            <input type="text" class="form-control mt-2" id="dedNewLine" maxlength="255" placeholder="Name of the new line, e.g. Diocese share" hidden>
+                            <div class="fs-12 mt-1">Record what was actually sent as money out on this line.</div>
+                        </div>
+                        <div class="col-lg-5">
+                            <div class="budget-field-label">Example</div>
+                            <div class="budget-deduction-example" id="dedExample"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="dedSaveBtn"><i class="ri-check-line me-1"></i>Save</button>
                 </div>
             </div>
         </div>
