@@ -96,7 +96,7 @@ final class Deductions
      * in, and keep a snapshot of each rule on the budget. Deductions that no
      * longer apply let go of their line (its amount stays, now typed).
      */
-    public function remember(Budget $budget, array $planned, int $userId): void
+    public function remember(Budget $budget, array $planned, ?int $userId): void
     {
         $items = BudgetLineItem::where('budget_id', $budget->id)->get()->keyBy('budget_line_id');
         $keep = [];
@@ -213,16 +213,56 @@ final class Deductions
         return $names === [] ? $last : implode(', ', $names).' and '.$last;
     }
 
-    /** Who set it, from the budget's place: "Set by the diocese", "Our own". */
+    /**
+     * Whose it is, from the budget's place: "Our own", or "Standard" for one
+     * that comes from above - worded neutrally on purpose: it's the system's
+     * standard, not one level ordering another.
+     */
     public function setBy(?BudgetDeduction $d, Budget $budget): string
     {
         if (! $d) {
             return '';
         }
-        if ($d->territory_type === $budget->territory_type && (int) $d->territory_id === (int) $budget->territory_id) {
-            return 'Our own';
-        }
 
-        return 'Set by the '.($d->territory_type === 'diocese' ? 'diocese' : 'region');
+        return $d->territory_type === $budget->territory_type && (int) $d->territory_id === (int) $budget->territory_id ? 'Our own' : 'Standard';
+    }
+
+    /**
+     * The open budgets (Draft or In use) a deduction reaches - its owner's
+     * own, and the churches' / regions' below it it applies to - plus any
+     * open budget that has it now, so a change of who it applies to is
+     * caught both ways. Closed budgets are frozen and left alone.
+     *
+     * @return Collection<int, Budget>
+     */
+    public function openBudgetsFor(BudgetDeduction $d): Collection
+    {
+        $level = $d->applies_to_level ?? 'own';
+        // Every place, once, then walk up from each (under a hundred rows).
+        $all = \Illuminate\Support\Facades\DB::table('territories')->whereNull('deleted_at')->get(['id', 'territory_type', 'parent_territory_id'])->keyBy('id');
+        $under = function (int $id) use ($all, $d) {
+            for ($t = $all->get($all->get($id)?->parent_territory_id), $depth = 0; $t && $depth < 6; $t = $all->get($t->parent_territory_id), $depth++) {
+                if ((int) $t->id === (int) $d->territory_id) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+        $below = fn (string $type) => $all->filter(fn ($t) => $t->territory_type === $type && $under((int) $t->id))->keys()->all();
+
+        return Budget::whereIn('status', ['draft', 'active'])
+            ->where(function ($q) use ($d, $level, $below) {
+                if (in_array($level, ['own', 'all'], true)) {
+                    $q->orWhere(fn ($own) => $own->where('territory_type', $d->territory_type)->where('territory_id', $d->territory_id));
+                }
+                foreach (['church', 'region'] as $type) {
+                    if (in_array($level, [$type, 'all'], true) && $d->territory_type !== $type) {
+                        $q->orWhere(fn ($b) => $b->where('territory_type', $type)->whereIn('territory_id', $below($type) ?: [0]));
+                    }
+                }
+                $q->orWhereIn('id', BudgetDeductionItem::where('budget_deduction_id', $d->id)->pluck('budget_id'));
+            })
+            ->get();
     }
 }

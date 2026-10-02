@@ -57,7 +57,7 @@ class BudgetDeductionsTest extends TestCase
         Sanctum::actingAs($this->pastor);
         $form = $this->getJson('/api/budgets/form?year=2026&month=1')->assertOk()->json('data');
         $this->assertSame('Diocese share', $form['deductions'][0]['name']);
-        $this->assertSame('Set by the diocese', $form['deductions'][0]['set_by']);
+        $this->assertSame('Standard', $form['deductions'][0]['set_by']); // neutral: the system's standard, not one level ordering another
 
         $january = $this->budgetFor($this->myChurch, 'active', [$this->incomeLine, $this->churchLine]);
         $item = $january->budgetLineItems->firstWhere('budget_line_id', $share->id);
@@ -106,6 +106,31 @@ class BudgetDeductionsTest extends TestCase
         $this->record($budget, $this->incomeLine, 400); // tithes recorded
         $d = $this->getJson("/api/budgets/{$budget->id}")->json('data.deductions.0');
         $this->assertEquals([40, 0, 40], [$d['due'], $d['sent'], $d['owed']]);
+    }
+
+    public function test_a_new_deduction_reaches_budgets_already_in_use_but_not_closed_ones(): void
+    {
+        Sanctum::actingAs($this->pastor);
+        $inUse = $this->budgetFor($this->myChurch, 'active', [$this->incomeLine], 2026, 1); // before any deduction
+        $closed = $this->budgetFor($this->myChurch, 'closed', [$this->incomeLine], 2026, 2);
+        $this->record($inUse, $this->incomeLine, 400);
+        $this->assertSame([], $this->getJson("/api/budgets/{$inUse->id}")->json('data.deductions'));
+
+        Sanctum::actingAs($this->bishop);
+        $id = $this->deduction(['basis' => 'lines', 'basis_line_ids' => [$this->incomeLine->id]]);
+
+        Sanctum::actingAs($this->pastor);
+        $d = $this->getJson("/api/budgets/{$inUse->id}")->assertOk()->json('data.deductions.0');
+        $this->assertSame('Standard', $d['set_by']);
+        $this->assertEquals([100, 40, 0, 40], [$d['planned'], $d['due'], $d['sent'], $d['owed']]); // shown at once, due on what was recorded
+        $this->assertSame([], $this->getJson("/api/budgets/{$closed->id}")->json('data.deductions')); // closed stays frozen
+        $this->assertContains('Added Diocese share: 10% of Tithes received (estimate from the plan KES 100.00)', collect($this->getJson("/api/budgets/{$inUse->id}/history")->json('data'))->pluck('description'));
+
+        // Switched off: it leaves the open budgets at once.
+        Sanctum::actingAs($this->bishop);
+        $this->putJson("/api/budget-settings/deductions/{$id}", ['is_active' => false])->assertOk();
+        Sanctum::actingAs($this->pastor);
+        $this->assertSame([], $this->getJson("/api/budgets/{$inUse->id}")->json('data.deductions'));
     }
 
     public function test_a_church_deduction_on_some_lines_only(): void
