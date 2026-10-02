@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\Territory;
 use App\Models\User;
 use App\Models\UserTerritoryAssignment;
+use App\Support\PasswordPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -755,7 +756,7 @@ class UserController extends Controller
             'username' => 'nullable|string|unique:users|max:255',
             'phone' => 'nullable|string|max:20',
             'position' => 'nullable|string|max:255',
-            'password' => 'nullable|string|min:8',
+            'password' => 'nullable|string|min:'.PasswordPolicy::min(),
             'employee_code' => 'nullable|string|size:6|unique:users',
             'status' => 'in:active,inactive',
             'must_change_password' => 'boolean',
@@ -853,7 +854,7 @@ class UserController extends Controller
                 'employee_code' => $employeeCode,
                 'status' => $request->input('status', 'active'),
                 'must_change_password' => $request->input('must_change_password', true),
-                'password_expires_at' => now()->addMonths(6),
+                'password_expires_at' => PasswordPolicy::expiresAt(),
                 'password_changed_at' => now(),
             ]);
 
@@ -952,7 +953,7 @@ class UserController extends Controller
             'username' => 'nullable|string|unique:users,username,'.$user->id,
             'phone' => 'nullable|string|max:20',
             'position' => 'nullable|string|max:255',
-            'password' => 'nullable|string|min:8',
+            'password' => 'nullable|string|min:'.PasswordPolicy::min(),
             'employee_code' => 'nullable|string|size:6|unique:users,employee_code,'.$user->id,
             'status' => 'in:active,inactive',
             'must_change_password' => 'boolean',
@@ -985,7 +986,7 @@ class UserController extends Controller
             if ($request->filled('password')) {
                 $updateData['password'] = Hash::make($request->password);
                 $updateData['password_changed_at'] = now();
-                $updateData['password_expires_at'] = now()->addMonths(6);
+                $updateData['password_expires_at'] = PasswordPolicy::expiresAt();
             }
 
             // Update employee code if provided
@@ -1127,7 +1128,7 @@ class UserController extends Controller
                 'password' => Hash::make($newPassword),
                 'must_change_password' => true,
                 'password_changed_at' => now(),
-                'password_expires_at' => now()->addMonths(6),
+                'password_expires_at' => PasswordPolicy::expiresAt(),
                 'login_attempts' => 0, // Reset failed attempts
             ]);
 

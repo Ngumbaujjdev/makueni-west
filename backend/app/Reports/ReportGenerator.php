@@ -66,7 +66,7 @@ final class ReportGenerator
             'file_size' => filesize($absolute),
             'file_hash' => hash_file('sha256', $absolute),
             'finished_at' => now(),
-            'expires_at' => now()->addDays(ReportRun::KEEP_DAYS),
+            'expires_at' => now()->addDays(ReportRun::keepDays()),
         ])->save();
     }
 }

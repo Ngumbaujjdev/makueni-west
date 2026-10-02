@@ -470,8 +470,10 @@ public function getStatusChangeHistory($limit = 20)
 
         $this->increment('failed_pin_attempts');
 
-        if ($this->failed_pin_attempts >= 3) {
-            $this->update(['pin_locked_until' => now()->addMinutes(15)]);
+        // How many tries and how long the lock lasts: Settings > Security.
+        $settings = app(\App\Services\Settings\Settings::class);
+        if ($this->failed_pin_attempts >= (int) $settings->system('security.pin_attempts')) {
+            $this->update(['pin_locked_until' => now()->addMinutes((int) $settings->system('security.pin_lock_minutes'))]);
         }
 
         return false;

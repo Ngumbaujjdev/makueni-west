@@ -39,6 +39,9 @@ final class Settings
 
     private ?Territory $systemPlace = null;
 
+    /** @var array<string, mixed> field key => its config value before applyToConfig() */
+    private array $configOriginals = [];
+
     private ?int $applied = null;
 
     public function version(): int
@@ -110,6 +113,17 @@ final class Settings
     public function get(string $key, ?Territory $place = null): mixed
     {
         return $this->resolve($key, $place)['value'];
+    }
+
+    /** A diocese system setting (Security, Documents, Maintenance...), falling back to its default. */
+    public function system(string $key): mixed
+    {
+        try {
+            return $this->get($key, $this->systemPlace());
+        } catch (\Throwable) {
+            // No settings table yet (fresh install, config:cache) - the default applies.
+            return SettingsRegistry::field($key)['default'] ?? null;
+        }
     }
 
     /** What the place would get without its own row (what "reset" falls back to). */
@@ -279,9 +293,20 @@ final class Settings
             if (empty($field['config'])) {
                 continue;
             }
+            // The config value before any setting touched it (the .env one), so a
+            // setting put back to its default restores it in long-running workers.
+            if (! array_key_exists($key, $this->configOriginals)) {
+                $this->configOriginals[$key] = config($field['config']);
+            }
             $r = $this->resolve($key, $place, $chain);
-            if ($r['source'] !== 'default') {
-                config([$field['config'] => $r['value'] === '' ? null : $r['value']]);
+            if ($r['source'] === 'default') {
+                config([$field['config'] => $this->configOriginals[$key]]);
+            } else {
+                $value = $r['value'] === '' ? null : $r['value'];
+                if (isset($field['config_scale']) && is_numeric($value)) {
+                    $value = (int) $value * $field['config_scale'];
+                }
+                config([$field['config'] => $value]);
             }
         }
         if (app()->resolved('mail.manager')) {

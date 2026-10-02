@@ -20,8 +20,14 @@ class ReportRun extends Model
 
     public const STATUS_FAILED = 'failed';
 
-    /** How long a finished file is kept before reports:prune removes it. */
+    /** How long a finished file is kept before reports:prune removes it (the default; see keepDays()). */
     public const KEEP_DAYS = 7;
+
+    /** Days a finished file is kept: Settings > Documents & PDF. */
+    public static function keepDays(): int
+    {
+        return max(1, (int) (app(\App\Services\Settings\Settings::class)->system('documents.keep_days') ?? self::KEEP_DAYS));
+    }
 
     protected $fillable = [
         'uuid', 'user_id', 'territory_id', 'report_key', 'format', 'params', 'status',

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\SendPasswordChangedNotification;
 use App\Jobs\SendSupportEmail;
 use App\Models\User;
+use App\Support\PasswordPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -120,7 +121,7 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'user_id' => 'required|exists:users,id',
             'current_password' => 'required|string',
-            'new_password' => 'required|string|min:8|confirmed',
+            'new_password' => 'required|string|min:'.PasswordPolicy::min().'|confirmed',
             'new_password_confirmation' => 'required|string',
         ]);
 
@@ -149,7 +150,7 @@ class AuthController extends Controller
                 'password' => Hash::make($request->new_password),
                 'password_changed_at' => now(),
                 'must_change_password' => false,
-                'password_expires_at' => now()->addMonths(6), // Diocese users get 6 months
+                'password_expires_at' => PasswordPolicy::expiresAt(), // Settings > Security
             ]);
 
             // Send password changed notification email
@@ -185,7 +186,7 @@ class AuthController extends Controller
             'position' => 'nullable|string|max:255',
             'email' => 'nullable|email|unique:users,email,'.$user->id,
             'current_password' => 'required_with:password|string',
-            'password' => 'nullable|string|min:8|confirmed',
+            'password' => 'nullable|string|min:'.PasswordPolicy::min().'|confirmed',
             'password_confirmation' => 'required_with:password|string',
         ]);
 
@@ -220,7 +221,7 @@ class AuthController extends Controller
                 $updateData['password'] = Hash::make($request->password);
                 $updateData['password_changed_at'] = now();
                 $updateData['must_change_password'] = false;
-                $updateData['password_expires_at'] = now()->addMonths(6);
+                $updateData['password_expires_at'] = PasswordPolicy::expiresAt();
 
                 // Send password changed notification
                 SendPasswordChangedNotification::dispatch($user);
