@@ -211,6 +211,12 @@ class DatabaseSeeder extends Seeder
             // Last, so it builds on every menu group and role above.
             // ==========================================
             BudgetsAccessSeeder::class,
+
+            // ==========================================
+            // PHASE 28: the standard deductions - "Diocese share: 10% of
+            // Tithes received" for every church (only created when missing)
+            // ==========================================
+            StandardDeductionsSeeder::class,
         ]);
     }
 }

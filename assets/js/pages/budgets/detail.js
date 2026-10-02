@@ -182,7 +182,7 @@ const BudgetsDetail = (function () {
     document.getElementById("deductionsTabBtn").hidden = !rows.length;
     if (!rows.length) return;
     const owed = rows.reduce((t, r) => t + r.owed, 0);
-    document.querySelector('[data-tab-figure="deductions"]').textContent = owed > 0 ? `${B.shortMoney(owed)} still owed` : "All sent";
+    document.querySelector('[data-tab-figure="deductions"]').textContent = owed > 0 ? `${B.shortMoney(owed)} still owed` : rows.some((r) => r.due > 0) ? "All sent" : "Nothing due yet";
     const fig = (label, value, cls = "") => `<div><small>${label}</small><b class="${cls}">${value}</b></div>`;
     const total = (k) => rows.reduce((t, r) => t + r[k], 0);
     document.getElementById("budgetDeductions").innerHTML = `

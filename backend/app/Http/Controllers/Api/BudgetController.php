@@ -453,7 +453,7 @@ class BudgetController extends Controller
                 'line_id' => (int) $d->budget_line_id,
                 'line' => $d->budgetLine?->name,
                 'rule' => $deductions->ruleText($d->deduction_type, (float) $d->deduction_value, $d->basis, false, $d->basis_line_ids ?? []),
-                'set_by' => $d->territory_type === $place['type'] && (int) $d->territory_id === $place['id'] ? 'Our own' : 'Set by the '.($d->territory_type === 'diocese' ? 'diocese' : 'region'),
+                'set_by' => $d->territory_type === $place['type'] && (int) $d->territory_id === $place['id'] ? 'Our own' : 'Standard',
             ])->values()->all();
     }
 

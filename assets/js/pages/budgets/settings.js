@@ -78,7 +78,7 @@ const BudgetsSettings = (function () {
     UI.renderStatCardsRow("statCardsRow", [
       { icon: "ri-list-check-2", label: "Lines in use", value: active.length, color: "primary", sub: `${active.filter((l) => l.side === "in").length} money in · ${active.filter((l) => l.side === "out").length} money out` },
       { icon: "ri-user-star-line", label: isDiocese() ? "The diocese's own" : "Our own", value: own.length, color: "success", sub: own.length ? "Added by you, only you use them" : "Add a line for anything not in the list" },
-      { icon: "ri-share-line", label: isDiocese() ? "Shared with others" : "Set by the diocese", value: shared.length, color: "purple", sub: isDiocese() ? "Churches and regions use them" : "Shared lines - only the diocese changes them" },
+      { icon: "ri-share-line", label: isDiocese() ? "Shared with others" : "Standard lines", value: shared.length, color: "purple", sub: isDiocese() ? "Churches and regions use them" : "The same for every church - kept up centrally" },
       { icon: "ri-toggle-line", label: "Switched off", value: off.length, color: "warning", sub: off.length ? "Not offered for new budgets" : "Every line is on" },
     ]);
   }
@@ -131,7 +131,7 @@ const BudgetsSettings = (function () {
   function row(l, s, i) {
     const color = B.lineColor(s, i);
     const chips = [
-      l.is_own ? `<span class="soft-chip soft-success">${isDiocese() ? "The diocese's own" : "Ours"}</span>` : `<span class="soft-chip soft-purple"><i class="ri-lock-line me-1"></i>${isDiocese() ? l.shared_label : `Set by the diocese · ${B.esc(l.shared_label || "")}`}</span>`,
+      l.is_own ? `<span class="soft-chip soft-success">${isDiocese() ? "The diocese's own" : "Ours"}</span>` : `<span class="soft-chip soft-purple"><i class="ri-lock-line me-1"></i>${isDiocese() ? l.shared_label : `Standard · ${B.esc(l.shared_label || "")}`}</span>`,
       l.is_active ? "" : '<span class="soft-chip soft-warning">Switched off</span>',
     ].join(" ");
     const used = l.used_here ? `Used in ${l.used_here} of your ${l.used_here === 1 ? "budget" : "budgets"}` : "Not in any of your budgets yet";
