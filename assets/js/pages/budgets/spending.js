@@ -112,7 +112,7 @@ const BudgetsSpending = (function () {
               <span class="budget-recent-date is-${isIn ? "in" : "out"}"><b>${date.getDate()}</b><small>${date.toLocaleDateString("en-GB", { month: "short" })}</small></span>
             </td>
             <td data-search="${B.esc(`${e.description} ${e.counterparty || ""} ${e.reference || ""}`)}">
-              <a href="${B.url("entry.php", { id: e.id })}" class="fw-semibold text-reset">${B.esc(e.description)}</a>
+              <a href="${B.url("entry.php", { id: e.id })}" class="fw-semibold text-reset">${B.esc(e.description)}</a>${e.receipts ? ` <i class="ri-attachment-2 text-primary" title="${e.receipts} ${e.receipts === 1 ? "receipt" : "receipts"}" aria-label="Has a receipt"></i>` : ""}
               ${e.counterparty ? `<div class="fs-12">${isIn ? "From" : "To"} ${B.esc(e.counterparty)}</div>` : ""}
             </td>
             <td data-search="${B.esc(`${e.line || ""} · ${isIn ? "Money in" : "Money out"}`)}">
@@ -123,7 +123,7 @@ const BudgetsSpending = (function () {
               ${B.methodChip(e.method)}${e.reference ? `<div class="fs-12 mt-1">${B.esc(e.reference)}</div>` : ""}
             </td>
             <td class="text-end fw-bold ${isIn ? "text-success" : "text-danger"}" data-order="${isIn ? e.amount : -e.amount}">${isIn ? "+" : "−"}${B.amount(e.amount)}</td>
-            <td class="d-none d-lg-table-cell">${B.esc(e.recorded_by || "-")}</td>
+            <td class="d-none d-lg-table-cell" data-search="${B.esc(e.recorded_by || "-")}">${B.esc(e.recorded_by || "-")}</td>
             <td class="text-end">
               ${canRecord ? `
               <div class="d-inline-flex gap-1">
@@ -136,12 +136,14 @@ const BudgetsSpending = (function () {
       .join("");
 
     const lines = [...new Set(entries.map((e) => e.line).filter(Boolean))].sort();
+    const people = [...new Set(entries.map((e) => e.recorded_by).filter(Boolean))].sort();
     UI.renderFilterToolbar("filterToolbar", {
       searchPlaceholder: "Search what for, paid to, reference...",
       filters: [
         { id: "dirFilter", label: "In and out", options: [{ value: "Money in", label: "Money in" }, { value: "Money out", label: "Money out" }] },
         { id: "lineFilter", label: "All lines", options: lines.map((l) => ({ value: l, label: l })) },
         { id: "methodFilter", label: "Any way", options: Object.values(METHODS).map((m) => ({ value: m, label: m })) },
+        { id: "byFilter", label: "Anyone", options: people.map((p) => ({ value: p, label: p })) },
       ],
     });
     const table = UI.initListDataTable("entriesTable", { order: [[0, "desc"]], nonSortableColumns: [6], hideDefaultSearch: true, noun: "entries", pageLength: 25 });
@@ -149,6 +151,7 @@ const BudgetsSpending = (function () {
       { id: "dirFilter", columnIndex: 2 },
       { id: "lineFilter", columnIndex: 2 },
       { id: "methodFilter", columnIndex: 3 },
+      { id: "byFilter", columnIndex: 5, exact: true },
     ], { noun: "entries" });
 
     tbody.onclick = (ev) => {

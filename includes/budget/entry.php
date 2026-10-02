@@ -92,6 +92,19 @@ $breadcrumbs = [
                     </div>
                     <div class="col-xl-5">
                         <div class="card custom-card">
+                            <div class="card-header justify-content-between flex-wrap gap-2">
+                                <div>
+                                    <div class="card-title">Receipts</div>
+                                    <span class="card-subtitle-text" id="receiptsSub">A photo or PDF of the receipt</span>
+                                </div>
+                                <label class="btn btn-sm btn-primary mb-0" id="addReceiptBtn" hidden>
+                                    <i class="ri-attachment-2 me-1"></i>Attach
+                                    <input type="file" id="receiptInput" accept="image/jpeg,image/png,image/webp,application/pdf" hidden>
+                                </label>
+                            </div>
+                            <div class="card-body" id="entryReceipts"><span class="skel" style="height: 6rem; display: block;"></span></div>
+                        </div>
+                        <div class="card custom-card">
                             <div class="card-header">
                                 <div>
                                     <div class="card-title">This entry's history</div>
