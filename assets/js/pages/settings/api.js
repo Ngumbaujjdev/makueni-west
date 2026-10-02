@@ -84,6 +84,9 @@ const SettingsAPI = (function () {
     changeRole: (id, roleId) => request("PUT", `/settings/team/${id}`, { role_id: roleId }),
     removePerson: (id) => request("DELETE", `/settings/team/${id}`),
     resetAccess: (id) => request("POST", `/settings/team/${id}/reset-access`),
+    health: (quick = false) => request("GET", `/settings/health${quick ? "?quick=1" : ""}`),
+    testSend: (channel, to) => request("POST", `/settings/test/${channel === "sms" ? "sms" : "email"}`, { to }),
+    retryFailed: () => request("POST", "/settings/maintenance/retry-failed"),
   };
 })();
 

@@ -2,7 +2,7 @@
 
 One **Settings** page for each level: church, region and diocese. Each place fills in its own profile, service times, team, finance details and communication there, and the module settings (Budgets, Attendance, Demographics) live under it. The diocese's global admins also get the system settings: email and SMS, health, security, documents, access control, the audit log and maintenance.
 
-**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (PR #165); S2 done (PR #166); S3 done (the module settings pages inside the hub).
+**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (PR #165); S2 done (PR #166); S3 done (PR #168); S4a done (Email, SMS, System health). S4b (Security, Documents & PDF, Maintenance, Audit log, Access control) next.
 - **S0:** lock down the access-control APIs.
 - **S1:** the hub, Overview, Profile and Service times.
 - **S2:** Leadership & team.
@@ -156,6 +156,13 @@ Subregions inherit settings but get no Settings page of their own.
 - `messages.reply_to`
 - `messages.display_name`
 - `messages.sms_signature`
+
+### System settings as built (S4a)
+- **Where they're stored:** Email, SMS and System health are kept at the **diocese** (`Settings::systemPlace()`, the single diocese territory) rather than at `territory_id NULL`. They're marked `global_only` in the registry, so only global admins see or change them; `SettingsAccess::can()` refuses everyone else, and there's no hub permission.
+- **Defaults:** each email field's default is its `.env` value. `applyToConfig()` runs at boot and before each queued job (when the cache version changed), and overrides `mail.default`, `mail.mailers.smtp.*` and `mail.from.*` **only for fields that have been saved**. Unsaved fields keep the `.env` value.
+- **SMS:** `App\Services\Sms\Sms` sends through Africa's Talking (`/version1/messaging` with the `apiKey` header; sandbox host when `sms.sandbox`), or the log until it's set up. Numbers are normalised to `+2547…` / `+2541…`. `balance()` feeds Health.
+- **Message log:** every email (the `LogSentEmail` listener on `MessageSent`) and every SMS is written to `message_logs`.
+- **Health tiles:** Email, SMS, Background jobs (`jobs` / `failed_jobs`; "Retry failed"), Scheduler (a heartbeat cached every minute by `routes/console.php`, OK if under 3 minutes old) and Storage (free %). There's also a count of messages this month and a "What's running" card.
 
 ## Resolution
 

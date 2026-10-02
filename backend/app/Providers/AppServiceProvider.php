@@ -78,5 +78,16 @@ class AppServiceProvider extends ServiceProvider
             // Settings hub - system-level setting changes are audited on "setting" 0
             'setting' => 'App\Models\Setting',
         ]);
+
+        // Saved system settings (email server, ...) take over from .env -
+        // Settings > Email. Never let a missing table or database stop boot
+        // (migrations, composer install, config:cache).
+        try {
+            $settings = $this->app->make(\App\Services\Settings\Settings::class);
+            $settings->applyToConfig();
+            \Illuminate\Support\Facades\Queue::before(fn () => $settings->applyIfStale());
+        } catch (\Throwable) {
+            // .env applies
+        }
     }
 }

@@ -73,6 +73,48 @@ const SettingsFields = (function () {
     }
   }
 
+  /** "Check it works": send a test email or SMS with the saved settings. */
+  function testCard(channel) {
+    const sms = channel === "sms";
+    return card({
+      id: "card-test",
+      title: "Check it works",
+      icon: "ri-send-plane-line",
+      colour: "success",
+      sub: `Send a test ${sms ? "SMS" : "email"} with the settings as saved (save your changes first).`,
+      body: `
+        <div class="row g-2 align-items-end">
+          <div class="col-md-8">
+            <label class="form-label" for="testTo">${sms ? "Phone number" : "Email address"}</label>
+            <input class="form-control" id="testTo" type="${sms ? "tel" : "email"}" placeholder="${sms ? "0712 345 678" : "you@example.com"}">
+          </div>
+          <div class="col-md-4 d-grid">
+            <button type="button" class="btn btn-success" id="testSend" data-channel="${channel}"><i class="ri-send-plane-line me-1"></i>Send a test</button>
+          </div>
+        </div>
+        <div id="testResult" class="mt-3" aria-live="polite"></div>`,
+    });
+  }
+
+  function wireTest(root) {
+    const btn = root.querySelector("#testSend");
+    if (!btn) return;
+    btn.addEventListener("click", async () => {
+      const to = root.querySelector("#testTo").value.trim();
+      const out = root.querySelector("#testResult");
+      if (!to) {
+        out.innerHTML = '<div class="soft-chip soft-danger">Enter where to send it.</div>';
+        return;
+      }
+      UI.setButtonLoading(btn, "Sending…");
+      const res = await SettingsAPI.testSend(btn.dataset.channel, to);
+      UI.restoreButton(btn);
+      out.innerHTML = `<div class="${res.ok ? "soft-success" : "soft-danger"} rounded p-2 d-flex align-items-start gap-2">
+        <span class="avatar avatar-xs ${res.ok ? "bg-success" : "bg-danger"} text-white flex-shrink-0"><i class="${res.ok ? "ri-check-line" : "ri-close-line"}"></i></span>
+        <span>${esc(res.message)}</span></div>`;
+    });
+  }
+
   /** A whole generic section from the registry. */
   function formSection(key) {
     let payload = null;
@@ -171,8 +213,13 @@ const SettingsFields = (function () {
           SettingsHub.changed();
         }),
       );
+      if (payload.section?.test) root.insertAdjacentHTML("beforeend", testCard(payload.section.test));
+      wireTest(root);
       root.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((t) => window.bootstrap && new bootstrap.Tooltip(t));
-      SettingsHub.subLinks(payload.cards.map((c) => ({ id: `card-${slug(c.title)}`, label: c.title })));
+      SettingsHub.subLinks([
+        ...payload.cards.map((c) => ({ id: `card-${slug(c.title)}`, label: c.title })),
+        ...(payload.section?.test ? [{ id: "card-test", label: "Check it works" }] : []),
+      ]);
     }
 
     return {
