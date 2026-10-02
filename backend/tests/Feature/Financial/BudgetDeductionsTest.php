@@ -68,10 +68,10 @@ class BudgetDeductionsTest extends TestCase
         $this->record($january, $share, 30);
         $d = $this->getJson("/api/budgets/{$january->id}")->assertOk()->json('data.deductions.0');
         $this->assertEquals([100, 40, 30, 10], [$d['planned'], $d['due'], $d['sent'], $d['owed']]);
-        $this->assertSame('10% of all money in', $d['rule']);
+        $this->assertSame('10% of all money received', $d['rule']);
 
         $history = collect($this->getJson("/api/budgets/{$january->id}/history")->json('data'))->pluck('description');
-        $this->assertContains('Worked out Diocese share: 10% of all money in (KES 1,000.00) = KES 100.00', $history);
+        $this->assertContains('Estimated Diocese share from the plan: 10% of all money received (KES 1,000.00 planned) = KES 100.00', $history);
 
         // Locked for the church
         $row = collect($this->getJson('/api/budget-settings')->json('data.deductions'))->firstWhere('name', 'Diocese share');
@@ -81,6 +81,31 @@ class BudgetDeductionsTest extends TestCase
         // ...and the Overview notices what's still owed
         $insights = collect($this->getJson('/api/budgets/dashboard?year=2026&month=1')->json('data.insights'))->pluck('title');
         $this->assertContains('KES 10.00 still owed in deductions', $insights);
+    }
+
+    public function test_the_diocese_share_is_ten_percent_of_the_tithes_actually_recorded(): void
+    {
+        Sanctum::actingAs($this->pastor);
+        $this->postJson('/api/budget-settings/lines', ['name' => 'Offerings', 'side' => 'in'])->assertCreated();
+        $offerings = $this->line('Offerings');
+
+        Sanctum::actingAs($this->bishop);
+        $this->deduction(['basis' => 'lines', 'basis_line_ids' => [$this->incomeLine->id]]); // 10% of Tithes
+
+        Sanctum::actingAs($this->pastor);
+        $budget = $this->budgetFor($this->myChurch, 'active', [$this->incomeLine, $offerings]); // plans 1,000 each
+
+        $d = $this->getJson("/api/budgets/{$budget->id}")->json('data.deductions.0');
+        $this->assertSame('10% of Tithes received', $d['rule']);
+        $this->assertSame([$this->incomeLine->id], $d['basis_line_ids']);
+        $this->assertEquals([100, 0], [$d['planned'], $d['due']]); // an estimate from the plan; nothing recorded yet
+
+        $this->record($budget, $offerings, 5000); // offerings don't count
+        $this->assertEquals(0, $this->getJson("/api/budgets/{$budget->id}")->json('data.deductions.0.due'));
+
+        $this->record($budget, $this->incomeLine, 400); // tithes recorded
+        $d = $this->getJson("/api/budgets/{$budget->id}")->json('data.deductions.0');
+        $this->assertEquals([40, 0, 40], [$d['due'], $d['sent'], $d['owed']]);
     }
 
     public function test_a_church_deduction_on_some_lines_only(): void
@@ -160,6 +185,6 @@ class BudgetDeductionsTest extends TestCase
         $d = $this->postJson('/api/reports/preview', ['report_key' => 'budget.summary', 'territory_id' => $this->myChurch->id, 'fiscal_year_id' => $year->id, 'month' => 1])->assertOk()->json('data');
 
         $section = collect($d['sections'])->firstWhere('heading', 'Deductions');
-        $this->assertSame(['Diocese share', '10% of all money in', 'Diocese share', '100.00', '0.00', '0.00', '0.00'], $section['rows'][0]);
+        $this->assertSame(['Diocese share', '10% of all money received', 'Diocese share', '0.00', '0.00', '0.00', '100.00'], $section['rows'][0]);
     }
 }

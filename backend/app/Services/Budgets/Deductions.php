@@ -150,7 +150,10 @@ final class Deductions
             return [
                 'id' => $d?->id,
                 'name' => $d?->name ?? 'Deduction',
-                'rule' => $this->ruleText($s->rate_type, (float) $s->rate_value, $d?->basis ?? 'all', $budget->period_month === null),
+                'rule' => $this->ruleText($s->rate_type, (float) $s->rate_value, $d?->basis ?? 'all', $budget->period_month === null, $d?->basis_line_ids ?? []),
+                // What it's worked out on: all money in, or these money-in lines.
+                'basis' => $d?->basis ?? 'all',
+                'basis_line_ids' => array_map('intval', $d?->basis_line_ids ?? []),
                 'line_id' => $d?->budget_line_id,
                 'line' => $d?->budgetLine?->name,
                 'set_by' => $this->setBy($d, $budget),
@@ -160,6 +163,7 @@ final class Deductions
                 'rate_type' => $s->rate_type,
                 'rate_value' => (float) $s->rate_value,
                 'base_planned' => (float) $s->base_amount,
+                'base_received' => round($base, 2),
                 'planned' => (float) $s->deduction_amount,
                 'due' => $due,
                 'sent' => $sent,
@@ -168,14 +172,45 @@ final class Deductions
         })->values()->all();
     }
 
-    /** "10% of all money in", "KES 5,000.00 each month (KES 60,000.00 for the year)". */
-    public function ruleText(?string $type, float $value, string $basis, bool $year = false): string
+    /**
+     * "10% of Tithes received", "10% of Tithes and Offerings received",
+     * "10% of all money received", "KES 5,000.00 each month (KES 60,000.00
+     * for the year)". A % is always of the money actually received - what
+     * is recorded - on the lines it names.
+     */
+    public function ruleText(?string $type, float $value, string $basis, bool $year = false, array $lineIds = []): string
     {
         if ($type === 'percentage') {
-            return rtrim(rtrim(number_format($value, 2), '0'), '.').'% of '.($basis === 'lines' ? 'some money in lines' : 'all money in');
+            $names = $basis === 'lines' ? $this->lineNames($lineIds) : [];
+            $on = $names === [] ? ($basis === 'lines' ? 'some money in' : 'all money') : $this->listOf($names);
+
+            return rtrim(rtrim(number_format($value, 2), '0'), '.')."% of {$on} received";
         }
 
         return 'KES '.number_format($value, 2).' each month'.($year ? ' (KES '.number_format($value * 12, 2).' for the year)' : '');
+    }
+
+    /** @var array<int, string> line names already looked up */
+    private array $names = [];
+
+    /** @return string[] the lines' names, in the order given */
+    private function lineNames(array $ids): array
+    {
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        $missing = array_diff($ids, array_keys($this->names));
+        if ($missing !== []) {
+            $this->names += BudgetLine::whereIn('id', $missing)->pluck('name', 'id')->all();
+        }
+
+        return array_values(array_filter(array_map(fn ($id) => $this->names[$id] ?? null, $ids)));
+    }
+
+    /** "Tithes", "Tithes and Offerings", "Tithes, Offerings and Donations". */
+    private function listOf(array $names): string
+    {
+        $last = array_pop($names);
+
+        return $names === [] ? $last : implode(', ', $names).' and '.$last;
     }
 
     /** Who set it, from the budget's place: "Set by the diocese", "Our own". */

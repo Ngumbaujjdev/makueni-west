@@ -327,7 +327,7 @@ class BudgetSettingsController extends Controller
                 'line' => $d->budgetLine?->name,
                 'applies_to_level' => $d->applies_to_level,
                 'applies_label' => self::APPLIES[$d->applies_to_level] ?? '',
-                'rule' => $this->deductions->ruleText($d->deduction_type, (float) $d->deduction_value, $d->basis),
+                'rule' => $this->deductions->ruleText($d->deduction_type, (float) $d->deduction_value, $d->basis, false, $d->basis_line_ids ?? []),
                 'example' => $d->deduction_type === 'percentage' ? round(100000 * (float) $d->deduction_value / 100, 2) : (float) $d->deduction_value,
                 'is_active' => (bool) $d->is_active,
                 'is_own' => $isOwn,

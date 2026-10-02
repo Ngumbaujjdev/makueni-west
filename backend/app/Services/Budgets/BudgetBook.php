@@ -143,14 +143,15 @@ final class BudgetBook
                 }
             }
 
-            // "Worked out Diocese share: 10% of KES 100,000.00 = KES 10,000.00", when it changed.
+            // "Estimated Diocese share from the plan: 10% of Tithes received (KES 100,000.00 planned) = KES 10,000.00", when it changed.
+            // The real share is worked out on what is recorded (Deductions::status()).
             foreach ($planned as $deductionId => $p) {
                 if (abs(($wasWorkedOut[$deductionId] ?? -1) - $p['amount']) >= 0.005) {
                     $d = $p['deduction'];
                     $how = $d->deduction_type === 'percentage'
-                        ? $deductions->ruleText('percentage', (float) $d->deduction_value, $d->basis).' (KES '.number_format($p['base'], 2).')'
+                        ? $deductions->ruleText('percentage', (float) $d->deduction_value, $d->basis, false, $d->basis_line_ids ?? []).' (KES '.number_format($p['base'], 2).' planned)'
                         : $deductions->ruleText('fixed_amount', (float) $d->deduction_value, 'all', $month === null);
-                    $this->log($budget, $user, 'deduction', "Worked out {$d->name}: {$how} = KES ".number_format($p['amount'], 2));
+                    $this->log($budget, $user, 'deduction', "Estimated {$d->name} from the plan: {$how} = KES ".number_format($p['amount'], 2));
                 }
             }
 
