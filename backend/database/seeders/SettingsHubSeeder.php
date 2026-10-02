@@ -23,6 +23,12 @@ use Spatie\Permission\Models\Role;
  * settings; the other office holders can look. A section can add roles
  * with config 'grants' => ['update' => ['church' => ['Church Treasurer']]].
  *
+ * Existing settings pages (Budget Settings, Gathering Types, Recording
+ * Cadence - config 'kind' => 'link') are moved in rather than copied: their
+ * menu row (found by its path, 'absorbs') goes under Settings with its
+ * permissions, and the module it came from is switched off once nothing in
+ * it is still on the menu. The page and its permission names don't change.
+ *
  * Idempotent - safe to re-run; it also brings paths and labels up to date.
  */
 class SettingsHubSeeder extends Seeder
@@ -66,6 +72,11 @@ class SettingsHubSeeder extends Seeder
 
             $granted = 0;
             foreach (SettingsRegistry::sections($level) as $key => $section) {
+                if (($section['kind'] ?? null) === 'link') {
+                    $this->absorb($module, $level, $section);
+
+                    continue;
+                }
                 $submodule = Submodule::updateOrCreate(
                     ['module_id' => $module->id, 'title' => $section['label']],
                     ['path' => $this->path($level, $key, $section), 'description' => $section['sentence'] ?? $section['label'], 'is_active' => true],
@@ -92,6 +103,27 @@ class SettingsHubSeeder extends Seeder
 
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
         $this->command?->info('✅ Settings hub menu ready.');
+    }
+
+    /** Move an existing settings page's menu row (and its permissions) under the Settings module. */
+    private function absorb(Module $settings, string $level, array $section): void
+    {
+        $path = $section['absorbs'][$level] ?? null;
+        $page = $path ? Submodule::where('path', $path)->first() : null;
+        if (! $page) {
+            $this->command?->warn("   ⚠️  {$level}: {$section['label']} page ({$path}) isn't on the menu yet - run its own seeder first");
+
+            return;
+        }
+        $from = $page->module_id;
+        if ((int) $from !== (int) $settings->id) {
+            $page->forceFill(['module_id' => $settings->id])->save();
+            Permission::where('submodule_id', $page->id)->update(['module_id' => $settings->id]);
+            if (! Submodule::where('module_id', $from)->where('is_active', true)->exists()) {
+                Module::whereKey($from)->update(['is_active' => false]);
+            }
+        }
+        $page->forceFill(['title' => $section['label'], 'is_active' => true])->save();
     }
 
     /** The overview opens the hub itself; other sections open it on their section, links open their own page. */

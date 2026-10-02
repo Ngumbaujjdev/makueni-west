@@ -154,16 +154,26 @@ class BudgetsAccessSeeder extends Seeder
 
             return null;
         }
-        $module = Module::firstOrCreate(
-            ['module_group_id' => $groupId, 'name' => 'Budget Settings'],
-            ['icon' => 'ri-settings-3-line', 'number' => 3, 'is_active' => true, 'description' => 'The lines and deductions budgets are built from'],
-        );
-        $module->update(['is_active' => true]);
         $path = match ($level) {
             'church' => '/church/settings/budget-settings/index.php',
             'region' => '/region/settings/budget-settings/index.php',
             'diocese' => '/diocese/settings/budget-settings/index.php',
         };
+        // Once the Settings hub has taken the page in (SettingsHubSeeder), it
+        // stays there - don't bring back a separate Budget Settings menu.
+        $inHub = Submodule::where('path', $path)
+            ->whereHas('module', fn ($q) => $q->where('module_group_id', $groupId)->where('name', 'Settings'))
+            ->first();
+        if ($inHub) {
+            $this->command->info("   ✅ {$level}: Settings → {$inHub->title} ({$path})");
+
+            return $inHub;
+        }
+        $module = Module::firstOrCreate(
+            ['module_group_id' => $groupId, 'name' => 'Budget Settings'],
+            ['icon' => 'ri-settings-3-line', 'number' => 3, 'is_active' => true, 'description' => 'The lines and deductions budgets are built from'],
+        );
+        $module->update(['is_active' => true]);
         $submodule = Submodule::updateOrCreate(
             ['module_id' => $module->id, 'path' => $path],
             ['title' => 'Lines and deductions', 'is_active' => true, 'description' => 'Money in and money out lines, and the shares worked out from money in'],

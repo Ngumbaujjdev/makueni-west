@@ -102,6 +102,11 @@ final class SettingsAccess
             return true;
         }
         $level = self::level($place);
+        // A linked page (S3) keeps its own permission; only reading applies.
+        $linked = SettingsRegistry::section($section)['permission'] ?? null;
+        if ($linked) {
+            return $action === 'read' && BudgetAccess::has($user, "{$level}.{$linked}");
+        }
         $has = fn (string $a) => BudgetAccess::has($user, SettingsRegistry::permission($level, $section, $a));
 
         return $action === 'read' ? ($has('read') || $has('update') || $has('manage')) : $has($action);

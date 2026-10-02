@@ -77,6 +77,57 @@ return [
             'actions' => ['read', 'manage'],
             'sentence' => 'The people who serve here, and what each one can do in the system.',
         ],
+
+        // Existing settings pages, shown inside the hub (S3). 'permission' is
+        // the page's own read permission ("{level}." is added); 'absorbs' is
+        // the page's menu row, which SettingsHubSeeder moves under Settings.
+        'budgets' => [
+            'label' => 'Budgets',
+            'icon' => 'ri-money-dollar-circle-line',
+            'colour' => 'secondary',
+            'group' => 'money',
+            'levels' => ['church', 'region', 'diocese'],
+            'kind' => 'link',
+            'actions' => [],
+            'permission' => 'settings.budgetsettings.read',
+            'url' => [
+                'church' => '/church/settings/budget-settings/',
+                'region' => '/region/settings/budget-settings/',
+                'diocese' => '/diocese/settings/budget-settings/',
+            ],
+            'absorbs' => [
+                'church' => '/church/settings/budget-settings/index.php',
+                'region' => '/region/settings/budget-settings/index.php',
+                'diocese' => '/diocese/settings/budget-settings/index.php',
+            ],
+            'sentence' => 'The money in and money out lines every budget is built from, and the shares worked out from money in.',
+        ],
+        'attendance' => [
+            'label' => 'Gathering types',
+            'icon' => 'ri-calendar-check-line',
+            'colour' => 'primary',
+            'group' => 'ministry',
+            'levels' => ['church'],
+            'kind' => 'link',
+            'actions' => [],
+            'permission' => 'settings.attendancesettings.gatheringtypes.read',
+            'url' => ['church' => '/church/settings/attendance-settings/gathering-types'],
+            'absorbs' => ['church' => '/church/settings/attendance-settings/gathering-types.php'],
+            'sentence' => 'The services, ministry meetings and special events your attendance is recorded against.',
+        ],
+        'demographics' => [
+            'label' => 'Recording cadence',
+            'icon' => 'ri-line-chart-line',
+            'colour' => 'purple',
+            'group' => 'ministry',
+            'levels' => ['church'],
+            'kind' => 'link',
+            'actions' => [],
+            'permission' => 'settings.demographicssettings.recordingcadence.read',
+            'url' => ['church' => '/church/settings/demographics-settings/recording-cadence'],
+            'absorbs' => ['church' => '/church/settings/demographics-settings/recording-cadence.php'],
+            'sentence' => 'How often you record your demographics: monthly, half-yearly or yearly.',
+        ],
     ],
 
     'fields' => [
