@@ -80,7 +80,14 @@ const BudgetsOverview = (function () {
     const banner = document.getElementById("viewOnlyBanner");
     banner.classList.toggle("d-none", !d.view_only);
     banner.classList.toggle("d-flex", !!d.view_only);
-    if (d.view_only) document.getElementById("viewOnlyText").textContent = `This is ${name}'s budget. Only ${name} can record its money.`;
+    if (d.view_only) {
+      const text = document.getElementById("viewOnlyText");
+      text.textContent = `This is ${name}'s budget. Only ${name} can record its money.`;
+      // Opened from the places-below page: a way back to the list.
+      if (new URLSearchParams(window.location.search).get("from") === "below" && B.CTX.can?.below) {
+        text.insertAdjacentHTML("beforeend", ` <a class="fw-semibold ms-1" href="${B.url("below.php", { year: period.year, month: period.month ?? "year" })}"><i class="ri-arrow-left-line me-1"></i>Back to ${B.CTX.level === "diocese" ? "Regions and churches" : "Churches' budgets"}</a>`);
+      }
+    }
 
     const open = document.getElementById("openBudgetBtn");
     open.classList.toggle("d-none", !d.budget);

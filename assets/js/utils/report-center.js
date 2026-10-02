@@ -78,6 +78,7 @@ const ReportCenter = (function () {
     "budget.compare": "pink",
     "budget.exceptions": "danger",
     "budget.line": "purple",
+    "budget.rollup": "pink",
   };
   const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const GROUP_SHORT = { "demographics.spiritual": "All four" };
