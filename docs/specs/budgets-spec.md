@@ -415,7 +415,7 @@ Acceptance (`BudgetReceiptsTest`): attach, stream, list and remove; a level abov
 - Report `budget.contributions` (PDF/Excel): month by month for a church; the churches (by region) above.
 - Acceptance (`BudgetContributionsTest`): statuses Sent / Late / Still to send / Nothing due on dated months; a region sees only its churches, the diocese all; view only below, never upward; the report builds for a church and a region.
 
-**Still to build here:** F5 clean-up of the empty finance menus and files.
+**F5. Clean-up** - `BudgetsAccessSeeder::retire()` switches off the six finance placeholder modules whose pages were never built (Tithe Management, Resource Allocation Management, Diocese Income Tracking, Diocese Expense Tracking, Financial Reports at `/diocese/financial/*`; the church's Diocesan Contributions at `/diocesan/tithe/*`) with their pages, and retires their permissions (checked nowhere); matched by name and path, on every run, so a fresh setup stays clean. The 40 empty placeholder files under `diocese/{income-tracking,expense-tracking,tithe-management,financial-reports}`, `region/regional-finances` and `church/{financial,diocesan-contributions}` are deleted. Finance is now: Budgets, Overview, Money in and out (with receipts), Contributions, Reports, and the places below.
 
 **Stays with the Settings work:** Finance settings - financial year start, payment methods, M-Pesa and bank details, receipt numbering.
 

@@ -49,6 +49,21 @@ class BudgetsAccessSeeder extends Seeder
         '/diocese/settings/budget-settings/budget-line.php',
     ];
 
+    /**
+     * Finance placeholder modules whose pages were never built - replaced by
+     * Budgets (Money in and out, Contributions, Reports). Matched by name and
+     * the placeholder paths they hold, switched off with their pages, and
+     * their permissions (checked nowhere) retired.
+     */
+    private const RETIRED_MODULES = [
+        'Tithe Management' => '/diocese/financial/',
+        'Resource Allocation Management' => '/diocese/financial/',
+        'Diocese Income Tracking' => '/diocese/financial/',
+        'Diocese Expense Tracking' => '/diocese/financial/',
+        'Financial Reports' => '/diocese/financial/',
+        'Diocesan Contributions' => '/diocesan/tithe/',
+    ];
+
     /** Which permissions each role gets, per level. */
     private const GRANTS = [
         'church' => [
@@ -198,6 +213,21 @@ class BudgetsAccessSeeder extends Seeder
             Permission::whereIn('id', $ids)->delete();
             $this->command->info("   🧹 Retired {$ids->count()} old budget permissions");
         }
+        $modules = Module::whereIn('name', array_keys(self::RETIRED_MODULES))->get()
+            ->filter(fn ($m) => $m->submodules()->exists() && $m->submodules()->pluck('path')->every(fn ($path) => str_starts_with($path, self::RETIRED_MODULES[$m->name])));
+        if ($modules->isNotEmpty()) {
+            $ids = $modules->pluck('id');
+            $subs = Submodule::whereIn('module_id', $ids)->pluck('id');
+            Module::whereIn('id', $ids)->update(['is_active' => false]);
+            Submodule::whereIn('id', $subs)->update(['is_active' => false]);
+            DB::table('sub_submodules')->whereIn('submodule_id', $subs)->update(['is_active' => false, 'updated_at' => now()]);
+            $perms = Permission::whereIn('module_id', $ids)->pluck('id');
+            DB::table('role_has_permissions')->whereIn('permission_id', $perms)->delete();
+            DB::table('model_has_permissions')->whereIn('permission_id', $perms)->delete();
+            Permission::whereIn('id', $perms)->delete();
+            $this->command->info("   🧹 Switched off {$modules->count()} empty finance modules (".$modules->pluck('name')->implode(', ')."), retired {$perms->count()} permissions");
+        }
+
         $pages = Submodule::whereIn('path', self::RETIRED_PAGES)->where('is_active', true)->update(['is_active' => false]);
         if ($pages) {
             $this->command->info("   🧹 {$pages} old budget settings pages taken off the menu");
