@@ -128,6 +128,14 @@
         const container = document.getElementById('secondary-nav-bar');
         if (!container) return;
 
+        // Pages with their own section navigation (the Settings hub's rail)
+        // turn the tab bar off rather than show the same sections twice.
+        if (window.SECONDARY_NAV_OFF) {
+            container.innerHTML = '';
+            positionSecondaryNav(container, false);
+            return;
+        }
+
         const cachedModules = getCachedModules();
         const activeModule = findActiveModule(cachedModules);
         const submodules = activeModule && activeModule.submodules ? activeModule.submodules : [];
