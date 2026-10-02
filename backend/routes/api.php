@@ -18,6 +18,10 @@ use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\Settings\HubController as SettingsHubController;
+use App\Http\Controllers\Api\Settings\ProfileController as SettingsProfileController;
+use App\Http\Controllers\Api\Settings\SectionController as SettingsSectionController;
+use App\Http\Controllers\Api\Settings\ServiceTimesController as SettingsServiceTimesController;
 use App\Http\Controllers\Api\StatusController;
 use App\Http\Controllers\Api\SupportTicketController;
 use App\Http\Controllers\Api\TerritoryController;
@@ -59,7 +63,25 @@ Route::post('support-tickets', [App\Http\Controllers\Api\SupportTicketController
 Route::get('/system-admin/contact', [UserController::class, 'getSystemAdminContact']);
 
 // === PROTECTED ROUTES (Authentication Required) ===
+// A place's logo is public - it shows on its pages and documents (Settings > Profile).
+Route::get('settings/logo/{territory}', [SettingsProfileController::class, 'logo']);
+
 Route::middleware(['auth:sanctum'])->group(function () {
+
+    // Settings hub - one page per church, region and diocese (docs/specs/settings-spec.md)
+    Route::prefix('settings')->group(function () {
+        Route::get('sections', [SettingsHubController::class, 'sections']);
+        Route::get('overview', [SettingsHubController::class, 'overview']);
+        Route::get('reference', [SettingsHubController::class, 'reference']);
+        Route::get('sections/{section}', [SettingsSectionController::class, 'show']);
+        Route::put('sections/{section}', [SettingsSectionController::class, 'update']);
+        Route::get('profile', [SettingsProfileController::class, 'show']);
+        Route::put('profile', [SettingsProfileController::class, 'update']);
+        Route::post('profile/logo', [SettingsProfileController::class, 'uploadLogo']);
+        Route::delete('profile/logo', [SettingsProfileController::class, 'removeLogo']);
+        Route::get('service-times', [SettingsServiceTimesController::class, 'show']);
+        Route::put('service-times', [SettingsServiceTimesController::class, 'update']);
+    });
 
     // Authentication Routes
     Route::prefix('auth')->group(function () {

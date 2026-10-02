@@ -2,7 +2,7 @@
 
 One **Settings** page for each level: church, region and diocese. Each place fills in its own profile, service times, team, finance details and communication there, and the module settings (Budgets, Attendance, Demographics) live under it. The diocese's global admins also get the system settings: email and SMS, health, security, documents, access control, the audit log and maintenance.
 
-**Status:** planned 2026-10-02, being built in phases.
+**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (the hub, Overview, Profile, Service times).
 - **S0:** lock down the access-control APIs.
 - **S1:** the hub, Overview, Profile and Service times.
 - **S2:** Leadership & team.
@@ -41,7 +41,7 @@ One **Settings** page for each level: church, region and diocese. Each place fil
 
 ### `settings` (S1)
 - `id`.
-- `territory_id`: nullable, foreign key to `territories`, cascades on delete. NULL means the **system** level.
+- `territory_id`: nullable, foreign key to `territories`, **no** ON DELETE CASCADE (MySQL refuses it on a base column of the stored generated `scope_id`; territories are soft-deleted anyway). NULL means the **system** level.
 - `scope_id`: generated column `IFNULL(territory_id, 0)`. A unique index treats every NULL as different, so this column is what keeps one system row per key.
 - `key`: varchar(120), dotted, for example `finance.mpesa_paybill` or `mail.host`.
 - `value`: longText, nullable. JSON-encoded, or `Crypt::encryptString` for secrets.
@@ -54,13 +54,14 @@ One **Settings** page for each level: church, region and diocese. Each place fil
 
 ### `territories` additions (S1)
 - `website`: varchar(255), nullable.
-- `logo_path`: varchar(255), nullable. The file is stored on the `public` disk as `logos/{territory_id}.webp` and re-encoded on the server, at most 2 MB.
+- `logo_path`: varchar(255), nullable. The file is stored on the `local` disk as `logos/{territory_id}.webp`, re-encoded on the server (longest side at most 512px), at most 2 MB upload. It is served publicly by `GET /api/settings/logo/{territory}`, so no `storage:link` is needed.
 - `sub_county`: varchar(100), nullable.
 - `phone` widens from 20 to 30 characters.
 - `county` is checked against `App\Support\Kenya::COUNTIES` (47) on save. Existing free-text values that don't match stay as they are; the screen flags them "Not in the county list".
 - Service times stay in `metadata.service_times`, because `Church::getServiceTimes()` already reads them there:
   - each entry is `{name, day 0–6, start "HH:MM", end "HH:MM"|null, gathering_type_id|null, language|null}`;
   - at most 20 entries.
+  - The seeders wrote an older shape, `{"sunday_morning": "09:00", …}`. `ServiceTimesController::normalize()` reads it as a list ("Sunday morning", 09:00) and the first save stores the new shape.
 
 ### `message_logs` (S4)
 - `id`.
@@ -240,7 +241,7 @@ Global admins can grant any role at any place.
 ## Pages
 
 **Files:**
-- Wrappers: `church/settings/index.php`, `region/settings/index.php` and `diocese/settings/index.php`. The diocese file is 0 bytes today.
+- Wrappers: `church/settings/index.php`, `region/settings/index.php` and `diocese/settings/index.php`. Links use the folder address (`/church/settings/?section=profile`), not `index.php`, so `.htaccess` doesn't redirect them.
 - Shared body: `includes/settings/hub.php`.
 - Context: `includes/settings/context.php`, with `settingsPageContext($level, $section)`, `settingsPageStyles()` and `settingsPageScripts()`, copied from `includes/budget/context.php`.
 - `includes/settings/shell-start.php` / `shell-end.php` hold the rail and the panel column. The existing full-page settings screens include them around their content, so Budgets, Gathering Types and Recording Cadence show inside the hub without being rewritten (S3).

@@ -217,6 +217,13 @@ class DatabaseSeeder extends Seeder
             // Tithes received" for every church (only created when missing)
             // ==========================================
             StandardDeductionsSeeder::class,
+
+            // ==========================================
+            // PHASE 29: the Settings hub - one Settings page per church,
+            // region and diocese, its section pages and the
+            // {level}.settings.hub.* permissions (docs/specs/settings-spec.md)
+            // ==========================================
+            SettingsHubSeeder::class,
         ]);
     }
 }
