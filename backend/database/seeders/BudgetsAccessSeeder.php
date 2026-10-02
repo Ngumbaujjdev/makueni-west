@@ -27,26 +27,26 @@ class BudgetsAccessSeeder extends Seeder
     /** Which permissions each role gets, per level. */
     private const GRANTS = [
         'church' => [
-            'Senior Pastor' => ['read', 'prepare', 'export'],
-            'Associate Pastor' => ['read', 'prepare', 'export'],
-            'Church Treasurer' => ['read', 'prepare', 'export'],
-            'Church Administrator' => ['read', 'prepare'],
+            'Senior Pastor' => ['read', 'prepare', 'export', 'settings'],
+            'Associate Pastor' => ['read', 'prepare', 'export', 'settings'],
+            'Church Treasurer' => ['read', 'prepare', 'export', 'settings'],
+            'Church Administrator' => ['read', 'prepare', 'settings'],
             'Church Secretary' => ['read'],
             'Church Committee Member' => ['read'],
         ],
         'region' => [
-            'Regional Overseer' => ['read', 'prepare', 'export', 'below'],
-            'Regional Treasurer' => ['read', 'prepare', 'export', 'below'],
+            'Regional Overseer' => ['read', 'prepare', 'export', 'below', 'settings'],
+            'Regional Treasurer' => ['read', 'prepare', 'export', 'below', 'settings'],
             'Regional Secretary' => ['read', 'prepare', 'below'],
             'Regional Coordinator' => ['read', 'below'],
             'Regional Committee Member' => ['read', 'below'],
         ],
         'diocese' => [
-            'Bishop' => ['read', 'prepare', 'export', 'below'],
-            'Diocese Treasurer' => ['read', 'prepare', 'export', 'below'],
-            'Diocese Finance Officer' => ['read', 'prepare', 'export', 'below'],
+            'Bishop' => ['read', 'prepare', 'export', 'below', 'settings'],
+            'Diocese Treasurer' => ['read', 'prepare', 'export', 'below', 'settings'],
+            'Diocese Finance Officer' => ['read', 'prepare', 'export', 'below', 'settings'],
             'Diocese Secretary' => ['read', 'prepare', 'below'],
-            'Diocese Administrator' => ['read', 'prepare', 'below'],
+            'Diocese Administrator' => ['read', 'prepare', 'below', 'settings'],
             'Diocese Council Member' => ['read', 'below'],
         ],
     ];
@@ -63,6 +63,8 @@ class BudgetsAccessSeeder extends Seeder
         // Exporting is linked to the Reports page, so only people who can export see it.
         'export' => ['budgets.budgets.export' => 'reports'],
         'below' => ['budgets.below.read' => 'budgets'],
+        // Budget Settings (lines and deductions), on its own page under Settings.
+        'settings' => ['settings.budgetsettings.read' => 'settings', 'settings.budgetsettings.update' => 'settings'],
     ];
 
     /** The Budgets module's pages, per level (the sidebar lists them by title). */
@@ -89,11 +91,54 @@ class BudgetsAccessSeeder extends Seeder
                     ['title' => $title, 'is_active' => true, 'description' => $description],
                 );
             }
+            if ($settings = $this->settingsMenu($level)) {
+                $pages['settings'] = $settings;
+            }
             $this->permissions($level, $pages);
         }
 
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
         $this->command->info('✅ Done - users log out and back in to see the new menu');
+    }
+
+    /**
+     * Settings → Budget Settings for a level: one page with the place's lines
+     * and deductions. The church's old Budget Lines page leaves the menu (it
+     * redirects to the new page); the diocese's older Types / Categories /
+     * Lines admin pages stay beside it.
+     */
+    private function settingsMenu(string $level): ?Submodule
+    {
+        $groupId = match ($level) {
+            'church' => DB::table('module_groups')->where('slug', 'church-settings')->value('id'),
+            'region' => DB::table('module_groups')->where('slug', 'region-settings')->value('id'),
+            'diocese' => DB::table('module_groups')->where('territory_scope', 'diocese')->where('name', 'Settings')->value('id'),
+        };
+        if (! $groupId) {
+            $this->command->error("   ❌ {$level}: settings menu group not found");
+
+            return null;
+        }
+        $module = Module::firstOrCreate(
+            ['module_group_id' => $groupId, 'name' => 'Budget Settings'],
+            ['icon' => 'ri-settings-3-line', 'number' => 3, 'is_active' => true, 'description' => 'The lines and deductions budgets are built from'],
+        );
+        $module->update(['is_active' => true]);
+        $path = match ($level) {
+            'church' => '/church/settings/budget-settings/index.php',
+            'region' => '/region/settings/budget-settings/index.php',
+            'diocese' => '/diocese/settings/budget-settings/index.php',
+        };
+        $submodule = Submodule::updateOrCreate(
+            ['module_id' => $module->id, 'path' => $path],
+            ['title' => 'Lines and deductions', 'is_active' => true, 'description' => 'Money in and money out lines, and the shares worked out from money in'],
+        );
+        if ($level === 'church') {
+            Submodule::where('module_id', $module->id)->where('path', '/church/settings/budget-settings/budget-lines.php')->update(['is_active' => false]);
+        }
+        $this->command->info("   ✅ {$level}: Settings → Budget Settings → {$submodule->title} ({$path})");
+
+        return $submodule;
     }
 
     /** Finance → Budgets → Budgets for a level; returns the Budgets submodule. */
