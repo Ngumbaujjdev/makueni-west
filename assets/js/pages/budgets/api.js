@@ -102,6 +102,7 @@ const BudgetsAPI = (function () {
     reopen: (id) => request("POST", `/budgets/${id}/reopen`),
     dashboard: (params) => request("GET", `/budgets/dashboard${qs(params)}`),
     below: (params) => request("GET", `/budgets/below${qs(params)}`),
+    contributions: (params) => request("GET", `/budgets/contributions${qs(params)}`),
     entries: (params) => request("GET", `/budget-entries${qs(params)}`),
     record: (body) => request("POST", "/budget-entries", body),
     changeEntry: (id, body) => request("PUT", `/budget-entries/${id}`, body),
