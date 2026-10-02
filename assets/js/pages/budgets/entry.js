@@ -27,6 +27,7 @@ const BudgetsEntry = (function () {
     );
     document.getElementById("deleteBtn").addEventListener("click", remove);
     document.getElementById("restoreBtn").addEventListener("click", restore);
+    document.getElementById("receiptInput").addEventListener("change", attachReceipt);
     await load();
   }
 
@@ -88,6 +89,7 @@ const BudgetsEntry = (function () {
     if (isIn && !e.deleted) renderShares(e);
     renderEffect(e, isIn);
     renderHistory(e);
+    renderReceipts();
     renderOthers();
   }
 
@@ -162,6 +164,73 @@ const BudgetsEntry = (function () {
     el.innerHTML = B.timeline(items);
   }
 
+  /** Receipts: a tile per photo or PDF (opened full size in a new tab), with Remove for the place itself. */
+  async function renderReceipts() {
+    const el = document.getElementById("entryReceipts");
+    const list = d.receipts || [];
+    const can = !!d.can?.receipts;
+    const btn = document.getElementById("addReceiptBtn");
+    btn.hidden = !can || list.length >= 3;
+    document.getElementById("receiptsSub").textContent = list.length ? `${list.length} attached` : "A photo or PDF of the receipt";
+    if (!list.length) {
+      el.innerHTML = `<div class="list-empty py-3"><span class="list-empty-icon bg-primary text-white"><i class="ri-receipt-line"></i></span><div class="fw-semibold mt-2">No receipt yet</div>${can ? '<div class="fs-12">Attach a photo or PDF - up to 3, 5 MB each.</div>' : ""}</div>`;
+      return;
+    }
+    el.innerHTML = `<div class="budget-receipts">${list
+      .map(
+        (r) => `
+        <div class="budget-receipt" data-receipt="${r.id}">
+          <button type="button" class="budget-receipt-open" data-open="${r.id}" title="Open ${B.esc(r.name)}">
+            ${r.type === "image" ? `<span class="budget-receipt-thumb" data-thumb="${r.id}"></span>` : '<span class="budget-receipt-pdf"><i class="ri-file-pdf-2-line"></i>PDF</span>'}
+          </button>
+          <div class="budget-receipt-meta"><span class="text-truncate">${B.esc(r.name)}</span><small>${(r.size / 1024).toFixed(0)} KB</small></div>
+          ${can ? `<button type="button" class="btn btn-sm btn-danger-light budget-receipt-remove" data-remove="${r.id}" title="Remove" aria-label="Remove"><i class="ri-delete-bin-line"></i></button>` : ""}
+        </div>`,
+      )
+      .join("")}</div>`;
+    el.querySelectorAll("[data-open]").forEach((b) => b.addEventListener("click", () => openReceipt(list.find((r) => r.id === Number(b.dataset.open)))));
+    el.querySelectorAll("[data-remove]").forEach((b) => b.addEventListener("click", () => removeReceipt(Number(b.dataset.remove))));
+    // Thumbnails come through the API (receipts aren't public).
+    for (const r of list.filter((x) => x.type === "image")) {
+      const url = await BudgetsAPI.fileUrl(r.url);
+      const thumb = el.querySelector(`[data-thumb="${r.id}"]`);
+      if (url && thumb) thumb.style.backgroundImage = `url("${url}")`;
+    }
+  }
+
+  async function openReceipt(r) {
+    const tab = window.open("", "_blank");
+    const url = await BudgetsAPI.fileUrl(r.url);
+    if (!url) {
+      tab?.close();
+      Toast.error("Couldn't open the receipt.");
+      return;
+    }
+    if (tab) tab.location.href = url;
+  }
+
+  async function attachReceipt(ev) {
+    const file = ev.target.files[0];
+    ev.target.value = "";
+    if (!file) return;
+    const res = await BudgetsAPI.addReceipt(id, file);
+    res.ok ? Toast.success("Receipt attached") : Toast.error(res.message);
+    if (res.ok) await load();
+  }
+
+  function removeReceipt(mediaId) {
+    Toast.confirm(
+      "Remove this receipt?",
+      async () => {
+        const res = await BudgetsAPI.removeReceipt(id, mediaId);
+        res.ok ? Toast.success("Receipt removed") : Toast.error(res.message);
+        if (res.ok) await load();
+      },
+      null,
+      { title: "Remove receipt", confirmText: "Remove", type: "error" },
+    );
+  }
+
   function renderOthers() {
     const el = document.getElementById("entryOthers");
     const lineUrl = B.url("line.php", { budget: d.budget.id, line: d.line.line_id });
@@ -217,7 +286,7 @@ const BudgetsEntry = (function () {
   function showError(message) {
     document.getElementById("placeLine").textContent = "";
     document.querySelector("#entryHero .card-body").innerHTML = `<div class="list-empty py-4"><span class="list-empty-icon bg-danger text-white"><i class="ri-error-warning-line"></i></span><div class="fw-semibold mt-2">${B.esc(message)}</div></div>`;
-    ["entryDetails", "entryEffect", "entryHistory", "entryOthers"].forEach((elId) => (document.getElementById(elId).innerHTML = ""));
+    ["entryDetails", "entryEffect", "entryHistory", "entryOthers", "entryReceipts"].forEach((elId) => (document.getElementById(elId).innerHTML = ""));
   }
 
   return { init };

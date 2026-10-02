@@ -39,6 +39,7 @@ class BudgetEntryController extends Controller
         }
 
         $query = BudgetEntry::with('lineItem.budgetLine', 'recorder:id,firstname,lastname')
+            ->withCount(['media as receipts_count' => fn ($q) => $q->where('collection_name', 'receipts')])
             ->whereHas('budget', fn ($q) => $q->where('territory_type', $place['type'])->where('territory_id', $place['id']))
             ->when($request->filled('direction'), fn ($q) => $q->where('direction', $request->query('direction')));
         if ($request->filled('budget_id')) {
@@ -176,8 +177,9 @@ class BudgetEntryController extends Controller
                 'others' => (clone $others)->where('id', '!=', $entry->id)->orderByDesc('entry_date')->orderByDesc('id')->limit(5)->get()->map(fn ($e) => BudgetData::entryRow($e))->values(),
                 'others_count' => (clone $others)->where('id', '!=', $entry->id)->count(),
                 'history' => $history->map(fn ($log) => $this->logRow($log))->values(),
+                'receipts' => $this->receiptRows($entry),
                 'view_only' => ! BudgetAccess::canWrite($request->user(), $budget, 'record'),
-                'can' => ['change' => $canChange],
+                'can' => ['change' => $canChange, 'receipts' => ! $entry->trashed() && BudgetAccess::canWrite($request->user(), $budget, 'record')],
             ],
         ]);
     }
@@ -304,6 +306,74 @@ class BudgetEntryController extends Controller
         }
 
         return $budget;
+    }
+
+    /** POST /budget-entries/{entry}/receipts - attach a photo or PDF (5 MB, at most 3 per entry). */
+    public function addReceipt(Request $request, BudgetEntry $entry): JsonResponse
+    {
+        if ($denied = $this->denyUnlessCanRecord($request, $entry->budget)) {
+            return $denied;
+        }
+        $request->validate(
+            ['receipt' => 'required|file|mimes:jpg,jpeg,png,webp,pdf|max:5120'],
+            ['receipt.mimes' => 'A receipt is a photo (JPG, PNG, WEBP) or a PDF.', 'receipt.max' => 'A receipt can be at most 5 MB.', 'receipt.required' => 'Choose the receipt to attach.'],
+        );
+        if ($entry->getMedia('receipts')->count() >= BudgetEntry::MAX_RECEIPTS) {
+            return response()->json(['success' => false, 'status' => 422, 'message' => 'An entry can have at most '.BudgetEntry::MAX_RECEIPTS.' receipts. Remove one first.', 'errors' => ['receipt' => ['At most '.BudgetEntry::MAX_RECEIPTS.' receipts.']]], 422);
+        }
+        try {
+            $this->book->addReceipt($request->user(), $entry, $request->file('receipt'));
+        } catch (\Spatie\MediaLibrary\MediaCollections\Exceptions\FileUnacceptableForCollection) {
+            return response()->json(['success' => false, 'status' => 422, 'message' => 'That file isn\'t a photo or a PDF we can read.', 'errors' => ['receipt' => ['Not a readable photo or PDF.']]], 422);
+        }
+
+        return response()->json(['success' => true, 'status' => 201, 'message' => 'Receipt attached', 'data' => $this->receiptRows($entry->fresh())], 201);
+    }
+
+    /** GET /budget-entries/{entryId}/receipts/{mediaId} - the file itself, for people who may see the budget. */
+    public function showReceipt(Request $request, int $entryId, int $mediaId)
+    {
+        $entry = BudgetEntry::withTrashed()->with('budget')->find($entryId);
+        if (! $entry || ! $entry->budget) {
+            return response()->json(['success' => false, 'status' => 404, 'message' => 'Receipt not found.'], 404);
+        }
+        if (! BudgetAccess::canSee($request->user(), $entry->budget)) {
+            return $this->forbidden('You can only see receipts of your own place, or of places below you.');
+        }
+        $media = $entry->getMedia('receipts')->firstWhere('id', $mediaId);
+        if (! $media) {
+            return response()->json(['success' => false, 'status' => 404, 'message' => 'Receipt not found.'], 404);
+        }
+
+        return $media->toInlineResponse($request);
+    }
+
+    /** DELETE /budget-entries/{entry}/receipts/{mediaId} */
+    public function removeReceipt(Request $request, BudgetEntry $entry, int $mediaId): JsonResponse
+    {
+        if ($denied = $this->denyUnlessCanRecord($request, $entry->budget)) {
+            return $denied;
+        }
+        $media = $entry->getMedia('receipts')->firstWhere('id', $mediaId);
+        if (! $media) {
+            return response()->json(['success' => false, 'status' => 404, 'message' => 'Receipt not found.'], 404);
+        }
+        $this->book->removeReceipt($request->user(), $entry, $media);
+
+        return response()->json(['success' => true, 'status' => 200, 'message' => 'Receipt removed', 'data' => $this->receiptRows($entry->fresh())]);
+    }
+
+    /** An entry's receipts: id, name, type (image / pdf), size, and where to fetch it. */
+    private function receiptRows(BudgetEntry $entry): array
+    {
+        return $entry->getMedia('receipts')->map(fn ($m) => [
+            'id' => $m->id,
+            'name' => $m->name,
+            'type' => str_starts_with((string) $m->mime_type, 'image/') ? 'image' : 'pdf',
+            'size' => (int) $m->size,
+            'added_at' => $m->created_at?->toIso8601String(),
+            'url' => "/budget-entries/{$entry->id}/receipts/{$m->id}",
+        ])->values()->all();
     }
 
     private function denyUnlessCanRecord(Request $request, Budget $budget): ?JsonResponse

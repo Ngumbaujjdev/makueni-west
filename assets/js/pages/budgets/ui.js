@@ -178,6 +178,8 @@ const BudgetsUI = (function () {
     entry_changed: ["warning", "ri-edit-2-line"],
     entry_removed: ["danger", "ri-delete-bin-line"],
     entry_restored: ["purple", "ri-arrow-go-back-line"],
+    receipt_added: ["primary", "ri-attachment-2"],
+    receipt_removed: ["danger", "ri-delete-bin-line"],
   };
   function eventLook(h) {
     if (h.action === "entry_recorded") return / received /.test(h.description) ? ["success", "ri-arrow-down-line"] : ["danger", "ri-arrow-up-line"];

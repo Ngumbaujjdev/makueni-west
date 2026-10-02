@@ -339,6 +339,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('/{entry}', [\App\Http\Controllers\Api\BudgetEntryController::class, 'destroy']);
         Route::post('/{entryId}/restore', [\App\Http\Controllers\Api\BudgetEntryController::class, 'restore']);
         Route::get('/{entryId}', [\App\Http\Controllers\Api\BudgetEntryController::class, 'show']);         // One entry, for its page
+        Route::post('/{entry}/receipts', [\App\Http\Controllers\Api\BudgetEntryController::class, 'addReceipt']);       // Attach a receipt
+        Route::get('/{entryId}/receipts/{mediaId}', [\App\Http\Controllers\Api\BudgetEntryController::class, 'showReceipt']); // The receipt file
+        Route::delete('/{entry}/receipts/{mediaId}', [\App\Http\Controllers\Api\BudgetEntryController::class, 'removeReceipt']); // Take it off
     });
 
     // Demographics (Church-level entry - Phase 3 of the Demographics module plan)

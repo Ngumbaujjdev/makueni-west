@@ -9,10 +9,12 @@ use App\Models\BudgetLineItem;
 use App\Models\BudgetLog;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /**
  * Everything that changes a budget goes through here, so a budget is saved
@@ -439,6 +441,26 @@ final class BudgetBook
                 }
             }
         });
+    }
+
+    /** Attach a receipt (photo or PDF) to an entry, and say so in its History. */
+    public function addReceipt(User $user, BudgetEntry $entry, UploadedFile $file): Media
+    {
+        $media = $entry->addMedia($file)
+            ->usingFileName(Str::uuid().'.'.strtolower($file->getClientOriginalExtension() ?: 'bin'))
+            ->usingName(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME) ?: 'Receipt')
+            ->withCustomProperties(['added_by' => $user->id])
+            ->toMediaCollection('receipts');
+        $this->log($entry->budget, $user, 'receipt_added', "Attached a receipt to {$entry->description}", entry: $entry);
+
+        return $media;
+    }
+
+    /** Take a receipt off an entry, and say so in its History. */
+    public function removeReceipt(User $user, BudgetEntry $entry, Media $media): void
+    {
+        $media->delete();
+        $this->log($entry->budget, $user, 'receipt_removed', "Removed a receipt from {$entry->description}", entry: $entry);
     }
 
     /** @return array{0: CarbonImmutable, 1: CarbonImmutable} */

@@ -387,12 +387,30 @@ Removed once nothing live used them:
 - **Seeding:** `BudgetsAccessSeeder` is the last phase of `DatabaseSeeder` (PHASE 27), so a fresh setup gets every level's Budgets and Budget Settings menus; the church-modules focus seeder no longer mutes the module holding the church's Budgets pages.
 - **Columns:** see Data Model → Other columns.
 
-## Handed over
+## Finance follow-up (2026-10-02)
 
-These aren't built by Budgets; they move to `docs/specs/settings-spec.md` and the finance follow-up:
-- the church's **"what we owe upward"** view (diocese share / region share: due, sent, still owed, by month) - built on `BudgetRollup::owedFor()`, with `Deductions::status()` as the one source of due / sent / owed;
-- **receipts on entries** (a `budget_entry_attachments` table; `GET /budget-entries/{id}` keeps returning the entry as now, for a Receipts card on the entry page);
-- **Finance settings:** financial year start, payment methods, M-Pesa and bank details, receipt numbering.
+Built here, on the budgets engine (the Settings session keeps Finance *settings*):
+
+**F1. Money in and out** - the Spending page, renamed (menu and page): every amount received and spent in a month or a year, across the place's budgets, with search, filters (in/out, line, how paid, **recorded by**) and Export (`budget.spending`). A 📎 marks entries with a receipt.
+
+**F2. Receipts on entries** - a photo (JPG, PNG, WEBP) or PDF, at most 5 MB and 3 per entry:
+- attached when recording (Record money → "Attach a receipt", optional) or later on the entry's page (a **Receipts** card: thumbnails, open full size, remove);
+- kept with the media library on the **private** `local` disk (`BudgetEntry` media collection `receipts`), never public; streamed by the API only to people who may see the budget (`BudgetAccess::canSee`) - a level above can view, only the place itself (record permission) can add or remove;
+- History says "Attached a receipt to …" / "Removed a receipt from …".
+
+| Method | Path | Does |
+|---|---|---|
+| POST | `/budget-entries/{id}/receipts` | multipart `receipt`; 422 for another type, over 5 MB, or a 4th |
+| GET | `/budget-entries/{id}/receipts/{mediaId}` | the file, inline |
+| DELETE | `/budget-entries/{id}/receipts/{mediaId}` | take it off |
+
+`GET /budget-entries/{id}` keeps its shape and adds `receipts` (id, name, type image/pdf, size, url) and `can.receipts`; the list's rows add a `receipts` count.
+
+Acceptance (`BudgetReceiptsTest`): attach, stream, list and remove; a level above views but can't add; another place gets 403; a wrong type, too big a file or a 4th receipt gets 422.
+
+**Still to build here:** F3 Contributions (what each place sends up: due, sent, still to send, Late) and F5 clean-up of the empty finance menus and files.
+
+**Stays with the Settings work:** Finance settings - financial year start, payment methods, M-Pesa and bank details, receipt numbering.
 
 Budget Settings becomes one section of each level's Settings hub, embedding `includes/budget/settings.php` as is.
 

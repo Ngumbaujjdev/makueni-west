@@ -49,6 +49,36 @@ const BudgetsAPI = (function () {
     }
   }
 
+  /** Upload a file (multipart): same headers, but the browser sets the Content-Type. */
+  async function upload(path, field, file) {
+    const h = headers();
+    delete h["Content-Type"];
+    const form = new FormData();
+    form.append(field, file);
+    try {
+      const res = await fetch(`${BASE}${path}`, { method: "POST", headers: h, body: form });
+      const json = await res.json().catch(() => ({}));
+      const ok = res.ok && json.success !== false;
+      const firstError = json.errors ? Object.values(json.errors).flat()[0] : null;
+      return { ok, status: res.status, message: ok ? json.message : firstError || json.message || "Couldn't attach it. Please try again.", data: json.data, body: json };
+    } catch (e) {
+      return { ok: false, status: 0, message: "Can't reach the server. Check your connection and try again.", data: null, body: null };
+    }
+  }
+
+  /** A protected file (a receipt) as a local object URL, or null. */
+  async function fileUrl(path) {
+    const h = headers();
+    delete h["Content-Type"];
+    h.Accept = "*/*";
+    try {
+      const res = await fetch(`${BASE}${path}`, { headers: h });
+      return res.ok ? URL.createObjectURL(await res.blob()) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   const qs = (params) => {
     const p = new URLSearchParams();
     Object.entries(params || {}).forEach(([k, v]) => {
@@ -78,6 +108,9 @@ const BudgetsAPI = (function () {
     removeEntry: (id) => request("DELETE", `/budget-entries/${id}`),
     restoreEntry: (id) => request("POST", `/budget-entries/${id}/restore`),
     entry: (id) => request("GET", `/budget-entries/${id}`),
+    addReceipt: (entryId, file) => upload(`/budget-entries/${entryId}/receipts`, "receipt", file),
+    removeReceipt: (entryId, mediaId) => request("DELETE", `/budget-entries/${entryId}/receipts/${mediaId}`),
+    fileUrl,
     settings: (params) => request("GET", `/budget-settings${qs(params)}`),
     addLine: (body) => request("POST", "/budget-settings/lines", body),
     changeLine: (id, body) => request("PUT", `/budget-settings/lines/${id}`, body),

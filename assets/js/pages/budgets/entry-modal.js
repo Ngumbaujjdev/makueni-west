@@ -87,6 +87,13 @@ const BudgetsEntryModal = (function () {
                         <span class="fs-12 fw-semibold">How was it paid?</span>
                         <div id="entryMethodWrap"></div>
                       </div>
+                      <div class="col-12" id="entryReceiptWrap">
+                        <label class="budget-receipt-pick mb-0">
+                          <i class="ri-attachment-2"></i>
+                          <span id="entryReceiptName">Attach a receipt (photo or PDF, optional)</span>
+                          <input type="file" id="entryReceipt" accept="image/jpeg,image/png,image/webp,application/pdf" hidden>
+                        </label>
+                      </div>
                     </div>
                   </section>
                 </div>
@@ -145,6 +152,15 @@ const BudgetsEntryModal = (function () {
     });
     document.getElementById("entryAmount").addEventListener("focus", (e) => setTimeout(() => e.target.select(), 0));
     document.getElementById("entrySaveBtn").addEventListener("click", save);
+    document.getElementById("entryReceipt").addEventListener("change", (e) => {
+      const f = e.target.files[0];
+      if (f && f.size > 5 * 1024 * 1024) {
+        Toast.warning("A receipt can be at most 5 MB.");
+        e.target.value = "";
+      }
+      const kept = e.target.files[0];
+      document.getElementById("entryReceiptName").textContent = kept ? kept.name : "Attach a receipt (photo or PDF, optional)";
+    });
     document.getElementById("entryDeleteBtn").addEventListener("click", remove);
     document.getElementById("entryAnotherBtn").addEventListener("click", () => {
       el.classList.remove("is-done");
@@ -186,6 +202,10 @@ const BudgetsEntryModal = (function () {
     document.getElementById("budgetEntryTitle").textContent = entry ? "Change entry" : "Record money";
     document.getElementById("budgetEntrySubtitle").textContent = `${b.period_label} budget · ${b.place?.name || ""}`;
     document.getElementById("entryDeleteBtn").hidden = !entry;
+    // A receipt can be attached when recording; a changed entry's receipts live on its page.
+    document.getElementById("entryReceiptWrap").hidden = !!entry;
+    document.getElementById("entryReceipt").value = "";
+    document.getElementById("entryReceiptName").textContent = "Attach a receipt (photo or PDF, optional)";
     document.querySelectorAll(`#${MODAL_ID} .is-invalid`).forEach((x) => x.classList.remove("is-invalid"));
 
     document.getElementById("entryDirectionWrap").innerHTML = UI.renderSegmented(
@@ -352,6 +372,15 @@ const BudgetsEntryModal = (function () {
       }
       Toast.error(res.message);
       return;
+    }
+
+    // The receipt goes up once the entry exists.
+    const receipt = !ctx.entry && document.getElementById("entryReceipt").files[0];
+    if (receipt) {
+      const up = await BudgetsAPI.addReceipt(res.data.id, receipt);
+      if (!up.ok) Toast.warning(`Saved, but the receipt wasn't attached: ${up.message}`);
+      document.getElementById("entryReceipt").value = "";
+      document.getElementById("entryReceiptName").textContent = "Attach a receipt (photo or PDF, optional)";
     }
 
     // Keep the window's figures in step, so "Record another" shows the new "left".

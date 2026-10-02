@@ -1,11 +1,11 @@
 <?php
 // Spending: money in and out - shared by every level; the wrapper sets $budgetCtx (includes/budget/context.php).
-$pageTitle = 'Spending';
+$pageTitle = 'Money in and out';
 $pageIcon = 'ri-exchange-dollar-line';
 $breadcrumbs = [
     'Home' => $budgetCtx['homeUrl'],
     'Budgets' => $budgetCtx['baseUrl'] . '/budgets.php',
-    'Spending' => null,
+    'Money in and out' => null,
 ];
 ?>
 <!DOCTYPE html>
@@ -16,7 +16,7 @@ $breadcrumbs = [
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>Spending - Makueni West Diocese</title>
+    <title>Money in and out - Makueni West Diocese</title>
     <meta name="Description" content="Every amount received and spent, against the budget" />
     <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico" type="image/x-icon" />
     <script src="<?= SITE_URL ?>/assets/js/main.js"></script>
