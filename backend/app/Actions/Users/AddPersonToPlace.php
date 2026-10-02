@@ -16,17 +16,17 @@ use Illuminate\Support\Str;
  * email or phone - gets a new assignment and keeps their own login.
  * Anyone new gets an account with a 6-digit employee code and a temporary
  * password they must change at first sign-in; the password is returned
- * once and never stored in plain text. The employee code doubles as the
- * username, so "employee code + password" works on the password sign-in
- * too (it matches email or username) - and since the code on its own also
- * signs a person in (AuthController::loginWithCode), it's treated as a
- * secret: shown only with the password, never in the team list.
+ * once and never stored in plain text. They also get a temporary 4-digit
+ * PIN for the employee-code sign-in (code + PIN). The employee code doubles
+ * as the username, so "employee code + password" works on the password
+ * sign-in too (it matches email or username). The code is still kept out
+ * of the team list, shown only with the password and PIN.
  */
 final class AddPersonToPlace
 {
     /**
      * @param  array{firstname: string, lastname: string, email?: ?string, phone?: ?string}  $person
-     * @return array{user: User, assignment: UserTerritoryAssignment, existing: bool, credentials: ?array{employee_code: string, temporary_password: string}}
+     * @return array{user: User, assignment: UserTerritoryAssignment, existing: bool, credentials: ?array{employee_code: string, temporary_password: string, pin: string}}
      */
     public function __invoke(array $person, Territory $place, Role $role, User $by): array
     {
@@ -36,6 +36,7 @@ final class AddPersonToPlace
 
             if (! $user) {
                 $password = self::temporaryPassword();
+                $pin = self::temporaryPin();
                 $code = self::employeeCode();
                 $user = User::create([
                     'firstname' => trim($person['firstname']),
@@ -45,12 +46,14 @@ final class AddPersonToPlace
                     'employee_code' => $code,
                     'username' => $code,
                     'password' => Hash::make($password),
+                    'pin' => Hash::make($pin),
+                    'pin_changed_at' => now(),
                     'status' => 'active',
                     'must_change_password' => true,
                     'password_changed_at' => now(),
                     'password_expires_at' => now()->addMonths(6),
                 ]);
-                $credentials = ['employee_code' => $user->employee_code, 'temporary_password' => $password];
+                $credentials = ['employee_code' => $user->employee_code, 'temporary_password' => $password, 'pin' => $pin];
             }
 
             $hasPrimary = $user->activeAssignments()->where('assignment_type', 'primary')->exists();
@@ -108,6 +111,16 @@ final class AddPersonToPlace
         } while (! preg_match('/\d/', $password) || ! preg_match('/[a-z]/', $password) || ! preg_match('/[A-Z]/', $password));
 
         return $password;
+    }
+
+    /** A 4-digit PIN for the code sign-in, never an easy one like 1234 or 0000. */
+    public static function temporaryPin(): string
+    {
+        do {
+            $pin = str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT);
+        } while (count(array_unique(str_split($pin))) === 1 || str_contains('0123456789', $pin) || str_contains('9876543210', $pin));
+
+        return $pin;
     }
 
     /** A 6-digit code no one has as their employee code or username. */

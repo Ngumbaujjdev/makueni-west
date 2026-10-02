@@ -117,9 +117,12 @@ class SettingsTeamTest extends TestCase
         $this->assertStringNotContainsString($creds['temporary_password'], $list);
         $this->assertStringNotContainsString($creds['employee_code'], $list, 'the code alone signs in, so it stays out of the list');
 
-        // The new person signs in with their code and the temporary password.
+        // The new person signs in with their code and the temporary password, or their code and PIN.
         $this->app['auth']->forgetGuards();
         $this->postJson('/api/auth/login', ['identifier' => $creds['employee_code'], 'password' => $creds['temporary_password']])
+            ->assertOk()->assertJsonPath('success', true);
+        $this->assertMatchesRegularExpression('/^\d{4}$/', $creds['pin']);
+        $this->postJson('/api/auth/login-code', ['employee_code' => $creds['employee_code'], 'pin' => $creds['pin']])
             ->assertOk()->assertJsonPath('success', true);
         $this->assertDatabaseHas('audits', ['event' => 'settings.team', 'auditable_id' => $this->church->id]);
     }
@@ -202,6 +205,7 @@ class SettingsTeamTest extends TestCase
         $this->assertNotSame($oldCode, $creds['employee_code']);
         $this->assertSame($creds['employee_code'], $fresh->employee_code);
         $this->assertTrue(Hash::check($creds['temporary_password'], $fresh->password));
+        $this->assertTrue(Hash::check($creds['pin'], $fresh->pin));
         $this->assertFalse(Hash::check('password', $fresh->password));
         $this->assertTrue((bool) $fresh->must_change_password);
         $this->assertSame(0, $fresh->tokens()->count());
