@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../../includes/session-manager.php';
 require_once __DIR__ . '/../../../includes/auth-check.php';
 require_once __DIR__ . '/../../../includes/permission-check.php';
+require_once __DIR__ . '/../../../includes/settings/context.php';
 
 requirePermission('church.settings.attendancesettings.gatheringtypes.read');
 
@@ -18,7 +19,7 @@ $pageTitle = 'Gathering Types';
 $pageIcon = 'ri-settings-3-line';
 $breadcrumbs = [
     'Home' => SITE_URL . '/church/dashboard',
-    'Attendance Settings' => null,
+    'Settings' => SITE_URL . '/church/settings/',
     'Gathering Types' => null,
 ];
 ?>
@@ -69,6 +70,8 @@ $breadcrumbs = [
 
                 <?php include __DIR__ . '/../../../includes/page-header.php' ?>
 
+                <?php $settingsShell = settingsShellFor('church', 'attendance'); include __DIR__ . '/../../../includes/settings/shell-start.php' ?>
+
                 <div class="alert alert-info bg-info-transparent border-0 mb-3">
                     <i class="ri-information-line me-2"></i>
                     These are your own church's gathering types - not shared with other churches. Sunday Service isn't
@@ -111,6 +114,7 @@ $breadcrumbs = [
                     </div>
                 </div>
 
+                <?php include __DIR__ . '/../../../includes/settings/shell-end.php' ?>
             </div>
         </div>
 
@@ -228,6 +232,7 @@ $breadcrumbs = [
     <script>
         document.addEventListener('DOMContentLoaded', () => window.AttendanceGatheringTypes.init());
     </script>
+    <?php settingsRailScripts() ?>
 </body>
 
 </html>

@@ -79,6 +79,7 @@ function settingsPageScripts(bool $withMap = true): void
     if ($withMap) {
         echo '<script src="' . SITE_URL . '/assets/libs/leaflet/leaflet.js"></script>' . "\n";
     }
+    echo '<script src="' . $v('assets/js/pages/demographics/ui-helpers.js') . '"></script>' . "\n";
     settingsRailScripts();
     foreach ([
         'assets/js/pages/settings/fields.js',
@@ -93,14 +94,23 @@ function settingsPageScripts(bool $withMap = true): void
 }
 
 /**
+ * The shell for an existing settings page shown inside the hub (S3): pass
+ * it as $settingsShell before including shell-start.php.
+ */
+function settingsShellFor(string $level, string $active): array
+{
+    return ['level' => $level, 'active' => $active, 'hubUrl' => SITE_URL . "/{$level}/settings/"];
+}
+
+/**
  * Just what the rail needs - for existing settings pages that wrap their
- * content in the shell (they already load jQuery, Bootstrap and friends).
+ * content in the shell. They already load jQuery, Bootstrap, constants and
+ * ui-helpers (which mustn't load twice), so only the rail's own scripts.
  */
 function settingsRailScripts(): void
 {
     $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
     foreach ([
-        'assets/js/pages/demographics/ui-helpers.js',
         'assets/js/pages/settings/api.js',
         'assets/js/pages/settings/rail.js',
     ] as $src) {

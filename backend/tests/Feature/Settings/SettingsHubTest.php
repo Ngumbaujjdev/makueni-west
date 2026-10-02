@@ -196,6 +196,45 @@ class SettingsHubTest extends TestCase
         $this->assertSame('Other Church', $below['missing'][0]['name'], 'least complete first');
     }
 
+    public function test_an_existing_settings_page_shows_in_the_rail_only_with_its_own_permission(): void
+    {
+        $sections = fn () => collect($this->getJson('/api/settings/sections')->json('data.groups'))->flatMap(fn ($g) => $g['sections'])->keyBy('key');
+        Sanctum::actingAs($this->pastor);
+        $this->assertArrayNotHasKey('budgets', $sections()->all());
+
+        $role = $this->pastor->roles()->first();
+        $role->givePermissionTo(Permission::firstOrCreate(['name' => 'church.settings.budgetsettings.read', 'guard_name' => 'web'], ['action' => 'read', 'territory_scope' => 'church']));
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->pastor->refresh();
+
+        $budgets = $sections()['budgets'];
+        $this->assertSame('link', $budgets['kind']);
+        $this->assertSame('/church/settings/budget-settings/', $budgets['url']);
+        $this->assertFalse($budgets['can']['update']);
+    }
+
+    public function test_the_seeder_moves_existing_settings_pages_under_settings(): void
+    {
+        $group = ModuleGroup::firstOrCreate(['slug' => 'church-settings'], ['name' => 'Settings', 'territory_scope' => 'church', 'is_active' => true]);
+        foreach (['region', 'diocese'] as $level) {
+            ModuleGroup::firstOrCreate(['slug' => "{$level}-settings"], ['name' => 'Settings', 'territory_scope' => $level, 'is_active' => true]);
+        }
+        $old = Module::create(['module_group_id' => $group->id, 'name' => 'Budget Settings', 'icon' => 'ri-settings-3-line', 'number' => 3, 'is_active' => true]);
+        $page = Submodule::create(['module_id' => $old->id, 'title' => 'Lines and deductions', 'path' => '/church/settings/budget-settings/index.php', 'is_active' => true]);
+        $permission = Permission::create(['name' => 'church.settings.budgetsettings.read', 'guard_name' => 'web', 'action' => 'read', 'territory_scope' => 'church', 'module_id' => $old->id, 'submodule_id' => $page->id]);
+
+        $this->seed(SettingsHubSeeder::class);
+        $this->seed(SettingsHubSeeder::class);
+
+        $settings = Module::where('name', 'Settings')->where('module_group_id', $group->id)->firstOrFail();
+        $page->refresh();
+        $this->assertSame($settings->id, $page->module_id);
+        $this->assertSame('Budgets', $page->title);
+        $this->assertSame($settings->id, $permission->fresh()->module_id);
+        $this->assertSame($page->id, $permission->fresh()->submodule_id, 'the permission stays on the same page');
+        $this->assertFalse((bool) $old->fresh()->is_active, 'the empty Budget Settings module is switched off');
+    }
+
     public function test_the_seeder_builds_each_levels_settings_menu_and_grants(): void
     {
         foreach (['church', 'region', 'diocese'] as $level) {

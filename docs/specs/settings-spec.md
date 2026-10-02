@@ -2,7 +2,7 @@
 
 One **Settings** page for each level: church, region and diocese. Each place fills in its own profile, service times, team, finance details and communication there, and the module settings (Budgets, Attendance, Demographics) live under it. The diocese's global admins also get the system settings: email and SMS, health, security, documents, access control, the audit log and maintenance.
 
-**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (PR #165); S2 done (Leadership & team).
+**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (PR #165); S2 done (PR #166); S3 done (the module settings pages inside the hub).
 - **S0:** lock down the access-control APIs.
 - **S1:** the hub, Overview, Profile and Service times.
 - **S2:** Leadership & team.
@@ -252,7 +252,23 @@ Global admins can grant any role at any place.
 - `includes/settings/shell-start.php` / `shell-end.php` hold the rail and the panel column. The existing full-page settings screens include them around their content, so Budgets, Gathering Types and Recording Cadence show inside the hub without being rewritten (S3).
 - JS: `assets/js/pages/settings/{api,rail,hub,fields}.js` and `sections/*.js`.
 
-**Menu:** `SettingsHubSeeder` adds one "{Level} settings" module, with a single "All settings" page, in each level's Settings group. In S3, the separate Attendance, Demographics and Budget Settings menu items are switched off; their URLs keep working.
+**Menu:** `SettingsHubSeeder` adds one "Settings" module to each level's Settings group, with one page per section.
+
+**Existing settings pages (S3)** are registry sections of kind `link`:
+- **Budgets:** church, region and diocese.
+- **Gathering types:** church.
+- **Recording cadence:** church.
+
+Each has three keys:
+- `url`: the page's folder-style address.
+- `permission`: the page's **own** read permission. The rail shows the section only to roles holding it, and there's no hub permission for it.
+- `absorbs`: the page's existing menu row, found by path.
+
+The seeder moves that row under Settings, renamed to the section's label. The page's permissions keep their submodule and get the Settings `module_id`. The module the row came from is switched off once nothing in it is on the menu, so "Attendance Settings", "Demographics Settings" and "Budget Settings" leave the sidebar. Their URLs and permission names don't change.
+
+`BudgetsAccessSeeder::settingsMenu()` leaves a page the hub has taken in where it is, so re-running either seeder doesn't bring the separate menu back.
+
+The pages themselves include `includes/settings/shell-start.php` / `shell-end.php` around their content, after `page-header.php`, and call `settingsRailScripts()` before `</body>`. That loads only `settings/api.js` and `rail.js`, because these pages already load `ui-helpers.js`, which mustn't load twice.
 
 ## Look
 
@@ -321,6 +337,8 @@ Global admins can grant any role at any place.
 ### S3: module settings in the hub
 - [ ] Gathering Types, Recording Cadence and Budget Settings show the settings rail with their item active.
 - [ ] The separate settings menu items are switched off, and their URLs still load.
+- [ ] A linked section appears in the rail only for a role holding the page's own read permission, and it can't be "updated" through the hub.
+- [ ] Re-running `SettingsHubSeeder` changes nothing; the page's permission stays on the same submodule under the Settings module.
 
 ### S4: diocese system settings
 - [ ] Saved mail settings override `.env` on the next request. A test email goes to `to` and adds a `message_logs` row.

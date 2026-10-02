@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../settings/context.php';
 // Budget Settings - one page per level (lines; deductions next). The wrapper sets $budgetCtx (includes/budget/context.php).
 // Filled in by assets/js/pages/budgets/settings.js from GET /budget-settings.
 $pageTitle = 'Budget Settings';
@@ -43,6 +44,8 @@ $breadcrumbs = [
             <div class="container-fluid">
 
                 <?php include __DIR__ . '/../page-header.php' ?>
+
+                <?php $settingsShell = settingsShellFor($budgetCtx['level'], 'budgets'); include __DIR__ . '/../settings/shell-start.php' ?>
 
                 <div class="page-toolbar">
                     <div class="page-toolbar-sub" id="placeLine">The lines every budget is built from</div>
@@ -114,6 +117,7 @@ $breadcrumbs = [
                     </div>
                 </div>
 
+                <?php include __DIR__ . '/../settings/shell-end.php' ?>
             </div>
         </div>
 
@@ -227,6 +231,7 @@ $breadcrumbs = [
 
     <?php budgetPageScripts('assets/js/pages/budgets/settings.js') ?>
     <script>document.addEventListener('DOMContentLoaded', () => window.BudgetsSettings.init());</script>
+    <?php settingsRailScripts() ?>
 </body>
 
 </html>

@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../../includes/session-manager.php';
 require_once __DIR__ . '/../../../includes/auth-check.php';
 require_once __DIR__ . '/../../../includes/permission-check.php';
+require_once __DIR__ . '/../../../includes/settings/context.php';
 
 requirePermission('church.settings.demographicssettings.recordingcadence.read');
 
@@ -17,7 +18,7 @@ $pageTitle = 'Recording Cadence';
 $pageIcon = 'ri-settings-3-line';
 $breadcrumbs = [
     'Home' => SITE_URL . '/church/dashboard',
-    'Demographics Settings' => null,
+    'Settings' => SITE_URL . '/church/settings/',
     'Recording Cadence' => null,
 ];
 ?>
@@ -65,6 +66,8 @@ $breadcrumbs = [
 
                 <?php include __DIR__ . '/../../../includes/page-header.php' ?>
 
+                <?php $settingsShell = settingsShellFor('church', 'demographics'); include __DIR__ . '/../../../includes/settings/shell-start.php' ?>
+
                 <div class="alert alert-info bg-info-transparent border-0 mb-3">
                     <i class="ri-information-line me-2"></i>
                     Membership composition doesn't change week to week the way attendance does, so this church doesn't
@@ -89,6 +92,7 @@ $breadcrumbs = [
                     </div>
                 </div>
 
+                <?php include __DIR__ . '/../../../includes/settings/shell-end.php' ?>
             </div>
         </div>
 
@@ -117,6 +121,7 @@ $breadcrumbs = [
     <script>
         document.addEventListener('DOMContentLoaded', () => window.DemographicsSettingsRecordingCadence.init());
     </script>
+    <?php settingsRailScripts() ?>
 </body>
 
 </html>
