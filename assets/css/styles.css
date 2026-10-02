@@ -34849,6 +34849,13 @@ a.budget-month-tile:hover {
   color: var(--default-text-color);
 }
 
+/* The places below */
+.budget-below-noticed {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--default-border);
+}
+
 /* Money in / out lists - the date tile takes the direction's colour */
 .budget-recent-date.is-in {
   background: rgba(var(--success-rgb), 0.12);

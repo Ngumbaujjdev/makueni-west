@@ -88,10 +88,21 @@ final class BudgetData
      */
     private function plans(int $year, ?int $month): Collection
     {
-        $budgets = Budget::with('budgetLineItems.budgetLine', 'budgetLineItems.budgetCategory')
+        return self::plansFrom(Budget::with('budgetLineItems.budgetLine', 'budgetLineItems.budgetCategory')
             ->where('territory_type', $this->type)->where('territory_id', $this->id)
             ->where('fiscal_year', $year)
-            ->get();
+            ->get(), $month);
+    }
+
+    /**
+     * Of one place's budgets for a year, the ones whose plan counts for a
+     * month (or the whole year), each with its share - one rule for the
+     * Overview, the reports and the places-below view (BudgetRollup).
+     *
+     * @return Collection<int, array{budget: Budget, share: float}>
+     */
+    public static function plansFrom(Collection $budgets, ?int $month): Collection
+    {
         $yearBudget = $budgets->firstWhere('period_month', null);
 
         if ($month !== null) {

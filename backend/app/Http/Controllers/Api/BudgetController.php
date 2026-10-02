@@ -134,6 +134,42 @@ class BudgetController extends Controller
         ]);
     }
 
+    /**
+     * The places below - a region's churches, the diocese's churches or (with
+     * ?level=region) its regions - each with its budget for a month or a
+     * year, read-only. Needs the "below" permission of a region or diocese
+     * role; a global admin names the region / diocese with ?territory_id=.
+     */
+    public function below(Request $request, \App\Reports\Budget\BudgetRollup $rollup): JsonResponse
+    {
+        $request->validate([
+            'year' => 'nullable|integer|min:2000|max:2100',
+            'month' => 'nullable|integer|between:1,12',
+            'level' => 'nullable|in:church,region',
+        ]);
+        $user = $request->user();
+        $place = BudgetAccess::place($user, $request->integer('territory_id') ?: null);
+        if (! $place || ! in_array($place['type'], ['region', 'diocese'], true)) {
+            return $this->forbidden('Only a region or the diocese has places below it.');
+        }
+        if (! $user->hasGlobalAccess() && ! (BudgetAccess::isOwn($user, $place['type'], $place['id']) && BudgetAccess::can($user, 'below'))) {
+            return $this->forbidden('Your role cannot see the budgets of the places below.');
+        }
+        $level = $place['type'] === 'diocese' ? ($request->query('level') ?: 'church') : 'church';
+        $year = $request->integer('year') ?: (int) now()->year;
+        $month = $request->filled('month') ? $request->integer('month') : null;
+
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'data' => [
+                ...$rollup->summary(\App\Models\Territory::findOrFail($place['id']), $year, $month, $level),
+                'place' => $this->placeInfo($place),
+                'can_export' => BudgetAccess::can($user, 'export'),
+            ],
+        ]);
+    }
+
     /** What the New budget form needs: usable lines, periods already taken, and last budget's amounts to copy. */
     public function form(Request $request): JsonResponse
     {

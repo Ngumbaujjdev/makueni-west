@@ -6,7 +6,8 @@ Budgets for a church, a region and the diocese. Each place plans a month or a wh
 - Phase 1: the budget model, access, the list, the form and details.
 - Phase 2 (2026-10-01): recording money in and out (Spending), the Overview dashboard, and "What we noticed".
 - Phase 4 (2026-10-02): Budget Settings, with lines and deductions for each level. Reports were brought forward.
-- Later phases: the top-to-bottom views and cleanup.
+- Phase 5 (2026-10-02): the places below - a region's churches, the diocese's churches and regions - read-only, with the budget.rollup report.
+- Later phases: cleanup.
 
 This spec replaces `church-budgeting-spec.md`, which described a church → diocese approval that no longer exists.
 
@@ -294,6 +295,37 @@ A deduction is a share sent up out of money in, worked out for you. For example,
 5. A region's deduction reaches only its own churches.
 6. A region can't make lines for its churches, and a church can't set deductions for others. A % over 100 is refused.
 7. The summary report lists the deductions.
+
+## The places below (phase 5)
+
+A region sees its churches' budgets and the diocese sees every church's (grouped by region) and its regions' own budgets - **read-only**, for a month or a whole year. Nobody sees upwards or sideways.
+
+**Page:** region **Churches' budgets**, diocese **Regions and churches** (`includes/budget/below.php` + `assets/js/pages/budgets/below.js`; wrappers `region|diocese/budgets/below.php`; menu page `below`, linked to `{level}.budgets.below.read`).
+- Year buttons and a month picker (the whole year first); the diocese has a **Churches | Regions** switch (`?level=region`).
+- Cards: with a budget in use (x of y, drafts, without one), money received and spent (against the period before, with a six-month sparkline), deductions still owed.
+- Spent against plan for the ten places with the most money out (red when over); who has a budget (In use / Draft / Closed / No budget) and What we noticed.
+- The groups at a glance (the diocese's regions, or a region's subregions) - tapping one filters the table.
+- One row per place: its budget and status, received and spent against plan (% pill: green, gold from 80%, red over), money left, deductions still owed. A place with no budget shows a gold "No budget" pill. Opening a row shows that place's Overview, view only, with a way back.
+
+**Which budget counts** for a period is the Overview's rule (`BudgetData::plansFrom()`): a month budget for a month, or a twelfth of the whole-year budget; for a year, the whole-year budget or the month budgets. Received and spent are by entry date. Deductions come from `Deductions::status()` and, as on the Overview, are only counted on whole budgets.
+
+**Service:** `App\Reports\Budget\BudgetRollup`, shared by the page and the report:
+- `placesBelow(Territory, level)` - the churches (or regions) below, with the group each is shown under;
+- `rows(Territory, year, month, level)` - one row per place;
+- `summary(...)` - rows, totals, the period before, sparkline, groups and What we noticed (`BudgetRollupCoverageRule`, `BudgetRollupOverPlanRule`, `BudgetRollupOwedRule`, `BudgetRollupDraftsRule`);
+- `owedFor(Territory, year, month)` - one place's deductions: who each is owed to (`owed_to`), its rate, planned, due, sent, still owed, in total and budget by budget. Built for a church's "what we owe upward" view (see Handed over).
+
+**API:** `GET /budgets/below?year=&month=&level=church|region` - the acting region or diocese, with `{level}.budgets.below.read` (a global admin names it with `territory_id`). A church, or a role without "below", gets 403.
+
+**Report `budget.rollup`** (region and diocese): tiles (in use x of y, received, spent, over plan, still owed), a chart of spent against plan, one section per region (or subregion) listing its churches with a budget, then "No budget yet", and What we noticed. Needs export and below, for the acting place itself.
+
+**Acceptance criteria** (`BudgetBelowTest`):
+1. A region sees only its own churches, with the right planned, received, spent, left and over-plan figures, and what we noticed.
+2. The diocese sees every church with its region, the groups, and (level=region) its regions' own budgets.
+3. A whole-year budget counts a twelfth in a month; entries count in the month of their date.
+4. Deductions still owed roll up; `owedFor()` says who each is owed to.
+5. A church, and a role without "below", get 403.
+6. The rollup report builds, and isn't offered for a church.
 
 ## Reports (phase 4, brought forward)
 
