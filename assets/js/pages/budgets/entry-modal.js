@@ -175,7 +175,7 @@ const BudgetsEntryModal = (function () {
     }
     // Opened from a line's page, the line is already chosen (and its side with it).
     const lineSide = lineId && (inBudget.in.some((l) => l.line_id === lineId) ? "in" : inBudget.out.some((l) => l.line_id === lineId) ? "out" : null);
-    ctx = { budget: detail.data.budget, lines: inBudget, extra, entry, lineId, direction: entry?.direction || lineSide || direction, onSaved };
+    ctx = { budget: detail.data.budget, lines: inBudget, extra, entry, lineId, direction: entry?.direction || lineSide || direction, onSaved, deductions: detail.data.deductions || [] };
     fill(entry);
     modal.show();
   }
@@ -300,6 +300,19 @@ const BudgetsEntryModal = (function () {
         : side === "in"
           ? `After this, ${B.esc(line.name)} has <b>${B.money(Math.max(line.planned - after, 0))}</b> still to come.`
           : `After this, ${B.esc(line.name)} has <b>${B.money(line.planned - after)}</b> left.`;
+    note.insertAdjacentHTML("beforeend", shareNote(side, Number(document.getElementById("entryLine").value), amount));
+  }
+
+  /** Money in on a line a deduction counts: "10% of this (KES 4,000.00) is the Diocese share". */
+  function shareNote(side, lineId, amount) {
+    if (side !== "in" || !amount) return "";
+    return (ctx.deductions || [])
+      .filter((d) => d.rate_type === "percentage" && (d.basis !== "lines" || (d.basis_line_ids || []).includes(lineId)))
+      .map((d) => {
+        const rate = Number(d.rate_value);
+        return `<div class="mt-2"><span class="soft-chip soft-purple text-wrap text-start" style="white-space: normal;"><i class="ri-percent-line me-1"></i>${rate.toLocaleString("en-GB", { maximumFractionDigits: 2 })}% of this (<b>${B.money((amount * rate) / 100)}</b>) is the ${B.esc(d.name)}</span></div>`;
+      })
+      .join("");
   }
 
   async function save() {

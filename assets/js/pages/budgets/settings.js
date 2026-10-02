@@ -273,13 +273,17 @@ const BudgetsSettings = (function () {
       el.innerHTML = `<div class="col-12"><div class="card custom-card"><div class="card-body"><div class="list-empty py-4">
         <span class="list-empty-icon bg-purple text-white"><i class="ri-percent-line"></i></span>
         <div class="fw-semibold mt-2">No deductions yet</div>
-        <div class="fs-12">${d.can.update ? "Add one - e.g. a share of money in that goes to the diocese." : "None has been set for you."}</div></div></div></div></div>`;
+        <div class="fs-12">${d.can.update ? "Add one - e.g. 10% of the tithes received, for the diocese." : "None has been set for you."}</div></div></div></div></div>`;
       return;
     }
     el.innerHTML = list
       .map((x) => {
         const color = x.is_own ? "purple" : "primary";
-        const example = x.deduction_type === "percentage" ? `On KES 100,000 in → <b>${B.money(x.example)}</b>` : `<b>${B.money(x.deduction_value)}</b> a month · <b>${B.money(x.deduction_value * 12)}</b> a year`;
+        // "KES 60,000.00 Tithes received → KES 6,000.00 due" - always on what is recorded.
+        const on = (x.rule.match(/% of (.+) received$/) || [])[1] || "money";
+        const example = x.deduction_type === "percentage"
+          ? `${B.money(60000)} ${B.esc(on === "all money" ? "" : on)} received → <b>${B.money((60000 * x.deduction_value) / 100)}</b> due`.replace("  ", " ")
+          : `<b>${B.money(x.deduction_value)}</b> a month · <b>${B.money(x.deduction_value * 12)}</b> a year`;
         return `
           <div class="col-xl-6">
             <div class="card custom-card budget-deduction-card${x.is_active ? "" : " is-off"}">
@@ -292,12 +296,12 @@ const BudgetsSettings = (function () {
                       ${x.is_own ? '<span class="soft-chip soft-success">Ours</span>' : `<span class="soft-chip soft-purple"><i class="ri-lock-line me-1"></i>${B.esc(x.set_by)}</span>`}
                       ${x.is_active ? "" : '<span class="soft-chip soft-warning">Switched off</span>'}
                     </div>
-                    <div class="budget-deduction-rule">${B.esc(ruleLabel(x))}${x.basis === "lines" && x.basis_lines.length ? `: ${B.esc(x.basis_lines.join(", "))}` : ""}</div>
+                    <div class="budget-deduction-rule">${B.esc(ruleLabel(x))}</div>
                     <ul class="list-unstyled mb-0 budget-facts">
                       <li><span>Paid through</span><span class="fw-semibold">${x.line ? B.lineDot(x.line) : '<span class="text-danger">No line yet</span>'}</span></li>
                       <li><span>Applies to</span><span class="fw-semibold">${B.esc(x.is_own ? x.applies_label : "This place")}</span></li>
                       <li><span>Example</span><span>${example}</span></li>
-                      <li><span>Worked out in</span><span class="fw-semibold">${x.used} ${x.used === 1 ? "budget" : "budgets"}</span></li>
+                      <li><span>Used in</span><span class="fw-semibold">${x.used} ${x.used === 1 ? "budget" : "budgets"}</span></li>
                     </ul>
                   </div>
                   ${x.editable ? `
@@ -337,17 +341,18 @@ const BudgetsSettings = (function () {
   function openDeduction(x) {
     dedEditing = x;
     ded.type = x?.deduction_type || "percentage";
-    ded.basis = x?.basis || "all";
+    // The diocese share is a % of the Tithes received - so a new diocese deduction starts on Tithes.
+    ded.basis = x?.basis || (isDiocese() ? "lines" : "all");
     document.getElementById("deductionModalTitle").textContent = x ? `Change ${x.name}` : "Add a deduction";
     document.getElementById("dedName").value = x?.name || "";
     document.getElementById("dedName").classList.remove("is-invalid");
     document.getElementById("dedValue").value = x ? String(x.deduction_value) : "";
-    document.getElementById("dedTypeWrap").innerHTML = UI.renderSegmented("dedType", [{ value: "percentage", label: "% of money in" }, { value: "fixed_amount", label: "Fixed each month" }], ded.type, { ariaLabel: "How it's worked out" });
+    document.getElementById("dedTypeWrap").innerHTML = UI.renderSegmented("dedType", [{ value: "percentage", label: "% of money received" }, { value: "fixed_amount", label: "Fixed each month" }], ded.type, { ariaLabel: "How it's worked out" });
     UI.wireSegmented("dedType", (v) => ((ded.type = v), example()));
-    document.getElementById("dedBasisWrap").innerHTML = UI.renderSegmented("dedBasis", [{ value: "all", label: "All money in" }, { value: "lines", label: "Only some lines" }], ded.basis, { ariaLabel: "On which money in" });
+    document.getElementById("dedBasisWrap").innerHTML = UI.renderSegmented("dedBasis", [{ value: "all", label: "All money received" }, { value: "lines", label: "Only some lines" }], ded.basis, { ariaLabel: "On which money in" });
     UI.wireSegmented("dedBasis", (v) => ((ded.basis = v), example()));
     const lines = document.getElementById("dedLines");
-    lines.innerHTML = d.lines.filter((l) => l.side === "in" && l.is_active).map((l) => `<option value="${l.id}" ${x?.basis_line_ids?.includes(l.id) ? "selected" : ""}>${B.esc(l.name)}</option>`).join("");
+    lines.innerHTML = d.lines.filter((l) => l.side === "in" && l.is_active).map((l) => `<option value="${l.id}" ${(x ? x.basis_line_ids?.includes(l.id) : isDiocese() && /^tithes?$/i.test(l.name.trim())) ? "selected" : ""}>${B.esc(l.name)}</option>`).join("");
     UI.enhanceSelect(lines, { search: true });
     const applies = document.getElementById("dedApplies");
     applies.innerHTML = d.applies_choices.map((c) => `<option value="${c.value}">${B.esc(c.label)}</option>`).join("");
@@ -380,17 +385,19 @@ const BudgetsSettings = (function () {
   function example() {
     const isPct = ded.type === "percentage";
     document.getElementById("dedPrefix").textContent = isPct ? "%" : "KES";
-    document.getElementById("dedTypeHint").textContent = isPct ? "A share of the money in planned - and, once money comes in, of what was received." : "The same amount every month - twelve times that on a whole-year budget.";
+    document.getElementById("dedTypeHint").textContent = isPct ? "A share of the money actually received - what is recorded. On a budget it is estimated from the plan until money comes in." : "The same amount every month - twelve times that on a whole-year budget.";
     document.getElementById("dedBasisBlock").hidden = !isPct;
     document.getElementById("dedLinesWrap").hidden = ded.basis !== "lines";
     const value = Number(String(document.getElementById("dedValue").value).replace(/[^0-9.]/g, "")) || 0;
     const name = document.getElementById("dedName").value.trim() || "This deduction";
     const lineSel = document.getElementById("dedLine");
     const line = lineSel.value === "new" ? document.getElementById("dedNewLine").value.trim() || name : lineSel.selectedOptions[0]?.value ? lineSel.selectedOptions[0].text : "its line";
+    const chosen = [...document.getElementById("dedLines").selectedOptions].map((o) => o.text);
+    const on = ded.basis === "lines" && chosen.length ? (chosen.length > 1 ? `${chosen.slice(0, -1).join(", ")} and ${chosen[chosen.length - 1]}` : chosen[0]) : "Money";
     document.getElementById("dedExample").innerHTML = isPct
-      ? `<div class="budget-example-row"><span>Money in planned</span><b>KES 100,000.00</b></div>
-         <div class="budget-example-row is-out"><span>${B.esc(name)} (${value || 0}%)</span><b>${B.money((100000 * value) / 100)}</b></div>
-         <div class="fs-12 mt-2">Filled in on <b>${B.esc(line)}</b>. If KES 40,000 actually comes in, <b>${B.money((40000 * value) / 100)}</b> is due.</div>`
+      ? `<div class="budget-example-row"><span>${B.esc(on)} received (recorded)</span><b>KES 60,000.00</b></div>
+         <div class="budget-example-row is-out"><span>${B.esc(name)} due (${value || 0}%)</span><b>${B.money((60000 * value) / 100)}</b></div>
+         <div class="fs-12 mt-2">Worked out on what is recorded, and sent as money out on <b>${B.esc(line)}</b>. On a budget it starts as an estimate from the plan.</div>`
       : `<div class="budget-example-row"><span>A month budget</span><b>${B.money(value)}</b></div>
          <div class="budget-example-row is-out"><span>A whole-year budget</span><b>${B.money(value * 12)}</b></div>
          <div class="fs-12 mt-2">Filled in on <b>${B.esc(line)}</b>.</div>`;
