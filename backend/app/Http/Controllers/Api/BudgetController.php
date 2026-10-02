@@ -165,6 +165,40 @@ class BudgetController extends Controller
         ]);
     }
 
+    /**
+     * Contributions for a year: what this place sends up (per budget and
+     * deduction: received, due, sent, still to send, status) and - for a
+     * region or the diocese with "below" - each church below with its totals.
+     * A place below can be looked at read-only with ?territory_id=.
+     */
+    public function contributions(Request $request, \App\Reports\Budget\BudgetRollup $rollup): JsonResponse
+    {
+        $request->validate(['year' => 'nullable|integer|min:2000|max:2100']);
+        $user = $request->user();
+        $place = BudgetAccess::place($user, $request->integer('territory_id') ?: null);
+        if (! $place) {
+            return $this->forbidden('You can only see your own contributions, or those of places below you.');
+        }
+        $year = $request->integer('year') ?: (int) now()->year;
+        $own = BudgetAccess::isOwn($user, $place['type'], $place['id']);
+        $rows = $rollup->contributionsOf($place['type'], $place['id'], $year);
+        $showBelow = $place['type'] !== 'church' && ($user->hasGlobalAccess() || ($own && BudgetAccess::can($user, 'below')));
+
+        return response()->json([
+            'success' => true,
+            'status' => 200,
+            'data' => [
+                'year' => $year,
+                'place' => $this->placeInfo($place),
+                'rows' => $rows,
+                'totals' => \App\Reports\Budget\BudgetRollup::contributionTotals($rows),
+                'below' => $showBelow ? $rollup->contributionsBelow(\App\Models\Territory::findOrFail($place['id']), $year) : null,
+                'view_only' => ! $own && ! $user->hasGlobalAccess(),
+                'can_record' => $own && BudgetAccess::can($user, 'record'),
+            ],
+        ]);
+    }
+
     /** What the New budget form needs: usable lines, periods already taken, and last budget's amounts to copy. */
     public function form(Request $request): JsonResponse
     {

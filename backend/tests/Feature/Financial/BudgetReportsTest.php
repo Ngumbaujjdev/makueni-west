@@ -70,7 +70,7 @@ class BudgetReportsTest extends TestCase
         Sanctum::actingAs($this->pastor);
         $keys = collect($this->getJson("/api/reports/catalogue?territory_id={$this->myChurch->id}&module=budget")->assertOk()->json('data'))->pluck('key');
 
-        $this->assertEqualsCanonicalizing(['budget.summary', 'budget.spending', 'budget.statement', 'budget.lines', 'budget.year', 'budget.compare', 'budget.exceptions', 'budget.line'], $keys->all());
+        $this->assertEqualsCanonicalizing(['budget.summary', 'budget.spending', 'budget.statement', 'budget.lines', 'budget.year', 'budget.compare', 'budget.exceptions', 'budget.line', 'budget.contributions'], $keys->all());
     }
 
     public function test_the_summary_matches_the_overview_with_money_to_two_decimals(): void
