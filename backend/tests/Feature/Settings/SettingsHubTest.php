@@ -48,7 +48,7 @@ class SettingsHubTest extends TestCase
             ->json('data.groups');
 
         $sections = collect($groups)->flatMap(fn ($g) => $g['sections'])->keyBy('key');
-        $this->assertSame(['overview', 'profile', 'servicetimes'], $sections->keys()->all());
+        $this->assertSame(['overview', 'profile', 'servicetimes', 'team'], $sections->keys()->all());
         $this->assertTrue($sections['profile']['can']['update']);
         $this->assertTrue($sections['profile']['attention'], 'an empty profile needs attention');
         $this->assertSame('Our place', collect($groups)->firstWhere('key', 'our-place')['label']);
@@ -63,7 +63,7 @@ class SettingsHubTest extends TestCase
         Sanctum::actingAs($this->overseer);
         $keys = collect($this->getJson('/api/settings/sections')->json('data.groups'))->flatMap(fn ($g) => $g['sections'])->pluck('key')->all();
 
-        $this->assertSame(['overview', 'profile'], $keys);
+        $this->assertSame(['overview', 'profile', 'team'], $keys);
         $this->getJson('/api/settings/service-times')->assertNotFound();
     }
 
@@ -209,11 +209,14 @@ class SettingsHubTest extends TestCase
 
         $module = Module::where('name', 'Settings')->whereHas('moduleGroup', fn ($q) => $q->where('slug', 'church-settings'))->firstOrFail();
         $this->assertSame(
-            ['/church/settings/', '/church/settings/?section=profile', '/church/settings/?section=servicetimes'],
+            ['/church/settings/', '/church/settings/?section=profile', '/church/settings/?section=servicetimes', '/church/settings/?section=team'],
             Submodule::where('module_id', $module->id)->orderBy('id')->pluck('path')->all(),
         );
         $this->assertSame(1, Permission::where('name', 'church.settings.hub.profile.update')->count());
         $this->assertTrue($pastorRole->fresh()->hasPermissionTo('church.settings.hub.profile.update'));
+        $this->assertTrue($pastorRole->fresh()->hasPermissionTo('church.settings.hub.team.manage'));
+        $this->assertTrue($secretaryRole->fresh()->hasPermissionTo('church.settings.hub.team.read'));
+        $this->assertFalse($secretaryRole->fresh()->hasPermissionTo('church.settings.hub.team.manage'));
         $this->assertTrue($secretaryRole->fresh()->hasPermissionTo('church.settings.hub.profile.read'));
         $this->assertFalse($secretaryRole->fresh()->hasPermissionTo('church.settings.hub.profile.update'));
         $this->assertTrue(Permission::where('name', 'region.settings.hub.overview.read')->exists());

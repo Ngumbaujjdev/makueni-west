@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\Settings\HubController as SettingsHubController;
 use App\Http\Controllers\Api\Settings\ProfileController as SettingsProfileController;
 use App\Http\Controllers\Api\Settings\SectionController as SettingsSectionController;
 use App\Http\Controllers\Api\Settings\ServiceTimesController as SettingsServiceTimesController;
+use App\Http\Controllers\Api\Settings\TeamController as SettingsTeamController;
 use App\Http\Controllers\Api\StatusController;
 use App\Http\Controllers\Api\SupportTicketController;
 use App\Http\Controllers\Api\TerritoryController;
@@ -81,6 +82,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('profile/logo', [SettingsProfileController::class, 'removeLogo']);
         Route::get('service-times', [SettingsServiceTimesController::class, 'show']);
         Route::put('service-times', [SettingsServiceTimesController::class, 'update']);
+        Route::get('team', [SettingsTeamController::class, 'index']);
+        Route::post('team', [SettingsTeamController::class, 'store']);
+        Route::put('team/{assignment}', [SettingsTeamController::class, 'update'])->whereNumber('assignment');
+        Route::delete('team/{assignment}', [SettingsTeamController::class, 'destroy'])->whereNumber('assignment');
+        Route::post('team/{assignment}/reset-access', [SettingsTeamController::class, 'resetAccess'])->whereNumber('assignment');
     });
 
     // Authentication Routes
