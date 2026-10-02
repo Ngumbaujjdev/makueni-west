@@ -211,6 +211,34 @@ Writing needs `{level}.budgets.spending.record` on the acting place's own budget
   3. A year budget's months follow the entry dates.
   4. A place below sees entries view-only; sideways gets 403.
 
+## Budget Settings (phase 4)
+
+One simple page per level: **Settings → Budget Settings → Lines and deductions** (`includes/budget/settings.php`; wrappers `church|region|diocese/settings/budget-settings/index.php`). The church's old Budget Lines page redirects there.
+
+**Lines tab:**
+- A place uses the shared lines meant for its level (set by the diocese, **locked** for churches and regions) and its **own** lines.
+- The diocese looks after the shared lines and says who uses them: only the diocese's own budgets, every church, every region, or everyone.
+- For each line: add, rename, describe, switch on/off (switched-off lines aren't offered for new budgets), and delete only when no budget has used it.
+- A used line can't move between money in and money out.
+
+**API** (`BudgetSettingsController`; the acting role decides the place, a global admin names it with `territory_id`):
+
+| Method | Path | Does |
+|---|---|---|
+| GET | `/budget-settings` | The place's lines: side, own or shared, who it's shared with, editable, used here, used anywhere |
+| POST | `/budget-settings/lines` | `{name, side: in\|out, description?, share_with?}` - `share_with` is for the diocese only (own / church / region / all) |
+| PUT | `/budget-settings/lines/{id}` | Rename, describe, `is_active`, side (if unused), `share_with` (shared lines) |
+| DELETE | `/budget-settings/lines/{id}` | Only an unused line; otherwise 422 "switch it off instead" |
+
+**Permissions:**
+- `{level}.settings.budgetsettings.read` / `.update`, granted to:
+  - church: Senior Pastor, Associate Pastor, Treasurer, Administrator;
+  - region: Overseer, Treasurer;
+  - diocese: Bishop, Treasurer, Finance Officer, Administrator.
+- A place may only change its own lines (and the diocese the shared ones); anything else gets 403.
+
+**Deductions tab:** next phase.
+
 ## Reports (phase 4, brought forward)
 
 PDF and Excel, through the shared report engine (`docs/specs/reports-spec.md`): queued on `reports`, verification codes `MWD-BUD-…`, files kept 7 days. The figures come from `BudgetData`, the same as the Overview, so the page and the report agree.
