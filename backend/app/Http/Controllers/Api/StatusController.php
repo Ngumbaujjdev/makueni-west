@@ -157,9 +157,6 @@ class StatusController extends Controller
         try {
             $status->load('creator:id,firstname,lastname,email');
 
-            // Get usage count
-            $status->budgets_count = $status->budgets()->count();
-
             return response()->json([
                 'success' => true,
                 'status' => 200,
@@ -302,17 +299,7 @@ class StatusController extends Controller
     public function destroy(Status $status)
     {
         try {
-            // Check if status is in use
-            $budgetsCount = $status->budgets()->count();
-
-            if ($budgetsCount > 0) {
-                return response()->json([
-                    'success' => false,
-                    'status' => 400,
-                    'message' => "Cannot delete status. It is being used by {$budgetsCount} budget(s)",
-                ], 400);
-            }
-
+            // Budgets keep their own status (draft / in use / closed), so nothing here depends on a status row.
             $status->delete();
 
             return response()->json([

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -22,7 +21,6 @@ class BudgetLineItem extends Model implements Auditable
         'actual_amount',
         'notes',
         'is_unplanned',
-        'is_locked',
         'created_by',
         'updated_by',
     ];
@@ -31,7 +29,6 @@ class BudgetLineItem extends Model implements Auditable
         'is_unplanned' => 'boolean',
         'budgeted_amount' => 'decimal:2',
         'actual_amount' => 'decimal:2',
-        'is_locked' => 'boolean',
     ];
 
     // ========================================================================
@@ -116,92 +113,6 @@ class BudgetLineItem extends Model implements Auditable
         return $query->whereHas('budgetCategory', function ($q) {
             $q->where('slug', 'expense');
         });
-    }
-
-    /**
-     * Get locked line items
-     */
-    public function scopeLocked($query)
-    {
-        return $query->where('is_locked', true);
-    }
-
-    /**
-     * Get unlocked line items
-     */
-    public function scopeUnlocked($query)
-    {
-        return $query->where('is_locked', false);
-    }
-
-    // ========================================================================
-    // COMPUTED ATTRIBUTES
-    // ========================================================================
-
-    /**
-     * Calculate variance (actual - budgeted)
-     */
-    protected function variance(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => $this->actual_amount - $this->budgeted_amount,
-        );
-    }
-
-    /**
-     * Calculate variance percentage
-     */
-    protected function variancePercentage(): Attribute
-    {
-        return Attribute::make(
-            get: function () {
-                if ($this->budgeted_amount == 0) {
-                    return 0;
-                }
-
-                return round(($this->variance / $this->budgeted_amount) * 100, 2);
-            }
-        );
-    }
-
-    /**
-     * Check if over budget
-     */
-    protected function isOverBudget(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => $this->actual_amount > $this->budgeted_amount,
-        );
-    }
-
-    /**
-     * Check if under budget
-     */
-    protected function isUnderBudget(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => $this->actual_amount < $this->budgeted_amount,
-        );
-    }
-
-    /**
-     * Check if on budget
-     */
-    protected function isOnBudget(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => $this->actual_amount == $this->budgeted_amount,
-        );
-    }
-
-    /**
-     * Check if editable
-     */
-    protected function isEditable(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => ! $this->is_locked && $this->budget && $this->budget->is_editable,
-        );
     }
 
     // ========================================================================

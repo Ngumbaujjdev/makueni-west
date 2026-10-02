@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Contracts\Auditable;
 
@@ -52,14 +51,6 @@ class Status extends Model implements Auditable
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
-    }
-
-    /**
-     * Get all budgets using this status
-     */
-    public function budgets(): HasMany
-    {
-        return $this->hasMany(Budget::class, 'status_id');
     }
 
     // ========================================================================

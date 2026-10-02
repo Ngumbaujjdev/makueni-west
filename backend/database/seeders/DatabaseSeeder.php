@@ -202,6 +202,15 @@ class DatabaseSeeder extends Seeder
             // never seeded), each behind its own admin-only permission
             // ==========================================
             AddSystemAdministrationRolePagesSeeder::class,
+
+            // ==========================================
+            // PHASE 27: Budgets for church, region and diocese - the Finance
+            // → Budgets and Settings → Budget Settings menus, the
+            // {level}.budgets.* permissions and who holds them, and the old
+            // budget permission names retired (docs/specs/budgets-spec.md).
+            // Last, so it builds on every menu group and role above.
+            // ==========================================
+            BudgetsAccessSeeder::class,
         ]);
     }
 }

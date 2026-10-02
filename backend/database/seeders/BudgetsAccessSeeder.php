@@ -25,6 +25,30 @@ use Spatie\Permission\Models\Role;
  */
 class BudgetsAccessSeeder extends Seeder
 {
+    /**
+     * Permission names from before the overhaul that nothing checks any more
+     * (the approval workflow, the old Budget Management menus, the old
+     * Budget Lines / Types / Categories pages). Retired on every run, so a
+     * seeder that still creates them can't bring them back.
+     */
+    private const RETIRED_PERMISSIONS = [
+        'financialmanagement.budgetmanagement.%',
+        'diocesebudgetmanagement.%',
+        'diocese.budgetmanagement.budgetoverview.%',
+        'church.settings.budgetsettings.budgetlines.%',
+        'diocese.settings.budgetsettings.budgettype.%',
+        'diocese.settings.budgetsettings.budgetcategory.%',
+        'diocese.settings.budgetsettings.budgetline.%',
+    ];
+
+    /** The old settings pages, now redirects to Budget Settings - out of the menu. */
+    private const RETIRED_PAGES = [
+        '/church/settings/budget-settings/budget-lines.php',
+        '/diocese/settings/budget-settings/budget-type.php',
+        '/diocese/settings/budget-settings/budget-category.php',
+        '/diocese/settings/budget-settings/budget-line.php',
+    ];
+
     /** Which permissions each role gets, per level. */
     private const GRANTS = [
         'church' => [
@@ -107,15 +131,16 @@ class BudgetsAccessSeeder extends Seeder
             $this->permissions($level, $pages);
         }
 
+        $this->retire();
+
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
         $this->command->info('✅ Done - users log out and back in to see the new menu');
     }
 
     /**
      * Settings → Budget Settings for a level: one page with the place's lines
-     * and deductions. The church's old Budget Lines page leaves the menu (it
-     * redirects to the new page); the diocese's older Types / Categories /
-     * Lines admin pages stay beside it.
+     * and deductions. The old Budget Lines / Types / Categories pages leave
+     * the menu in retire() - they redirect here.
      */
     private function settingsMenu(string $level): ?Submodule
     {
@@ -143,12 +168,29 @@ class BudgetsAccessSeeder extends Seeder
             ['module_id' => $module->id, 'path' => $path],
             ['title' => 'Lines and deductions', 'is_active' => true, 'description' => 'Money in and money out lines, and the shares worked out from money in'],
         );
-        if ($level === 'church') {
-            Submodule::where('module_id', $module->id)->where('path', '/church/settings/budget-settings/budget-lines.php')->update(['is_active' => false]);
-        }
         $this->command->info("   ✅ {$level}: Settings → Budget Settings → {$submodule->title} ({$path})");
 
         return $submodule;
+    }
+
+    /** Old permission names and pages out: the permissions deleted (and taken off roles), the pages off the menu. */
+    private function retire(): void
+    {
+        $ids = Permission::where(function ($q) {
+            foreach (self::RETIRED_PERMISSIONS as $pattern) {
+                $q->orWhere('name', 'like', $pattern);
+            }
+        })->pluck('id');
+        if ($ids->isNotEmpty()) {
+            DB::table('role_has_permissions')->whereIn('permission_id', $ids)->delete();
+            DB::table('model_has_permissions')->whereIn('permission_id', $ids)->delete();
+            Permission::whereIn('id', $ids)->delete();
+            $this->command->info("   🧹 Retired {$ids->count()} old budget permissions");
+        }
+        $pages = Submodule::whereIn('path', self::RETIRED_PAGES)->where('is_active', true)->update(['is_active' => false]);
+        if ($pages) {
+            $this->command->info("   🧹 {$pages} old budget settings pages taken off the menu");
+        }
     }
 
     /** Finance → Budgets → Budgets for a level; returns the Budgets submodule. */

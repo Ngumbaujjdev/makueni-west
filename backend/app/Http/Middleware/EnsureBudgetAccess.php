@@ -3,7 +3,6 @@
 namespace App\Http\Middleware;
 
 use App\Models\Budget;
-use App\Models\BudgetLineItem;
 use App\Support\BudgetAccess;
 use Closure;
 use Illuminate\Http\Request;
@@ -21,11 +20,7 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureBudgetAccess
 {
     /** Controller actions that change a budget. Everything else only reads. */
-    private const WRITE_ACTIONS = [
-        'form', 'formFor', 'store', 'update', 'destroy', 'start', 'close', 'reopen',
-        'addLineItem', 'updateLineItem', 'updateLooseLineItem', 'deleteLineItem',
-        'applyDeduction', 'reverseDeduction', 'recalculateDeductions',
-    ];
+    private const WRITE_ACTIONS = ['form', 'formFor', 'store', 'update', 'destroy', 'start', 'close', 'reopen'];
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -34,16 +29,12 @@ class EnsureBudgetAccess
         $writes = in_array($action, self::WRITE_ACTIONS, true);
 
         $budget = $request->route('budget');
-        // Some routes (the history logs) take a plain id - resolve it so they're checked too.
+        // A plain id (before route binding) is resolved so it's checked too.
         if ($budget !== null && ! $budget instanceof Budget) {
             $budget = Budget::find((int) $budget);
             if (! $budget) {
                 return response()->json(['success' => false, 'status' => 404, 'message' => 'Budget not found.'], 404);
             }
-        }
-        $lineItem = $request->route('lineItem');
-        if (! $budget && $lineItem instanceof BudgetLineItem) {
-            $budget = $lineItem->budget;
         }
 
         if ($budget instanceof Budget) {

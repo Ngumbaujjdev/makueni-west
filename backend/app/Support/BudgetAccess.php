@@ -40,7 +40,6 @@ final class BudgetAccess
         'record' => 'budgets.spending.record',
         'settings.read' => 'settings.budgetsettings.read',
         'settings' => 'settings.budgetsettings.update',
-        'settings.read' => 'settings.budgetsettings.read',
         'settings.update' => 'settings.budgetsettings.update',
     ];
 
@@ -99,14 +98,6 @@ final class BudgetAccess
         $type = $territory?->territory_type?->value;
 
         return $territory && in_array($type, self::LEVELS, true) ? ['type' => $type, 'id' => (int) $territory->id] : null;
-    }
-
-    /** The church a church-level user is acting for, or null. */
-    public static function churchId(?User $user): ?int
-    {
-        $place = self::acting($user);
-
-        return $place && $place['type'] === 'church' ? $place['id'] : null;
     }
 
     /** Whether the user may do something with budgets at their own level. */

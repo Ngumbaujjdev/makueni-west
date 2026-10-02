@@ -7,6 +7,11 @@ use App\Models\BudgetPeriod;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * Budget periods, read-only - the Demographics tracking page uses them to
+ * find a year's fiscal months (budgets themselves are a month or a year,
+ * docs/specs/budgets-spec.md).
+ */
 class BudgetPeriodController extends Controller
 {
     /**
@@ -45,62 +50,6 @@ class BudgetPeriodController extends Controller
                 'data' => $periods,
                 'message' => 'Budget periods retrieved successfully',
                 'count' => $periods->count(),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve budget periods: '.$e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Get a single budget period with all related data
-     */
-    public function show(int $id): JsonResponse
-    {
-        try {
-            $period = BudgetPeriod::with(['budgetType', 'fiscalYear', 'fiscalMonth', 'fiscalQuarter', 'fiscalSemiAnnual'])
-                ->findOrFail($id);
-
-            return response()->json([
-                'success' => true,
-                'data' => $period,
-                'message' => 'Budget period retrieved successfully',
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Budget period not found',
-            ], 404);
-        }
-    }
-
-    /**
-     * Get budget periods grouped by type for a specific year
-     * Useful for populating dropdowns
-     */
-    public function byYear(Request $request): JsonResponse
-    {
-        try {
-            $request->validate([
-                'fiscal_year_id' => 'required|integer|exists:fiscal_years,id',
-            ]);
-
-            $periods = BudgetPeriod::with(['budgetType'])
-                ->where('fiscal_year_id', $request->input('fiscal_year_id'))
-                ->where('is_active', true)
-                ->orderBy('budget_type_id')
-                ->orderBy('start_date')
-                ->get()
-                ->groupBy(function ($period) {
-                    return $period->budgetType->slug ?? 'unknown';
-                });
-
-            return response()->json([
-                'success' => true,
-                'data' => $periods,
-                'message' => 'Budget periods grouped by type',
             ]);
         } catch (\Exception $e) {
             return response()->json([

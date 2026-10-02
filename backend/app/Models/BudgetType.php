@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use OwenIt\Auditing\Contracts\Auditable;
 
 class BudgetType extends Model implements Auditable
@@ -30,14 +29,6 @@ class BudgetType extends Model implements Auditable
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
-    }
-
-    /**
-     * Get all budgets of this type
-     */
-    public function budgets(): HasMany
-    {
-        return $this->hasMany(Budget::class);
     }
 
     /**
