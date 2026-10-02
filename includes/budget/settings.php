@@ -106,7 +106,7 @@ $breadcrumbs = [
                             <span class="avatar avatar-md bg-purple text-white flex-shrink-0"><i class="ri-percent-line"></i></span>
                             <div class="flex-fill">
                                 <div class="fw-semibold">A deduction is a share sent up out of money in - worked out for you.</div>
-                                <div class="fs-13">For example <b>"Diocese share: 10% of money in"</b>: on KES 100,000 planned in, the budget fills in KES 10,000 on the line it's paid through. What was actually sent is money out recorded on that line.</div>
+                                <div class="fs-13">For example <b>"Diocese share: 10% of Tithes received"</b>: when a church records KES 60,000 of tithes, KES 6,000 is due to the diocese. Sending it is money out recorded on the line it's paid through. Until money comes in, the budget shows an estimate from the plan.</div>
                             </div>
                             <button type="button" class="btn btn-primary flex-shrink-0" id="addDeductionBtn" hidden><i class="ri-add-line me-1"></i>Add a deduction</button>
                         </div>
@@ -169,7 +169,7 @@ $breadcrumbs = [
                     <span class="app-modal-icon bg-purple"><i class="ri-percent-line"></i></span>
                     <div class="flex-fill" style="min-width: 0;">
                         <h5 class="modal-title" id="deductionModalTitle">Add a deduction</h5>
-                        <div class="app-modal-subtitle" id="deductionModalSub">A share of money in, worked out on every budget saved from now on</div>
+                        <div class="app-modal-subtitle" id="deductionModalSub">A share of the money received - worked out on what is recorded</div>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -191,7 +191,7 @@ $breadcrumbs = [
                             <div class="fs-12 mt-1" id="dedTypeHint"></div>
 
                             <div id="dedBasisBlock">
-                                <div class="budget-field-label mt-3">On which money in?</div>
+                                <div class="budget-field-label mt-3">On which money received?</div>
                                 <div id="dedBasisWrap"></div>
                                 <div class="mt-2" id="dedLinesWrap" hidden>
                                     <select class="form-select" id="dedLines" multiple aria-label="Money in lines"></select>

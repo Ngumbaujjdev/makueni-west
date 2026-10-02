@@ -213,7 +213,13 @@ class DatabaseSeeder extends Seeder
             BudgetsAccessSeeder::class,
 
             // ==========================================
-            // PHASE 28: the Settings hub - one Settings page per church,
+            // PHASE 28: the standard deductions - "Diocese share: 10% of
+            // Tithes received" for every church (only created when missing)
+            // ==========================================
+            StandardDeductionsSeeder::class,
+
+            // ==========================================
+            // PHASE 29: the Settings hub - one Settings page per church,
             // region and diocese, its section pages and the
             // {level}.settings.hub.* permissions (docs/specs/settings-spec.md)
             // ==========================================

@@ -168,21 +168,29 @@ const BudgetsDetail = (function () {
     if (b.notes) document.getElementById("budgetNotes").textContent = b.notes;
   }
 
-  /** Deductions: each one's rule, planned, due on what came in, sent, still owed. */
+  /** "10% of KES 40,000.00 Tithes received = KES 4,000.00 due". */
+  function dueSentence(r) {
+    if (r.rate_type !== "percentage") return `${B.money(r.due)} due`;
+    const on = (r.rule.match(/% of (.+) received$/) || [])[1] || "money";
+    const rate = `${Number(r.rate_value).toLocaleString("en-GB", { maximumFractionDigits: 2 })}%`;
+    return `${rate} of ${B.money(r.base_received || 0)} ${B.esc(on === "all money" ? "" : on).trim()} received = <span class="text-${r.owed > 0 ? "danger" : "success"}">${B.money(r.due)} due</span>`.replace("  ", " ");
+  }
+
+  /** Deductions: what is due on the money actually received (recorded), what was sent, what is still owed - and the plan's estimate. */
   function renderDeductions() {
     const rows = d.deductions || [];
     document.getElementById("deductionsTabBtn").hidden = !rows.length;
     if (!rows.length) return;
     const owed = rows.reduce((t, r) => t + r.owed, 0);
-    document.querySelector('[data-tab-figure="deductions"]').textContent = owed > 0 ? `${B.shortMoney(owed)} still owed` : "All sent";
+    document.querySelector('[data-tab-figure="deductions"]').textContent = owed > 0 ? `${B.shortMoney(owed)} still owed` : rows.some((r) => r.due > 0) ? "All sent" : "Nothing due yet";
     const fig = (label, value, cls = "") => `<div><small>${label}</small><b class="${cls}">${value}</b></div>`;
     const total = (k) => rows.reduce((t, r) => t + r[k], 0);
     document.getElementById("budgetDeductions").innerHTML = `
       <div class="budget-items-strip soft-warning">
-        ${fig("Planned", B.money(total("planned")))}
-        ${fig("Due on money in", B.money(total("due")))}
+        ${fig("Due on money received", B.money(total("due")))}
         ${fig("Sent", B.money(total("sent")), "text-success")}
         ${fig("Still owed", B.money(owed), owed > 0 ? "text-danger" : "")}
+        ${fig("Estimate from the plan", B.money(total("planned")))}
       </div>
       <ul class="budget-items">${rows
         .map((r) => {
@@ -196,18 +204,19 @@ const BudgetsDetail = (function () {
                   <span class="budget-item-name">${B.esc(r.name)} <span class="soft-chip soft-purple">${B.esc(r.set_by)}</span></span>
                   ${r.owed > 0 ? `<span class="badge bg-danger">${B.money(r.owed)} owed</span>` : r.due > 0 ? '<span class="badge bg-success">All sent</span>' : '<span class="soft-chip soft-primary">Nothing due yet</span>'}
                 </div>
+                <div class="fw-semibold mb-1">${dueSentence(r)}</div>
                 <div class="fs-12 mb-1">${B.esc(r.rule)} · paid through ${href ? `<a href="${href}">${B.esc(r.line || "")}</a>` : B.esc(r.line || "-")}</div>
                 <div class="count-bar"><span class="bg-${r.owed > 0 ? "warning" : "success"}" style="width: ${pct}%"></span></div>
                 <div class="budget-item-figs">
-                  <span>Planned <b>${B.money(r.planned)}</b></span>
                   <span>Due <b>${B.money(r.due)}</b></span>
                   <span>Sent <b>${B.money(r.sent)}</b></span>
+                  <span>Estimate <b>${B.money(r.planned)}</b></span>
                 </div>
               </div>
             </li>`;
         })
         .join("")}</ul>
-      <div class="budget-items-total"><span>Due is worked out on the money actually received.</span>${d.can?.record && owed > 0 ? '<button type="button" class="btn btn-sm btn-primary" id="sendDeductionBtn"><i class="ri-send-plane-line me-1"></i>Record what was sent</button>' : ""}</div>`;
+      <div class="budget-items-total"><span>Due is worked out on the money actually received - what is recorded. The estimate comes from the plan.</span>${d.can?.record && owed > 0 ? '<button type="button" class="btn btn-sm btn-primary" id="sendDeductionBtn"><i class="ri-send-plane-line me-1"></i>Record what was sent</button>' : ""}</div>`;
     document.querySelectorAll("#budgetDeductions .budget-item[data-href]").forEach((li) =>
       li.addEventListener("click", (ev) => {
         if (!ev.target.closest("a, button")) window.location.href = li.dataset.href;

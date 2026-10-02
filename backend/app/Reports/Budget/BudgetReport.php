@@ -213,11 +213,11 @@ abstract class BudgetReport extends Report
             ReportColumn::text('Deduction', true),
             ReportColumn::text('How it is worked out'),
             ReportColumn::text('Paid through'),
-            ReportColumn::money('Planned'),
-            ReportColumn::money('Due'),
+            ReportColumn::money('Due on received'),
             ReportColumn::money('Sent'),
             ReportColumn::money('Still owed'),
-        ], array_map(fn ($r) => [$r['name'], $r['rule'], $r['line'], $r['planned'], $r['due'], $r['sent'], $r['owed']], $rows), 'Due is worked out on the money actually received; sent is what was recorded on the line it is paid through.');
+            ReportColumn::money('Estimate (plan)'),
+        ], array_map(fn ($r) => [$r['name'], $r['rule'], $r['line'], $r['due'], $r['sent'], $r['owed'], $r['planned']], $rows), 'Due is worked out on the money actually received (recorded); sent is what was recorded on the line it is paid through. The estimate is from the plan.');
     }
 
     protected static function day(?string $date): ?string

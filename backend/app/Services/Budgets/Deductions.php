@@ -96,7 +96,7 @@ final class Deductions
      * in, and keep a snapshot of each rule on the budget. Deductions that no
      * longer apply let go of their line (its amount stays, now typed).
      */
-    public function remember(Budget $budget, array $planned, int $userId): void
+    public function remember(Budget $budget, array $planned, ?int $userId): void
     {
         $items = BudgetLineItem::where('budget_id', $budget->id)->get()->keyBy('budget_line_id');
         $keep = [];
@@ -150,7 +150,10 @@ final class Deductions
             return [
                 'id' => $d?->id,
                 'name' => $d?->name ?? 'Deduction',
-                'rule' => $this->ruleText($s->rate_type, (float) $s->rate_value, $d?->basis ?? 'all', $budget->period_month === null),
+                'rule' => $this->ruleText($s->rate_type, (float) $s->rate_value, $d?->basis ?? 'all', $budget->period_month === null, $d?->basis_line_ids ?? []),
+                // What it's worked out on: all money in, or these money-in lines.
+                'basis' => $d?->basis ?? 'all',
+                'basis_line_ids' => array_map('intval', $d?->basis_line_ids ?? []),
                 'line_id' => $d?->budget_line_id,
                 'line' => $d?->budgetLine?->name,
                 'set_by' => $this->setBy($d, $budget),
@@ -160,6 +163,7 @@ final class Deductions
                 'rate_type' => $s->rate_type,
                 'rate_value' => (float) $s->rate_value,
                 'base_planned' => (float) $s->base_amount,
+                'base_received' => round($base, 2),
                 'planned' => (float) $s->deduction_amount,
                 'due' => $due,
                 'sent' => $sent,
@@ -168,26 +172,97 @@ final class Deductions
         })->values()->all();
     }
 
-    /** "10% of all money in", "KES 5,000.00 each month (KES 60,000.00 for the year)". */
-    public function ruleText(?string $type, float $value, string $basis, bool $year = false): string
+    /**
+     * "10% of Tithes received", "10% of Tithes and Offerings received",
+     * "10% of all money received", "KES 5,000.00 each month (KES 60,000.00
+     * for the year)". A % is always of the money actually received - what
+     * is recorded - on the lines it names.
+     */
+    public function ruleText(?string $type, float $value, string $basis, bool $year = false, array $lineIds = []): string
     {
         if ($type === 'percentage') {
-            return rtrim(rtrim(number_format($value, 2), '0'), '.').'% of '.($basis === 'lines' ? 'some money in lines' : 'all money in');
+            $names = $basis === 'lines' ? $this->lineNames($lineIds) : [];
+            $on = $names === [] ? ($basis === 'lines' ? 'some money in' : 'all money') : $this->listOf($names);
+
+            return rtrim(rtrim(number_format($value, 2), '0'), '.')."% of {$on} received";
         }
 
         return 'KES '.number_format($value, 2).' each month'.($year ? ' (KES '.number_format($value * 12, 2).' for the year)' : '');
     }
 
-    /** Who set it, from the budget's place: "Set by the diocese", "Our own". */
+    /** @var array<int, string> line names already looked up */
+    private array $names = [];
+
+    /** @return string[] the lines' names, in the order given */
+    private function lineNames(array $ids): array
+    {
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        $missing = array_diff($ids, array_keys($this->names));
+        if ($missing !== []) {
+            $this->names += BudgetLine::whereIn('id', $missing)->pluck('name', 'id')->all();
+        }
+
+        return array_values(array_filter(array_map(fn ($id) => $this->names[$id] ?? null, $ids)));
+    }
+
+    /** "Tithes", "Tithes and Offerings", "Tithes, Offerings and Donations". */
+    private function listOf(array $names): string
+    {
+        $last = array_pop($names);
+
+        return $names === [] ? $last : implode(', ', $names).' and '.$last;
+    }
+
+    /**
+     * Whose it is, from the budget's place: "Our own", or "Standard" for one
+     * that comes from above - worded neutrally on purpose: it's the system's
+     * standard, not one level ordering another.
+     */
     public function setBy(?BudgetDeduction $d, Budget $budget): string
     {
         if (! $d) {
             return '';
         }
-        if ($d->territory_type === $budget->territory_type && (int) $d->territory_id === (int) $budget->territory_id) {
-            return 'Our own';
-        }
 
-        return 'Set by the '.($d->territory_type === 'diocese' ? 'diocese' : 'region');
+        return $d->territory_type === $budget->territory_type && (int) $d->territory_id === (int) $budget->territory_id ? 'Our own' : 'Standard';
+    }
+
+    /**
+     * The open budgets (Draft or In use) a deduction reaches - its owner's
+     * own, and the churches' / regions' below it it applies to - plus any
+     * open budget that has it now, so a change of who it applies to is
+     * caught both ways. Closed budgets are frozen and left alone.
+     *
+     * @return Collection<int, Budget>
+     */
+    public function openBudgetsFor(BudgetDeduction $d): Collection
+    {
+        $level = $d->applies_to_level ?? 'own';
+        // Every place, once, then walk up from each (under a hundred rows).
+        $all = \Illuminate\Support\Facades\DB::table('territories')->whereNull('deleted_at')->get(['id', 'territory_type', 'parent_territory_id'])->keyBy('id');
+        $under = function (int $id) use ($all, $d) {
+            for ($t = $all->get($all->get($id)?->parent_territory_id), $depth = 0; $t && $depth < 6; $t = $all->get($t->parent_territory_id), $depth++) {
+                if ((int) $t->id === (int) $d->territory_id) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+        $below = fn (string $type) => $all->filter(fn ($t) => $t->territory_type === $type && $under((int) $t->id))->keys()->all();
+
+        return Budget::whereIn('status', ['draft', 'active'])
+            ->where(function ($q) use ($d, $level, $below) {
+                if (in_array($level, ['own', 'all'], true)) {
+                    $q->orWhere(fn ($own) => $own->where('territory_type', $d->territory_type)->where('territory_id', $d->territory_id));
+                }
+                foreach (['church', 'region'] as $type) {
+                    if (in_array($level, [$type, 'all'], true) && $d->territory_type !== $type) {
+                        $q->orWhere(fn ($b) => $b->where('territory_type', $type)->whereIn('territory_id', $below($type) ?: [0]));
+                    }
+                }
+                $q->orWhereIn('id', BudgetDeductionItem::where('budget_deduction_id', $d->id)->pluck('budget_id'));
+            })
+            ->get();
     }
 }

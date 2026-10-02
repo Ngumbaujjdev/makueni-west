@@ -17,7 +17,7 @@ use Illuminate\Support\Str;
  * Budget Settings for one place - a church, a region or the diocese - in one
  * simple page (docs/specs/budgets-spec.md, phase 4).
  *
- * Lines: a place uses the shared lines meant for its level (set by the
+ * Lines: a place uses the standard lines meant for its level (kept by the
  * diocese, locked for everyone else) and its own. The diocese also looks
  * after the shared lines and says who they're for. Every level is
  * independent: a place only ever changes its own lines.
@@ -118,7 +118,7 @@ class BudgetSettingsController extends Controller
             return $place;
         }
         if (! $this->editable($line, $place)) {
-            return $this->forbidden('This line is set by the diocese - only the diocese can change it.');
+            return $this->forbidden('This is a standard line - it can\'t be changed here.');
         }
         $data = $request->validate([
             'name' => 'sometimes|required|string|max:255',
@@ -161,7 +161,7 @@ class BudgetSettingsController extends Controller
             return $place;
         }
         if (! $this->editable($line, $place) || $line->is_system_default) {
-            return $this->forbidden('This line is set by the diocese - only the diocese can change it.');
+            return $this->forbidden('This is a standard line - it can\'t be changed here.');
         }
         $used = $line->budgetLineItems()->distinct('budget_id')->count('budget_id');
         if ($used > 0) {
@@ -197,7 +197,9 @@ class BudgetSettingsController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
-        return response()->json(['success' => true, 'status' => 201, 'message' => "Added {$deduction->name}. Budgets saved from now on work it out.", 'data' => ['id' => $deduction->id]], 201);
+        $reached = $this->refreshBudgets($deduction, $request->user());
+
+        return response()->json(['success' => true, 'status' => 201, 'message' => "Added {$deduction->name}".($reached ? " - shown on {$reached} open ".($reached === 1 ? 'budget' : 'budgets').' now' : '').'.', 'data' => ['id' => $deduction->id]], 201);
     }
 
     /** PUT /budget-settings/deductions/{deduction} - change the rule, or just switch it on/off. */
@@ -208,12 +210,13 @@ class BudgetSettingsController extends Controller
             return $place;
         }
         if (! $this->ownsDeduction($deduction, $place)) {
-            return $this->forbidden('This deduction is set by a level above - only they can change it.');
+            return $this->forbidden('This is a standard deduction - it can\'t be changed here.');
         }
         if ($request->has('is_active') && count($request->except(['is_active', 'territory_id'])) === 0) {
             $deduction->update(['is_active' => $request->boolean('is_active'), 'updated_by' => $request->user()->id]);
+            $this->refreshBudgets($deduction, $request->user());
 
-            return response()->json(['success' => true, 'status' => 200, 'message' => $deduction->is_active ? "{$deduction->name} is on" : "{$deduction->name} is off - budgets saved from now on leave it out"]);
+            return response()->json(['success' => true, 'status' => 200, 'message' => $deduction->is_active ? "{$deduction->name} is on" : "{$deduction->name} is off - open budgets no longer count it"]);
         }
         $data = $this->deductionData($request, $place);
         if ($data instanceof JsonResponse) {
@@ -226,7 +229,21 @@ class BudgetSettingsController extends Controller
             'updated_by' => $request->user()->id,
         ]);
 
-        return response()->json(['success' => true, 'status' => 200, 'message' => "Saved {$deduction->name}. Budgets saved from now on use the new rule."]);
+        $this->refreshBudgets($deduction->fresh(), $request->user());
+
+        return response()->json(['success' => true, 'status' => 200, 'message' => "Saved {$deduction->name} - open budgets now use the new rule."]);
+    }
+
+    /** Open budgets (Draft / In use) it reaches work it out again at once; returns how many changed hands. */
+    private function refreshBudgets(BudgetDeduction $deduction, $user): int
+    {
+        $budgets = $this->deductions->openBudgetsFor($deduction);
+        $book = app(\App\Services\Budgets\BudgetBook::class);
+        foreach ($budgets as $budget) {
+            $book->reapplyDeductions($budget, $user);
+        }
+
+        return $budgets->count();
     }
 
     /** DELETE /budget-settings/deductions/{deduction} - only one no budget has used. */
@@ -237,7 +254,7 @@ class BudgetSettingsController extends Controller
             return $place;
         }
         if (! $this->ownsDeduction($deduction, $place)) {
-            return $this->forbidden('This deduction is set by a level above - only they can change it.');
+            return $this->forbidden('This is a standard deduction - it can\'t be changed here.');
         }
         $used = $deduction->budgetDeductionItems()->count();
         if ($used > 0) {
@@ -312,7 +329,6 @@ class BudgetSettingsController extends Controller
 
         return $own->merge($inherited)->map(function (BudgetDeduction $d) use ($place, $canUpdate, $lineNames) {
             $isOwn = $this->ownsDeduction($d, $place);
-            $from = $d->territory_type === 'diocese' ? 'the diocese' : 'the region';
 
             return [
                 'id' => $d->id,
@@ -327,13 +343,14 @@ class BudgetSettingsController extends Controller
                 'line' => $d->budgetLine?->name,
                 'applies_to_level' => $d->applies_to_level,
                 'applies_label' => self::APPLIES[$d->applies_to_level] ?? '',
-                'rule' => $this->deductions->ruleText($d->deduction_type, (float) $d->deduction_value, $d->basis),
+                'rule' => $this->deductions->ruleText($d->deduction_type, (float) $d->deduction_value, $d->basis, false, $d->basis_line_ids ?? []),
                 'example' => $d->deduction_type === 'percentage' ? round(100000 * (float) $d->deduction_value / 100, 2) : (float) $d->deduction_value,
                 'is_active' => (bool) $d->is_active,
                 'is_own' => $isOwn,
-                'set_by' => $isOwn ? 'Ours' : "Set by {$from}",
+                'set_by' => $isOwn ? 'Ours' : 'Standard',
                 'editable' => $canUpdate && $isOwn,
-                'used' => $d->budgetDeductionItems()->count(),
+                // How many budgets work it out - of this place only, when it's a standard one from above.
+                'used' => $d->budgetDeductionItems()->when(! $isOwn, fn ($q) => $q->whereHas('budget', fn ($b) => $b->where('territory_type', $place['type'])->where('territory_id', $place['id'])))->count(),
             ];
         })->values()->all();
     }

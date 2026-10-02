@@ -143,14 +143,15 @@ final class BudgetBook
                 }
             }
 
-            // "Worked out Diocese share: 10% of KES 100,000.00 = KES 10,000.00", when it changed.
+            // "Estimated Diocese share from the plan: 10% of Tithes received (KES 100,000.00 planned) = KES 10,000.00", when it changed.
+            // The real share is worked out on what is recorded (Deductions::status()).
             foreach ($planned as $deductionId => $p) {
                 if (abs(($wasWorkedOut[$deductionId] ?? -1) - $p['amount']) >= 0.005) {
                     $d = $p['deduction'];
                     $how = $d->deduction_type === 'percentage'
-                        ? $deductions->ruleText('percentage', (float) $d->deduction_value, $d->basis).' (KES '.number_format($p['base'], 2).')'
+                        ? $deductions->ruleText('percentage', (float) $d->deduction_value, $d->basis, false, $d->basis_line_ids ?? []).' (KES '.number_format($p['base'], 2).' planned)'
                         : $deductions->ruleText('fixed_amount', (float) $d->deduction_value, 'all', $month === null);
-                    $this->log($budget, $user, 'deduction', "Worked out {$d->name}: {$how} = KES ".number_format($p['amount'], 2));
+                    $this->log($budget, $user, 'deduction', "Estimated {$d->name} from the plan: {$how} = KES ".number_format($p['amount'], 2));
                 }
             }
 
@@ -393,6 +394,53 @@ final class BudgetBook
         $budget->refresh();
     }
 
+    /**
+     * Work a budget's deductions out again from its own planned amounts -
+     * when a deduction is added, changed or switched on or off (Budget
+     * Settings), so budgets already in use show it at once. Draft and In use
+     * budgets only; a closed one is frozen. Without a user (a seeder), History
+     * shows it as the system's.
+     */
+    public function reapplyDeductions(Budget $budget, ?User $user = null): void
+    {
+        if (! in_array($budget->status, ['draft', 'active'], true)) {
+            return;
+        }
+        $deductions = app(Deductions::class);
+        $amounts = BudgetLineItem::where('budget_id', $budget->id)->where('budgeted_amount', '>', 0)
+            ->pluck('budgeted_amount', 'budget_line_id')->map(fn ($v) => (float) $v)->all();
+        $planned = array_filter(
+            $deductions->plan($deductions->applicable($budget->territory_type, (int) $budget->territory_id), $amounts, $budget->period_month),
+            fn ($p) => $p['amount'] > 0,
+        );
+        $was = $budget->budgetDeductionItems()->with('budgetDeduction:id,name')->get()->keyBy('budget_deduction_id');
+        $same = $was->count() === count($planned) && collect($planned)->every(fn ($p, $id) => $was->has($id) && abs((float) $was[$id]->deduction_amount - $p['amount']) < 0.005);
+        if ($same) {
+            return;
+        }
+
+        DB::transaction(function () use ($budget, $user, $deductions, $amounts, $planned, $was) {
+            foreach ($planned as $p) {
+                $amounts[$p['line_id']] = $p['amount'];
+            }
+            $this->writeLines($budget, $amounts, $user);
+            $deductions->remember($budget, $planned, $user?->id);
+            $this->recalculate($budget);
+
+            $year = $budget->period_month === null;
+            foreach ($planned as $id => $p) {
+                $d = $p['deduction'];
+                $rule = $deductions->ruleText($d->deduction_type, (float) $d->deduction_value, $d->basis, $year, $d->basis_line_ids ?? []);
+                $this->log($budget, $user, 'deduction', ($was->has($id) ? "Updated {$d->name}" : "Added {$d->name}").": {$rule} (estimate from the plan KES ".number_format($p['amount'], 2).')');
+            }
+            foreach ($was as $id => $item) {
+                if (! isset($planned[$id])) {
+                    $this->log($budget, $user, 'deduction', ($item->budgetDeduction?->name ?? 'A deduction').' no longer applies');
+                }
+            }
+        });
+    }
+
     /** @return array{0: CarbonImmutable, 1: CarbonImmutable} */
     public function dates(int $year, ?int $month): array
     {
@@ -423,20 +471,20 @@ final class BudgetBook
     }
 
     /** Write the planned amounts; a line dropped from the budget is removed unless money was recorded on it. */
-    private function writeLines(Budget $budget, array $amounts, User $user): void
+    private function writeLines(Budget $budget, array $amounts, ?User $user): void
     {
         $items = BudgetLineItem::withTrashed()->where('budget_id', $budget->id)->get()->keyBy('budget_line_id');
         $lines = BudgetLine::withTrashed()->whereIn('id', array_keys($amounts))->get()->keyBy('id');
 
         foreach ($amounts as $lineId => $amount) {
-            $item = $items->get($lineId) ?? new BudgetLineItem(['budget_id' => $budget->id, 'budget_line_id' => $lineId, 'created_by' => $user->id]);
+            $item = $items->get($lineId) ?? new BudgetLineItem(['budget_id' => $budget->id, 'budget_line_id' => $lineId, 'created_by' => $user?->id]);
             if ($item->trashed()) {
                 $item->restore();
             }
             $item->budget_category_id = $lines[$lineId]->budget_category_id;
             $item->budgeted_amount = $amount;
             $item->is_unplanned = false; // it's planned now
-            $item->updated_by = $user->id;
+            $item->updated_by = $user?->id;
             $item->saveQuietly();
         }
 
@@ -492,7 +540,7 @@ final class BudgetBook
     }
 
     /** One History sentence; an entry's own events also name the entry, so its page can list them. */
-    private function log(Budget $budget, User $user, string $action, string $description, array $old = [], array $new = [], ?BudgetEntry $entry = null): void
+    private function log(Budget $budget, ?User $user, string $action, string $description, array $old = [], array $new = [], ?BudgetEntry $entry = null): void
     {
         BudgetLog::create([
             'budget_id' => $budget->id,
@@ -502,7 +550,7 @@ final class BudgetBook
             'affected_model_id' => $entry?->id,
             'old_values' => $old ?: null,
             'new_values' => $new ?: null,
-            'performed_by' => $user->id,
+            'performed_by' => $user?->id,
             'ip_address' => request()->ip(),
             'user_agent' => request()->userAgent(),
         ]);
