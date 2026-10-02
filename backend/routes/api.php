@@ -308,6 +308,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         // A month or a whole year of one place; no approval (docs/specs/budgets-spec.md)
         Route::get('/', [BudgetController::class, 'index']);                                    // This place's budgets (or one below, read-only)
         Route::get('/dashboard', [BudgetController::class, 'dashboard']);                       // The Overview for a month or a year
+        Route::get('/below', [BudgetController::class, 'below']);                               // The places below, read-only (region / diocese)
         Route::get('/form', [BudgetController::class, 'form']);                                 // What the New budget form needs
         Route::post('/', [BudgetController::class, 'store']);                                   // Create, with all its lines
         Route::get('/{budget}', [BudgetController::class, 'show']);                             // One budget, with its lines

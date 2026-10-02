@@ -12,6 +12,7 @@ use App\Reports\Budget\BudgetCompareReport;
 use App\Reports\Budget\BudgetExceptionsReport;
 use App\Reports\Budget\BudgetLineReport;
 use App\Reports\Budget\BudgetLinesReport;
+use App\Reports\Budget\BudgetRollupReport;
 use App\Reports\Budget\BudgetSpendingReport;
 use App\Reports\Budget\BudgetStatementReport;
 use App\Reports\Budget\BudgetSummaryReport;
@@ -54,6 +55,7 @@ final class ReportRegistry
         BudgetCompareReport::class,
         BudgetExceptionsReport::class,
         BudgetLineReport::class,
+        BudgetRollupReport::class,
     ];
 
     /** @return Report[] */

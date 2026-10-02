@@ -18,7 +18,8 @@ use Spatie\Permission\Models\Role;
  * Reuses the existing budget menu of each level: the church "Budget"
  * module, the diocese "Diocese Budget Management" module and the region's
  * placeholder "Regional Finances" module, whose pages were never built.
- * Later phases add Overview, Spending and Reports next to Budgets.
+ * Overview, Spending, New budget and Reports sit next to Budgets; a region
+ * and the diocese also get the read-only page of the places below them.
  *
  * Idempotent - safe to re-run. Users log out and back in for the new menu.
  */
@@ -62,7 +63,8 @@ class BudgetsAccessSeeder extends Seeder
         'prepare' => ['budgets.budgets.prepare' => 'new', 'budgets.spending.record' => 'spending'],
         // Exporting is linked to the Reports page, so only people who can export see it.
         'export' => ['budgets.budgets.export' => 'reports'],
-        'below' => ['budgets.below.read' => 'budgets'],
+        // Seeing the places below is linked to its own page (region and diocese only).
+        'below' => ['budgets.below.read' => 'below'],
         // Budget Settings (lines and deductions), on its own page under Settings.
         'settings' => ['settings.budgetsettings.read' => 'settings', 'settings.budgetsettings.update' => 'settings'],
     ];
@@ -73,7 +75,11 @@ class BudgetsAccessSeeder extends Seeder
         'spending' => ['Spending', 'spending.php', 'Record money in and out, and see every entry'],
         'new' => ['New budget', 'form.php', 'Plan a month or a year, step by step'],
         'reports' => ['Reports', 'reports.php', 'Budget reports as PDF or Excel: summary, money in and out, one budget'],
+        'below' => ['Churches\' budgets', 'below.php', 'The budgets of the places below, read-only: who has one, received, spent, still owed'],
     ];
+
+    /** The places-below page is a region's and the diocese's only, named for what it shows. */
+    private const BELOW_TITLES = ['region' => 'Churches\' budgets', 'diocese' => 'Regions and churches'];
 
     public function run(): void
     {
@@ -86,6 +92,10 @@ class BudgetsAccessSeeder extends Seeder
             }
             $pages = ['budgets' => $submodule];
             foreach (self::PAGES as $key => [$title, $file, $description]) {
+                if ($key === 'below' && ! isset(self::BELOW_TITLES[$level])) {
+                    continue;
+                }
+                $title = $key === 'below' ? self::BELOW_TITLES[$level] : $title;
                 $pages[$key] = Submodule::updateOrCreate(
                     ['module_id' => $submodule->module_id, 'path' => dirname($submodule->path).'/'.$file],
                     ['title' => $title, 'is_active' => true, 'description' => $description],

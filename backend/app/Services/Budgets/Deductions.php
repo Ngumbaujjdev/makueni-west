@@ -154,6 +154,11 @@ final class Deductions
                 'line_id' => $d?->budget_line_id,
                 'line' => $d?->budgetLine?->name,
                 'set_by' => $this->setBy($d, $budget),
+                // Who set it - who the money is owed to.
+                'owner_type' => $d?->territory_type,
+                'owner_id' => $d?->territory_id ? (int) $d->territory_id : null,
+                'rate_type' => $s->rate_type,
+                'rate_value' => (float) $s->rate_value,
                 'base_planned' => (float) $s->base_amount,
                 'planned' => (float) $s->deduction_amount,
                 'due' => $due,
