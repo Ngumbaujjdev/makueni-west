@@ -79,6 +79,11 @@ const SettingsAPI = (function () {
     removeLogo: () => request("DELETE", "/settings/profile/logo"),
     serviceTimes: () => request("GET", "/settings/service-times"),
     saveServiceTimes: (times) => request("PUT", "/settings/service-times", { times }),
+    team: () => request("GET", "/settings/team"),
+    addPerson: (body) => request("POST", "/settings/team", body),
+    changeRole: (id, roleId) => request("PUT", `/settings/team/${id}`, { role_id: roleId }),
+    removePerson: (id) => request("DELETE", `/settings/team/${id}`),
+    resetAccess: (id) => request("POST", `/settings/team/${id}/reset-access`),
   };
 })();
 

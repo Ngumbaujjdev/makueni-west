@@ -45,6 +45,8 @@ function settingsPageStyles(bool $withMap = true): void
 {
     $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
     echo '<link rel="stylesheet" href="' . SITE_URL . '/assets/libs/select2/select2.min.css" />' . "\n";
+    echo '<link rel="stylesheet" href="' . SITE_URL . '/assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css" />' . "\n";
+    echo '<link rel="stylesheet" href="' . SITE_URL . '/assets/data-tables/responsive/2.3.0/css/responsive.bootstrap.min.css" />' . "\n";
     if ($withMap) {
         echo '<link rel="stylesheet" href="' . SITE_URL . '/assets/libs/leaflet/leaflet.css" />' . "\n";
     }
@@ -71,6 +73,9 @@ function settingsPageScripts(bool $withMap = true): void
     echo '<script src="' . $v('assets/js/utils/toast.js') . '"></script>' . "\n";
     echo '<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>' . "\n";
     echo '<script src="' . SITE_URL . '/assets/libs/select2/select2.min.js"></script>' . "\n";
+    foreach (['assets/data-tables/1.12.1/js/jquery.dataTables.min.js', 'assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js', 'assets/data-tables/responsive/2.3.0/js/dataTables.responsive.min.js'] as $src) {
+        echo '<script src="' . SITE_URL . "/{$src}\"></script>\n";
+    }
     if ($withMap) {
         echo '<script src="' . SITE_URL . '/assets/libs/leaflet/leaflet.js"></script>' . "\n";
     }
@@ -80,6 +85,7 @@ function settingsPageScripts(bool $withMap = true): void
         'assets/js/pages/settings/sections/overview.js',
         'assets/js/pages/settings/sections/profile.js',
         'assets/js/pages/settings/sections/service-times.js',
+        'assets/js/pages/settings/sections/team.js',
         'assets/js/pages/settings/hub.js',
     ] as $src) {
         echo '<script src="' . $v($src) . '"></script>' . "\n";

@@ -34,7 +34,14 @@
         sub: `${o.profile.done} of ${o.profile.total} details`,
         link: o.profile.percent < 100 ? { href: href("profile"), text: "Finish the profile" } : null,
       }),
-      UI.renderSparkCard({ icon: "ri-team-line", label: "People with a role here", value: String(o.team.people), color: "primary", sub: "Leaders and office holders" }),
+      UI.renderSparkCard({
+        icon: "ri-team-line",
+        label: "People with a role here",
+        value: String(o.team.people),
+        color: "primary",
+        sub: "Leaders and office holders",
+        link: SettingsRail.section("team") ? { href: href("team"), text: "See the team" } : null,
+      }),
     ];
     if (o.service_times.shown) {
       cards.push(
