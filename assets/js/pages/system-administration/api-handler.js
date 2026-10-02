@@ -38,11 +38,20 @@
    * Get default headers for API requests
    */
   function getHeaders() {
-    return {
+    const h = {
       "Content-Type": Constants.HEADERS.CONTENT_TYPE_JSON,
       Accept: Constants.HEADERS.ACCEPT_JSON,
       Authorization: `Bearer ${getAuthToken()}`,
     };
+    // The role the user is acting in - the access-control APIs check that
+    // role's permissions (RequireAdminPermission), not every role they hold.
+    try {
+      const role = JSON.parse(localStorage.getItem(Constants.STORAGE_KEYS.CURRENT_ROLE) || "null");
+      if (role?.assignment_id) h["X-Assignment-Id"] = String(role.assignment_id);
+    } catch (e) {
+      /* no role cached - the API uses the primary one */
+    }
+    return h;
   }
 
   /**
@@ -1362,6 +1371,8 @@
   // ========================================================================
 
   window.APIHandler = {
+    getHeaders,             // Auth + acting-role headers, for pages making their own fetch
+
     // Users
     getUsers,
     getUser,
