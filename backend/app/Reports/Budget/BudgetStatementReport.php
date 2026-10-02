@@ -88,6 +88,7 @@ final class BudgetStatementReport extends BudgetReport
             sections: [
                 $this->inSection($d['lines']['in']),
                 $this->outSection($d['lines']['out']),
+                ...(($deductions = app(\App\Services\Budgets\Deductions::class)->status($budget)) ? [$this->deductionsSection($deductions)] : []),
                 $this->entriesSection($entries, 'in'),
                 $this->entriesSection($entries, 'out'),
                 new ReportSection('History', [

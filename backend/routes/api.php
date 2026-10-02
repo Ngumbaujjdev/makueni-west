@@ -349,6 +349,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/lines', [\App\Http\Controllers\Api\BudgetSettingsController::class, 'storeLine']);
         Route::put('/lines/{line}', [\App\Http\Controllers\Api\BudgetSettingsController::class, 'updateLine']);
         Route::delete('/lines/{line}', [\App\Http\Controllers\Api\BudgetSettingsController::class, 'destroyLine']);
+        Route::post('/deductions', [\App\Http\Controllers\Api\BudgetSettingsController::class, 'storeDeduction']);
+        Route::put('/deductions/{deduction}', [\App\Http\Controllers\Api\BudgetSettingsController::class, 'updateDeduction']);
+        Route::delete('/deductions/{deduction}', [\App\Http\Controllers\Api\BudgetSettingsController::class, 'destroyDeduction']);
     });
 
     Route::prefix('budget-entries')->group(function () {

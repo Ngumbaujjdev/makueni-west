@@ -16,6 +16,7 @@ class BudgetLineItem extends Model implements Auditable
     protected $fillable = [
         'budget_id',
         'budget_line_id',
+        'budget_deduction_id',
         'budget_category_id',
         'budgeted_amount',
         'actual_amount',
