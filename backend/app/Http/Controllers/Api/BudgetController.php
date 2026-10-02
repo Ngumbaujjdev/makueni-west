@@ -193,10 +193,25 @@ class BudgetController extends Controller
                 'rows' => $rows,
                 'totals' => \App\Reports\Budget\BudgetRollup::contributionTotals($rows),
                 'below' => $showBelow ? $rollup->contributionsBelow(\App\Models\Territory::findOrFail($place['id']), $year) : null,
+                // How to pay each place the shares go to (Settings > Payment details).
+                'pay_to' => $this->payTo($rows, $place['id']),
                 'view_only' => ! $own && ! $user->hasGlobalAccess(),
                 'can_record' => $own && BudgetAccess::can($user, 'record'),
             ],
         ]);
+    }
+
+    /** Payment details of every place this place's shares go to. */
+    private function payTo(array $rows, int $fromId): array
+    {
+        $ids = array_values(array_unique(array_filter(array_column($rows, 'to_id'))));
+        if (! $ids) {
+            return [];
+        }
+        $from = \App\Models\Territory::find($fromId);
+
+        return \App\Models\Territory::whereIn('id', $ids)->orderBy('level')->get()
+            ->map(fn ($to) => \App\Support\Settings\PaymentDetails::for($to, $from))->values()->all();
     }
 
     /** What the New budget form needs: usable lines, periods already taken, and last budget's amounts to copy. */

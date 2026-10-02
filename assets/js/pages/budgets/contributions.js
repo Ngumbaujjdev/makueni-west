@@ -55,6 +55,7 @@ const BudgetsContributions = (function () {
     renderHeader();
     renderStats();
     renderOwn();
+    renderPayTo();
     renderBelow();
   }
 
@@ -138,6 +139,56 @@ const BudgetsContributions = (function () {
       </div>`;
     body.querySelectorAll("[data-send]").forEach((b) =>
       b.addEventListener("click", () => BudgetsEntryModal.open({ budgetId: Number(b.dataset.send), lineId: Number(b.dataset.line), direction: "out", onSaved: load })),
+    );
+  }
+
+  /** How to send the share: each receiving place's M-Pesa and bank details (Settings > Payment details). */
+  function renderPayTo() {
+    const card = document.getElementById("payToCard");
+    const places = d.pay_to || [];
+    card.hidden = !places.length || document.getElementById("ownCard").hidden;
+    if (card.hidden) return;
+    const copy = (text, label) =>
+      `<button type="button" class="btn btn-sm btn-icon btn-light border ms-1" data-copy="${B.esc(text)}" title="Copy ${B.esc(label)}" aria-label="Copy ${B.esc(label)}"><i class="ri-file-copy-line"></i></button>`;
+    const line = (label, value, canCopy = false) =>
+      value ? `<div class="d-flex align-items-center flex-wrap gap-1"><span class="fw-semibold me-1">${label}</span><span class="fw-bold">${B.esc(value)}</span>${canCopy ? copy(value, label) : ""}</div>` : "";
+    document.getElementById("payToBody").innerHTML = places
+      .map((p) => {
+        if (!p.set) {
+          return `<div class="alert alert-warning d-flex align-items-center gap-2 mb-0"><i class="ri-information-line fs-18"></i><span><b>${B.esc(p.name)}</b> hasn't added its payment details yet - ask its treasurer how to send the share.</span></div>`;
+        }
+        const ways = [
+          p.mpesa
+            ? `<div class="col-md-6"><div class="d-flex gap-3 align-items-start pay-to-way">
+                <span class="avatar avatar-md bg-success text-white flex-shrink-0"><i class="ri-smartphone-line"></i></span>
+                <div class="d-flex flex-column gap-1"><div class="fw-semibold">M-Pesa</div>${line(p.mpesa.type === "till" ? "Till" : "Paybill", p.mpesa.number, true)}${line("Account", p.mpesa.account, true)}</div>
+              </div></div>`
+            : "",
+          p.bank
+            ? `<div class="col-md-6"><div class="d-flex gap-3 align-items-start pay-to-way">
+                <span class="avatar avatar-md bg-primary text-white flex-shrink-0"><i class="ri-bank-line"></i></span>
+                <div class="d-flex flex-column gap-1"><div class="fw-semibold">${B.esc(p.bank.name || "Bank")}${p.bank.branch ? ` · ${B.esc(p.bank.branch)}` : ""}</div>${line("Account name", p.bank.account_name)}${line("Account number", p.bank.account_number, true)}</div>
+              </div></div>`
+            : "",
+        ].join("");
+        return `
+          <div class="pay-to-place">
+            ${places.length > 1 ? `<div class="fw-semibold fs-15 mb-2">${B.esc(p.name)}</div>` : `<div class="mb-2">To <b>${B.esc(p.name)}</b></div>`}
+            <div class="row g-3">${ways}</div>
+            ${p.note ? `<div class="soft-chip soft-primary mt-3 d-inline-flex align-items-start gap-1 text-wrap"><i class="ri-chat-quote-line"></i><span>${B.esc(p.note)}</span></div>` : ""}
+          </div>`;
+      })
+      .join("");
+    document.querySelectorAll("#payToBody [data-copy]").forEach((btn) =>
+      btn.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(btn.dataset.copy);
+          btn.innerHTML = '<i class="ri-check-line"></i>';
+          setTimeout(() => (btn.innerHTML = '<i class="ri-file-copy-line"></i>'), 1500);
+        } catch (e) {
+          Toast.error("Couldn't copy - select it and copy instead.");
+        }
+      }),
     );
   }
 

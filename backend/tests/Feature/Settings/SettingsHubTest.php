@@ -63,7 +63,7 @@ class SettingsHubTest extends TestCase
         Sanctum::actingAs($this->overseer);
         $keys = collect($this->getJson('/api/settings/sections')->json('data.groups'))->flatMap(fn ($g) => $g['sections'])->pluck('key')->all();
 
-        $this->assertSame(['overview', 'profile', 'team'], $keys);
+        $this->assertSame(['overview', 'profile', 'team', 'finance'], $keys);
         $this->getJson('/api/settings/service-times')->assertNotFound();
     }
 

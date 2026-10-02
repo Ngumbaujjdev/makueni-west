@@ -8,6 +8,7 @@ use App\Models\UserTerritoryAssignment;
 use App\Services\DemographicsGrowthService;
 use App\Services\Settings\Settings;
 use App\Support\Kenya;
+use App\Support\Settings\PaymentDetails;
 use App\Support\Settings\PlaceProfile;
 use App\Support\Settings\SettingsRegistry;
 use App\Support\SettingsAccess;
@@ -89,6 +90,9 @@ class HubController extends SettingsController
         if ($hasServiceTimes) {
             $checklist[] = ['key' => 'service_times', 'label' => 'Service times', 'done' => $times > 0, 'section' => 'servicetimes'];
         }
+        if (isset(SettingsRegistry::sections($level)['finance'])) {
+            $checklist[] = ['key' => 'payment_details', 'label' => 'Payment details', 'done' => PaymentDetails::isSet($place), 'section' => 'finance'];
+        }
 
         $below = null;
         if ($level !== 'church') {
@@ -139,6 +143,7 @@ class HubController extends SettingsController
         return match ($section) {
             'profile' => PlaceProfile::completeness($place)['percent'] < 100,
             'servicetimes' => ServiceTimesController::normalize($place->metadata['service_times'] ?? []) === [],
+            'finance' => ! PaymentDetails::isSet($place),
             'health' => collect(app(\App\Support\Settings\Health::class)->report(false)['tiles'])->contains('status', 'check'),
             default => false,
         };

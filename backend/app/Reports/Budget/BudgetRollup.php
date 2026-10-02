@@ -277,6 +277,7 @@ final class BudgetRollup
                     'line_id' => $d['line_id'],
                     'line' => $d['line'],
                     'to' => $owner?->name,
+                    'to_id' => $owner?->id,
                     'received' => $d['base_received'],
                     'due' => $d['due'],
                     'sent' => $d['sent'],

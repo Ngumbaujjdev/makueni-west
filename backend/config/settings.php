@@ -181,6 +181,20 @@ return [
             'sentence' => 'Who can sign in and what each role can see and do.',
         ],
 
+        // S5 - how to pay a region or the diocese. Read by Contributions ("How to
+        // send it", for the places below). Churches get theirs with the first
+        // page that shows a church's payment details.
+        'finance' => [
+            'label' => 'Payment details',
+            'icon' => 'ri-bank-card-line',
+            'colour' => 'success',
+            'group' => 'money',
+            'levels' => ['region', 'diocese'],
+            'kind' => 'form',
+            'grants' => ['update' => ['region' => ['Regional Treasurer'], 'diocese' => ['Diocese Treasurer']]],
+            'sentence' => 'Where the churches below send their share: M-Pesa and bank details, shown on their Contributions page.',
+        ],
+
         // Existing settings pages, shown inside the hub (S3). 'permission' is
         // the page's own read permission ("{level}." is added); 'absorbs' is
         // the page's menu row, which SettingsHubSeeder moves under Settings.
@@ -254,6 +268,17 @@ return [
         'sms.api_key' => ['section' => 'sms', 'card' => 'Gateway', 'label' => 'API key', 'type' => 'secret', 'secret' => true, 'rules' => ['nullable', 'string', 'max:200'], 'default' => null, 'levels' => ['diocese']],
         'sms.sandbox' => ['section' => 'sms', 'card' => 'Gateway', 'label' => 'Use the sandbox (no real messages)', 'type' => 'switch', 'default' => false, 'levels' => ['diocese']],
         'sms.sender_id' => ['section' => 'sms', 'card' => 'Who SMS comes from', 'label' => 'Sender ID', 'rules' => ['nullable', 'string', 'max:11', 'regex:/^[A-Za-z0-9 ]*$/'], 'default' => null, 'levels' => ['diocese'], 'help' => 'Up to 11 letters or digits, approved by your provider. Leave empty for their default.', 'used_by' => 'Every SMS - churches send under it'],
+
+        // Payment details (S5) - each place's own: never inherited ('inherits' => false),
+        // so a region without details never shows the diocese's paybill as its own.
+        'finance.mpesa_type' => ['section' => 'finance', 'card' => 'M-Pesa', 'label' => 'How to pay by M-Pesa', 'type' => 'select', 'options' => ['' => 'Not by M-Pesa', 'paybill' => 'Paybill', 'till' => 'Till (Buy Goods)'], 'default' => '', 'levels' => ['region', 'diocese'], 'inherits' => false, 'used_by' => 'Contributions - "How to send it" for the churches below'],
+        'finance.mpesa_number' => ['section' => 'finance', 'card' => 'M-Pesa', 'label' => 'Paybill or till number', 'rules' => ['nullable', 'regex:/^\d{5,7}$/'], 'default' => null, 'levels' => ['region', 'diocese'], 'inherits' => false, 'help' => '5 to 7 digits.'],
+        'finance.mpesa_account' => ['section' => 'finance', 'card' => 'M-Pesa', 'label' => 'Account number to quote', 'rules' => ['nullable', 'string', 'max:40'], 'default' => null, 'levels' => ['region', 'diocese'], 'inherits' => false, 'span' => 12, 'help' => 'Paybill only. Write {code} where the sending church\'s code goes, e.g. "{code}-SHARE".'],
+        'finance.bank_name' => ['section' => 'finance', 'card' => 'Bank', 'label' => 'Bank', 'rules' => ['nullable', 'string', 'max:80'], 'default' => null, 'levels' => ['region', 'diocese'], 'inherits' => false, 'help' => 'e.g. KCB, Equity, Co-operative Bank'],
+        'finance.bank_branch' => ['section' => 'finance', 'card' => 'Bank', 'label' => 'Branch', 'rules' => ['nullable', 'string', 'max:80'], 'default' => null, 'levels' => ['region', 'diocese'], 'inherits' => false],
+        'finance.bank_account_name' => ['section' => 'finance', 'card' => 'Bank', 'label' => 'Account name', 'rules' => ['nullable', 'string', 'max:120'], 'default' => null, 'levels' => ['region', 'diocese'], 'inherits' => false],
+        'finance.bank_account_number' => ['section' => 'finance', 'card' => 'Bank', 'label' => 'Account number', 'rules' => ['nullable', 'regex:/^[0-9][0-9 -]{4,29}$/'], 'default' => null, 'levels' => ['region', 'diocese'], 'inherits' => false],
+        'finance.payment_note' => ['section' => 'finance', 'card' => 'For whoever sends money', 'label' => 'Anything else they should know', 'type' => 'textarea', 'rules' => ['nullable', 'string', 'max:300'], 'default' => null, 'levels' => ['region', 'diocese'], 'inherits' => false, 'span' => 12, 'help' => 'e.g. "Send the share by the 5th of the next month, and record it in Money in and out."'],
 
         // Security (S4b) - read by User::verifyPin, the password rules in AuthController and Sanctum.
         'security.pin_attempts' => ['section' => 'security', 'card' => 'Employee code + PIN', 'label' => 'Wrong PINs before it locks', 'type' => 'number', 'rules' => ['required', 'integer', 'between:1,10'], 'default' => 3, 'levels' => ['diocese'], 'used_by' => 'Sign-in with employee code and PIN'],
