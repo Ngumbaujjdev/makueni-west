@@ -85,6 +85,7 @@ const BudgetsEntry = (function () {
       </div>`;
 
     renderDetails(e, isIn);
+    if (isIn && !e.deleted) renderShares(e);
     renderEffect(e, isIn);
     renderHistory(e);
     renderOthers();
@@ -103,6 +104,19 @@ const BudgetsEntry = (function () {
       e.changed_at ? ["Last changed", `${B.esc(e.changed_by || e.recorded_by || "-")} · ${stamp(e.changed_at)}`] : null,
     ].filter(Boolean);
     document.getElementById("entryDetails").innerHTML = `<ul class="list-unstyled mb-0 budget-facts">${rows.map(([k, v]) => `<li><span>${k}</span><span class="fw-semibold text-end">${v}</span></li>`).join("")}</ul>`;
+  }
+
+  /** Money in on a line a deduction counts: "10% of this (KES 4,000.00) is the Diocese share", under the details. */
+  async function renderShares(e) {
+    const res = await BudgetsAPI.get(d.budget.id);
+    const shares = (res.ok ? res.data.deductions || [] : []).filter((x) => x.rate_type === "percentage" && (x.basis !== "lines" || (x.basis_line_ids || []).includes(d.line.line_id)));
+    if (!shares.length) return;
+    document.getElementById("entryDetails").insertAdjacentHTML(
+      "beforeend",
+      `<div class="d-flex flex-wrap gap-1 mt-3">${shares
+        .map((x) => `<span class="soft-chip soft-purple text-start" style="white-space: normal;"><i class="ri-percent-line me-1"></i>${Number(x.rate_value).toLocaleString("en-GB", { maximumFractionDigits: 2 })}% of this (<b>${B.money((e.amount * x.rate_value) / 100)}</b>) is the ${B.esc(x.name)}</span>`)
+        .join("")}</div>`,
+    );
   }
 
   /** The line before this amount, the amount itself, and after - as figures and as one bar. */
