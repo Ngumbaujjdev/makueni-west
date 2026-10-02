@@ -5,15 +5,25 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
 /**
  * Money that actually came in (direction "in") or went out ("out") against
  * one line of a budget. Written through BudgetBook, which keeps the line's
  * and the budget's received/spent totals in step.
+ *
+ * Receipts (a photo or PDF) hang off it in the "receipts" media collection,
+ * kept on the private local disk - they're only ever streamed through the
+ * API, to people who may see the budget.
  */
-class BudgetEntry extends Model
+class BudgetEntry extends Model implements HasMedia
 {
+    use InteractsWithMedia;
     use SoftDeletes;
+
+    /** At most this many receipts on one entry. */
+    public const MAX_RECEIPTS = 3;
 
     public const METHODS = ['cash' => 'Cash', 'mpesa' => 'M-Pesa', 'bank' => 'Bank', 'cheque' => 'Cheque'];
 
@@ -45,5 +55,12 @@ class BudgetEntry extends Model
     public function recorder(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by');
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('receipts')
+            ->useDisk('local')
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);
     }
 }

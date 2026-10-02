@@ -96,7 +96,7 @@ class BudgetsAccessSeeder extends Seeder
     /** The Budgets module's pages, per level (the sidebar lists them by title). */
     private const PAGES = [
         'overview' => ['Overview', 'overview.php', 'This month or year at a glance: planned, received, spent, what we noticed'],
-        'spending' => ['Spending', 'spending.php', 'Record money in and out, and see every entry'],
+        'spending' => ['Money in and out', 'spending.php', 'Every amount received and spent: search, filter, receipts, export'],
         'new' => ['New budget', 'form.php', 'Plan a month or a year, step by step'],
         'reports' => ['Reports', 'reports.php', 'Budget reports as PDF or Excel: summary, money in and out, one budget'],
         'below' => ['Churches\' budgets', 'below.php', 'The budgets of the places below, read-only: who has one, received, spent, still owed'],

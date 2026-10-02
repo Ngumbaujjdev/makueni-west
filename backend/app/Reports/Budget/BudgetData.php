@@ -410,6 +410,8 @@ final class BudgetData
             'reference' => $e->reference,
             'recorded_by' => $e->recorder ? trim("{$e->recorder->firstname} {$e->recorder->lastname}") : null,
             'deleted' => $e->trashed(),
+            // Only counted where the query asked (withCount); 0 elsewhere.
+            'receipts' => (int) ($e->receipts_count ?? 0),
         ];
     }
 }

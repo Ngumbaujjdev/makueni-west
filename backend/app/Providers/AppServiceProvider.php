@@ -54,6 +54,7 @@ class AppServiceProvider extends ServiceProvider
             'budget_deduction' => 'App\Models\BudgetDeduction',
             'budget_deduction_item' => 'App\Models\BudgetDeductionItem',
             'budget_period' => 'App\Models\BudgetPeriod',
+            'budget_entry' => 'App\Models\BudgetEntry',
 
             // Fiscal period models
             'fiscal_year' => 'App\Models\FiscalYear',
