@@ -2,7 +2,7 @@
 
 One **Settings** page for each level: church, region and diocese. Each place fills in its own profile, service times, team, finance details and communication there, and the module settings (Budgets, Attendance, Demographics) live under it. The diocese's global admins also get the system settings: email and SMS, health, security, documents, access control, the audit log and maintenance.
 
-**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (PR #165); S2 done (PR #166); S3 done (PR #168); S4a done (PR #170, Email, SMS, System health); S4b done (PR #173, Security, Documents & PDF, Maintenance, Audit log, Access control); S5 done (PR #174, Payment details for regions and the diocese). **S6 (planned 2026-10-05; S6a, S6b and S6c done):** adding people safely, Communication for churches and regions, a message log with preview, and sending sign-in details. Still deferred: church payment details and a currency setting.
+**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (PR #165); S2 done (PR #166); S3 done (PR #168); S4a done (PR #170, Email, SMS, System health); S4b done (PR #173, Security, Documents & PDF, Maintenance, Audit log, Access control); S5 done (PR #174, Payment details for regions and the diocese). **S6 (planned 2026-10-05; done):** adding people safely, Communication for churches and regions, a message log with preview, and sending sign-in details. Still deferred: church payment details and a currency setting.
 - **S0:** lock down the access-control APIs.
 - **S1:** the hub, Overview, Profile and Service times.
 - **S2:** Leadership & team.
@@ -285,6 +285,12 @@ Asked for on 2026-10-05:
 - Add someone and Reset access get "Send their sign-in details by: SMS / Email". Both are ticked when the person has that contact.
 - The message goes out through `PlaceMessenger` for the place (`kind = sign_in_details`), with the code and temporary password masked in the log.
 - The response says what was sent, or why not. The credentials are still shown once on screen.
+
+**S6d as built:**
+- `App\Actions\Users\SendSignInDetails` builds the SMS and the email (the `emails.place-message` view, with a details table and a Sign in button to `config('app.login_url')`, new, defaulting to `FRONTEND_URL/authentication/login`) and sends them through `PlaceMessenger`, with the code and temporary password masked in the log.
+- `POST /settings/team` and `POST /settings/team/{id}/reset-access` take `send: ['sms', 'email']` and return `delivery` (per channel: sent, logged, failed or skipped, and the masked contact).
+- **Nothing is sent** to someone who already had an account, since they keep their own sign-in.
+- The Add someone and Reset access windows have "Send their sign-in details by" switches, which turn on when there's a valid phone or email. The details window shows what was sent, and no longer mentions a PIN: code-only sign-in is back since 2026-10-05.
 
 ## Resolution
 
