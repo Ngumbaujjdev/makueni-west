@@ -2,7 +2,7 @@
 
 Part of the **Church life** plan (2026-10-05), L5. A church, region or the diocese sends a message (by SMS, email, or just in the app) to its own leaders and to the leaders of the places below it, plus numbers or emails typed in. Everyone with a login gets it in their **Inbox** and the bell, and can **reply**. Nothing goes upwards except a reply.
 
-**Status:** planned 2026-10-05.
+**Status:** planned 2026-10-05; L5a (backend) done the same day.
 - **L5a:** data, recipients, sending, scheduling, the inbox, replies, saved messages, permissions and menu (this PR).
 - **L5b:** the pages.
 
@@ -97,16 +97,24 @@ Per level: `{L}.messages.messages.read`, `.messages.send`, and `{L}.messages.inb
 
 The placeholders' unbuilt sub-pages are switched off.
 
+### L5a as built
+- **Code:** `App\Services\Messages\Audience` (who it reaches), `App\Services\Messages\Broadcaster` (SMS parts, `{name}` / `{place}` / `{sender}`, delivery, retry), the `SendMessageBatch` job (the `default` queue), `messages:send-scheduled` (every minute, claims a batch before sending so a second run can't double it), `MessagesController`, `MessagesAccess`, `MessagesAccessSeeder` (phase 34).
+- **The bell rings once** per person (`message_recipients.notified_at`), not again on a retry.
+- **Emails** use the Settings email layout (`emails.place-message`): the subject as the heading, the body's paragraphs.
+- **Typed entries** are split on new lines, commas and semicolons (spaces inside a number are fine). A typed number or email that belongs to someone becomes that person, Inbox included.
+- **The summary** counts the places picked ("Senior Pastors of 2 churches in Region A"), whether or not each has someone in that role.
+- Tests: the new `Communications` suite (`tests/Feature/Communications/MessagesTest.php`, 7).
+
 ## Acceptance Criteria
 
 ### L5a: backend
-- [ ] Recipients per level: a church reaches its own people only; a region its own and its churches (by subregion or picked); the diocese regions and churches. Picked places that aren't below are refused.
-- [ ] Typed numbers are made `+2547…`; others are refused and listed. People are counted once.
-- [ ] Sending goes through `PlaceMessenger` (log driver): each recipient gets its statuses and log ids, and the batch its counts.
-- [ ] Schedule, the scheduled run and cancel work; retry sends only what failed.
-- [ ] The Inbox shows only my own messages; read and reply work, and the reply tells the sender.
-- [ ] Saved messages belong to their place.
-- [ ] The seeder adds Messages per level, reuses the placeholders and stays idempotent.
+- [x] Recipients per level: a church reaches its own people only; a region its own and its churches (by subregion or picked); the diocese regions and churches. Picked places that aren't below are refused.
+- [x] Typed numbers are made `+2547…`; others are refused and listed. People are counted once.
+- [x] Sending goes through `PlaceMessenger` (log driver): each recipient gets its statuses and log ids, and the batch its counts.
+- [x] Schedule, the scheduled run and cancel work; retry sends only what failed.
+- [x] The Inbox shows only my own messages; read and reply work, and the reply tells the sender.
+- [x] Saved messages belong to their place.
+- [x] The seeder adds Messages per level, reuses the placeholders and stays idempotent.
 
 ### L5b: pages
 - [ ] Inbox, Send a message (who, message, live count and preview), Sent with each message's page, Saved messages.
