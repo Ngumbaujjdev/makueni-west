@@ -161,6 +161,12 @@ class MessagesTest extends TestCase
         $this->postJson("/api/messages/inbox/{$rid}/reply", ['body' => 'We will come.'])->assertCreated()->assertJsonPath('data.my_replies.0.body', 'We will come.');
         $this->assertSame(0, $this->getJson('/api/messages/inbox')->json('data.unread'));
 
+        // Without a subject, the title is the start of the message as the person reads it.
+        Sanctum::actingAs($this->overseer);
+        $this->postJson('/api/messages', ['audience' => ['below' => ['scope' => 'all', 'roles' => ['Senior Pastor']]], 'channel' => 'app', 'body' => 'Hello {name}, see you Sunday.'])->assertCreated();
+        Sanctum::actingAs($this->otherPastor);
+        $this->assertSame('Hello Test, see you Sunday.', $this->getJson('/api/messages/inbox')->json('data.items.0.subject'));
+
         Sanctum::actingAs($this->farPastor);
         $this->assertSame([], $this->getJson('/api/messages/inbox')->json('data.items'));
         $this->postJson("/api/messages/inbox/{$rid}/reply", ['body' => 'Not mine'])->assertNotFound();
