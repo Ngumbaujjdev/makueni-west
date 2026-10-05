@@ -48,9 +48,9 @@ const CalendarAPI = (function () {
   }
 
   /** Download a file the API sends (it needs the sign-in header, so no plain link). */
-  async function download(path, filename) {
+  async function download(path, filename, params = null) {
     try {
-      const res = await fetch(url(path), { headers: headers(false) });
+      const res = await fetch(url(path, params), { headers: headers(false) });
       if (!res.ok) return false;
       const blob = await res.blob();
       const a = document.createElement("a");
@@ -79,6 +79,8 @@ const CalendarAPI = (function () {
       return request("POST", "/calendar/cci/import", { form });
     },
     template: () => download("/calendar/cci/template", `cci-calendar-template-${new Date().getFullYear()}.csv`),
+    /** The items on screen as a .ics file, to import into Google or Outlook. */
+    ics: (params, filename) => download("/calendar/ics", filename, params),
   };
 })();
 

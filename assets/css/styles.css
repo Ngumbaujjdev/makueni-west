@@ -35941,6 +35941,7 @@ tr.is-clickable {
 .cal-layer.active[data-colour="primary"] { color: rgb(var(--primary-rgb)); background: rgba(var(--primary-rgb), 0.08); }
 .cal-layer.active[data-colour="purple"] { color: rgb(var(--purple-rgb)); background: rgba(var(--purple-rgb), 0.08); }
 .cal-layer.active[data-colour="success"] { color: rgb(var(--success-rgb)); background: rgba(var(--success-rgb), 0.08); }
+.cal-layer.active[data-colour="pink"] { color: rgb(var(--pink-rgb)); background: rgba(var(--pink-rgb), 0.1); }
 .cal-layer.active[data-colour="secondary"] { color: var(--default-text-color); background: rgba(var(--secondary-rgb), 0.18); border-color: rgb(var(--secondary-rgb)); }
 .cal-layer-dot {
   width: 0.55rem;
@@ -36106,6 +36107,45 @@ tr.is-clickable {
 }
 .notif-row-unread td {
   background: rgba(var(--primary-rgb), 0.04);
+}
+
+/* Calendar C3 (2026-10-05): Church life items, and the Coming up / Due soon column */
+.fc .cal-ev-draft {
+  border-style: dashed !important;
+  opacity: 0.8;
+}
+.cal-side {
+  display: flex;
+  flex-direction: column;
+}
+.cal-side-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 0.25rem;
+  border-radius: 0.5rem;
+  color: inherit;
+}
+.cal-side-item + .cal-side-item {
+  border-top: 1px solid var(--default-border);
+}
+a.cal-side-item:hover {
+  background: rgba(var(--primary-rgb), 0.05);
+  color: inherit;
+}
+.cal-side-item strong {
+  font-size: 0.85rem;
+  color: var(--v2-heading);
+}
+.cal-side-item small {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--default-text-color);
+}
+.cal-side-empty {
+  padding: 0.5rem 0;
+  text-align: center;
 }
 
 /* ==========================================================================

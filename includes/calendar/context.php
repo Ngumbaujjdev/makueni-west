@@ -22,6 +22,7 @@ function calendarPageContext(string $level): array
         'level' => $level,
         'tab' => $tab,
         'homeUrl' => SITE_URL . "/{$level}/dashboard",
+        'siteUrl' => SITE_URL, // Church life items (C3) link to their own pages
         'place' => ['id' => (int) ($role['territory_id'] ?? 0), 'name' => $role['territory']['name'] ?? $role['territory_name'] ?? ''],
     ];
 }
