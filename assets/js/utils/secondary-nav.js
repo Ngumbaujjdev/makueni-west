@@ -193,6 +193,23 @@
         html += '</ul>';
         container.innerHTML = html;
         positionSecondaryNav(container, true);
+        watchHeight(container);
+    }
+
+    // The bar's height can change after it's first measured - web fonts
+    // arriving, a phone rotating, the tab row wrapping - and a stale height
+    // left the bar covering the page title and breadcrumb. Re-measure
+    // whenever it actually changes, and once fonts and the page are loaded.
+    let watching = false;
+    function watchHeight(container) {
+        if (watching) return;
+        watching = true;
+        const refit = () => {
+            if (container.innerHTML.trim() !== '') positionSecondaryNav(container, true);
+        };
+        if ('ResizeObserver' in window) new ResizeObserver(refit).observe(container);
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(refit);
+        window.addEventListener('load', refit);
     }
 
     window.addEventListener('resize', function() {
