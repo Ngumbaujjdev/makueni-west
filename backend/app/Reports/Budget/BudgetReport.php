@@ -111,8 +111,8 @@ abstract class BudgetReport extends Report
         return $value === null ? null : round($value).'%';
     }
 
-    /** Money in, line by line: planned, received, still to come. */
-    protected function inSection(array $lines, string $heading = 'Money in by line'): ReportSection
+    /** Income, line by line: planned, received, still to come. */
+    protected function inSection(array $lines, string $heading = 'Income by line'): ReportSection
     {
         return new ReportSection($heading, [
             ReportColumn::text('Line', true),
@@ -126,11 +126,11 @@ abstract class BudgetReport extends Report
             $l['actual'],
             max($l['left'], 0.0),
             self::pct($l['pct']),
-        ], $lines), $lines === [] ? 'No money in planned or recorded.' : null);
+        ], $lines), $lines === [] ? 'No income planned or recorded.' : null);
     }
 
-    /** Money out, line by line: planned, spent, left - or over. */
-    protected function outSection(array $lines, string $heading = 'Money out by line'): ReportSection
+    /** Expenses, line by line: planned, spent, left - or over. */
+    protected function outSection(array $lines, string $heading = 'Expenses by line'): ReportSection
     {
         return new ReportSection($heading, [
             ReportColumn::text('Line', true),
@@ -146,7 +146,7 @@ abstract class BudgetReport extends Report
             $l['left'],
             self::pct($l['pct']),
             $l['actual'] > $l['planned'] ? ($l['planned'] > 0 ? 'Over by '.self::money($l['actual'] - $l['planned']) : 'Unplanned') : null,
-        ], $lines), $lines === [] ? 'No money out planned or recorded.' : null);
+        ], $lines), $lines === [] ? 'No expenses planned or recorded.' : null);
     }
 
     /**
@@ -166,7 +166,7 @@ abstract class BudgetReport extends Report
     }
 
     /** Received and spent per month, as columns. */
-    protected function monthsChart(array $points, string $title = 'Money in and out, month by month'): ReportChart
+    protected function monthsChart(array $points, string $title = 'Income & Expenses, month by month'): ReportChart
     {
         return ReportChart::bars($title, array_column($points, 'label'), [
             ['name' => 'Received', 'tone' => 'success', 'values' => array_column($points, 'in_actual')],
@@ -181,7 +181,7 @@ abstract class BudgetReport extends Report
         $in = $side === 'in';
 
         return ReportChart::hbars(
-            $title ?? ($in ? 'Money in: planned against received' : 'Money out: planned against spent'),
+            $title ?? ($in ? 'Income: planned against received' : 'Expenses: planned against spent'),
             array_column($top, 'name'),
             [
                 ['name' => 'Planned', 'tone' => $in ? 'success' : 'primary', 'soft' => true, 'values' => array_column($top, 'planned')],
@@ -231,7 +231,7 @@ abstract class BudgetReport extends Report
         $in = $direction === 'in';
         $methods = ['cash' => 'Cash', 'mpesa' => 'M-Pesa', 'bank' => 'Bank', 'cheque' => 'Cheque'];
 
-        return new ReportSection($in ? 'Money in' : 'Money out', [
+        return new ReportSection($in ? 'Income' : 'Expenses', [
             ReportColumn::text('Date'),
             ReportColumn::text('What for', true),
             ReportColumn::text('Line'),

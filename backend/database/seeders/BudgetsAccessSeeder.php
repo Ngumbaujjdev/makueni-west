@@ -97,9 +97,9 @@ class BudgetsAccessSeeder extends Seeder
      * includes recording money in and out.
      */
     private const PERMISSIONS = [
-        'read' => ['budgets.budgets.read' => 'budgets', 'budgets.overview.read' => 'overview', 'budgets.spending.read' => 'spending', 'budgets.contributions.read' => 'contributions'],
+        'read' => ['budgets.budgets.read' => 'budgets', 'budgets.overview.read' => 'overview', 'budgets.spending.read' => 'expenses', 'budgets.income.read' => 'income', 'budgets.contributions.read' => 'contributions'],
         // Preparing is linked to the New budget page, so only people who can prepare see it in the menu.
-        'prepare' => ['budgets.budgets.prepare' => 'new', 'budgets.spending.record' => 'spending'],
+        'prepare' => ['budgets.budgets.prepare' => 'new', 'budgets.spending.record' => 'expenses'],
         // Exporting is linked to the Reports page, so only people who can export see it.
         'export' => ['budgets.budgets.export' => 'reports'],
         // Seeing the places below is linked to its own page (region and diocese only).
@@ -111,7 +111,9 @@ class BudgetsAccessSeeder extends Seeder
     /** The Budgets module's pages, per level (the sidebar lists them by title). */
     private const PAGES = [
         'overview' => ['Overview', 'overview.php', 'This month or year at a glance: planned, received, spent, what we noticed'],
-        'spending' => ['Money in and out', 'spending.php', 'Every amount received and spent: search, filter, receipts, export'],
+        // Income and Expenses open the same page (spending.php's body), filtered; spending.php itself shows both.
+        'income' => ['Income', 'income.php', 'Every amount received: tithes, offerings and the rest - search, receipts, export'],
+        'expenses' => ['Expenses', 'expenses.php', 'Every amount paid out, taken off its budget line - search, receipts, export'],
         'new' => ['New budget', 'form.php', 'Plan a month or a year, step by step'],
         'reports' => ['Reports', 'reports.php', 'Budget reports as PDF or Excel: summary, money in and out, one budget'],
         'contributions' => ['Contributions', 'contributions.php', 'What we send up - the diocese share: due on tithes received, sent, still to send'],

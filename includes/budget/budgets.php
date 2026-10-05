@@ -65,7 +65,7 @@ $breadcrumbs = [
                         <div class="card custom-card">
                             <div class="card-header justify-content-between flex-wrap gap-2">
                                 <div>
-                                    <div class="card-title" id="flowTitle">Money in and out, month by month</div>
+                                    <div class="card-title" id="flowTitle">Income & Expenses, month by month</div>
                                     <span class="card-subtitle-text" id="flowSub">What each month's budget plans to receive and spend</span>
                                 </div>
                                 <div class="d-flex flex-wrap gap-1" id="flowChips"></div>
@@ -78,7 +78,7 @@ $breadcrumbs = [
                             <div class="card-header justify-content-between flex-wrap gap-2">
                                 <div>
                                     <div class="card-title">Where the money goes</div>
-                                    <span class="card-subtitle-text" id="whereSub">The biggest money out lines this year</span>
+                                    <span class="card-subtitle-text" id="whereSub">The biggest expense lines this year</span>
                                 </div>
                                 <div id="whereSwitchWrap"></div>
                             </div>
@@ -113,8 +113,8 @@ $breadcrumbs = [
                                     <tr>
                                         <th>Budget</th>
                                         <th>Status</th>
-                                        <th class="text-end">Money in</th>
-                                        <th class="text-end">Money out</th>
+                                        <th class="text-end">Income</th>
+                                        <th class="text-end">Expenses</th>
                                         <th class="text-end">Money left</th>
                                         <th class="d-none d-lg-table-cell">Prepared by</th>
                                         <th class="text-end">Action</th>

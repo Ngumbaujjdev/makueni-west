@@ -12,7 +12,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use Tests\TestCase;
 
 /**
- * Budget reports: summary, money in and out, and one budget's statement
+ * Budget reports: summary, income and expenses, and one budget's statement
  * (docs/specs/budgets-spec.md, Reports). Built from the same figures as the
  * Overview, money with 2 decimals, own place or a place below only.
  */
@@ -82,9 +82,9 @@ class BudgetReportsTest extends TestCase
         $this->assertSame('Church budget summary', $d['kicker']);
         $this->assertSame('January 2026', $d['period_label']);
         $this->assertSame('KES 1,200.50', collect($d['tiles'])->firstWhere('label', 'Spent')['value']);
-        $out = collect($d['sections'])->firstWhere('heading', 'Money out by line');
+        $out = collect($d['sections'])->firstWhere('heading', 'Expenses by line');
         $this->assertSame(['Church Rent', '1,000.00', '1,200.50', '-200.50', '120%', 'Over by KES 200.50'], $out['rows'][0]);
-        $in = collect($d['sections'])->firstWhere('heading', 'Money in by line');
+        $in = collect($d['sections'])->firstWhere('heading', 'Income by line');
         $this->assertSame('400.25', $in['totals'][2]);
         $this->assertContains('Church Rent is over plan by KES 200.50', collect($d['insights'])->pluck('title'));
     }
@@ -106,7 +106,7 @@ class BudgetReportsTest extends TestCase
 
         $d = $this->postJson('/api/reports/preview', $this->body(['report_key' => 'budget.spending']))->assertOk()->json('data');
 
-        $out = collect($d['sections'])->firstWhere('heading', 'Money out');
+        $out = collect($d['sections'])->firstWhere('heading', 'Expenses');
         $this->assertSame(1, $out['row_count']);
         $this->assertSame('Rent', $out['rows'][0][1]);
         $this->assertSame('1,200.50', $out['totals'][7]);
@@ -161,7 +161,7 @@ class BudgetReportsTest extends TestCase
 
         $d = $this->postJson('/api/reports/preview', $this->body(['report_key' => 'budget.lines']))->assertOk()->json('data');
 
-        $out = collect($d['sections'])->firstWhere('heading', 'Money out lines');
+        $out = collect($d['sections'])->firstWhere('heading', 'Expense lines');
         $this->assertSame(['Church Rent', '1,000.00', '1,200.50', '-200.50', '120%', '1', '10 Jan 2026', 'Over by KES 200.50'], $out['rows'][0]);
         $this->assertSame('1 line', collect($d['tiles'])->firstWhere('label', 'Over plan')['value']);
         $this->assertSame(['hbars', 'hbars'], array_column($d['charts'], 'kind'));
@@ -190,7 +190,7 @@ class BudgetReportsTest extends TestCase
         $d = $this->postJson('/api/reports/preview', $this->body(['report_key' => 'budget.compare']))->assertOk()->json('data');
 
         $this->assertSame('January 2026 against December 2025', $d['period_label']);
-        $out = collect($d['sections'])->firstWhere('heading', 'Money out');
+        $out = collect($d['sections'])->firstWhere('heading', 'Expenses');
         $this->assertSame(['Church Rent', '1,000.00', '800.00', '1,000.00', '1,200.50', '400.50', '50%'], $out['rows'][0]);
     }
 
@@ -213,7 +213,7 @@ class BudgetReportsTest extends TestCase
 
         $d = $this->postJson('/api/reports/preview', $this->body(['report_key' => 'budget.line', 'budget_id' => $january->id, 'line_id' => $this->churchLine->id]))->assertOk()->json('data');
         $this->assertSame('Church Rent', $d['title']);
-        $this->assertSame('1,200.50', collect($d['sections'])->firstWhere('heading', 'Money out')['totals'][7]);
+        $this->assertSame('1,200.50', collect($d['sections'])->firstWhere('heading', 'Expenses')['totals'][7]);
 
         $this->postJson('/api/reports/preview', $this->body(['report_key' => 'budget.line', 'budget_id' => $january->id, 'line_id' => $this->dioceseLine->id]))->assertStatus(422);
     }
@@ -244,7 +244,7 @@ class BudgetReportsTest extends TestCase
         $run = ReportRun::where('uuid', $uuid)->firstOrFail();
         $this->assertSame(ReportRun::STATUS_READY, $run->status);
         $path = Storage::disk('local')->path($run->file_path);
-        $sheet = IOFactory::load($path)->getSheetByName('Money out');
+        $sheet = IOFactory::load($path)->getSheetByName('Expenses');
         $this->assertSame(1200.5, $sheet->getCell('H2')->getValue());
         $this->assertSame('#,##0.00', $sheet->getStyle('H2')->getNumberFormat()->getFormatCode());
     }

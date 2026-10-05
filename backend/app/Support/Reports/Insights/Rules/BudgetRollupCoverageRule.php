@@ -32,7 +32,7 @@ final class BudgetRollupCoverageRule implements InsightRule
             $none * 2 >= $places ? Insight::CONCERN : Insight::WATCH,
             ($none === 1 ? "1 {$one} has" : "{$none} {$many} have")." no budget for {$label}",
             implode(', ', $shown).(count($names) > 5 ? ' and '.(count($names) - 5).' more' : '').'.',
-            'Ask them to prepare one, or copy their last budget, so their money in and out can be followed.',
+            'Ask them to prepare one, or copy their last budget, so their income and expenses can be followed.',
         );
     }
 }

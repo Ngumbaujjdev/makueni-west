@@ -63,7 +63,7 @@ $breadcrumbs = [
                     <div class="card-header justify-content-between flex-wrap gap-2">
                         <div>
                             <div class="card-title" id="ownTitle">Month by month</div>
-                            <span class="card-subtitle-text" id="ownSub">The share is worked out on what was received - and sent as money out on its line</span>
+                            <span class="card-subtitle-text" id="ownSub">The share is worked out on what was received - and sent as an expense on its line</span>
                         </div>
                         <div class="d-flex flex-wrap gap-1" id="ownChips"></div>
                     </div>

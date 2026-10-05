@@ -124,13 +124,13 @@ const BudgetsBelow = (function () {
     const rows = d.rows.filter((r) => r.out_planned > 0 || r.out_actual > 0).sort((a, b) => Math.max(b.out_planned, b.out_actual) - Math.max(a.out_planned, a.out_actual)).slice(0, 10);
     const t = d.totals;
     document.getElementById("pvaTitle").textContent = `Spent against plan, by ${words()[0]}`;
-    document.getElementById("pvaSub").textContent = rows.length >= 10 ? `The ten ${many} with the most money out` : `Money out planned and spent, per ${words()[0]}`;
+    document.getElementById("pvaSub").textContent = rows.length >= 10 ? `The ten ${many} with the most expenses` : `Expenses planned and spent, per ${words()[0]}`;
     document.getElementById("pvaChips").innerHTML = `
       <span class="soft-chip soft-primary">Planned ${B.shortMoney(t.out_planned)}</span>
       <span class="soft-chip soft-danger">Spent ${B.shortMoney(t.out_actual)}</span>
       ${t.over ? `<span class="soft-chip soft-warning">${t.over} over plan</span>` : ""}`;
     if (!rows.length) {
-      body.innerHTML = `<div class="list-empty py-5"><span class="list-empty-icon bg-primary text-white"><i class="ri-bar-chart-horizontal-line"></i></span><div class="fw-semibold mt-2">No money out planned for ${B.esc(d.period.label)}</div><div class="fs-12">Once ${many} plan their budgets, you'll see them here.</div></div>`;
+      body.innerHTML = `<div class="list-empty py-5"><span class="list-empty-icon bg-primary text-white"><i class="ri-bar-chart-horizontal-line"></i></span><div class="fw-semibold mt-2">No expenses planned for ${B.esc(d.period.label)}</div><div class="fs-12">Once ${many} plan their budgets, you'll see them here.</div></div>`;
       return;
     }
     body.innerHTML = '<div id="pvaChart"></div>';

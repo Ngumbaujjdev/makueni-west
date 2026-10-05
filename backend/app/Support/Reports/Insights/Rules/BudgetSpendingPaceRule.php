@@ -25,12 +25,12 @@ final class BudgetSpendingPaceRule implements InsightRule
             return new Insight(
                 Insight::WATCH,
                 'Spending is running ahead',
-                round($spent).'% of the money out planned is already spent, with '.round($time).'% of '.$facts->get('period_label').' gone.',
+                round($spent).'% of the expenses planned is already spent, with '.round($time).'% of '.$facts->get('period_label').' gone.',
                 'Hold back on anything that can wait until later in the period.',
             );
         }
         if ($spent > 0 && $gap <= 5) {
-            return new Insight(Insight::GOOD, 'Spending is on track', round($spent).'% of the money out planned is spent, with '.round($time).'% of the period gone.');
+            return new Insight(Insight::GOOD, 'Spending is on track', round($spent).'% of the expenses planned is spent, with '.round($time).'% of the period gone.');
         }
 
         return null;

@@ -81,7 +81,7 @@ $breadcrumbs = [
                             <div class="card-header justify-content-between flex-wrap gap-2">
                                 <div>
                                     <div class="card-title">Where the money goes</div>
-                                    <span class="card-subtitle-text" id="whereSub">This budget's money out, by line</span>
+                                    <span class="card-subtitle-text" id="whereSub">This budget's expenses, by line</span>
                                 </div>
                                 <div id="whereSwitchWrap"></div>
                             </div>
@@ -106,7 +106,7 @@ $breadcrumbs = [
                     <div class="card-header justify-content-between flex-wrap gap-2">
                         <div>
                             <div class="card-title">Month by month</div>
-                            <span class="card-subtitle-text">Money in and out each month, by the date it was recorded - tap a month to see its entries</span>
+                            <span class="card-subtitle-text">Income & Expenses each month, by the date it was recorded - tap a month to see its entries</span>
                         </div>
                         <div class="d-flex flex-wrap gap-1" id="monthsChips"></div>
                     </div>
@@ -142,7 +142,7 @@ $breadcrumbs = [
                                 <div class="card custom-card">
                                     <div class="card-header justify-content-between flex-wrap gap-2">
                                         <div>
-                                            <div class="card-title">Money in</div>
+                                            <div class="card-title">Income</div>
                                             <span class="card-subtitle-text">Planned, and received so far</span>
                                         </div>
                                         <span class="soft-chip soft-success" id="inChip"></span>
@@ -154,7 +154,7 @@ $breadcrumbs = [
                                 <div class="card custom-card">
                                     <div class="card-header justify-content-between flex-wrap gap-2">
                                         <div>
-                                            <div class="card-title">Money out (spending)</div>
+                                            <div class="card-title">Expenses</div>
                                             <span class="card-subtitle-text">Planned, and spent so far</span>
                                         </div>
                                         <span class="soft-chip soft-danger" id="outChip"></span>
@@ -172,7 +172,7 @@ $breadcrumbs = [
                         <div class="card custom-card">
                             <div class="card-header justify-content-between flex-wrap gap-2">
                                 <div>
-                                    <div class="card-title">Money in and out</div>
+                                    <div class="card-title">Income & Expenses</div>
                                     <span class="card-subtitle-text" id="spendingSub">Everything recorded against this budget</span>
                                 </div>
                                 <div class="d-flex flex-wrap gap-1" id="spendingChips"></div>
@@ -185,7 +185,7 @@ $breadcrumbs = [
                             <div class="card-header">
                                 <div>
                                     <div class="card-title">Deductions</div>
-                                    <span class="card-subtitle-text">Shares of money in, worked out for you: due on what came in, and what was sent</span>
+                                    <span class="card-subtitle-text">Shares of income, worked out for you: due on what came in, and what was sent</span>
                                 </div>
                             </div>
                             <div class="card-body p-0" id="budgetDeductions"></div>

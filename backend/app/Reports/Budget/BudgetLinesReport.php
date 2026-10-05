@@ -46,7 +46,7 @@ final class BudgetLinesReport extends BudgetReport
         $t = $d['totals'];
 
         $section = function (array $lines, bool $isIn) use ($activity) {
-            return new ReportSection($isIn ? 'Money in lines' : 'Money out lines', [
+            return new ReportSection($isIn ? 'Income lines' : 'Expense lines', [
                 ReportColumn::text('Line', true),
                 ReportColumn::money('Planned'),
                 ReportColumn::money($isIn ? 'Received' : 'Spent'),
@@ -75,8 +75,8 @@ final class BudgetLinesReport extends BudgetReport
             tiles: [
                 ['label' => 'Lines', 'value' => (string) (count($in) + count($out)), 'tone' => 'primary'],
                 ['label' => 'Over plan', 'value' => count($over).' '.(count($over) === 1 ? 'line' : 'lines'), 'tone' => $over ? 'danger' : 'success'],
-                ['label' => 'Money out used', 'value' => ($t['out_planned'] > 0 ? round($t['out_actual'] / $t['out_planned'] * 100) : 0).'%', 'tone' => 'warning'],
-                ['label' => 'Money in received', 'value' => ($t['in_planned'] > 0 ? round($t['in_actual'] / $t['in_planned'] * 100) : 0).'%', 'tone' => 'success'],
+                ['label' => 'Expenses used', 'value' => ($t['out_planned'] > 0 ? round($t['out_actual'] / $t['out_planned'] * 100) : 0).'%', 'tone' => 'warning'],
+                ['label' => 'Income received', 'value' => ($t['in_planned'] > 0 ? round($t['in_actual'] / $t['in_planned'] * 100) : 0).'%', 'tone' => 'success'],
                 ['label' => 'Spent', 'value' => self::money($t['out_actual']), 'tone' => 'danger'],
             ],
             meta: $this->meta($context, ['Period' => $this->periodLabel($d['period'])]),

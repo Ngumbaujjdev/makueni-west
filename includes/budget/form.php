@@ -54,8 +54,8 @@ $breadcrumbs = [
 // assets/js/pages/budgets/form.js.
 $steps = [
     1 => ['Month or year?', 'What this budget covers'],
-    2 => ['Money in', 'What you expect to receive'],
-    3 => ['Money out', 'What you plan to spend'],
+    2 => ['Income', 'What you expect to receive'],
+    3 => ['Expenses', 'What you plan to spend'],
     4 => ['Check and save', 'Look it over, then save'],
 ];
 ?>
@@ -118,12 +118,12 @@ $steps = [
                                     </div>
                                 </section>
 
-                                <!-- 2 Money in -->
+                                <!-- 2 Income -->
                                 <section class="intake-step" data-step="2" hidden>
                                     <div class="intake-step-head">
                                         <span class="intake-step-num">2</span>
                                         <div class="flex-fill">
-                                            <h5>Money in</h5>
+                                            <h5>Income</h5>
                                             <p>What do you expect to receive? Lines left empty are left out.</p>
                                         </div>
                                         <span class="soft-chip soft-success"><b id="inTotal">KES 0.00</b></span>
@@ -132,12 +132,12 @@ $steps = [
                                     <div class="intake-step-body" id="linesIn"><span class="skel" style="height: 8rem; display: block;"></span></div>
                                 </section>
 
-                                <!-- 3 Money out (spending) -->
+                                <!-- 3 Expenses -->
                                 <section class="intake-step" data-step="3" hidden>
                                     <div class="intake-step-head">
                                         <span class="intake-step-num">3</span>
                                         <div class="flex-fill">
-                                            <h5>Money out (spending)</h5>
+                                            <h5>Expenses</h5>
                                             <p>Salaries, rent, bills and the rest. Deductions such as the diocese share come later, from Budget Settings.</p>
                                         </div>
                                         <span class="soft-chip soft-danger"><b id="outTotal">KES 0.00</b></span>
@@ -193,12 +193,12 @@ $steps = [
                                             <div class="preview-change" id="sumInTile">
                                                 <span class="preview-change-icon bg-success text-white"><i class="ri-arrow-down-circle-line"></i></span>
                                                 <span class="preview-change-value" id="sumIn">KES 0</span>
-                                                <span class="preview-change-label">Money in</span>
+                                                <span class="preview-change-label">Income</span>
                                             </div>
                                             <div class="preview-change" id="sumOutTile">
                                                 <span class="preview-change-icon bg-danger text-white"><i class="ri-arrow-up-circle-line"></i></span>
                                                 <span class="preview-change-value" id="sumOut">KES 0</span>
-                                                <span class="preview-change-label">Money out</span>
+                                                <span class="preview-change-label">Expenses</span>
                                             </div>
                                             <div class="preview-change" id="sumLeftTile">
                                                 <span class="preview-change-icon bg-purple text-white"><i class="ri-scales-3-line"></i></span>
@@ -211,11 +211,11 @@ $steps = [
                                         <div id="previewDeductions"></div>
                                     </div>
                                     <div class="preview-section">
-                                        <div class="preview-section-title">Money in</div>
+                                        <div class="preview-section-title">Income</div>
                                         <div id="previewIn"></div>
                                     </div>
                                     <div class="preview-section">
-                                        <div class="preview-section-title">Money out</div>
+                                        <div class="preview-section-title">Expenses</div>
                                         <div id="previewOut"></div>
                                     </div>
                                     <div class="preview-section">
@@ -227,7 +227,7 @@ $steps = [
                                     <strong><i class="ri-lightbulb-line"></i>Good to know</strong>
                                     <ul>
                                         <li><b>Copy amounts</b> fills every line from the last budget. Change what's different, and Undo if you change your mind.</li>
-                                        <li><b>Money out</b> is what you plan to spend. Deductions like the diocese share are worked out separately.</li>
+                                        <li><b>Expenses</b> is what you plan to spend. Deductions like the diocese share are worked out separately.</li>
                                         <li><b>Save as draft</b> keeps it to finish later. Money can be recorded once you <b>start using</b> it.</li>
                                     </ul>
                                 </div>

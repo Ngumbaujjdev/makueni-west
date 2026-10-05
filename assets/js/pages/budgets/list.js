@@ -5,7 +5,7 @@
  * The year's budget dashboard, in the Demographics look:
  *   - year buttons in the toolbar (kept in the URL);
  *   - four cards with "vs last year" and month-by-month sparklines;
- *   - "Money in and out, month by month" + "Where the money goes";
+ *   - "Income & Expenses, month by month" + "Where the money goes";
  *   - "The year at a glance": a tile per month (or the whole-year budget);
  *   - the searchable table of the year's budgets.
  * ?territory_id= shows a place below, read-only.
@@ -106,7 +106,7 @@ const BudgetsList = (function () {
     UI.renderStatCardsRow("statCardsRow", [
       {
         icon: "ri-arrow-down-circle-line",
-        label: "Money in (planned)",
+        label: "Income (planned)",
         value: B.shortMoney(s.in_planned),
         color: "success",
         delta: B.delta(s.in_planned, prev?.in_planned, vs),
@@ -115,7 +115,7 @@ const BudgetsList = (function () {
       },
       {
         icon: "ri-arrow-up-circle-line",
-        label: "Money out (planned)",
+        label: "Expenses (planned)",
         value: B.shortMoney(s.out_planned),
         color: "danger",
         delta: B.delta(s.out_planned, prev?.out_planned, vs),
@@ -141,48 +141,48 @@ const BudgetsList = (function () {
     ]);
   }
 
-  // ---------------------------------------------------------------- money in and out
+  // ---------------------------------------------------------------- income and expenses
 
   function renderFlow(budgets, months, s) {
     const body = document.getElementById("flowBody");
     const chips = document.getElementById("flowChips");
     const left = s.in_planned - s.out_planned;
     chips.innerHTML = budgets.length
-      ? `<span class="soft-chip soft-success">In ${B.shortMoney(s.in_planned)}</span>
-         <span class="soft-chip soft-danger">Out ${B.shortMoney(s.out_planned)}</span>
+      ? `<span class="soft-chip soft-success">Income ${B.shortMoney(s.in_planned)}</span>
+         <span class="soft-chip soft-danger">Expenses ${B.shortMoney(s.out_planned)}</span>
          <span class="soft-chip soft-${left < 0 ? "danger" : "primary"}">Left ${B.shortMoney(left)}</span>`
       : "";
 
     if (!budgets.length) {
-      body.innerHTML = emptyState("ri-bar-chart-grouped-line", `Nothing planned for ${state.year} yet`, "Once a budget is prepared, its money in and out shows here.");
+      body.innerHTML = emptyState("ri-bar-chart-grouped-line", `Nothing planned for ${state.year} yet`, "Once a budget is prepared, its income and expenses show here.");
       return;
     }
 
     // A whole-year budget can't be split by month - show its split instead.
     if (months.year) {
-      document.getElementById("flowTitle").textContent = `Money in and out, whole of ${state.year}`;
+      document.getElementById("flowTitle").textContent = `Income & Expenses, whole of ${state.year}`;
       document.getElementById("flowSub").textContent = "What the year's budget plans to receive and spend";
       UI.renderCompositionCard("flowBody", {
         total: left,
         totalLabel: "money left, planned for the year",
         format: (v) => B.money(v),
         items: [
-          { label: "Money in", value: s.in_planned, color: "success" },
-          { label: "Money out", value: s.out_planned, color: "danger" },
+          { label: "Income", value: s.in_planned, color: "success" },
+          { label: "Expenses", value: s.out_planned, color: "danger" },
         ],
       });
       return;
     }
 
-    document.getElementById("flowTitle").textContent = "Money in and out, month by month";
+    document.getElementById("flowTitle").textContent = "Income & Expenses, month by month";
     document.getElementById("flowSub").textContent = "What each month's budget plans to receive and spend";
     body.innerHTML = '<div id="flowChart"></div>';
     charts.push(
       UI.renderTrendChart("flowChart", {
         categories: B.MONTHS.map((m) => m.slice(0, 3)),
         series: [
-          { name: "Money in", data: months.byMonth.map((b) => (b ? b.in_planned : 0)) },
-          { name: "Money out", data: months.byMonth.map((b) => (b ? b.out_planned : 0)) },
+          { name: "Income", data: months.byMonth.map((b) => (b ? b.in_planned : 0)) },
+          { name: "Expenses", data: months.byMonth.map((b) => (b ? b.out_planned : 0)) },
         ],
         type: "bar",
         colors: [UI.cssColor("success"), UI.cssColor("danger")],
@@ -196,14 +196,14 @@ const BudgetsList = (function () {
   function renderWhere() {
     const wrap = document.getElementById("whereSwitchWrap");
     if (!wrap.innerHTML) {
-      wrap.innerHTML = UI.renderSegmented("whereSwitch", [{ value: "out", label: "Out" }, { value: "in", label: "In" }], state.whereSide, { ariaLabel: "Money in or out" });
+      wrap.innerHTML = UI.renderSegmented("whereSwitch", [{ value: "out", label: "Expenses" }, { value: "in", label: "Income" }], state.whereSide, { ariaLabel: "Income or expense" });
       UI.wireSegmented("whereSwitch", (value) => {
         state.whereSide = value;
         renderWhere();
       });
     }
     const lines = (state.whereSide === "out" ? state.body.top_out : state.body.top_in) || [];
-    document.getElementById("whereSub").textContent = state.whereSide === "out" ? `The biggest money out lines in ${state.year}` : `Where money in comes from in ${state.year}`;
+    document.getElementById("whereSub").textContent = state.whereSide === "out" ? `The biggest expense lines in ${state.year}` : `Where income comes from in ${state.year}`;
     if (!lines.length) {
       document.getElementById("whereDonut").innerHTML = emptyState("ri-pie-chart-2-line", "Nothing planned yet", "The lines of the year's budgets show here.");
       return;
@@ -212,7 +212,7 @@ const BudgetsList = (function () {
       B.moneyDonut("whereDonut", {
         rows: lines.map((l) => ({ name: l.name, value: l.planned })),
         colors: state.whereSide === "out" ? ["danger", "warning", "purple", "pink", "primary", "secondary"] : ["success", "primary", "purple", "warning", "pink", "secondary"],
-        centerLabel: state.whereSide === "out" ? "Money out" : "Money in",
+        centerLabel: state.whereSide === "out" ? "Expenses" : "Income",
         sort: false,
         limit: 6,
       }),
@@ -261,7 +261,7 @@ const BudgetsList = (function () {
         ${isNow ? '<span class="period-chip-now">This month</span>' : ""}
         <div class="budget-month-top"><span class="fw-semibold">${label}</span>${B.statusPill(b.status)}</div>
         <div class="budget-month-figure ${left < 0 ? "text-danger" : "text-success"}">${B.money(left)}</div>
-        <div class="budget-month-sub">money left · in ${B.shortMoney(b.in_planned)} · out ${B.shortMoney(b.out_planned)}</div>
+        <div class="budget-month-sub">money left · income ${B.shortMoney(b.in_planned)} · expenses ${B.shortMoney(b.out_planned)}</div>
       </a>`;
   }
 

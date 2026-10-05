@@ -27,7 +27,7 @@ final class BudgetDeductionsOwedRule implements InsightRule
             count($owed) === 1
                 ? "{$first['name']}: KES ".number_format($first['due'], 2).' due on the money received, KES '.number_format($first['sent'], 2).' sent so far.'
                 : implode('; ', array_map(fn ($d) => "{$d['name']} KES ".number_format($d['owed'], 2), $owed)).'.',
-            'When it is sent, record it as money out on the '.($first['line'] ?? 'deduction').' line, so the budget shows it as paid.',
+            'When it is sent, record it as an expense on the '.($first['line'] ?? 'deduction').' line, so the budget shows it as paid.',
         );
     }
 }

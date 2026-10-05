@@ -296,7 +296,7 @@ final class BudgetData
         ];
     }
 
-    /** A year: money in and out received/spent each month, with each month's plan. */
+    /** A year: income and expenses received/spent each month, with each month's plan. */
     private function yearTrend(Collection $entries): array
     {
         $months = [];
@@ -315,7 +315,7 @@ final class BudgetData
         return ['kind' => 'months', 'points' => $months];
     }
 
-    /** A month: money out spent so far, day by day, against an even pace through the month. */
+    /** A month: expenses spent so far, day by day, against an even pace through the month. */
     private function monthTrend(Collection $entries, CarbonImmutable $start, CarbonImmutable $end, array $totals): array
     {
         $days = $start->diffInDays($end) + 1;

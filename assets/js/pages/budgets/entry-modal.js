@@ -211,11 +211,11 @@ const BudgetsEntryModal = (function () {
     document.getElementById("entryDirectionWrap").innerHTML = UI.renderSegmented(
       "entryDirection",
       [
-        { value: "in", label: '<i class="ri-arrow-down-circle-line me-1"></i>Money in' },
-        { value: "out", label: '<i class="ri-arrow-up-circle-line me-1"></i>Money out' },
+        { value: "in", label: '<i class="ri-arrow-down-circle-line me-1"></i>Income' },
+        { value: "out", label: '<i class="ri-arrow-up-circle-line me-1"></i>Expenses' },
       ],
       ctx.direction,
-      { ariaLabel: "Money in or out" },
+      { ariaLabel: "Income or expense" },
     );
     UI.wireSegmented("entryDirection", (value) => {
       ctx.direction = value;
@@ -285,12 +285,12 @@ const BudgetsEntryModal = (function () {
     const line = chosenLine();
     document.getElementById("budgetEntryIcon").className = `app-modal-icon bg-${side === "in" ? "success" : "danger"} text-white`;
     document.getElementById("entryPreview").className = `att-entry-preview budget-entry-preview is-${side}`;
-    // The footer sums it up, like the report window: "Money out · Salaries & Wages · KES 1,500.00 · 1 Oct"
+    // The footer sums it up, like the report window: "Expenses · Salaries & Wages · KES 1,500.00 · 1 Oct"
     const day = document.getElementById("entryDate").value;
     document.getElementById("entrySummary").innerHTML = `
       <span class="avatar avatar-xs bg-${side === "in" ? "success" : "danger"} text-white"><i class="${side === "in" ? "ri-arrow-down-line" : "ri-arrow-up-line"}"></i></span>
-      <span><b>Money ${side}</b>${line ? ` · ${B.esc(line.name)}` : ""}${amount ? ` · ${B.money(amount)}` : ""}${day ? ` · ${new Date(`${day}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : ""}</span>`;
-    document.getElementById("entryPreviewWhat").textContent = line ? `Money ${side} · ${line.name}` : `Money ${side}`;
+      <span><b>${side === "in" ? "Income" : "Expense"}</b>${line ? ` · ${B.esc(line.name)}` : ""}${amount ? ` · ${B.money(amount)}` : ""}${day ? ` · ${new Date(`${day}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : ""}</span>`;
+    document.getElementById("entryPreviewWhat").textContent = line ? `${side === "in" ? "Income" : "Expense"} · ${line.name}` : side === "in" ? "Income" : "Expense";
     // Smaller as the number gets longer, so it always fits the panel.
     const shown = B.amount(amount);
     document.getElementById("entryPreviewAmount").textContent = shown;
@@ -323,7 +323,7 @@ const BudgetsEntryModal = (function () {
     note.insertAdjacentHTML("beforeend", shareNote(side, Number(document.getElementById("entryLine").value), amount));
   }
 
-  /** Money in on a line a deduction counts: "10% of this (KES 4,000.00) is the Diocese share". */
+  /** Income on a line a deduction counts: "10% of this (KES 4,000.00) is the Diocese share". */
   function shareNote(side, lineId, amount) {
     if (side !== "in" || !amount) return "";
     return (ctx.deductions || [])
@@ -392,7 +392,7 @@ const BudgetsEntryModal = (function () {
       ctx.lines[side].push({ line_id: res.data.line_id, name: res.data.line, ...res.body.line });
     }
 
-    document.getElementById("entryDoneTitle").textContent = ctx.entry ? "Change saved" : side === "in" ? "Money in recorded" : "Money out recorded";
+    document.getElementById("entryDoneTitle").textContent = ctx.entry ? "Change saved" : side === "in" ? "Income recorded" : "Expense recorded";
     document.getElementById("entryDoneFacts").innerHTML = `
       <span class="soft-chip soft-${side === "in" ? "success" : "danger"}">${B.money(res.data.amount)} ${side === "in" ? "received" : "spent"}</span>
       <span class="soft-chip soft-primary">${B.esc(res.data.line)}</span>

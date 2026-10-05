@@ -3,15 +3,15 @@
  * PAGE - BUDGET OVERVIEW (includes/budget/overview.php, every level)
  * ============================================================================
  * Straight to the point, for a month (default: this month) or a whole year:
- *   - a verdict: on track, spending ahead or over plan, with money in and
+ *   - a verdict: on track, spending ahead or over plan, with income and
  *     out against how much of the period has gone;
- *   - money in received, money out spent, money left, and how far in we are,
+ *   - income received, expenses spent, money left, and how far in we are,
  *     each against the period before;
  *   - how the money moved (a month: spending against an even pace;
  *     a year: received and spent each month);
  *   - what we noticed; plan vs actual for the biggest lines; where the money
  *     received came from; where the money is going, line by line;
- *   - the latest money in and out, and "Record money".
+ *   - the latest income and expenses, and "Record money".
  * ?territory_id= shows a place below, read-only.
  * ============================================================================
  */
@@ -186,8 +186,8 @@ const BudgetsOverview = (function () {
         </div>`;
     };
     document.getElementById("heroBars").innerHTML = `
-      ${bar("Money in", t.in_actual, t.in_planned, "success", "received")}
-      ${bar("Money out", t.out_actual, t.out_planned, "primary", "spent")}
+      ${bar("Income", t.in_actual, t.in_planned, "success", "received")}
+      ${bar("Expenses", t.out_actual, t.out_planned, "primary", "spent")}
       ${time !== null ? `<div class="budget-hero-legend"><i class="budget-hero-today-key"></i>Today · ${roundPct(time)}% of ${B.esc(label)} gone</div>` : ""}`;
 
     const left = document.getElementById("heroLeft");
@@ -205,7 +205,7 @@ const BudgetsOverview = (function () {
       ring.innerHTML = '<span class="budget-hero-ring-empty"><i class="ri-donut-chart-line"></i></span>';
       return;
     }
-    ring.innerHTML = '<div class="budget-hero-ring-chart"></div><div class="budget-hero-ring-cap">of money in spent</div>';
+    ring.innerHTML = '<div class="budget-hero-ring-chart"></div><div class="budget-hero-ring-cap">of income spent</div>';
     const spentPct = t.in_actual > 0 ? Math.round(pctOf(t.out_actual, t.in_actual)) : 100;
     const chart = new ApexCharts(ring.querySelector(".budget-hero-ring-chart"), {
       chart: { type: "donut", height: 160, width: 160, animations: { enabled: !document.documentElement.classList.contains("app-reduce-motion") } },
@@ -243,8 +243,8 @@ const BudgetsOverview = (function () {
     const pct = (a, b) => (b > 0 ? `${Math.round((a / b) * 100)}% of ${B.shortMoney(b)} planned` : "Nothing planned");
     const spark = (key) => ({ labels: d.spark.labels, data: d.spark[key] });
     const cards = [
-      { icon: "ri-arrow-down-circle-line", label: "Money in (received)", value: B.shortMoney(t.in_actual), color: "success", delta: p.entries ? B.delta(t.in_actual, p.in_actual, vs) : null, series: spark("in"), sub: pct(t.in_actual, t.in_planned) },
-      { icon: "ri-arrow-up-circle-line", label: "Money out (spent)", value: B.shortMoney(t.out_actual), color: "danger", delta: p.entries ? B.delta(t.out_actual, p.out_actual, vs) : null, series: spark("out"), sub: pct(t.out_actual, t.out_planned) },
+      { icon: "ri-arrow-down-circle-line", label: "Income (received)", value: B.shortMoney(t.in_actual), color: "success", delta: p.entries ? B.delta(t.in_actual, p.in_actual, vs) : null, series: spark("in"), sub: pct(t.in_actual, t.in_planned) },
+      { icon: "ri-arrow-up-circle-line", label: "Expenses (spent)", value: B.shortMoney(t.out_actual), color: "danger", delta: p.entries ? B.delta(t.out_actual, p.out_actual, vs) : null, series: spark("out"), sub: pct(t.out_actual, t.out_planned) },
       {
         icon: "ri-scales-3-line",
         label: "Money left",
@@ -269,8 +269,8 @@ const BudgetsOverview = (function () {
   function renderTrend() {
     const t = d.totals;
     document.getElementById("trendChips").innerHTML = `
-      <span class="soft-chip soft-success">In ${B.shortMoney(t.in_actual)}</span>
-      <span class="soft-chip soft-danger">Out ${B.shortMoney(t.out_actual)}</span>
+      <span class="soft-chip soft-success">Income ${B.shortMoney(t.in_actual)}</span>
+      <span class="soft-chip soft-danger">Expenses ${B.shortMoney(t.out_actual)}</span>
       <span class="soft-chip soft-${t.left_actual < 0 ? "danger" : "primary"}">Left ${B.shortMoney(t.left_actual)}</span>`;
     const body = document.getElementById("trendBody");
     const points = d.trend.points;
@@ -282,7 +282,7 @@ const BudgetsOverview = (function () {
     body.innerHTML = '<div id="trendChart"></div>';
     if (d.trend.kind === "days") {
       document.getElementById("trendTitle").textContent = "Spending through the month";
-      document.getElementById("trendSub").textContent = "Money out spent so far, against spending the plan evenly";
+      document.getElementById("trendSub").textContent = "Expenses so far, against spending the plan evenly";
       charts.push(
         UI.renderTrendChart("trendChart", {
           categories: points.map((x) => x.label),
@@ -299,7 +299,7 @@ const BudgetsOverview = (function () {
         }),
       );
     } else {
-      document.getElementById("trendTitle").textContent = "Money in and out, month by month";
+      document.getElementById("trendTitle").textContent = "Income & Expenses, month by month";
       document.getElementById("trendSub").textContent = "Received and spent each month";
       charts.push(
         UI.renderTrendChart("trendChart", {
@@ -321,7 +321,7 @@ const BudgetsOverview = (function () {
   function renderPlanVsActual() {
     const wrap = document.getElementById("pvaSwitchWrap");
     if (!wrap.innerHTML) {
-      wrap.innerHTML = UI.renderSegmented("pvaSwitch", [{ value: "out", label: "Out" }, { value: "in", label: "In" }], pvaSide, { ariaLabel: "Money in or out" });
+      wrap.innerHTML = UI.renderSegmented("pvaSwitch", [{ value: "out", label: "Expenses" }, { value: "in", label: "Income" }], pvaSide, { ariaLabel: "Income or expense" });
       UI.wireSegmented("pvaSwitch", (value) => {
         pvaSide = value;
         renderPlanVsActual();
@@ -337,7 +337,7 @@ const BudgetsOverview = (function () {
       charts = charts.filter((c) => c !== old);
     }
     if (!lines.length) {
-      body.innerHTML = `<div class="list-empty py-5"><span class="list-empty-icon bg-primary text-white"><i class="ri-bar-chart-horizontal-line"></i></span><div class="fw-semibold mt-2">No money ${pvaSide} planned for ${B.esc(d.period.label)}</div></div>`;
+      body.innerHTML = `<div class="list-empty py-5"><span class="list-empty-icon bg-primary text-white"><i class="ri-bar-chart-horizontal-line"></i></span><div class="fw-semibold mt-2">No ${pvaSide === "in" ? "income" : "expenses"} planned for ${B.esc(d.period.label)}</div></div>`;
       return;
     }
     body.innerHTML = '<div id="pvaChart"></div>';
@@ -368,7 +368,7 @@ const BudgetsOverview = (function () {
     }
   }
 
-  // ---------------------------------------------------------------- money in by source
+  // ---------------------------------------------------------------- income by source
 
   function renderSources() {
     const el = document.getElementById("sourceDonut");
@@ -378,7 +378,7 @@ const BudgetsOverview = (function () {
     const rows = (useActual ? received : lines.filter((l) => l.planned > 0)).map((l) => ({ name: l.name, value: useActual ? l.actual : l.planned })).sort((a, b) => b.value - a.value);
     document.getElementById("sourceSub").textContent = useActual ? "Where the money received came from" : "Nothing received yet - this is what's planned";
     if (!rows.length) {
-      el.innerHTML = `<div class="list-empty py-5"><span class="list-empty-icon bg-success text-white"><i class="ri-pie-chart-line"></i></span><div class="fw-semibold mt-2">No money in for ${B.esc(d.period.label)}</div><div class="fs-12">Plan or record money in to see where it comes from.</div></div>`;
+      el.innerHTML = `<div class="list-empty py-5"><span class="list-empty-icon bg-success text-white"><i class="ri-pie-chart-line"></i></span><div class="fw-semibold mt-2">No income for ${B.esc(d.period.label)}</div><div class="fs-12">Plan or record income to see where it comes from.</div></div>`;
       return;
     }
     charts.push(
@@ -424,7 +424,7 @@ const BudgetsOverview = (function () {
   function renderSideSwitch() {
     const wrap = document.getElementById("sideSwitchWrap");
     if (wrap.innerHTML) return;
-    wrap.innerHTML = UI.renderSegmented("sideSwitch", [{ value: "out", label: "Out" }, { value: "in", label: "In" }], side, { ariaLabel: "Money in or out" });
+    wrap.innerHTML = UI.renderSegmented("sideSwitch", [{ value: "out", label: "Expenses" }, { value: "in", label: "Income" }], side, { ariaLabel: "Income or expense" });
     UI.wireSegmented("sideSwitch", (value) => {
       side = value;
       showAllLines = false;
@@ -439,7 +439,7 @@ const BudgetsOverview = (function () {
     const lines = d.lines[side] || [];
     document.getElementById("linesSub").textContent = isIn ? "Each line: planned, and received so far" : "Each line: planned, and spent so far";
     if (!lines.length) {
-      el.innerHTML = `<div class="list-empty py-5"><span class="list-empty-icon bg-${isIn ? "success" : "danger"} text-white"><i class="ri-list-check-2"></i></span><div class="fw-semibold mt-2">No money ${side} planned or recorded for ${B.esc(d.period.label)}</div></div>`;
+      el.innerHTML = `<div class="list-empty py-5"><span class="list-empty-icon bg-${isIn ? "success" : "danger"} text-white"><i class="ri-list-check-2"></i></span><div class="fw-semibold mt-2">No ${side === "in" ? "income" : "expenses"} planned or recorded for ${B.esc(d.period.label)}</div></div>`;
       return;
     }
     const verb = isIn ? "Received" : "Spent";

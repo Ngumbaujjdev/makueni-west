@@ -69,7 +69,7 @@ final class BudgetCompareReport extends BudgetReport
             })->sortByDesc(fn ($r) => max($r[3], $r[4], $r[1], $r[2]))->values()->all();
             $verb = $side === 'in' ? 'received' : 'spent';
 
-            return new ReportSection($side === 'in' ? 'Money in' : 'Money out', [
+            return new ReportSection($side === 'in' ? 'Income' : 'Expenses', [
                 ReportColumn::text('Line', true),
                 ReportColumn::money("Planned, {$prevLabel}"),
                 ReportColumn::money(ucfirst($verb).", {$prevLabel}"),
@@ -96,7 +96,7 @@ final class BudgetCompareReport extends BudgetReport
                 ['label' => 'Spent before', 'value' => self::money($p['out_actual']), 'tone' => 'muted'],
                 ['label' => 'Left, change', 'value' => self::money($t['left_actual'] - $p['left_actual']), 'tone' => $t['left_actual'] - $p['left_actual'] < 0 ? 'danger' : 'purple'],
             ],
-            meta: $this->meta($context, ['This period' => $label, 'Compared with' => $prevLabel, 'Money in' => $change($t['in_actual'], $p['in_actual']), 'Money out' => $change($t['out_actual'], $p['out_actual'])]),
+            meta: $this->meta($context, ['This period' => $label, 'Compared with' => $prevLabel, 'Income' => $change($t['in_actual'], $p['in_actual']), 'Expenses' => $change($t['out_actual'], $p['out_actual'])]),
             sections: [$section('in'), $section('out')],
             charts: [ReportChart::bars("{$label} against {$prevLabel}", ['Planned in', 'Received', 'Planned out', 'Spent'], [
                 ['name' => $prevLabel, 'tone' => 'muted', 'soft' => true, 'values' => [$p['in_planned'], $p['in_actual'], $p['out_planned'], $p['out_actual']]],

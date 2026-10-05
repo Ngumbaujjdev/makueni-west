@@ -11,9 +11,9 @@ use App\Models\Territory;
 use Illuminate\Support\Collection;
 
 /**
- * Deductions: a share sent up out of money in, worked out for you
+ * Deductions: a share sent up out of income, worked out for you
  * (docs/specs/budgets-spec.md, phase 4) - e.g. "Diocese share: 10% of money
- * in, for every church". Each is paid through a money-out line, so what was
+ * in, for every church". Each is paid through a expense line, so what was
  * sent is just money recorded on that line and nothing is counted twice.
  *
  * Who it applies to: the place that set it (own, all) and, when it says so,
@@ -151,7 +151,7 @@ final class Deductions
                 'id' => $d?->id,
                 'name' => $d?->name ?? 'Deduction',
                 'rule' => $this->ruleText($s->rate_type, (float) $s->rate_value, $d?->basis ?? 'all', $budget->period_month === null, $d?->basis_line_ids ?? []),
-                // What it's worked out on: all money in, or these money-in lines.
+                // What it's worked out on: all income, or these income lines.
                 'basis' => $d?->basis ?? 'all',
                 'basis_line_ids' => array_map('intval', $d?->basis_line_ids ?? []),
                 'line_id' => $d?->budget_line_id,
@@ -182,7 +182,7 @@ final class Deductions
     {
         if ($type === 'percentage') {
             $names = $basis === 'lines' ? $this->lineNames($lineIds) : [];
-            $on = $names === [] ? ($basis === 'lines' ? 'some money in' : 'all money') : $this->listOf($names);
+            $on = $names === [] ? ($basis === 'lines' ? 'some income' : 'all money') : $this->listOf($names);
 
             return rtrim(rtrim(number_format($value, 2), '0'), '.')."% of {$on} received";
         }
