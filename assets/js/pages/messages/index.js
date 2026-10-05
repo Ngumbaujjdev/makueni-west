@@ -458,18 +458,28 @@
     document.body.insertAdjacentHTML(
       "beforeend",
       `<div class="modal fade app-modal" id="tplModal" tabindex="-1" aria-labelledby="tplTitle">
-        <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-sm-down"><div class="modal-content">
+        <div class="modal-dialog modal-dialog-centered modal-xl modal-fullscreen-sm-down"><div class="modal-content">
           <div class="modal-header">
             <span class="app-modal-icon bg-purple text-white"><i class="ri-bookmark-line"></i></span>
             <div class="flex-fill"><h5 class="modal-title" id="tplTitle">${t ? "Edit saved message" : "New saved message"}</h5><div class="app-modal-subtitle">Use it again in one click when you send</div></div>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            <div class="row g-3">
-              <div class="col-md-7"><label class="form-label" for="tName">Name</label><input class="form-control" id="tName" maxlength="80" value="${M.esc(t?.name || "")}" placeholder="e.g. Report reminder"></div>
-              <div class="col-md-5"><label class="form-label" for="tChannel">Usually sent by</label><select class="form-select" id="tChannel">${Object.entries(M.CHANNELS).map(([k, c]) => `<option value="${k}"${(t?.channel || "sms") === k ? " selected" : ""}>${c.label}</option>`).join("")}</select></div>
-              <div class="col-12"><label class="form-label" for="tSubject">Subject (email and Inbox)</label><input class="form-control" id="tSubject" maxlength="120" value="${M.esc(t?.subject || "")}"></div>
-              <div class="col-12"><label class="form-label" for="tBody">Message</label><textarea class="form-control" id="tBody" rows="6" maxlength="10000" placeholder="Dear {name}, ...">${M.esc(t?.body || "")}</textarea><div class="form-text" id="tCount"></div></div>
+            <div class="row g-4">
+              <div class="col-lg-7"><div class="row g-3">
+                <div class="col-md-7"><label class="form-label" for="tName">Name</label><input class="form-control" id="tName" maxlength="80" value="${M.esc(t?.name || "")}" placeholder="e.g. Report reminder"></div>
+                <div class="col-md-5"><label class="form-label" for="tChannel">Usually sent by</label><select class="form-select" id="tChannel">${Object.entries(M.CHANNELS).map(([k, c]) => `<option value="${k}"${(t?.channel || "sms") === k ? " selected" : ""}>${c.label}</option>`).join("")}</select></div>
+                <div class="col-12"><label class="form-label" for="tSubject">Subject (email and Inbox)</label><input class="form-control" id="tSubject" maxlength="120" value="${M.esc(t?.subject || "")}"></div>
+                <div class="col-12"><label class="form-label" for="tBody">Message</label><textarea class="form-control" id="tBody" rows="7" maxlength="10000" placeholder="Dear {name}, ...">${M.esc(t?.body || "")}</textarea>
+                  <div class="d-flex flex-wrap gap-1 mt-2">${[["{name}", "Their name"], ["{place}", "Their place"], ["{sender}", "Who it's from"]].map(([v, l]) => `<button type="button" class="btn btn-light border btn-sm py-0 px-2 fs-11" data-token="${v}" title="${v}">${l}</button>`).join("")}</div>
+                </div>
+              </div></div>
+              <!-- v1-events' template writer: the message as it lands on a phone -->
+              <div class="col-lg-5">
+                <div class="pb-section-title">On a phone</div>
+                <div class="nw-phone"><div class="nw-phone-from">${M.esc(CTX.place?.name || "")}</div><div class="nw-bubble" id="tBubble"></div></div>
+                <div class="nw-seg" id="tCount"></div>
+              </div>
             </div>
           </div>
           <div class="modal-footer">
@@ -484,10 +494,23 @@
     const modal = new bootstrap.Modal(el);
     UI.enhanceSelect("tChannel", { search: false, dropdownParent: window.jQuery(el) });
     const count = () => {
-      const p = M.smsParts($("tBody").value);
-      $("tCount").textContent = `${p.characters} characters · ${p.parts} SMS${p.unicode ? " (special characters make SMS shorter)" : ""}`;
+      const text = ($("tBody").value || "Your message shows here.").replaceAll("{name}", "Stephen").replaceAll("{place}", CTX.place?.name || "").replaceAll("{sender}", CTX.place?.name || "");
+      const p = M.smsParts(text);
+      $("tBubble").textContent = text;
+      $("tCount").className = `nw-seg${p.parts > 1 ? " is-over" : ""}`;
+      $("tCount").innerHTML = `<b>${p.characters}</b> characters · <b>${p.parts}</b> ${p.parts === 1 ? "text" : "texts"}${p.unicode ? " (special characters make texts shorter)" : ""}`;
     };
     $("tBody").addEventListener("input", count);
+    el.querySelectorAll("[data-token]").forEach((b) =>
+      b.addEventListener("click", () => {
+        const f = $("tBody");
+        const [a, z] = [f.selectionStart ?? f.value.length, f.selectionEnd ?? f.value.length];
+        f.value = f.value.slice(0, a) + b.dataset.token + f.value.slice(z);
+        f.focus();
+        f.selectionStart = f.selectionEnd = a + b.dataset.token.length;
+        count();
+      }),
+    );
     count();
     const reload = async (keepId) => {
       const res = await MessagesAPI.templates();

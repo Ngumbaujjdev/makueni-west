@@ -37093,6 +37093,89 @@ a.mr-tile:hover {
     max-height: calc(100vh - 22rem - var(--secondary-nav-h, 0px));
   }
 }
+/* --------------------------------------------------------------------------
+   Send a message: v1-events' "Send campaign" composer (its campaign modal's
+   pb-* layout and its template writer's phone preview), as a page card.
+   Copied as they are, with v1's --tuqio-* colours swapped for ours and no
+   gradients (its progress bar and certificate box had them).
+   -------------------------------------------------------------------------- */
+.pb-composer { overflow: hidden; }
+.pb-compose { padding: 1.5rem; }
+.pb-aside { background: rgb(var(--light-rgb)); border-left: 1px solid var(--input-border); padding: 1.5rem; }
+@media (max-width: 991.98px) { .pb-aside { border-left: 0; border-top: 1px solid var(--input-border); } }
+.pb-section + .pb-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed var(--input-border); }
+.pb-section-title { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: .75rem; }
+.pb-sub { font-size: 12px; font-weight: 600; color: var(--default-text-color); margin-bottom: .4rem; }
+
+/* Channel cards (four of ours, where v1 has three) */
+.pb-channels { display: grid; grid-template-columns: repeat(4, 1fr); gap: .6rem; }
+.pb-channel { position: relative; margin: 0; }
+.pb-channel input { position: absolute; opacity: 0; pointer-events: none; }
+.pb-channel .pb-channel-body {
+  display: flex; align-items: center; gap: .6rem; padding: .7rem .8rem; cursor: pointer; height: 100%;
+  border: 1.5px solid var(--input-border); border-radius: 10px; background: var(--custom-white); transition: all .15s;
+}
+.pb-channel .pb-channel-body i { font-size: 17px; color: var(--text-muted); }
+.pb-channel input:checked + .pb-channel-body { border-color: var(--primary-color); background: var(--primary01); box-shadow: 0 0 0 3px rgba(var(--primary-rgb), .06); }
+.pb-channel input:checked + .pb-channel-body i { color: var(--primary-color); }
+.pb-channel input:focus-visible + .pb-channel-body { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+@media (max-width: 1199.98px) { .pb-channels { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 575.98px) { .pb-channels { grid-template-columns: 1fr; } }
+
+/* Template chips - also our role chips */
+.pb-tpl-chip {
+  border: 1px solid var(--input-border); background: var(--custom-white); color: var(--default-text-color); border-radius: 20px;
+  font-size: 11.5px; padding: .2rem .7rem; transition: all .12s;
+}
+.pb-tpl-chip b { font-weight: 700; margin-left: .2rem; }
+.pb-tpl-chip:hover { border-color: var(--primary-color); color: var(--primary-color); }
+.pb-tpl-chip.active { background: var(--primary-color); border-color: var(--primary-color); color: #fff; }
+.pb-tpl-scroll { max-height: 150px; overflow-y: auto; }
+
+/* Segmented choice (v1's two options; any number here) */
+.pb-segment { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--gray-3); border-radius: 10px; padding: 3px; }
+.pb-segment input { position: absolute; opacity: 0; pointer-events: none; }
+.pb-segment label {
+  margin: 0; text-align: center; padding: .45rem .5rem; border-radius: 8px; cursor: pointer;
+  font-size: 12.5px; font-weight: 600; color: var(--default-text-color); transition: all .15s;
+}
+.pb-segment input:checked + label { background: var(--custom-white); color: var(--primary-color); box-shadow: 0 1px 3px rgba(0, 0, 0, .08); }
+.pb-segment input:focus-visible + label { outline: 2px solid var(--primary-color); outline-offset: 1px; }
+
+/* Live counter */
+.pb-counter { background: var(--custom-white); border: 1px solid var(--input-border); border-radius: 12px; padding: 1rem; }
+.pb-counter-num { font-size: 26px; font-weight: 800; line-height: 1; color: var(--primary-color); }
+.pb-counter-num.is-sms { color: rgb(var(--success-rgb)); }
+.pb-counter-num.is-email { color: rgb(var(--purple-rgb)); }
+.pb-note { font-size: 11.5px; display: flex; gap: .4rem; align-items: flex-start; margin-top: .45rem; }
+.pb-footer-link { font-size: 12.5px; color: var(--default-text-color); text-decoration: none; }
+.pb-footer-link:hover { color: var(--primary-color); }
+
+/* Review / sending / done / error window */
+.pb-confirm-icon { width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #fff; }
+.pb-confirm-icon-navy { background: var(--primary-color); }
+.pb-confirm-icon-red { background: rgb(var(--danger-rgb)); }
+.pb-confirm-icon-green { background: rgb(var(--success-rgb)); }
+.pb-summary { border: 1px solid var(--input-border); border-radius: 10px; overflow: hidden; }
+.pb-summary-row { display: flex; justify-content: space-between; gap: 1rem; padding: .55rem .9rem; font-size: 13px; }
+.pb-summary-row > span:last-child { font-weight: 600; text-align: end; }
+.pb-summary-row + .pb-summary-row { border-top: 1px solid var(--input-border); }
+.pb-progress { height: 10px; border-radius: 10px; background: rgb(var(--light-rgb)); }
+.pb-progress .progress-bar { background: var(--primary-color); transition: width .5s ease; }
+.pb-result-tile { background: rgb(var(--light-rgb)); border-radius: 10px; padding: .75rem; text-align: center; font-size: 12px; }
+.pb-result-tile strong { display: block; font-size: 20px; line-height: 1.1; }
+
+/* A text message as it lands on a handset (v1's template writer) */
+.nw-phone { max-width: 260px; margin: 0 auto; padding: 1rem .8rem; border: 1px solid var(--input-border); border-radius: 22px; background: var(--custom-white); }
+.nw-phone-from { text-align: center; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: .5rem; }
+.nw-bubble {
+  padding: .6rem .8rem; border-radius: 16px 16px 16px 4px; background: rgb(var(--light-rgb)); border: 1px solid var(--input-border);
+  font-size: 12.5px; line-height: 1.5; color: var(--default-text-color); white-space: pre-wrap; word-break: break-word;
+}
+.nw-seg { margin-top: .6rem; text-align: center; font-size: 11.5px; color: var(--text-muted); }
+.nw-seg b { color: var(--default-text-color); }
+.nw-seg.is-over b { color: rgb(var(--warning-rgb)); }
+
 .msg-list {
   max-height: 70vh;
   margin: 0;
