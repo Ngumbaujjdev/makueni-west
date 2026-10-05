@@ -117,12 +117,12 @@ class SettingsTeamTest extends TestCase
         $this->assertStringNotContainsString($creds['temporary_password'], $list);
         $this->assertStringNotContainsString($creds['employee_code'], $list, 'the code alone signs in, so it stays out of the list');
 
-        // The new person signs in with their code and the temporary password, or their code and PIN.
+        // The new person signs in with their code and the temporary password, or their code alone.
         $this->app['auth']->forgetGuards();
         $this->postJson('/api/auth/login', ['identifier' => $creds['employee_code'], 'password' => $creds['temporary_password']])
             ->assertOk()->assertJsonPath('success', true);
         $this->assertMatchesRegularExpression('/^\d{4}$/', $creds['pin']);
-        $this->postJson('/api/auth/login-code', ['employee_code' => $creds['employee_code'], 'pin' => $creds['pin']])
+        $this->postJson('/api/auth/login-code', ['employee_code' => $creds['employee_code']])
             ->assertOk()->assertJsonPath('success', true);
         $this->assertDatabaseHas('audits', ['event' => 'settings.team', 'auditable_id' => $this->church->id]);
     }
