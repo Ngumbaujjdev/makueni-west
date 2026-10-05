@@ -173,17 +173,7 @@ const CalendarPage = (function () {
       },
       eventClick: (arg) => {
         arg.jsEvent.preventDefault();
-        const o = arg.event.extendedProps.o;
-        // Events, sessions, services and due dates live on their own pages.
-        if (o.source && o.source !== "calendar" && o.url) {
-          window.location.href = `${ctx.siteUrl || ""}${o.url}`;
-          return;
-        }
-        CalendarEventModal.details(o, {
-          kinds: info.kinds,
-          onEdit: () => CalendarEventModal.form(CalendarEventModal.eventFromOccurrence(o), { kinds: info.kinds, level: ctx.level, cci: o.layer === "cci", onSaved: changed }),
-          onDelete: changed,
-        });
+        openItem(arg.event.extendedProps.o);
       },
       dateClick: (arg) => {
         if (!info.can.manage) return;
@@ -192,6 +182,19 @@ const CalendarPage = (function () {
       datesSet: syncUrl,
     });
     calendar.render();
+  }
+
+  /** Any item - grid, Coming up or Due soon - opens a window first. */
+  function openItem(o) {
+    if (o.source && o.source !== "calendar") {
+      CalendarEventModal.preview(o, { siteUrl: ctx.siteUrl || "", colour: colourOf(o) });
+      return;
+    }
+    CalendarEventModal.details(o, {
+      kinds: info.kinds,
+      onEdit: () => CalendarEventModal.form(CalendarEventModal.eventFromOccurrence(o), { kinds: info.kinds, level: ctx.level, cci: o.layer === "cci", onSaved: changed }),
+      onDelete: changed,
+    });
   }
 
   async function reloadStats() {
@@ -224,10 +227,10 @@ const CalendarPage = (function () {
       <span class="avatar avatar-sm avatar-rounded bg-${colour} ${colour === "secondary" ? "text-dark" : "text-white"} flex-shrink-0"><i class="${CalendarMeta.KIND_ICONS[o.kind] || src.icon}"></i></span>
       <span class="flex-fill" style="min-width:0"><strong class="d-block text-break">${esc(o.title)}</strong><small>${dayLabel(o.start)}${time}${o.description && o.source === "due" ? ` · ${esc(o.description)}` : ""}</small></span>
       ${tag}`;
-    return o.url && o.source !== "calendar"
-      ? `<a class="cal-side-item" href="${ctx.siteUrl || ""}${o.url}">${inner}</a>`
-      : `<div class="cal-side-item">${inner}</div>`;
+    sideOccs.push(o);
+    return `<button type="button" class="cal-side-item" data-side="${sideOccs.length - 1}">${inner}</button>`;
   }
+  let sideOccs = [];
 
   async function loadSide() {
     const today = new Date();
@@ -245,6 +248,7 @@ const CalendarPage = (function () {
       due.innerHTML = coming.innerHTML = `<p class="mb-0 fw-semibold">${esc(res.message)}</p>`;
       return;
     }
+    sideOccs = [];
     const t = isoDay(today);
     const w = isoDay(week);
     const dues = res.data
@@ -259,6 +263,12 @@ const CalendarPage = (function () {
     coming.innerHTML = next.length
       ? `<div class="cal-side">${next.map(sideItem).join("")}</div>`
       : `<div class="cal-side-empty"><p class="mb-0 fw-semibold">Nothing in the next 7 days.</p></div>`;
+    [due, coming].forEach((box) => {
+      box.onclick = (ev) => {
+        const btn = ev.target.closest("[data-side]");
+        if (btn) openItem(sideOccs[Number(btn.dataset.side)]);
+      };
+    });
   }
 
   async function downloadIcs() {

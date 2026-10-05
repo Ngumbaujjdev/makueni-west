@@ -51,7 +51,12 @@ const AttendanceRecord = (function () {
       return;
     }
     d = res.data;
-    render();
+    // One part failing (a chart, say) mustn't leave the rest of the page blank.
+    try {
+      render();
+    } catch (e) {
+      console.error(e);
+    }
     loadHistory();
   }
 
@@ -260,8 +265,13 @@ const AttendanceRecord = (function () {
 
   async function loadHistory() {
     const el = document.getElementById("recordHistory");
-    const res = await DemographicsAPIHandler.getAttendanceAudits(id);
-    const audits = res.success ? res.data || [] : [];
+    let audits = [];
+    try {
+      const res = await DemographicsAPIHandler.getAttendanceAudits(id);
+      audits = res.success ? res.data || [] : [];
+    } catch (e) {
+      console.error(e);
+    }
     const created = { event: "created", user: d.recorded_by, created_at: d.record.created_at, changes: [] };
     const items = audits.some((a) => a.event === "created") ? audits : [...audits, created];
     el.innerHTML = `<ul class="record-history">${items

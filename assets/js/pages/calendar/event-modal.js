@@ -150,6 +150,47 @@ const CalendarEventModal = (function () {
     });
   }
 
+  /** Where a church-life item's button leads, worded for what you'll do there. */
+  function actionFor(o) {
+    const url = o.url || "";
+    if (o.source === "events") return { label: "Open the event", icon: "ri-calendar-check-line" };
+    if (o.source === "sessions") return { label: "Open the initiative", icon: "ri-seedling-line" };
+    if (o.source === "services") return { label: "See service times", icon: "ri-time-line" };
+    if (url.includes("monthly-reports")) return { label: o.status === "late" ? "Write it now" : "Open the report", icon: "ri-file-text-line" };
+    if (url.includes("contributions")) return { label: "Record what was sent", icon: "ri-hand-coin-line" };
+    if (url.includes("budget")) return { label: "Prepare the budget", icon: "ri-wallet-3-line" };
+    return { label: "Open", icon: "ri-arrow-right-line" };
+  }
+
+  /**
+   * Events, initiative sessions, services and due dates: a preview first,
+   * then one button to the page where it's handled (they used to jump
+   * straight there, so a click on the calendar seemed to do nothing).
+   */
+  function preview(o, { siteUrl = "", colour = "primary" } = {}) {
+    const src = CalendarMeta.SOURCES[o.source] || CalendarMeta.SOURCES.calendar;
+    const action = actionFor(o);
+    const facts = [
+      ["When", whenText(o)],
+      ["What", o.source === "due" ? "Due date" : src.label.replace(/s$/, "")],
+      ...(o.location ? [["Where", o.location]] : []),
+      ...(o.owner?.name ? [["From", o.owner.name]] : []),
+      ...(o.status === "late" ? [["Status", "Late"]] : o.status === "draft" ? [["Status", "Draft"]] : []),
+    ];
+    open({
+      icon: CalendarMeta.KIND_ICONS[o.kind] || src.icon,
+      colour,
+      title: o.title,
+      sub: `<span class="badge bg-${colour} ${textOn(colour)}">${esc(src.label)}</span>${o.status === "late" ? ' <span class="badge bg-danger">Late</span>' : ""}`,
+      body: `
+        <div class="cal-facts">${facts.map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("")}</div>
+        ${o.description ? `<p class="mt-3 mb-0 cal-description">${esc(o.description)}</p>` : ""}`,
+      foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Close</button>${
+        o.url ? `<a class="btn btn-primary" href="${esc(siteUrl + o.url)}"><i class="${action.icon} me-1"></i>${esc(action.label)}</a>` : ""
+      }`,
+    });
+  }
+
   function panel(icon, colour, title, body) {
     return `
       <section class="cal-panel">
@@ -262,7 +303,7 @@ const CalendarEventModal = (function () {
     return { id: o.event_id, title: o.title, kind: o.kind, description: o.description, location: o.location, repeats: o.repeats, all_day: o.all_day, shared_below: o.shared_below, ...(o.base || {}) };
   }
 
-  return { details, form, eventFromOccurrence, whenText, esc };
+  return { details, preview, form, eventFromOccurrence, whenText, esc };
 })();
 
 window.CalendarMeta = CalendarMeta;

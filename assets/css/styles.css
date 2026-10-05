@@ -37276,3 +37276,15 @@ a.mr-tile:hover {
 #sundayTable {
   width: 100% !important;
 }
+
+/* Calendar side column: each row is a button that opens the item's window. */
+button.cal-side-item {
+  width: 100%;
+  border: 0;
+  background: none;
+  text-align: start;
+}
+button.cal-side-item:hover,
+button.cal-side-item:focus-visible {
+  background: rgba(var(--primary-rgb), 0.05);
+}

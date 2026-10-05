@@ -117,7 +117,7 @@ $breadcrumbs = [
                                         <span class="card-subtitle-text">With the same gathering before it</span>
                                     </div>
                                 </div>
-                                <div class="card-body" id="recordCompare"></div>
+                                <div class="card-body" id="recordCompare"><div class="placeholder-glow"><span class="placeholder col-12 rounded mb-2" style="height:2.4rem"></span><span class="placeholder col-12 rounded mb-2" style="height:2.4rem"></span><span class="placeholder col-8 rounded" style="height:2.4rem"></span></div></div>
                             </div>
                         </div>
                     </div>
@@ -132,14 +132,14 @@ $breadcrumbs = [
                                     </div>
                                 </div>
                                 <div class="card-body">
-                                    <div id="recordRecent"></div>
+                                    <div id="recordRecent"><div class="placeholder-glow"><span class="placeholder col-12 rounded" style="height:12rem"></span></div></div>
                                 </div>
                             </div>
                             <div class="card custom-card">
                                 <div class="card-header">
                                     <div class="card-title">Notes</div>
                                 </div>
-                                <div class="card-body" id="recordNotes"></div>
+                                <div class="card-body" id="recordNotes"><div class="placeholder-glow"><span class="placeholder col-12 rounded mb-2" style="height:2.4rem"></span><span class="placeholder col-12 rounded mb-2" style="height:2.4rem"></span><span class="placeholder col-8 rounded" style="height:2.4rem"></span></div></div>
                             </div>
                         </div>
                         <div class="col-xl-5">
@@ -150,7 +150,7 @@ $breadcrumbs = [
                                         <span class="card-subtitle-text">Who recorded it, and every change since</span>
                                     </div>
                                 </div>
-                                <div class="card-body" id="recordHistory"></div>
+                                <div class="card-body" id="recordHistory"><div class="placeholder-glow"><span class="placeholder col-12 rounded mb-2" style="height:2.4rem"></span><span class="placeholder col-12 rounded mb-2" style="height:2.4rem"></span><span class="placeholder col-8 rounded" style="height:2.4rem"></span></div></div>
                             </div>
                         </div>
                     </div>
