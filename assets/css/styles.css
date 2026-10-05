@@ -36637,3 +36637,9 @@ a.cal-side-item:hover {
   height: 100%;
   margin-bottom: 0;
 }
+/* Tables in tabs that start hidden are measured on their first showing - keep them full width. */
+#tab-roles table.dataTable,
+#tab-activity table.dataTable,
+#tab-signins table.dataTable {
+  width: 100% !important;
+}
