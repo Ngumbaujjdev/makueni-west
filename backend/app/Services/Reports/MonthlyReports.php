@@ -22,11 +22,17 @@ final class MonthlyReports
 
     public function __construct(private Settings $settings, private Activities $activities) {}
 
+    /** Only the diocese sets it, so every place below has the same day - worked out once. */
+    private ?int $dueDay = null;
+
     public function dueDay(Territory $place): int
     {
-        $day = (int) $this->settings->get('reports.monthly_due_day', $place);
+        if ($this->dueDay === null) {
+            $day = (int) $this->settings->get('reports.monthly_due_day', $place);
+            $this->dueDay = $day >= 1 && $day <= 28 ? $day : 5;
+        }
 
-        return $day >= 1 && $day <= 28 ? $day : 5;
+        return $this->dueDay;
     }
 
     /** The month's report is due on this day of the next month. */
@@ -45,7 +51,9 @@ final class MonthlyReports
         $today = CarbonImmutable::now(self::TZ)->startOfDay();
         $due = $this->dueOn($place, $year, $month);
         $start = CarbonImmutable::create($year, $month, 1, 0, 0, 0, self::TZ);
-        $status = $report?->status ?? 'not_started';
+        // Months before monthly reports began aren't asked for - never late.
+        $before = ! $report && sprintf('%04d-%02d', $year, $month) < (string) config('app.monthly_reports_from', '2026-09');
+        $status = $report?->status ?? ($before ? 'not_tracked' : 'not_started');
         $sent = in_array($status, ['sent', 'seen'], true);
         $sentOn = $report?->sent_at ? CarbonImmutable::instance($report->sent_at)->setTimezone(self::TZ) : null;
 
@@ -58,7 +66,7 @@ final class MonthlyReports
             'id' => $report?->id,
             'due_on' => $due->toDateString(),
             'open' => $start->lte($today),
-            'late' => ! $sent && $today->gt($due),
+            'late' => ! $sent && ! $before && $today->gt($due),
             'on_time' => $sent ? $sentOn->startOfDay()->lte($due) : null,
             'due_in_days' => $sent ? null : (int) $today->diffInDays($due, false),
             'sent_at' => $report?->sent_at?->toIso8601String(),

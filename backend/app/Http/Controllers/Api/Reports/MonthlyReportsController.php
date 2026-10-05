@@ -37,7 +37,8 @@ class MonthlyReportsController extends Controller
         $existing = MonthlyReport::withCount('comments')->where('territory_id', $place->id)->where('year', $year)->get()->keyBy('month');
         $months = collect(range(1, 12))->map(fn ($m) => $this->reports->state($place, $year, $m, $existing->get($m)));
         $sent = $months->whereIn('status', ['sent', 'seen']);
-        $current = $months->first(fn ($m) => $m['open'] && ! in_array($m['status'], ['sent', 'seen'], true) && $m['due_in_days'] !== null && ! $m['late']);
+        // The report to write next: the earliest open month not sent, not late, and asked for.
+        $current = $months->first(fn ($m) => $m['open'] && in_array($m['status'], ['draft', 'not_started'], true) && ! $m['late']);
 
         return $this->ok([
             'year' => $year,
@@ -320,7 +321,8 @@ class MonthlyReportsController extends Controller
             'sent_by' => $report?->sent_by ? $this->who($report->sent_by) : null,
             'seen_by' => $report?->seen_by ? $this->who($report->seen_by) : null,
             'attachments' => $report ? $this->attachments($report) : [],
-            'comments' => $report ? $report->comments()->with(['user', 'territory'])->get()->map(fn (MonthlyReportComment $c) => [
+            // The thread itself ("comments" is its count, from state()).
+            'thread' => $report ? $report->comments()->with(['user', 'territory'])->get()->map(fn (MonthlyReportComment $c) => [
                 'id' => $c->id, 'body' => $c->body, 'at' => $c->created_at?->toIso8601String(),
                 'who' => $c->user ? trim("{$c->user->firstname} {$c->user->lastname}") : 'Someone',
                 'place' => $c->territory?->name, 'from_above' => (int) $c->territory_id !== (int) $owner->id,

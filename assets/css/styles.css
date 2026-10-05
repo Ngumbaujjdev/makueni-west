@@ -36775,4 +36775,292 @@ a.cal-side-item:hover {
   background: rgba(var(--primary-rgb), 0.05);
   border-color: rgba(var(--primary-rgb), 0.35);
   color: inherit;
+/* ==========================================================================
+   Monthly reports (2026-10-05) - the year at a glance, the reports below,
+   and the report page (docs/specs/monthly-reports-spec.md)
+   ========================================================================== */
+.mr-year {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.75rem;
+}
+.mr-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.75rem;
+  color: var(--default-text-color);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+a.mr-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(var(--dark-rgb), 0.08);
+  color: var(--default-text-color);
+}
+.mr-tile-month {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--v2-heading);
+}
+.mr-tile-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.mr-tile-sub {
+  font-size: 0.74rem;
+  font-weight: 500;
+}
+.mr-tile.is-sent { border-color: rgba(var(--success-rgb), 0.5); background: rgba(var(--success-rgb), 0.08); }
+.mr-tile.is-sent .mr-tile-state { color: #138a69; }
+.mr-tile.is-seen { border-color: rgba(var(--purple-rgb), 0.5); background: rgba(var(--purple-rgb), 0.08); }
+.mr-tile.is-seen .mr-tile-state { color: rgb(var(--purple-rgb)); }
+.mr-tile.is-draft { border-color: rgba(var(--secondary-rgb), 0.7); background: rgba(var(--secondary-rgb), 0.14); }
+.mr-tile.is-draft .mr-tile-state { color: #8a6a06; }
+.mr-tile.is-late { border-color: rgba(var(--danger-rgb), 0.5); background: rgba(var(--danger-rgb), 0.08); }
+.mr-tile.is-late .mr-tile-state { color: #c42a2a; }
+.mr-tile.is-not_started .mr-tile-state { color: rgb(var(--primary-rgb)); }
+.mr-tile.is-future {
+  border-style: dashed;
+  background: transparent;
+}
+.mr-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-inline-end: 0.3rem;
+  border-radius: 50%;
+}
+.mr-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.mr-groups:empty {
+  display: none;
+}
+.mr-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 0.9rem 1rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.75rem;
+  background: var(--custom-white);
+  overflow: hidden;
+}
+.mr-group strong {
+  display: block;
+  font-size: 0.86rem;
+  color: var(--v2-heading);
+}
+.mr-group small {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--default-text-color);
+}
+.mr-group.is-on {
+  border-color: rgb(var(--primary-rgb));
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.2);
+}
+.mr-group-bar {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 4px;
+  background: rgba(var(--success-rgb), 0.15);
+}
+.mr-group-bar i {
+  display: block;
+  height: 100%;
+}
+.mr-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+}
+.mr-hero-icon {
+  display: flex;
+  flex: 0 0 4rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4.25rem;
+  border-radius: 0.7rem;
+  line-height: 1.05;
+}
+.mr-hero-icon strong {
+  font-size: 1.15rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.mr-hero-icon span {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.mr-block + .mr-block {
+  margin-top: 1.25rem;
+}
+.mr-block .ev-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+.mr-figs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+  gap: 0.65rem;
+}
+.mr-fig {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.65rem;
+}
+.mr-fig small {
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--default-text-color);
+}
+.mr-fig strong {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--v2-heading);
+}
+.mr-fig span:not(.avatar) {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--default-text-color);
+}
+.mr-fig-link {
+  margin-inline-start: auto;
+  font-size: 1.1rem;
+}
+.mr-list,
+.mr-thread {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mr-list li,
+.mr-thread li {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0;
+}
+.mr-list li + li,
+.mr-thread li + li {
+  border-top: 1px solid var(--default-border);
+}
+.mr-list strong,
+.mr-thread strong {
+  display: block;
+  font-size: 0.86rem;
+  color: var(--v2-heading);
+}
+.mr-list small,
+.mr-thread small {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--default-text-color);
+}
+.mr-thread li {
+  align-items: flex-start;
+}
+.mr-thread p {
+  margin-top: 0.25rem;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.mr-word {
+  display: flex;
+  gap: 0.65rem;
+  height: 100%;
+  padding: 0.85rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.65rem;
+}
+.mr-word h6 {
+  margin-bottom: 0.3rem;
+  font-weight: 700;
+  color: var(--v2-heading);
+}
+.mr-files {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.mr-file {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.6rem;
+}
+.mr-drop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 1.1rem;
+  border: 2px dashed rgba(var(--primary-rgb), 0.4);
+  border-radius: 0.75rem;
+  cursor: pointer;
+  color: var(--default-text-color);
+}
+.mr-drop i {
+  font-size: 1.5rem;
+  color: rgb(var(--primary-rgb));
+}
+.mr-drop:hover {
+  background: rgba(var(--primary-rgb), 0.05);
+}
+.mr-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  gap: 0.65rem;
+}
+.mr-thumb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  height: 7rem;
+  padding: 0;
+  border: 1px solid var(--default-border);
+  border-radius: 0.6rem;
+  background: var(--custom-white);
+  overflow: hidden;
+  color: var(--default-text-color);
+}
+.mr-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.mr-thumb i {
+  font-size: 1.8rem;
+  color: rgb(var(--danger-rgb));
+}
+.mr-thumb small {
+  max-width: 90%;
+  overflow: hidden;
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
