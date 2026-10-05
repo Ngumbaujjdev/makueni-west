@@ -38,3 +38,7 @@ Folder names in this repo are misleading if you go by name alone:
 - **`diocese/demographics-analytics/*`** — 6 files, all empty stubs. This is where the Demographics module's analytics pages will go.
 
 Full inventory with line counts: `AUDIT-2026-08.md`.
+
+## Church life modules (2026-10)
+Events, Initiatives, Monthly reports and Messages follow the Budgets pattern: shared page bodies in `includes/{events,monthly-reports,messages}/` with five-line wrappers per level, one `*Access` class each over `App\Support\PlaceAccess` (the acting role from `X-Assignment-Id`: write your own place, read the places below, never upwards or sideways), and one seeder each that reuses the old placeholder menu module. Notifications go through Laravel's `notifications` table (`App\Notifications\PlaceNotification`) and the header bell (`assets/js/utils/notifications.js`). SMS and email always go through `App\Services\Messaging\PlaceMessenger`, so every message lands in the Settings message log. Scheduled work: `reports:remind` (daily) and `messages:send-scheduled` (every minute) in `routes/console.php`, plus the `default` queue for sending.
+
