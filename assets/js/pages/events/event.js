@@ -1,12 +1,14 @@
 /**
  * ============================================================================
- * EVENTS - one event (church, region, diocese)
+ * EVENTS AND INITIATIVES - one event or initiative (church, region, diocese)
  * ============================================================================
  * The organiser sees: details, who's coming (grouped by region, with fees),
  * money (recorded through the Budgets "Record money" window, tagged with the
  * event), how it went and the history - plus Publish / Mark as done / Cancel.
  * An invited place sees the details and registers its numbers, then says how
- * many came. The places above see it read-only.
+ * many came. The places above see it read-only. An initiative adds its
+ * sessions (attendance recorded in place), progress across sessions, and
+ * how many finished from each place.
  * ============================================================================
  */
 (function () {
@@ -15,11 +17,14 @@
   const UI = DemographicsUI;
   const E = EventsUI;
   const CTX = window.EVENTS_CTX;
+  const INIT = E.IS_INITIATIVE;
+  const N = E.NOUN;
   const $ = (id) => document.getElementById(id);
   const id = Number(new URLSearchParams(window.location.search).get("id"));
   const GROUPS = Object.keys(E.GROUPS);
-  const state = { ev: null, regs: null, money: null, history: null, tab: new URLSearchParams(window.location.search).get("tab") || "details" };
+  const state = { ev: null, regs: null, money: null, history: null, sessions: null, tab: new URLSearchParams(window.location.search).get("tab") || "details" };
   let donut = null;
+  let progressChart = null;
 
   // ================================================================ header
   function renderHero() {
@@ -28,14 +33,14 @@
     const can = ev.can;
     const more = [
       can.complete ? `<li><button class="dropdown-item" data-act="complete"><i class="ri-checkbox-circle-line me-2 text-success"></i>Mark as done</button></li>` : "",
-      can.cancel ? `<li><button class="dropdown-item text-danger" data-act="cancel"><i class="ri-close-circle-line me-2"></i>Cancel the event</button></li>` : "",
+      can.cancel ? `<li><button class="dropdown-item text-danger" data-act="cancel"><i class="ri-close-circle-line me-2"></i>Cancel the ${N.one}</button></li>` : "",
     ].join("");
     const actions = [
       can.publish ? `<button class="btn btn-success" data-act="publish"><i class="ri-send-plane-line me-1"></i>Publish</button>` : "",
       can.edit ? `<a class="btn btn-outline-primary" href="${CTX.baseUrl}/new?id=${ev.id}"><i class="ri-edit-line me-1"></i>Edit</a>` : "",
       can.record_money
         ? `<div class="dropdown"><button class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="ri-hand-coin-line me-1"></i>Record money</button>
-            <ul class="dropdown-menu dropdown-menu-end"><li><button class="dropdown-item" data-act="money-in"><i class="ri-arrow-down-circle-line me-2 text-success"></i>Money in (offerings, fees)</button></li><li><button class="dropdown-item" data-act="money-out"><i class="ri-arrow-up-circle-line me-2 text-danger"></i>Money out (spending)</button></li></ul></div>`
+            <ul class="dropdown-menu dropdown-menu-end"><li><button class="dropdown-item" data-act="money-in"><i class="ri-arrow-down-circle-line me-2 text-success"></i>Income (offerings, fees)</button></li><li><button class="dropdown-item" data-act="money-out"><i class="ri-arrow-up-circle-line me-2 text-danger"></i>Expenses (spending)</button></li></ul></div>`
         : "",
       can.record_attendance ? `<button class="btn btn-outline-primary" data-act="attendance"><i class="ri-user-follow-line me-1"></i>Record attendance</button>` : "",
       ev.relation !== "invited" ? `<button class="btn btn-outline-primary" data-report-key="activity.summary" data-module="events" data-activity-id="${ev.id}"><i class="ri-download-2-line me-1"></i>Export</button>` : "",
@@ -53,7 +58,7 @@
             </div>
             <div class="ev-card-meta">
               <span class="soft-chip soft-${color}"><i class="${E.typeIcon(ev.type)}"></i>${E.esc(ev.type_label)}</span>
-              <span><i class="ri-time-line"></i>${E.when(ev.starts_at, ev.ends_at)} · ${E.relative(ev.starts_at)}</span>
+              ${INIT ? `<span><i class="ri-repeat-line"></i>${E.esc(E.meets(ev))}</span><span><i class="ri-calendar-line"></i>${E.shortDate(new Date(ev.starts_at))} - ${E.longDate(new Date(ev.ends_at))}</span>` : `<span><i class="ri-time-line"></i>${E.when(ev.starts_at, ev.ends_at)} · ${E.relative(ev.starts_at)}</span>`}
               ${ev.venue ? `<span><i class="ri-map-pin-line"></i>${E.esc(ev.venue)}</span>` : ""}
               ${by}
             </div>
@@ -66,8 +71,8 @@
 
   function heroNote() {
     const ev = state.ev;
-    if (ev.status === "cancelled") return `<div class="alert alert-danger d-flex gap-2 mt-3 mb-0"><i class="ri-close-circle-line fs-16"></i><span>This event was cancelled.</span></div>`;
-    if (ev.status === "draft") return `<div class="alert alert-primary d-flex gap-2 mt-3 mb-0"><i class="ri-draft-line fs-16"></i><span>This is a draft - only your place sees it. ${ev.open_to === "own" ? "Publish it to put it on your events." : "Publish it to tell the places it's open to."}</span></div>`;
+    if (ev.status === "cancelled") return `<div class="alert alert-danger d-flex gap-2 mt-3 mb-0"><i class="ri-close-circle-line fs-16"></i><span>This ${N.one} was cancelled.</span></div>`;
+    if (ev.status === "draft") return `<div class="alert alert-primary d-flex gap-2 mt-3 mb-0"><i class="ri-draft-line fs-16"></i><span>This is a draft - only your place sees it. ${ev.open_to === "own" ? `Publish it to put it on your ${N.many}.` : "Publish it to tell the places it's open to."}</span></div>`;
     return "";
   }
 
@@ -80,7 +85,15 @@
       return;
     }
     const t = ev.totals;
-    const cards = [
+    const s = ev.sessions || {};
+    const cards = INIT ? [
+      { icon: "ri-community-line", label: "Places taking part", value: E.num(t.places), color: "primary", sub: ev.registration ? (ev.registration_open ? `Open to join${ev.register_by ? ` until ${E.shortDate(new Date(ev.register_by))}` : ""}` : "Joining closed") : "Our own place" },
+      { icon: "ri-calendar-check-line", label: "Sessions held", value: `${E.num(s.held || 0)} of ${E.num(s.total || 0)}`, color: "purple", sub: s.next ? `Next on ${E.longDate(new Date(`${s.next}T12:00:00`))}` : s.total && s.held >= s.total ? "All sessions held" : "No session coming up" },
+      { icon: "ri-user-follow-line", label: "Average attendance", value: s.average == null ? "-" : E.num(s.average), color: "success", sub: s.average == null ? "Record attendance at each session" : `${E.num(s.attendance)} attendances in all` },
+      ev.fee_per_person
+        ? { icon: "ri-money-dollar-circle-line", label: "Fees paid", value: E.money(t.fee_paid), color: "secondary", sub: t.fee_due ? `of ${E.money(t.fee_due)} due` : "" }
+        : { icon: "ri-group-line", label: "People taking part", value: E.num(t.expected), color: "secondary", sub: ev.capacity ? `Places for ${E.num(ev.capacity)}` : "From the places that joined" },
+    ] : [
       { icon: "ri-community-line", label: "Places registered", value: E.num(t.places), color: "primary", sub: ev.registration ? (ev.registration_open ? `Open${ev.register_by ? ` until ${E.shortDate(new Date(ev.register_by))}` : ""}` : "Registration closed") : "No registration" },
       { icon: "ri-group-line", label: "People expected", value: E.num(t.expected), color: "purple", sub: ev.capacity ? `Room for ${E.num(ev.capacity)}` : GROUPS.map((g) => `${E.num(t.by_group[g])} ${E.GROUPS[g].toLowerCase()}`).slice(0, 2).join(" · ") },
       { icon: "ri-user-follow-line", label: "People who came", value: t.came == null ? "-" : E.num(t.came), color: "success", sub: t.came == null ? "Places say once it has happened" : t.expected ? `${Math.round((t.came / t.expected) * 100)}% of those expected` : "" },
@@ -89,15 +102,28 @@
     row.innerHTML = cards.map((c) => `<div class="col-xl-3 col-lg-6 col-md-6">${UI.renderSparkCard(c)}</div>`).join("");
   }
 
+  /** An initiative shows its sessions to whoever can see it - even an invited place. */
+  function renderInvitedStats() {
+    const s = state.ev.sessions;
+    if (!INIT || !s || state.ev.totals) return;
+    $("statCardsRow").innerHTML = [
+      { icon: "ri-calendar-check-line", label: "Sessions", value: `${E.num(s.held)} of ${E.num(s.total)}`, color: "primary", sub: "Held so far" },
+      { icon: "ri-calendar-event-line", label: "Next session", value: s.next ? E.shortDate(new Date(`${s.next}T12:00:00`)) : "-", color: "purple", sub: E.meets(state.ev) },
+    ].map((c) => `<div class="col-xl-3 col-lg-6 col-md-6">${UI.renderSparkCard(c)}</div>`).join("");
+  }
+
   // ================================================================ tabs
   function tabsFor() {
     const ev = state.ev;
-    if (ev.relation === "invited") return [];
+    const sessionsTab = { key: "sessions", label: "Sessions", icon: "ri-calendar-check-line", color: "success", figure: `${E.num(ev.sessions?.held || 0)} of ${E.num(ev.sessions?.total || 0)} held` };
+    if (ev.relation === "invited") return INIT ? [{ key: "details", label: "Details", icon: "ri-file-list-3-line", color: "primary", figure: E.STATUS[ev.status]?.label || "" }, sessionsTab] : [];
     const tabs = [{ key: "details", label: "Details", icon: "ri-file-list-3-line", color: "primary", figure: E.STATUS[ev.status]?.label || "" }];
-    if (ev.open_to !== "own" || ev.totals?.places) tabs.push({ key: "coming", label: "Who's coming", icon: "ri-group-line", color: "purple", figure: `${E.num(ev.totals?.expected || 0)} expected` });
+    if (INIT) tabs.push(sessionsTab);
+    if (ev.open_to !== "own" || ev.totals?.places) tabs.push({ key: "coming", label: INIT ? "Taking part" : "Who's coming", icon: "ri-group-line", color: "purple", figure: `${E.num(ev.totals?.expected || 0)} ${INIT ? "people" : "expected"}` });
+    if (INIT) tabs.push({ key: "progress", label: "Progress", icon: "ri-line-chart-line", color: "pink", figure: ev.sessions?.average != null ? `${E.num(ev.sessions.average)} a session` : "Attendance" });
     if (ev.relation === "own") {
-      tabs.push({ key: "money", label: "Money", icon: "ri-hand-coin-line", color: "secondary", figure: "In and out" });
-      tabs.push({ key: "went", label: "How it went", icon: "ri-chat-smile-2-line", color: "success", figure: ev.status === "completed" ? "Done" : "After the event" });
+      tabs.push({ key: "money", label: "Money", icon: "ri-hand-coin-line", color: "secondary", figure: "Income and expenses" });
+      tabs.push({ key: "went", label: "How it went", icon: "ri-chat-smile-2-line", color: INIT ? "primary" : "success", figure: ev.status === "completed" ? "Done" : `After the ${N.one}` });
       tabs.push({ key: "history", label: "History", icon: "ri-history-line", color: "danger", figure: "Who did what" });
     }
     return tabs;
@@ -132,7 +158,7 @@
     const q = new URLSearchParams(window.location.search);
     key === "details" ? q.delete("tab") : q.set("tab", key);
     history.replaceState(null, "", `${window.location.pathname}?${q.toString()}`);
-    return ({ details: renderDetails, coming: loadComing, money: loadMoney, went: renderWent, history: loadHistory })[key]?.(first);
+    return ({ details: renderDetails, sessions: loadSessions, coming: loadComing, progress: loadProgress, money: loadMoney, went: renderWent, history: loadHistory })[key]?.(first);
   }
 
   const pane = (key) => document.querySelector(`#evPanes [data-pane="${key}"]`);
@@ -144,13 +170,13 @@
     const agenda = (ev.agenda || "").split(/\n+/).map((l) => l.trim()).filter(Boolean);
     pane("details").innerHTML = `
       <div class="card custom-card">
-        <div class="card-header"><div class="card-title">About the event</div></div>
+        <div class="card-header"><div class="card-title">About the ${N.one}</div></div>
         <div class="card-body">
           ${ev.description ? `<p class="ev-text">${E.esc(ev.description)}</p>` : `<p class="mb-0 fw-semibold">No description yet.</p>`}
-          ${agenda.length ? `<h6 class="ev-sub mt-4">Programme</h6><ol class="ev-agenda">${agenda.map((l) => `<li>${E.esc(l)}</li>`).join("")}</ol>` : ""}
+          ${agenda.length ? `<h6 class="ev-sub mt-4">${INIT ? "What it covers" : "Programme"}</h6><ol class="ev-agenda">${agenda.map((l) => `<li>${E.esc(l)}</li>`).join("")}</ol>` : ""}
           ${ev.speakers || ev.coordinator ? `<div class="row g-3 mt-2">
             ${ev.speakers ? `<div class="col-sm-6"><div class="ev-person"><span class="avatar avatar-md avatar-rounded bg-purple text-white"><i class="ri-mic-line"></i></span><div><small>Speakers</small><strong>${E.esc(ev.speakers)}</strong></div></div></div>` : ""}
-            ${ev.coordinator ? `<div class="col-sm-6"><div class="ev-person"><span class="avatar avatar-md avatar-rounded bg-success text-white"><i class="ri-user-star-line"></i></span><div><small>Coordinator</small><strong>${E.esc(ev.coordinator)}</strong></div></div></div>` : ""}
+            ${ev.coordinator ? `<div class="col-sm-6"><div class="ev-person"><span class="avatar avatar-md avatar-rounded bg-success text-white"><i class="ri-user-star-line"></i></span><div><small>${INIT ? "Facilitator" : "Coordinator"}</small><strong>${E.esc(ev.coordinator)}</strong></div></div></div>` : ""}
           </div>` : ""}
         </div>
       </div>`;
@@ -164,12 +190,16 @@
         <div class="card-header"><div class="card-title">At a glance</div></div>
         <div class="card-body">
           <ul class="ev-facts">
-            <li><i class="ri-time-line"></i><span>${E.when(ev.starts_at, ev.ends_at)}</span></li>
+            ${INIT
+              ? `<li><i class="ri-repeat-line"></i><span>${E.esc(E.meets(ev))}</span></li>
+                 <li><i class="ri-calendar-line"></i><span>${E.longDate(new Date(ev.starts_at))} - ${E.longDate(new Date(ev.ends_at))} · ${E.num(ev.sessions?.total || 0)} sessions</span></li>
+                 ${ev.certificate ? `<li><i class="ri-award-line"></i><span>A certificate for those who finish</span></li>` : ""}`
+              : `<li><i class="ri-time-line"></i><span>${E.when(ev.starts_at, ev.ends_at)}</span></li>`}
             <li><i class="ri-map-pin-line"></i><span>${E.esc(ev.venue) || "Venue not set yet"}</span></li>
-            <li><i class="ri-user-heart-line"></i><span>For ${E.esc((ev.audience || "everyone").replace(/^\w/, (c) => c.toUpperCase()))}${ev.capacity ? ` · room for ${E.num(ev.capacity)}` : ""}</span></li>
+            <li><i class="ri-user-heart-line"></i><span>For ${E.esc((ev.audience || "everyone").replace(/^\w/, (c) => c.toUpperCase()))}${ev.capacity ? ` · ${INIT ? "places" : "room"} for ${E.num(ev.capacity)}` : ""}</span></li>
             <li><i class="ri-community-line"></i><span>${E.esc(ev.open_to_label)}</span></li>
-            <li><i class="ri-user-add-line"></i><span>${ev.registration ? `Register${ev.register_by ? ` by ${E.longDate(new Date(ev.register_by))}` : ""} · ${ev.fee_per_person ? `${E.money(ev.fee_per_person)} a person` : "free"}` : "No registration needed"}</span></li>
-            ${ev.relation === "own" && (ev.planned_income || ev.planned_spend) ? `<li><i class="ri-hand-coin-line"></i><span>Plan: raise ${E.money(ev.planned_income)}, spend ${E.money(ev.planned_spend)}</span></li>` : ""}
+            <li><i class="ri-user-add-line"></i><span>${ev.registration ? `${INIT ? "Join" : "Register"}${ev.register_by ? ` by ${E.longDate(new Date(ev.register_by))}` : INIT ? " until the last day" : ""} · ${ev.fee_per_person ? `${E.money(ev.fee_per_person)} a person` : "free"}` : INIT ? "Nothing to join - it's for our own place" : "No registration needed"}</span></li>
+            ${ev.relation === "own" && (ev.planned_income || ev.planned_spend) ? `<li><i class="ri-hand-coin-line"></i><span>Plan: income ${E.money(ev.planned_income)}, expenses ${E.money(ev.planned_spend)}</span></li>` : ""}
           </ul>
           ${invitees.length ? `<h6 class="ev-sub mt-3">Open to</h6><div class="d-flex flex-wrap gap-1">${invitees.map((p) => `<span class="soft-chip soft-${p.type === "region" ? "purple" : "success"}"><i class="${p.type === "region" ? "ri-map-2-line" : "ri-home-heart-line"}"></i>${E.esc(p.name)}</span>`).join("")}</div>` : ""}
         </div>
@@ -187,7 +217,7 @@
     const mine = ev.mine && ev.mine.status === "registered" ? ev.mine : null;
     if (ev.status === "cancelled") return "";
     if (!ev.registration) {
-      return `<div class="card custom-card"><div class="card-body ev-callout"><span class="avatar avatar-md avatar-rounded bg-primary text-white"><i class="ri-calendar-check-line"></i></span><div><strong>No registration needed</strong><span>Just come - ${E.esc(ev.owner.name)} hasn't asked for numbers.</span></div></div></div>`;
+      return `<div class="card custom-card"><div class="card-body ev-callout"><span class="avatar avatar-md avatar-rounded bg-primary text-white"><i class="ri-calendar-check-line"></i></span><div><strong>${INIT ? "Nothing to join" : "No registration needed"}</strong><span>Just come - ${E.esc(ev.owner.name)} hasn't asked for numbers.</span></div></div></div>`;
     }
     if (ev.can.say_came) {
       return `
@@ -205,23 +235,23 @@
     }
     if (!ev.can.register) {
       return mine
-        ? `<div class="card custom-card"><div class="card-body ev-callout"><span class="avatar avatar-md avatar-rounded bg-success text-white"><i class="ri-checkbox-circle-line"></i></span><div><strong>You registered ${E.num(mine.expected)}</strong><span>${GROUPS.map((g) => `${E.num(mine[g])} ${E.GROUPS[g].toLowerCase()}`).join(" · ")}${mine.fee_due ? ` · fee ${E.money(mine.fee_due)}` : ""}</span></div></div></div>`
-        : `<div class="card custom-card"><div class="card-body ev-callout"><span class="avatar avatar-md avatar-rounded bg-danger text-white"><i class="ri-lock-line"></i></span><div><strong>Registration is closed</strong><span>Talk to ${E.esc(ev.owner.name)} if you still want to come.</span></div></div></div>`;
+        ? `<div class="card custom-card"><div class="card-body ev-callout"><span class="avatar avatar-md avatar-rounded bg-success text-white"><i class="ri-checkbox-circle-line"></i></span><div><strong>You ${INIT ? "joined with" : "registered"} ${E.num(mine.expected)}</strong><span>${GROUPS.map((g) => `${E.num(mine[g])} ${E.GROUPS[g].toLowerCase()}`).join(" · ")}${mine.fee_due ? ` · fee ${E.money(mine.fee_due)}` : ""}</span></div></div></div>`
+        : `<div class="card custom-card"><div class="card-body ev-callout"><span class="avatar avatar-md avatar-rounded bg-danger text-white"><i class="ri-lock-line"></i></span><div><strong>${INIT ? "Joining is closed" : "Registration is closed"}</strong><span>Talk to ${E.esc(ev.owner.name)} if you still want to take part.</span></div></div></div>`;
     }
     return `
       <div class="card custom-card ev-register" id="regCard">
         <div class="card-header justify-content-between">
-          <div class="card-title">${mine ? "Our numbers" : "Register"}</div>
-          ${mine ? UI.pill("Registered", "success", "ri-checkbox-circle-line") : ev.register_by ? `<span class="soft-chip soft-danger"><i class="ri-alarm-line"></i>By ${E.shortDate(new Date(ev.register_by))}</span>` : ""}
+          <div class="card-title">${mine ? "Our numbers" : INIT ? "Join" : "Register"}</div>
+          ${mine ? UI.pill(INIT ? "Joined" : "Registered", "success", "ri-checkbox-circle-line") : ev.register_by ? `<span class="soft-chip soft-danger"><i class="ri-alarm-line"></i>By ${E.shortDate(new Date(ev.register_by))}</span>` : ""}
         </div>
         <div class="card-body">
-          <p class="mb-3">How many are coming from us? Numbers only - no names needed.</p>
+          <p class="mb-3">${INIT ? "How many from us are taking part?" : "How many are coming from us?"} Numbers only - no names needed.</p>
           <div class="row g-3">${GROUPS.map((g) => stepper("reg", g, mine?.[g])).join("")}</div>
           <label class="form-label mt-3" for="regNames">Names (optional)</label>
           <textarea class="form-control" id="regNames" rows="2" maxlength="2000" placeholder="e.g. who is leading the group">${E.esc(mine?.names || "")}</textarea>
-          <div class="ev-total mt-3"><span>Coming</span><strong id="regTotal">0</strong>${ev.fee_per_person ? `<span>Fee</span><strong id="regFee">KES 0</strong>` : ""}</div>
-          <button class="btn btn-primary w-100 mt-3" id="regSave"><i class="ri-user-add-line me-1"></i>${mine ? "Update our numbers" : "Register"}</button>
-          ${mine ? `<button class="btn btn-link text-danger w-100 mt-1" id="regWithdraw">We're no longer coming</button>` : ""}
+          <div class="ev-total mt-3"><span>${INIT ? "Taking part" : "Coming"}</span><strong id="regTotal">0</strong>${ev.fee_per_person ? `<span>Fee</span><strong id="regFee">KES 0</strong>` : ""}</div>
+          <button class="btn btn-primary w-100 mt-3" id="regSave"><i class="ri-user-add-line me-1"></i>${mine ? "Update our numbers" : INIT ? "Join" : "Register"}</button>
+          ${mine ? `<button class="btn btn-link text-danger w-100 mt-1" id="regWithdraw">${INIT ? "We're no longer taking part" : "We're no longer coming"}</button>` : ""}
         </div>
       </div>`;
   }
@@ -239,7 +269,7 @@
       card.addEventListener("input", sync);
       sync();
       $("regSave").addEventListener("click", async () => {
-        if (!total()) return Toast.warning("Say how many are coming.");
+        if (!total()) return Toast.warning(INIT ? "Say how many are taking part." : "Say how many are coming.");
         const body = { ...Object.fromEntries(GROUPS.map((g) => [g, parseInt($(`reg_${g}`).value, 10) || 0])), names: $("regNames").value.trim() || null };
         const btn = $("regSave");
         UI.setButtonLoading(btn, "Saving...");
@@ -250,7 +280,7 @@
         reload();
       });
       $("regWithdraw")?.addEventListener("click", async () => {
-        const yes = await E.ask({ title: "No longer coming?", text: `${E.esc(ev.owner.name)} will see that your place withdrew. You can register again while registration is open.`, icon: "ri-user-unfollow-line", color: "danger", action: "Withdraw", actionColor: "danger" });
+        const yes = await E.ask({ title: INIT ? "No longer taking part?" : "No longer coming?", text: `${E.esc(ev.owner.name)} will see that your place withdrew. You can ${INIT ? "join" : "register"} again while it is open.`, icon: "ri-user-unfollow-line", color: "danger", action: "Withdraw", actionColor: "danger" });
         if (!yes) return;
         const res = await EventsAPI.withdraw(ev.mine.id);
         if (!res.ok) return Toast.error(res.message);
@@ -297,7 +327,7 @@
     const active = items.filter((r) => r.status === "registered");
     const withdrawn = items.filter((r) => r.status !== "registered");
     if (!items.length) {
-      p.innerHTML = `<div class="card custom-card"><div class="card-body"><div class="ev-empty"><span class="avatar avatar-lg avatar-rounded bg-purple text-white mb-2"><i class="ri-group-line fs-20"></i></span><h6 class="mb-1">Nobody has registered yet</h6><p class="mb-0">${state.ev.status === "draft" ? "Publish the event so the places it's open to can register." : "Places show here as they register, grouped by region."}</p></div></div></div>`;
+      p.innerHTML = `<div class="card custom-card"><div class="card-body"><div class="ev-empty"><span class="avatar avatar-lg avatar-rounded bg-purple text-white mb-2"><i class="ri-group-line fs-20"></i></span><h6 class="mb-1">${INIT ? "No place has joined yet" : "Nobody has registered yet"}</h6><p class="mb-0">${state.ev.status === "draft" ? `Publish the ${N.one} so the places it's open to can ${INIT ? "join" : "register"}.` : `Places show here as they ${INIT ? "join" : "register"}, grouped by region.`}</p></div></div></div>`;
       return;
     }
     const byRegion = new Map();
@@ -307,17 +337,18 @@
       byRegion.get(k).push(r);
     });
     const fees = !!state.ev.fee_per_person || active.some((r) => r.fee_due || r.fee_paid);
-    const cols = 6 + (fees ? 1 : 0);
+    const cols = 6 + (fees ? 1 : 0) + (INIT ? 1 : 0);
     const row = (r) => `
       <tr data-row-id="${r.id}">
         <td><div class="fw-semibold">${E.esc(r.place.name)}</div>${r.subregion ? `<small>${E.esc(r.subregion)}</small>` : ""}${r.names ? `<div class="fs-12 text-break">${E.esc(r.names)}</div>` : ""}</td>
         ${GROUPS.map((g) => `<td class="text-end">${E.num(r[g])}</td>`).join("")}
-        <td class="text-end fw-bold">${E.num(r.expected)}${r.came != null ? `<div class="fs-12 text-success">${E.num(r.came)} came</div>` : ""}</td>
+        <td class="text-end fw-bold">${E.num(r.expected)}${!INIT && r.came != null ? `<div class="fs-12 text-success">${E.num(r.came)} came</div>` : ""}</td>
+        ${INIT ? `<td class="text-end"><div class="d-flex align-items-center justify-content-end gap-2"><span class="fw-semibold">${r.completed == null ? "-" : E.num(r.completed)}</span>${r.can_record_fee ? `<button class="btn btn-sm btn-success-light btn-icon" data-finished="${r.id}" title="Record how many from ${E.esc(r.place.name)} finished" aria-label="Record how many finished"><i class="ri-award-line"></i></button>` : ""}</div></td>` : ""}
         ${fees ? `<td class="text-end">${feeCell(r)}</td>` : ""}
       </tr>`;
     p.innerHTML = `
       <div class="card custom-card">
-        <div class="card-header justify-content-between"><div class="card-title">Who is coming</div><span class="soft-chip soft-purple"><i class="ri-group-line"></i>${E.num(totals.expected)} from ${E.num(totals.places)} ${totals.places === 1 ? "place" : "places"}</span></div>
+        <div class="card-header justify-content-between"><div class="card-title">${INIT ? "Who is taking part" : "Who is coming"}</div><span class="soft-chip soft-purple"><i class="ri-group-line"></i>${E.num(totals.expected)} from ${E.num(totals.places)} ${totals.places === 1 ? "place" : "places"}</span></div>
         <div class="card-body">
           <div class="row g-4 align-items-center">
             <div class="col-md-5"><div id="comingDonut"></div></div>
@@ -338,16 +369,16 @@
       <div class="row g-4">
         <div class="col-12">
           <div class="card custom-card">
-            <div class="card-header justify-content-between"><div class="card-title">Places that registered</div><span class="soft-chip soft-primary">${E.num(active.length)} ${active.length === 1 ? "place" : "places"}</span></div>
+            <div class="card-header justify-content-between"><div class="card-title">${INIT ? "Places that joined" : "Places that registered"}</div><span class="soft-chip soft-primary">${E.num(active.length)} ${active.length === 1 ? "place" : "places"}</span></div>
             <div class="card-body p-0">
               <div class="table-responsive">
                 <table class="table text-nowrap mb-0 ev-reg-table">
-                  <thead><tr><th>Place</th>${GROUPS.map((g) => `<th class="text-end">${E.GROUPS[g]}</th>`).join("")}<th class="text-end">Total</th>${fees ? `<th class="text-end">Fee</th>` : ""}</tr></thead>
+                  <thead><tr><th>Place</th>${GROUPS.map((g) => `<th class="text-end">${E.GROUPS[g]}</th>`).join("")}<th class="text-end">Total</th>${INIT ? `<th class="text-end">Finished</th>` : ""}${fees ? `<th class="text-end">Fee</th>` : ""}</tr></thead>
                   <tbody>
                     ${[...byRegion.entries()].map(([name, list]) => `<tr class="ev-group-row"><td colspan="${cols}"><span class="soft-chip soft-${UI.colorFor(name)}"><i class="ri-map-2-line"></i>${E.esc(name)}</span></td></tr>${list.map(row).join("")}`).join("")}
                     ${withdrawn.length ? `<tr class="ev-group-row"><td colspan="${cols}"><span class="soft-chip soft-danger"><i class="ri-user-unfollow-line"></i>Withdrew</span></td></tr>${withdrawn.map((r) => `<tr><td colspan="${cols}">${E.esc(r.place.name)}${r.region ? ` · ${E.esc(r.region)}` : ""}</td></tr>`).join("")}` : ""}
                   </tbody>
-                  <tfoot><tr><th>Total</th>${GROUPS.map((g) => `<th class="text-end">${E.num(totals.by_group[g])}</th>`).join("")}<th class="text-end">${E.num(totals.expected)}</th>${fees ? `<th class="text-end">${E.money(totals.fee_paid)} <small>of ${E.money(totals.fee_due)}</small></th>` : ""}</tr></tfoot>
+                  <tfoot><tr><th>Total</th>${GROUPS.map((g) => `<th class="text-end">${E.num(totals.by_group[g])}</th>`).join("")}<th class="text-end">${E.num(totals.expected)}</th>${INIT ? `<th class="text-end">${E.num(active.reduce((a, r) => a + (r.completed || 0), 0))}</th>` : ""}${fees ? `<th class="text-end">${E.money(totals.fee_paid)} <small>of ${E.money(totals.fee_due)}</small></th>` : ""}</tr></tfoot>
                 </table>
               </div>
             </div>
@@ -355,8 +386,9 @@
         </div>
       </div>`;
     donut?.destroy?.();
-    donut = UI.renderRingDonut("comingDonut", { labels: GROUPS.map((g) => E.GROUPS[g]), series: GROUPS.map((g) => totals.by_group[g]), colors: GROUPS.map((g) => E.GROUP_COLORS[g]), centerLabel: "Expected" });
+    donut = UI.renderRingDonut("comingDonut", { labels: GROUPS.map((g) => E.GROUPS[g]), series: GROUPS.map((g) => totals.by_group[g]), colors: GROUPS.map((g) => E.GROUP_COLORS[g]), centerLabel: INIT ? "Taking part" : "Expected" });
     p.querySelectorAll("[data-fee]").forEach((b) => b.addEventListener("click", () => recordFee(active.find((r) => r.id === Number(b.dataset.fee)))));
+    p.querySelectorAll("[data-finished]").forEach((b) => b.addEventListener("click", () => recordFinished(active.find((r) => r.id === Number(b.dataset.finished)))));
   }
 
   function feeCell(r) {
@@ -370,6 +402,17 @@
     const value = await E.ask({ title: "Fee paid", text: `What has <b>${E.esc(r.place.name)}</b> paid so far? They owe ${E.money(r.fee_due)}.`, icon: "ri-money-dollar-circle-line", color: "secondary", action: "Save", input: { label: "Paid (KES)", value: r.fee_paid || "" } });
     if (value === null || value === "") return;
     const res = await EventsAPI.updateRegistration(r.id, { fee_paid: Number(value) });
+    if (!res.ok) return Toast.error(res.message);
+    Toast.success(res.message);
+    state.regs = null;
+    await reload(false);
+    UI.flashRow(r.id);
+  }
+
+  async function recordFinished(r) {
+    const value = await E.ask({ title: "How many finished?", text: `How many from <b>${E.esc(r.place.name)}</b> finished the ${N.one}? ${E.num(r.expected)} took part.`, icon: "ri-award-line", color: "success", action: "Save", input: { label: "Finished", value: r.completed ?? "" } });
+    if (value === null || value === "") return;
+    const res = await EventsAPI.updateRegistration(r.id, { completed: Number(value) });
     if (!res.ok) return Toast.error(res.message);
     Toast.success(res.message);
     state.regs = null;
@@ -400,25 +443,25 @@
       ${noBudget ? `<div class="alert alert-primary d-flex gap-2"><i class="ri-information-line fs-16"></i><span>No budget is in use today, so money can't be recorded yet. <a href="${CTX.budget.baseUrl}/">Open Budgets</a> to start one.</span></div>` : ""}
       <div class="row g-3 mb-1">
         ${[
-          ["Money in", m.in, "success", "ri-arrow-down-circle-line"],
-          ["Money out", m.out, "danger", "ri-arrow-up-circle-line"],
-          ["Left over", m.net, m.net < 0 ? "danger" : "primary", "ri-scales-3-line"],
+          ["Income", m.in, "success", "ri-arrow-down-circle-line"],
+          ["Expenses", m.out, "danger", "ri-arrow-up-circle-line"],
+          ["Left over", m.net, m.net < 0 ? "danger" : "purple", "ri-scales-3-line"],
         ]
           .map(([label, v, c, icon]) => `<div class="col-md-4">${UI.renderSparkCard({ icon, label, value: E.money(v), color: c })}</div>`)
           .join("")}
       </div>
-      ${m.planned_income || m.planned_spend ? `<div class="card custom-card"><div class="card-header"><div class="card-title">Against the plan</div></div><div class="card-body">${bar("Raised", m.in, m.planned_income, "success")}${bar("Spent", m.out, m.planned_spend, "danger")}</div></div>` : ""}
+      ${m.planned_income || m.planned_spend ? `<div class="card custom-card"><div class="card-header"><div class="card-title">Against the plan</div></div><div class="card-body">${bar("Income", m.in, m.planned_income, "success")}${bar("Expenses", m.out, m.planned_spend, "danger")}</div></div>` : ""}
       <div class="card custom-card">
         <div class="card-header justify-content-between">
-          <div class="card-title">Recorded for this event</div>
-          ${ev.can.record_money && m.budget_in_use ? `<div class="d-flex gap-2"><button class="btn btn-sm btn-success" data-act="money-in"><i class="ri-add-line me-1"></i>Money in</button><button class="btn btn-sm btn-danger" data-act="money-out"><i class="ri-add-line me-1"></i>Money out</button></div>` : ""}
+          <div class="card-title">Recorded for this ${N.one}</div>
+          ${ev.can.record_money && m.budget_in_use ? `<div class="d-flex gap-2"><button class="btn btn-sm btn-success" data-act="money-in"><i class="ri-add-line me-1"></i>Income</button><button class="btn btn-sm btn-danger" data-act="money-out"><i class="ri-add-line me-1"></i>Expense</button></div>` : ""}
         </div>
         <div class="card-body p-0">
           ${m.entries.length
             ? `<div class="table-responsive"><table class="table text-nowrap mb-0"><thead><tr><th>Date</th><th>What</th><th class="text-end">Amount</th></tr></thead><tbody>
-              ${m.entries.map((e) => `<tr><td>${E.shortDate(new Date(e.date))}</td><td class="text-wrap">${E.esc(e.description || (e.direction === "in" ? "Money in" : "Money out"))}</td><td class="text-end fw-semibold text-${e.direction === "in" ? "success" : "danger"}">${e.direction === "in" ? "+" : "-"}${E.money(e.amount)}</td></tr>`).join("")}
+              ${m.entries.map((e) => `<tr><td>${E.shortDate(new Date(e.date))}</td><td class="text-wrap">${E.esc(e.description || (e.direction === "in" ? "Income" : "Expense"))}</td><td class="text-end fw-semibold text-${e.direction === "in" ? "success" : "danger"}">${e.direction === "in" ? "+" : "-"}${E.money(e.amount)}</td></tr>`).join("")}
             </tbody></table></div>`
-            : `<div class="ev-empty"><span class="avatar avatar-lg avatar-rounded bg-secondary text-dark mb-2"><i class="ri-hand-coin-line fs-20"></i></span><h6 class="mb-1">Nothing recorded yet</h6><p class="mb-0">Offerings, fees collected and spending for this event show here. They go into your budget${m.budget_in_use ? ` (${E.esc(m.budget_in_use.label)})` : ""}, tagged with the event.</p></div>`}
+            : `<div class="ev-empty"><span class="avatar avatar-lg avatar-rounded bg-secondary text-dark mb-2"><i class="ri-hand-coin-line fs-20"></i></span><h6 class="mb-1">Nothing recorded yet</h6><p class="mb-0">Offerings, fees collected and spending for this ${N.one} show here. They go into your budget${m.budget_in_use ? ` (${E.esc(m.budget_in_use.label)})` : ""}, tagged with the ${N.one}.</p></div>`}
         </div>
       </div>`;
   }
@@ -459,9 +502,12 @@
       <div class="card custom-card">
         <div class="card-header justify-content-between"><div class="card-title">Report back</div>${ev.can.complete ? `<button class="btn btn-sm btn-success" data-act="complete"><i class="ri-checkbox-circle-line me-1"></i>Mark as done</button>` : ""}</div>
         <div class="card-body">
-          ${ev.report_back ? `<p class="ev-text mb-0">${E.esc(ev.report_back)}</p>` : `<p class="mb-0 fw-semibold">${ev.status === "completed" ? "No report was written." : "When the event is over, mark it as done and write a few lines on how it went."}</p>`}
+          ${ev.report_back ? `<p class="ev-text mb-0">${E.esc(ev.report_back)}</p>` : `<p class="mb-0 fw-semibold">${ev.status === "completed" ? "No report was written." : `When the ${N.one} is over, mark it as done and write a few lines on how it went.`}</p>`}
         </div>
       </div>
+      ${INIT ? wentInitiative(items) : ""}`;
+    if (INIT) return;
+    p.innerHTML += `
       <div class="row g-4">
         <div class="col-md-6">
           <div class="card custom-card h-100">
@@ -481,6 +527,212 @@
         </div>
       </div>
       ${comments.length ? `<div class="card custom-card"><div class="card-header"><div class="card-title">Comments</div></div><div class="card-body"><ul class="ev-comments">${comments.map((r) => `<li><span class="avatar avatar-sm avatar-rounded bg-${UI.colorFor(r.place.name)} text-white">${E.esc(r.place.name.charAt(0))}</span><div><strong>${E.esc(r.place.name)}</strong>${r.rating ? ` <span class="soft-chip soft-secondary"><i class="ri-star-fill"></i>${r.rating}</span>` : ""}<p class="mb-0">${E.esc(r.comment)}</p></div></li>`).join("")}</ul></div></div>` : ""}`;
+  }
+
+  function wentInitiative(items) {
+    const s = state.ev.sessions || {};
+    const finished = items.reduce((a, r) => a + (r.completed || 0), 0);
+    const recorded = items.filter((r) => r.completed != null).length;
+    const joined = items.reduce((a, r) => a + r.expected, 0);
+    return `
+      <div class="row g-4">
+        <div class="col-md-6">
+          <div class="card custom-card h-100">
+            <div class="card-header"><div class="card-title">Sessions</div></div>
+            <div class="card-body">
+              <div class="ev-big">${E.num(s.held || 0)} <small>of ${E.num(s.total || 0)} held</small></div>
+              <div class="progress progress-sm mt-2"><div class="progress-bar bg-success" style="width:${s.total ? Math.round(((s.held || 0) / s.total) * 100) : 0}%"></div></div>
+              <p class="mt-2 mb-0">${s.average != null ? `${E.num(s.average)} people a session on average.` : "No attendance recorded yet."}</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card custom-card h-100">
+            <div class="card-header"><div class="card-title">Finished${state.ev.certificate ? " (certificate)" : ""}</div></div>
+            <div class="card-body">
+              ${items.length
+                ? `<div class="ev-big">${E.num(finished)} <small>of ${E.num(joined)} who took part</small></div><div class="progress progress-sm mt-2"><div class="progress-bar bg-purple" style="width:${joined ? Math.min(100, Math.round((finished / joined) * 100)) : 0}%"></div></div><p class="mt-2 mb-0">${recorded} of ${items.length} places recorded. Record it under Taking part.</p>`
+                : `<p class="mb-0 fw-semibold">No place joined - attendance at each session tells the story.</p>`}
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ================================================================ sessions (initiatives)
+  const SESSION_STATUS = { held: ["Held", "success"], planned: ["Planned", "primary"], cancelled: ["Cancelled", "danger"] };
+  const todayIso = () => {
+    const t = new Date();
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+  };
+  const dayOf = (iso) => new Date(`${iso}T12:00:00`);
+
+  async function fetchSessions() {
+    if (state.sessions) return state.sessions;
+    const res = await EventsAPI.sessions(id);
+    if (!res.ok) {
+      Toast.error(res.message);
+      return null;
+    }
+    state.sessions = res.data;
+    return state.sessions;
+  }
+
+  async function loadSessions() {
+    const p = pane("sessions");
+    if (!state.sessions) p.innerHTML = loading();
+    const data = await fetchSessions();
+    if (!data) return;
+    const today = todayIso();
+    const row = (x) => {
+      const missed = x.status === "planned" && x.held_on < today;
+      const [label, color] = missed ? ["Not recorded", "secondary"] : SESSION_STATUS[x.status];
+      const d = dayOf(x.held_on);
+      return `
+        <li class="ev-session${x.status === "cancelled" ? " is-cancelled" : ""}" data-session="${x.id}">
+          <span class="ev-session-no bg-${color} ${E.textOn(color)}">${x.number}</span>
+          <div class="ev-session-day"><strong>${d.getDate()} ${d.toLocaleDateString(undefined, { month: "short" })}</strong><small>${d.toLocaleDateString(undefined, { weekday: "short" })}</small></div>
+          <div class="flex-fill" style="min-width:0">
+            <div class="fw-semibold text-break">${x.topic ? E.esc(x.topic) : `<span class="ev-session-none">No topic yet</span>`}</div>
+            <div class="ev-card-meta mt-1">${UI.pill(label, color)}${x.attendance != null ? `<span><i class="ri-user-follow-line"></i>${E.num(x.attendance)} came</span>` : ""}${x.notes ? `<span class="text-break"><i class="ri-sticky-note-line"></i>${E.esc(x.notes).slice(0, 80)}</span>` : ""}</div>
+          </div>
+          ${data.can_manage
+            ? `<div class="flex-shrink-0">${x.status !== "cancelled" && x.held_on <= today ? `<button class="btn btn-sm btn-success" data-record="${x.id}"><i class="ri-user-follow-line me-1"></i>${x.attendance != null ? "Edit" : "Record"}</button>` : `<button class="btn btn-sm btn-outline-primary" data-record="${x.id}"><i class="ri-edit-line me-1"></i>Edit</button>`}</div>`
+            : ""}
+        </li>`;
+    };
+    const s = data.summary;
+    p.innerHTML = `
+      <div class="card custom-card">
+        <div class="card-header justify-content-between flex-wrap gap-2">
+          <div><div class="card-title">Sessions</div><span class="card-subtitle-text">${E.esc(E.meets(state.ev))}</span></div>
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="soft-chip soft-success"><i class="ri-checkbox-circle-line"></i>${E.num(s.held)} of ${E.num(s.total)} held</span>
+            ${s.average != null ? `<span class="soft-chip soft-purple"><i class="ri-user-follow-line"></i>${E.num(s.average)} a session</span>` : ""}
+            ${data.can_manage ? `<button class="btn btn-sm btn-primary" id="addSessionBtn"><i class="ri-add-line me-1"></i>Add a session</button>` : ""}
+          </div>
+        </div>
+        <div class="card-body">
+          ${data.items.length ? `<ul class="ev-sessions">${data.items.map(row).join("")}</ul>` : `<div class="ev-empty"><h6 class="mb-1">No sessions</h6><p class="mb-0">Add one, or change how often it meets.</p></div>`}
+        </div>
+      </div>`;
+    p.querySelectorAll("[data-record]").forEach((b) => b.addEventListener("click", () => openSession(data.items.find((x) => x.id === Number(b.dataset.record)))));
+    $("addSessionBtn")?.addEventListener("click", () => openSession(null));
+  }
+
+  /** One session's window: day and topic, attendance (once the day has come), notes; it didn't happen / remove. */
+  function openSession(x) {
+    document.getElementById("evSessionModal")?.remove();
+    const canHold = x ? x.held_on <= todayIso() : false;
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      `<div class="modal fade app-modal" id="evSessionModal" tabindex="-1" aria-labelledby="evSessionTitle">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
+          <div class="modal-content">
+            <div class="modal-header">
+              <span class="app-modal-icon bg-success text-white"><i class="ri-calendar-check-line"></i></span>
+              <div class="flex-fill"><h5 class="modal-title" id="evSessionTitle">${x ? `Session ${x.number}` : "Add a session"}</h5><div class="app-modal-subtitle">${E.esc(state.ev.title)}</div></div>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="row g-3">
+                <div class="col-sm-5"><label class="form-label" for="sDate">Day</label><input type="date" class="form-control" id="sDate" value="${x?.held_on || todayIso()}"></div>
+                <div class="col-sm-7"><label class="form-label" for="sTopic">Topic</label><input type="text" class="form-control" id="sTopic" maxlength="160" value="${E.esc(x?.topic || "")}" placeholder="e.g. Prayer and fasting"></div>
+              </div>
+              ${x
+                ? `<div class="ev-sub mt-4 mb-2">How many came</div>
+                   ${canHold
+                     ? `<div class="row g-3" id="sCounts">${GROUPS.map((g) => `<div class="col-6">${UI.numberStepperHtml(`s_${g}`, { label: E.GROUPS[g], min: 0, max: 100000, value: x[g] ?? "" })}</div>`).join("")}</div>
+                        <div class="ev-total mt-3"><span>Came</span><strong id="sTotal">0</strong></div>`
+                     : `<div class="alert alert-primary d-flex gap-2 mb-0"><i class="ri-information-line fs-16"></i><span>Attendance can be recorded on the day or after.</span></div>`}
+                   <label class="form-label mt-3" for="sNotes">Notes (optional)</label>
+                   <textarea class="form-control" id="sNotes" rows="2" maxlength="2000">${E.esc(x.notes || "")}</textarea>`
+                : ""}
+            </div>
+            <div class="modal-footer">
+              ${x && x.status !== "cancelled" ? `<button type="button" class="btn btn-link text-danger me-auto" id="sCancel">${x.attendance == null && x.status === "planned" ? "Remove this session" : "It didn't happen"}</button>` : ""}
+              ${x && x.status === "cancelled" ? `<button type="button" class="btn btn-link me-auto" id="sRestore">Put it back</button>` : ""}
+              <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-success" id="sSave"><i class="ri-check-line me-1"></i>Save</button>
+            </div>
+          </div>
+        </div>
+      </div>`,
+    );
+    const el = $("evSessionModal");
+    const modal = new bootstrap.Modal(el);
+    const counts = $("sCounts");
+    if (counts) {
+      const sync = () => ($("sTotal").textContent = E.num(GROUPS.reduce((a, g) => a + (parseInt($(`s_${g}`).value, 10) || 0), 0)));
+      UI.initSteppers(counts, sync);
+      counts.addEventListener("input", sync);
+      sync();
+    }
+    const done = async (res) => {
+      if (!res.ok) return Toast.error(res.message);
+      Toast.success(res.message);
+      modal.hide();
+      state.sessions = null;
+      await reload(false);
+    };
+    $("sSave").addEventListener("click", async () => {
+      const btn = $("sSave");
+      UI.setButtonLoading(btn, "Saving...");
+      let res;
+      if (!x) {
+        res = await EventsAPI.addSession(id, { held_on: $("sDate").value, topic: $("sTopic").value.trim() || null });
+      } else {
+        const body = { held_on: $("sDate").value, topic: $("sTopic").value.trim() || null, notes: $("sNotes").value.trim() || null };
+        if (counts) GROUPS.forEach((g) => (body[g] = $(`s_${g}`).value === "" ? null : parseInt($(`s_${g}`).value, 10)));
+        res = await EventsAPI.updateSession(x.id, body);
+      }
+      UI.restoreButton(btn);
+      done(res);
+    });
+    $("sCancel")?.addEventListener("click", async () => {
+      const remove = x.attendance == null && x.status === "planned";
+      done(remove ? await EventsAPI.removeSession(x.id) : await EventsAPI.updateSession(x.id, { status: "cancelled" }));
+    });
+    $("sRestore")?.addEventListener("click", async () => done(await EventsAPI.updateSession(x.id, { status: x.attendance != null ? "held" : "planned" })));
+    el.addEventListener("hidden.bs.modal", () => el.remove());
+    modal.show();
+  }
+
+  // ================================================================ progress (initiatives)
+  async function loadProgress() {
+    const p = pane("progress");
+    if (!state.sessions) p.innerHTML = loading();
+    const data = await fetchSessions();
+    if (!data) return;
+    const held = data.items.filter((x) => x.status === "held" && x.attendance != null);
+    if (!held.length) {
+      p.innerHTML = `<div class="card custom-card"><div class="card-body"><div class="ev-empty"><span class="avatar avatar-lg avatar-rounded bg-pink text-white mb-2"><i class="ri-line-chart-line fs-20"></i></span><h6 class="mb-1">No attendance yet</h6><p class="mb-0">Once attendance is recorded at the sessions, this shows how it goes from one session to the next.</p></div></div></div>`;
+      return;
+    }
+    const best = held.reduce((a, x) => (x.attendance > a.attendance ? x : a), held[0]);
+    const first = held[0].attendance;
+    const last = held[held.length - 1].attendance;
+    const expected = state.ev.capacity || state.ev.totals?.expected || null;
+    const delta = held.length > 1 ? UI.periodDelta(last, first, { prevLabel: "the first session" }) : null;
+    const rate = expected ? Math.round((held.reduce((a, x) => a + x.attendance, 0) / (held.length * expected)) * 100) : null;
+    p.innerHTML = `
+      <div class="row g-3 mb-1">
+        <div class="col-md-4">${UI.renderSparkCard({ icon: "ri-user-follow-line", label: "Last session", value: E.num(last), color: "success", delta, sub: `Session ${held[held.length - 1].number}` })}</div>
+        <div class="col-md-4">${UI.renderSparkCard({ icon: "ri-trophy-line", label: "Best session", value: E.num(best.attendance), color: "purple", sub: `Session ${best.number} · ${E.shortDate(dayOf(best.held_on))}` })}</div>
+        <div class="col-md-4">${UI.renderSparkCard({ icon: "ri-percent-line", label: "Attendance rate", value: rate == null ? "-" : `${rate}%`, color: "secondary", sub: expected ? `Against ${E.num(expected)} expected each time` : "Set how many it is for, or let places join" })}</div>
+      </div>
+      <div class="card custom-card">
+        <div class="card-header"><div><div class="card-title">Attendance per session</div><span class="card-subtitle-text">Youth, adults, children and leaders</span></div></div>
+        <div class="card-body"><div id="progressChart"></div></div>
+      </div>`;
+    progressChart?.destroy?.();
+    progressChart = UI.renderTrendChart("progressChart", {
+      categories: held.map((x) => `${x.number} · ${E.shortDate(dayOf(x.held_on))}`),
+      series: GROUPS.map((g) => ({ name: E.GROUPS[g], type: "column", data: held.map((x) => x[g] || 0) })),
+      type: "mixed",
+      stacked: true,
+      colors: GROUPS.map((g) => UI.cssColor(E.GROUP_COLORS[g])),
+    });
   }
 
   // ================================================================ history
@@ -513,7 +765,7 @@
     if (name === "attendance") return recordAttendance();
     let res;
     if (name === "publish") {
-      const ok = await E.ask({ title: "Publish this event?", text: ev.open_to === "own" ? "It goes on your events. Nobody else is told." : `The leaders of the places it's open to (${E.esc(ev.open_to_label.toLowerCase())}) get a notification and can register.`, icon: "ri-send-plane-line", color: "success", action: "Publish", actionColor: "success" });
+      const ok = await E.ask({ title: `Publish this ${N.one}?`, text: ev.open_to === "own" ? `It goes on your ${N.many}. Nobody else is told.` : `The leaders of the places it's open to (${E.esc(ev.open_to_label.toLowerCase())}) get a notification and can ${INIT ? "join" : "register"}.`, icon: "ri-send-plane-line", color: "success", action: "Publish", actionColor: "success" });
       if (!ok) return;
       UI.setButtonLoading(btn, "Publishing...");
       res = await EventsAPI.publish(id);
@@ -522,7 +774,7 @@
       if (text === null) return;
       res = await EventsAPI.complete(id, text || null);
     } else if (name === "cancel") {
-      const ok = await E.ask({ title: "Cancel this event?", text: ev.status === "published" ? "The places that registered get a notification that it's cancelled. This can't be undone." : "The draft is kept, marked as cancelled. This can't be undone.", icon: "ri-close-circle-line", color: "danger", action: "Cancel the event", actionColor: "danger" });
+      const ok = await E.ask({ title: `Cancel this ${N.one}?`, text: ev.status === "published" ? `The places that ${INIT ? "joined" : "registered"} get a notification that it's cancelled. This can't be undone.` : "The draft is kept, marked as cancelled. This can't be undone.", icon: "ri-close-circle-line", color: "danger", action: `Cancel the ${N.one}`, actionColor: "danger" });
       if (!ok) return;
       res = await EventsAPI.cancel(id);
     }
@@ -571,16 +823,17 @@
   async function reload(resetCaches = true) {
     const res = await EventsAPI.get(id);
     if (!res.ok) {
-      $("eventPage").innerHTML = `<div class="card custom-card"><div class="card-body"><div class="ev-empty"><span class="avatar avatar-lg avatar-rounded bg-danger text-white mb-2"><i class="ri-close-circle-line fs-20"></i></span><h6 class="mb-1">${res.status === 404 ? "This event isn't one you can see" : "Couldn't open the event"}</h6><p class="mb-3">${E.esc(res.message)}</p><a class="btn btn-primary" href="${CTX.baseUrl}/">Back to events</a></div></div></div>`;
+      $("eventPage").innerHTML = `<div class="card custom-card"><div class="card-body"><div class="ev-empty"><span class="avatar avatar-lg avatar-rounded bg-danger text-white mb-2"><i class="ri-close-circle-line fs-20"></i></span><h6 class="mb-1">${res.status === 404 ? `This ${N.one} isn't one you can see` : `Couldn't open the ${N.one}`}</h6><p class="mb-3">${E.esc(res.message)}</p><a class="btn btn-primary" href="${CTX.baseUrl}/">Back to ${N.many}</a></div></div></div>`;
       return;
     }
     state.ev = res.data;
     if (resetCaches) {
-      state.regs = state.money = state.history = null;
+      state.regs = state.money = state.history = state.sessions = null;
     }
     document.title = `${state.ev.title} - Makueni West Diocese`;
     renderHero();
     renderStats();
+    renderInvitedStats();
     renderSide();
     await renderTabs();
   }

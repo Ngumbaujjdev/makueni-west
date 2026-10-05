@@ -1,12 +1,14 @@
 <?php
 // Events - one set of pages per level (docs/specs/events-initiatives-spec.md). The wrapper sets $eventsCtx
 // (includes/events/context.php); the body for each page is includes/events/body-{list,form,event}.php.
-$titles = ['list' => 'Events', 'form' => isset($_GET['id']) ? 'Edit event' : 'New event', 'event' => 'Event'];
+$isInitiative = $eventsCtx['kind'] === 'initiative';
+$noun = $isInitiative ? ['one' => 'initiative', 'One' => 'Initiative', 'Many' => 'Initiatives'] : ['one' => 'event', 'One' => 'Event', 'Many' => 'Events'];
+$titles = ['list' => $noun['Many'], 'form' => (isset($_GET['id']) ? 'Edit ' : 'New ') . $noun['one'], 'event' => $noun['One']];
 $pageTitle = $titles[$eventsCtx['page']];
-$pageIcon = 'ri-calendar-check-line';
+$pageIcon = $isInitiative ? 'ri-seedling-line' : 'ri-calendar-check-line';
 $breadcrumbs = $eventsCtx['page'] === 'list'
-    ? ['Home' => $eventsCtx['homeUrl'], 'Events' => null]
-    : ['Home' => $eventsCtx['homeUrl'], 'Events' => $eventsCtx['baseUrl'] . '/', $pageTitle => null];
+    ? ['Home' => $eventsCtx['homeUrl'], $noun['Many'] => null]
+    : ['Home' => $eventsCtx['homeUrl'], $noun['Many'] => $eventsCtx['baseUrl'] . '/', $pageTitle => null];
 ?>
 <!DOCTYPE html>
 <html lang="en" dir="ltr" class="<?= appearanceHtmlClasses() ?>" data-nav-layout="vertical" <?= appearanceThemeAttributes() ?>
@@ -17,7 +19,7 @@ $breadcrumbs = $eventsCtx['page'] === 'list'
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title><?= htmlspecialchars($pageTitle) ?> - Makueni West Diocese</title>
-    <meta name="Description" content="Events of this place, invitations from above, and who is coming" />
+    <meta name="Description" content="<?= $isInitiative ? 'Initiatives of this place, their sessions, and the places taking part' : 'Events of this place, invitations from above, and who is coming' ?>" />
     <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico" type="image/x-icon" />
     <script src="<?= SITE_URL ?>/assets/js/main.js"></script>
     <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css" rel="stylesheet" />

@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * EVENTS - the list (church, region, diocese)
+ * EVENTS AND INITIATIVES - the list (church, region, diocese)
  * ============================================================================
  * Year switch, four KPI cards, events by month, and three tabs: our events,
  * invitations from above, and the places below. Filters, search, tab and
@@ -13,6 +13,7 @@
   const UI = DemographicsUI;
   const E = EventsUI;
   const CTX = window.EVENTS_CTX;
+  const N = E.NOUN;
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const params = new URLSearchParams(window.location.search);
   const thisYear = new Date().getFullYear();
@@ -43,19 +44,27 @@
   // -------------------------------------------------------------- figures
   function renderOverview(o) {
     const total = o.by_month.reduce((a, b) => a + b, 0);
-    const cards = [
-      { icon: "ri-calendar-event-line", label: "Coming up", value: E.num(o.upcoming), color: "primary", sub: "Ours and invitations, still ahead" },
-      { icon: "ri-group-line", label: "People expected", value: E.num(o.expected), color: "purple", sub: "Registered for our events" },
-      { icon: "ri-user-follow-line", label: "People who came", value: E.num(o.came), color: "success", sub: o.expected ? `${Math.round((o.came / o.expected) * 100)}% of those expected` : "Once events have happened" },
-      { icon: "ri-hand-coin-line", label: "Money raised", value: E.money(o.raised), color: "secondary", sub: "Recorded against our events" },
-    ];
+    const byMonth = { labels: MONTHS, data: o.by_month };
+    const cards = E.IS_INITIATIVE
+      ? [
+          { icon: "ri-seedling-line", label: "Running", value: E.num(o.active), color: "primary", sub: "Ours and the ones we joined" },
+          { icon: "ri-community-line", label: "Places taking part", value: E.num(o.taking_part), color: "purple", sub: "Joined our initiatives" },
+          { icon: "ri-calendar-check-line", label: "Sessions held", value: E.num(o.sessions_held), color: "success", series: total ? byMonth : null, sub: o.average_attendance != null ? `${E.num(o.average_attendance)} people a session on average` : "Record attendance at each session" },
+          { icon: "ri-user-follow-line", label: "Attendance rate", value: o.attendance_rate != null ? `${o.attendance_rate}%` : "-", color: "secondary", sub: o.attendance_rate != null ? "Of the people expected at each session" : "Once places join or a size is set" },
+        ]
+      : [
+          { icon: "ri-calendar-event-line", label: "Coming up", value: E.num(o.upcoming), color: "primary", sub: "Ours and invitations, still ahead" },
+          { icon: "ri-group-line", label: "People expected", value: E.num(o.expected), color: "purple", sub: "Registered for our events" },
+          { icon: "ri-user-follow-line", label: "People who came", value: E.num(o.came), color: "success", sub: o.expected ? `${Math.round((o.came / o.expected) * 100)}% of those expected` : "Once events have happened" },
+          { icon: "ri-hand-coin-line", label: "Income", value: E.money(o.raised), color: "secondary", sub: "Recorded against our events" },
+        ];
     const row = document.getElementById("statCardsRow");
     row.innerHTML = cards.map((c) => `<div class="col-xl-3 col-lg-6 col-md-6">${UI.renderSparkCard(c)}</div>`).join("");
     UI.mountSparklines(row);
 
     const busiest = total ? MONTHS[o.by_month.indexOf(Math.max(...o.by_month))] : null;
     document.getElementById("heroChips").innerHTML = [
-      `<span class="soft-chip soft-primary"><i class="ri-calendar-2-line"></i>${E.num(total)} ${total === 1 ? "event" : "events"} in ${o.year}</span>`,
+      `<span class="soft-chip soft-primary"><i class="ri-calendar-2-line"></i>${E.num(total)} ${E.IS_INITIATIVE ? (total === 1 ? "session" : "sessions") : total === 1 ? "event" : "events"} in ${o.year}</span>`,
       busiest ? `<span class="soft-chip soft-purple"><i class="ri-fire-line"></i>Busiest · ${busiest}</span>` : "",
     ].join("");
     const el = document.getElementById("heroChart");
@@ -63,10 +72,12 @@
     heroChart?.destroy();
     el.innerHTML = "";
     heroChart = total
-      ? UI.renderTrendChart("heroChart", { categories: MONTHS, series: [{ name: "Events", data: o.by_month }], type: "bar", color: "primary" })
+      ? UI.renderTrendChart("heroChart", { categories: MONTHS, series: [{ name: E.IS_INITIATIVE ? "Sessions" : "Events", data: o.by_month }], type: "bar", color: "primary" })
       : null;
     if (!total) {
-      el.innerHTML = `<div class="ev-empty"><span class="avatar avatar-lg avatar-rounded bg-primary text-white mb-2"><i class="ri-bar-chart-2-line fs-20"></i></span><h6 class="mb-1">No events of ours in ${o.year}</h6><p class="mb-0">Once you add events, this shows how they spread across the year.</p></div>`;
+      el.innerHTML = E.IS_INITIATIVE
+        ? `<div class="ev-empty"><span class="avatar avatar-lg avatar-rounded bg-primary text-white mb-2"><i class="ri-bar-chart-2-line fs-20"></i></span><h6 class="mb-1">No sessions held in ${o.year}</h6><p class="mb-0">Once you record attendance at your sessions, this shows them across the year.</p></div>`
+        : `<div class="ev-empty"><span class="avatar avatar-lg avatar-rounded bg-primary text-white mb-2"><i class="ri-bar-chart-2-line fs-20"></i></span><h6 class="mb-1">No events of ours in ${o.year}</h6><p class="mb-0">Once you add events, this shows how they spread across the year.</p></div>`;
     }
 
     const figure = (k, text) => {
@@ -88,7 +99,7 @@
   }
 
   function renderToolbar() {
-    UI.renderFilterToolbar("eventFilters", { searchPlaceholder: "Search events, places, venues...", filters: filtersFor(state.items) });
+    UI.renderFilterToolbar("eventFilters", { searchPlaceholder: `Search ${N.many}, places, venues...`, filters: filtersFor(state.items) });
     const search = document.getElementById("eventFiltersSearch");
     const status = document.getElementById("evStatus");
     const type = document.getElementById("evType");
@@ -127,7 +138,7 @@
       if (on) shown++;
     });
     const filtered = !!(state.q || state.status || state.type);
-    document.getElementById("eventFiltersCount").textContent = `${shown} of ${state.items.length} ${state.items.length === 1 ? "event" : "events"}`;
+    document.getElementById("eventFiltersCount").textContent = `${shown} of ${state.items.length} ${state.items.length === 1 ? N.one : N.many}`;
     document.getElementById("eventFiltersClear").classList.toggle("d-none", !filtered);
     const none = document.getElementById("evNoMatch");
     if (none) none.hidden = shown > 0 || !state.items.length;
@@ -135,13 +146,13 @@
   }
 
   function emptyFor(scope) {
-    if (scope === "invited") return E.empty("ri-mail-open-line", "No invitations", `Nothing from the places above you in ${state.year} yet. When the region or diocese opens an event to you, it shows here.`);
-    if (scope === "below") return E.empty("ri-community-line", "Nothing from the places below", `No published events from the places under you in ${state.year}.`);
+    if (scope === "invited") return E.empty("ri-mail-open-line", "No invitations", `Nothing from the places above you in ${state.year} yet. When the region or diocese opens ${E.IS_INITIATIVE ? "an initiative" : "an event"} to you, it shows here.`);
+    if (scope === "below") return E.empty("ri-community-line", "Nothing from the places below", `No published ${N.many} from the places under you in ${state.year}.`);
     return E.empty(
-      "ri-calendar-event-line",
-      "No events yet",
-      `Nothing planned for ${state.year}. Add one and decide who it's open to.`,
-      CTX.can.manage ? `<a class="btn btn-primary" href="${CTX.baseUrl}/new"><i class="ri-add-line me-1"></i>New event</a>` : "",
+      E.IS_INITIATIVE ? "ri-seedling-line" : "ri-calendar-event-line",
+      `No ${N.many} yet`,
+      E.IS_INITIATIVE ? `Nothing running in ${state.year}. Add a programme that meets over time - a Bible study, a training - and its sessions are made for you.` : `Nothing planned for ${state.year}. Add one and decide who it's open to.`,
+      CTX.can.manage ? `<a class="btn btn-primary" href="${CTX.baseUrl}/new"><i class="ri-add-line me-1"></i>New ${N.one}</a>` : "",
     );
   }
 
@@ -159,9 +170,9 @@
     const past = state.items.filter((i) => new Date(i.ends_at) < now).reverse();
     const head = (label, n) => `<div class="col-12"><div class="ev-group-head"><span>${label}</span><span class="soft-chip soft-primary">${n}</span></div></div>`;
     grid.innerHTML =
-      (ahead.length ? head("Coming up", ahead.length) + ahead.map(E.eventCard).join("") : "") +
-      (past.length ? head("Already happened", past.length) + past.map(E.eventCard).join("") : "") +
-      `<div class="col-12" id="evNoMatch" hidden>${E.empty("ri-search-line", "No events match", "Try another word, or reset the filters.")}</div>`;
+      (ahead.length ? head(E.IS_INITIATIVE ? "Running and coming up" : "Coming up", ahead.length) + ahead.map(E.eventCard).join("") : "") +
+      (past.length ? head(E.IS_INITIATIVE ? "Ended" : "Already happened", past.length) + past.map(E.eventCard).join("") : "") +
+      `<div class="col-12" id="evNoMatch" hidden>${E.empty("ri-search-line", `No ${N.many} match`, "Try another word, or reset the filters.")}</div>`;
     renderToolbar();
     applyFilters();
   }
@@ -179,7 +190,7 @@
     const res = await EventsAPI.list({ scope: state.scope, year: state.year });
     if (token !== loadToken) return;
     if (!res.ok) {
-      document.getElementById("eventsGrid").innerHTML = E.empty("ri-error-warning-line", "Couldn't load the events", E.esc(res.message));
+      document.getElementById("eventsGrid").innerHTML = E.empty("ri-error-warning-line", `Couldn't load the ${N.many}`, E.esc(res.message));
       return;
     }
     state.items = res.data || [];

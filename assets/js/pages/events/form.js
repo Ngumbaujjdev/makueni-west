@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * EVENTS - new / edit (church, region, diocese)
+ * EVENTS AND INITIATIVES - new / edit (church, region, diocese)
  * ============================================================================
  * Four steps (what and when, where and who, registration and money, check)
  * with a live preview of how the invited places will see it. Save as a
@@ -13,10 +13,13 @@
   const UI = DemographicsUI;
   const E = EventsUI;
   const CTX = window.EVENTS_CTX;
+  const INIT = E.IS_INITIATIVE;
+  const N = E.NOUN;
+  const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const $ = (id) => document.getElementById(id);
   const editId = Number(new URLSearchParams(window.location.search).get("id")) || null;
   const STEP_OF = {
-    title: 1, type: 1, audience: 1, starts_at: 1, ends_at: 1, description: 1,
+    title: 1, type: 1, audience: 1, starts_at: 1, ends_at: 1, description: 1, frequency: 1, meeting_day: 1, meeting_time: 1, certificate: 1,
     venue: 2, capacity: 2, coordinator: 2, speakers: 2, agenda: 2, open_to: 2, invitees: 2,
     registration: 3, register_by: 3, fee_per_person: 3, planned_income: 3, planned_spend: 3,
   };
@@ -57,6 +60,11 @@
     const churches = ov.invitable.filter((p) => p.type === "church");
     const group = (label, list, icon, color) => (list.length ? `<optgroup label="${label}">${list.map((p) => `<option value="${p.id}" data-icon="${icon}" data-color="${color}">${E.esc(p.name)}</option>`).join("")}</optgroup>` : "");
     $("f_invitees").innerHTML = group("Regions", regions, "ri-map-2-line", "purple") + group("Churches", churches, "ri-home-heart-line", "success");
+    if (INIT) {
+      $("f_frequency").innerHTML = Object.entries(ov.frequencies || {}).map(([k, label]) => `<option value="${k}">${E.esc(label)}</option>`).join("");
+      UI.enhanceSelect("f_frequency", { search: false });
+      UI.enhanceSelect("f_meeting_day", { search: false });
+    }
     UI.enhanceSelect("f_type");
     UI.enhanceSelect("f_audience", { search: false });
     UI.enhanceSelect("f_invitees", { placeholder: "Pick regions or churches", closeOnSelect: false, search: true });
@@ -79,7 +87,8 @@
 
   function fill(e) {
     const start = e ? new Date(e.starts_at) : new Date(Date.now() + 14 * 86400000);
-    const end = e ? new Date(e.ends_at) : start;
+    // A new initiative runs for eight weeks to start with.
+    const end = e ? new Date(e.ends_at) : INIT ? new Date(start.getTime() + 56 * 86400000) : start;
     setValue("f_title", e?.title);
     setValue("f_type", e?.type);
     setValue("f_audience", e?.audience || "everyone");
@@ -101,6 +110,15 @@
     setValue("f_fee", e?.fee_per_person);
     setValue("f_planned_income", e?.planned_income);
     setValue("f_planned_spend", e?.planned_spend);
+    if (INIT) {
+      setValue("f_frequency", e?.frequency || "weekly");
+      setValue("f_meeting_day", e?.meeting_day ?? start.getDay());
+      $("f_certificate").checked = !!e?.certificate;
+      if (!e) {
+        $("f_start_time").value = "18:00";
+        $("f_end_time").value = "20:00";
+      }
+    }
     syncDependents();
   }
 
@@ -110,7 +128,9 @@
     $("regBox").hidden = !reaches();
     $("regOff").classList.toggle("d-none", reaches());
     $("regFields").hidden = !$("f_registration").checked;
-    $("f_register_by").max = $("f_start_date").value || "";
+    // An initiative can be joined until its last day.
+    $("f_register_by").max = (INIT ? $("f_end_date").value : $("f_start_date").value) || "";
+    if (INIT) $("meetingDayWrap").hidden = !["weekly", "fortnightly"].includes($("f_frequency").value);
   }
 
   // -------------------------------------------------------------- read it back
@@ -137,7 +157,41 @@
       fee_per_person: reg ? n("f_fee") : null,
       planned_income: n("f_planned_income"),
       planned_spend: n("f_planned_spend"),
+      ...(INIT
+        ? {
+            frequency: $("f_frequency").value,
+            meeting_day: ["weekly", "fortnightly"].includes($("f_frequency").value) ? Number($("f_meeting_day").value) : null,
+            // Sessions start at the time the first day starts.
+            meeting_time: $("f_start_time").value || null,
+            certificate: $("f_certificate").checked,
+          }
+        : {}),
     };
+  }
+
+  /** The days it will meet - the same rules the server uses (docs/specs/events-initiatives-spec.md). */
+  function sessionDates(b) {
+    if (!INIT || !b.frequency || !$("f_start_date").value || !$("f_end_date").value) return [];
+    const at = (v) => new Date(`${v}T12:00:00`);
+    const start = at($("f_start_date").value);
+    const end = at($("f_end_date").value);
+    const out = [];
+    if (b.frequency === "once") return [start];
+    if (b.frequency === "weekly" || b.frequency === "fortnightly") {
+      const day = new Date(start);
+      while (b.meeting_day != null && day.getDay() !== b.meeting_day) day.setDate(day.getDate() + 1);
+      for (; day <= end && out.length < 104; day.setDate(day.getDate() + (b.frequency === "weekly" ? 7 : 14))) out.push(new Date(day));
+      return out;
+    }
+    const step = b.frequency === "monthly" ? 1 : 3;
+    for (let i = 0; out.length < 104; i++) {
+      const first = new Date(start.getFullYear(), start.getMonth() + i * step, 1, 12);
+      const last = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+      const day = new Date(first.getFullYear(), first.getMonth(), Math.min(start.getDate(), last), 12);
+      if (day > end) break;
+      out.push(day);
+    }
+    return out;
   }
 
   /** The checks the API makes too, per step, so the person isn't sent back later. */
@@ -145,8 +199,9 @@
     const b = body();
     const out = {};
     if (n === 1) {
-      if (!b.title) out.title = "Give the event a name.";
-      if (!b.type) out.type = "Pick a kind of event.";
+      if (!b.title) out.title = `Give the ${N.one} a name.`;
+      if (!b.type) out.type = `Pick a kind of ${N.one}.`;
+      if (INIT && !b.frequency) out.frequency = "Say how often it meets.";
       if (!b.starts_at) out.starts_at = "Pick the day it starts.";
       if (!b.ends_at) out.ends_at = "Pick the day it ends.";
       if (b.starts_at && b.ends_at && b.ends_at < b.starts_at) out.ends_at = "It can't end before it starts.";
@@ -155,7 +210,8 @@
       if (!b.open_to) out.open_to = "Say who it is open to.";
       if (b.open_to === "selected" && !b.invitees.length) out.invitees = "Pick the places it's open to.";
     }
-    if (n === 3 && b.register_by && $("f_start_date").value && b.register_by > $("f_start_date").value) out.register_by = "Registration has to close by the day it starts.";
+    const closeBy = INIT ? $("f_end_date").value : $("f_start_date").value;
+    if (n === 3 && b.register_by && closeBy && b.register_by > closeBy) out.register_by = INIT ? "Joining has to close by the last day." : "Registration has to close by the day it starts.";
     return out;
   }
 
@@ -211,7 +267,7 @@
   // -------------------------------------------------------------- preview and review
   function renderPreview() {
     const b = body();
-    const label = ov.types[b.type] || "Kind of event";
+    const label = ov.types[b.type] || `Kind of ${N.one}`;
     const color = b.type ? E.typeColor(b.type) : "primary";
     const start = b.starts_at ? new Date(b.starts_at) : null;
     const invited = b.open_to === "selected" ? [...$("f_invitees").selectedOptions].map((o) => o.textContent) : [];
@@ -220,7 +276,7 @@
       <div class="d-flex gap-3">
         ${start ? E.dateBlock(b.starts_at, color) : `<div class="ev-date bg-light"><span>&nbsp;</span><strong>?</strong></div>`}
         <div style="min-width:0">
-          <div class="fw-bold text-break">${E.esc(b.title) || "Name of the event"}</div>
+          <div class="fw-bold text-break">${E.esc(b.title) || `Name of the ${N.one}`}</div>
           <div class="ev-card-meta mt-1">
             <span class="soft-chip soft-${color}"><i class="${E.typeIcon(b.type)}"></i>${E.esc(label)}</span>
             ${b.audience && b.audience !== "everyone" ? `<span class="soft-chip soft-primary">${E.esc(ov.audiences[b.audience])}</span>` : ""}
@@ -229,28 +285,39 @@
       </div>
       <ul class="ev-facts mt-3">
         <li><i class="ri-time-line"></i><span>${b.starts_at && b.ends_at ? E.when(b.starts_at, b.ends_at) : "Pick the dates"}</span></li>
+        ${INIT && b.frequency ? `<li><i class="ri-repeat-line"></i><span>${E.esc(E.meets({ frequency: b.frequency, frequency_label: ov.frequencies[b.frequency], meeting_day: b.meeting_day, starts_at: b.starts_at }))}</span></li>` : ""}
         <li><i class="ri-map-pin-line"></i><span>${E.esc(b.venue) || "Venue not set"}</span></li>
         <li><i class="${OPEN_ICONS[b.open_to] || "ri-group-line"}"></i><span>${E.esc(ov.open_to[b.open_to] || "Who it is open to")}${invited.length ? ` · ${invited.length} ${invited.length === 1 ? "place" : "places"}` : ""}</span></li>
-        ${b.registration ? `<li><i class="ri-user-add-line"></i><span>Register${b.register_by ? ` by ${E.shortDate(new Date(b.register_by))}` : ""} · ${b.fee_per_person ? `${E.money(b.fee_per_person)} a person` : "Free"}</span></li>` : ""}
+        ${b.registration ? `<li><i class="ri-user-add-line"></i><span>${INIT ? "Join" : "Register"}${b.register_by ? ` by ${E.shortDate(new Date(b.register_by))}` : ""} · ${b.fee_per_person ? `${E.money(b.fee_per_person)} a person` : "Free"}</span></li>` : ""}
         ${b.planned_income || b.planned_spend ? `<li><i class="ri-hand-coin-line"></i><span>Plan: raise ${E.money(b.planned_income)}, spend ${E.money(b.planned_spend)}</span></li>` : ""}
       </ul>
       ${invited.length ? `<div class="d-flex flex-wrap gap-1 mt-2">${invited.slice(0, 8).map((n) => `<span class="soft-chip soft-purple">${E.esc(n)}</span>`).join("")}${invited.length > 8 ? `<span class="soft-chip soft-primary">+${invited.length - 8} more</span>` : ""}</div>` : ""}
+      ${sessionsPreview(b)}
       ${b.description ? `<p class="mt-3 mb-0 fs-13 text-break">${E.esc(b.description).slice(0, 280)}${b.description.length > 280 ? "..." : ""}</p>` : ""}`;
+  }
+
+  function sessionsPreview(b) {
+    const dates = sessionDates(b);
+    if (!INIT) return "";
+    if (!dates.length) return `<div class="ev-sub mt-3">Sessions</div><p class="mb-0 fs-13 fw-semibold">Pick the days to see the sessions.</p>`;
+    return `<div class="ev-sub mt-3">${dates.length} ${dates.length === 1 ? "session" : "sessions"}${dates.length >= 104 ? " (the most)" : ""}</div>
+      <div class="d-flex flex-wrap gap-1 mt-1">${dates.slice(0, 8).map((d) => `<span class="soft-chip soft-primary">${d.toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>`).join("")}${dates.length > 8 ? `<span class="soft-chip soft-purple">+${dates.length - 8} more</span>` : ""}</div>`;
   }
 
   function renderReview() {
     const all = { ...problems(1), ...problems(2), ...problems(3) };
     const b = body();
-    const told = b.open_to === "own" ? "Nobody else is told - it's for your own church." : `When you publish, the leaders of ${b.open_to === "selected" ? `the ${b.invitees.length} ${b.invitees.length === 1 ? "place" : "places"} you picked` : E.esc(ov.open_to[b.open_to]).toLowerCase()} get a notification.`;
+    const told = b.open_to === "own" ? "Nobody else is told - it's for your own place." : `When you publish, the leaders of ${b.open_to === "selected" ? `the ${b.invitees.length} ${b.invitees.length === 1 ? "place" : "places"} you picked` : E.esc(ov.open_to[b.open_to]).toLowerCase()} get a notification.`;
     $("reviewBody").innerHTML = Object.keys(all).length
       ? `<div class="alert alert-danger mb-0"><strong>A few things are missing.</strong><ul class="mb-0 mt-1">${Object.values(all).map((m) => `<li>${E.esc(m)}</li>`).join("")}</ul></div>`
       : `<div class="ev-review">
           <div class="ev-review-row"><span>Name</span><strong>${E.esc(b.title)}</strong></div>
           <div class="ev-review-row"><span>Kind</span><strong>${E.esc(ov.types[b.type])} · ${E.esc(ov.audiences[b.audience])}</strong></div>
           <div class="ev-review-row"><span>When</span><strong>${E.when(b.starts_at, b.ends_at)}</strong></div>
+          ${INIT ? `<div class="ev-review-row"><span>Meets</span><strong>${E.esc(E.meets({ frequency: b.frequency, frequency_label: ov.frequencies[b.frequency], meeting_day: b.meeting_day, starts_at: b.starts_at }))} · ${sessionDates(b).length} sessions</strong></div>` : ""}
           <div class="ev-review-row"><span>Where</span><strong>${E.esc(b.venue) || "Not set"}</strong></div>
           <div class="ev-review-row"><span>Open to</span><strong>${E.esc(ov.open_to[b.open_to])}</strong></div>
-          <div class="ev-review-row"><span>Registration</span><strong>${b.registration ? `Yes${b.register_by ? `, by ${E.shortDate(new Date(b.register_by))}` : ""} · ${b.fee_per_person ? `${E.money(b.fee_per_person)} a person` : "free"}` : "No"}</strong></div>
+          <div class="ev-review-row"><span>${INIT ? "Joining" : "Registration"}</span><strong>${b.registration ? `Yes${b.register_by ? `, by ${E.shortDate(new Date(b.register_by))}` : ""} · ${b.fee_per_person ? `${E.money(b.fee_per_person)} a person` : "free"}` : "No"}</strong></div>
         </div>
         <div class="alert alert-primary d-flex gap-2 mt-3 mb-0"><i class="ri-notification-3-line fs-16"></i><span>${told}</span></div>`;
   }
@@ -282,7 +349,7 @@
     }
     dirty = false;
     sessionStorage.setItem("mwd-events-flash", message);
-    window.location.href = `${CTX.baseUrl}/event?id=${res.data.id}`;
+    window.location.href = `${CTX.baseUrl}/${N.page}?id=${res.data.id}`;
   }
 
   // -------------------------------------------------------------- start
@@ -302,14 +369,14 @@
     }
     ov = o.data;
     if (!ov.can.manage) {
-      Toast.warning("Your role can't add events here.");
+      Toast.warning(`Your role can't add ${N.many} here.`);
       window.location.href = `${CTX.baseUrl}/`;
       return;
     }
     if (e) {
       if (!e.ok || !e.data.can.edit) {
-        Toast.warning(e.ok ? "This event can't be changed any more." : e.message);
-        window.location.href = editId && e.ok ? `${CTX.baseUrl}/event?id=${editId}` : `${CTX.baseUrl}/`;
+        Toast.warning(e.ok ? `This ${N.one} can't be changed any more.` : e.message);
+        window.location.href = editId && e.ok ? `${CTX.baseUrl}/${N.page}?id=${editId}` : `${CTX.baseUrl}/`;
         return;
       }
       event = e.data;

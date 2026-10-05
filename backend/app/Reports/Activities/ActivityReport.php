@@ -6,18 +6,24 @@ use App\Enums\TerritoryType;
 use App\Models\Territory;
 use App\Models\User;
 use App\Reports\Report;
-use App\Support\EventsAccess;
+use App\Support\ActivityAccess;
 use App\Support\PlaceAccess;
 
 /**
- * Event reports (docs/specs/events-initiatives-spec.md): for a church,
- * region or the diocese - your own place, or one below you.
+ * Event and initiative reports (docs/specs/events-initiatives-spec.md): for
+ * a church, region or the diocese - your own place, or one below you.
  */
 abstract class ActivityReport extends Report
 {
     public function module(): string
     {
         return 'events';
+    }
+
+    /** Which kind this report is about (the summary reads either; its activity decides). */
+    protected function kind(): string
+    {
+        return 'event';
     }
 
     public function scopes(): array
@@ -32,11 +38,11 @@ abstract class ActivityReport extends Report
 
     public function authorize(User $user, Territory $territory): ?string
     {
-        if (! EventsAccess::can($user, $territory, 'read')) {
-            return 'Your role cannot see events here.';
+        if (! ActivityAccess::can($user, $territory, 'read', $this->kind())) {
+            return $this->kind() === 'initiative' ? 'Your role cannot see initiatives here.' : 'Your role cannot see events here.';
         }
         if (! PlaceAccess::isOwn($user, $territory) && ! PlaceAccess::isBelow($user, $territory)) {
-            return 'You can export your own events, or those of places below you.';
+            return 'You can export your own, or those of places below you.';
         }
 
         return null;

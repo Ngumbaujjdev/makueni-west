@@ -93,6 +93,7 @@ class AppServiceProvider extends ServiceProvider
             'calendar_event' => 'App\Models\CalendarEvent',
             'activity' => 'App\Models\Activity',
             'activity_registration' => 'App\Models\ActivityRegistration',
+            'activity_session' => 'App\Models\ActivitySession',
         ]);
 
         // Saved system settings (email server, ...) take over from .env -

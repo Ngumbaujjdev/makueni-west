@@ -8,7 +8,7 @@ Part of the **Church life** plan (2026-10-05): Events, Initiatives, Calendar add
 
 Both use one model, so the pages are shared.
 
-**Status:** planned 2026-10-05; L1a (the foundation), L1b (the Events backend) and L1c (the Events pages) done.
+**Status:** planned 2026-10-05; L1a (the foundation), L1b (the Events backend) and L1c (the Events pages) and L2 (Initiatives) done.
 - **L1a:** the shared foundation: place access, in-app notifications, and the header bell.
 - **L1b:** the Events backend.
 - **L1c:** the Events pages.
@@ -202,6 +202,63 @@ Menu (`ActivitiesAccessSeeder`, DatabaseSeeder phase 31):
   - The organiser records a fee paid per place from Who's coming.
 - **Export** passes `activity_id` through `report-center.js` (`data-activity-id`).
 
+## Initiatives (L2)
+An initiative is an `activities` row with `kind = initiative`. It uses the same visibility, open-to rules, registrations, money and history as an event; what differs is below.
+
+### Data
+- **`activities`** gains:
+  - `frequency`: `once`, `weekly`, `fortnightly`, `monthly` or `quarterly` (initiatives only; null for events);
+  - `meeting_day` (0 = Sunday ... 6 = Saturday, for weekly and fortnightly), `meeting_time` (time);
+  - `certificate` (bool): those who finish get a certificate or acknowledgement.
+  - `starts_at` / `ends_at` are the first and last day of the programme. `coordinator` is shown as **Facilitator** and `capacity` as **Places for (people)**.
+- **`activity_sessions`:** `activity_id`, `number`, `held_on` (date), `topic`, `status` (`planned`, `held`, `cancelled`), `youth`, `adults`, `children`, `leaders` (attendance, nullable until held), `notes`, `updated_by`, timestamps. Audited.
+- **`activity_registrations`** gains `completed` (int, nullable): how many from that place finished, recorded by the organiser at the end.
+
+**Types (initiatives):**
+- **Church:** Bible study, discipleship class, prayer group, youth programme, children's programme, women's fellowship, men's fellowship, outreach, training, welfare, other.
+- **Region and diocese:** pastors' training, leadership training, discipleship, Bible study, youth programme, women's programme, men's programme, evangelism, outreach, welfare, other.
+
+### Sessions
+- **Generated** when an initiative is created, and again when its dates, frequency or meeting day change:
+  - `once`: one session on the start day;
+  - `weekly` / `fortnightly`: every 7 / 14 days from the first meeting day on or after the start;
+  - `monthly` / `quarterly`: the start's day of the month, every 1 / 3 months (the last day when a month is shorter).
+  - At most 104 sessions. Regenerating keeps every session that is held or has attendance, and replaces only the untouched planned ones.
+- **Editable** by the organiser: topic, date, notes, status, and attendance (youth, adults, children, leaders). Saving attendance marks the session held. A session can be added, and an untouched planned one removed.
+
+### API (L2)
+The L1b routes take `kind=initiative`. The permission checks follow the activity's kind (`initiatives.*` for initiatives). Added:
+
+| Method | Path | Notes | Permission |
+|---|---|---|---|
+| GET | `/activities/{id}/sessions` | Sessions in date order, with totals | read, and visible |
+| POST | `/activities/{id}/sessions` | Add one: `held_on`, `topic` | manage (own) |
+| PUT | `/sessions/{id}` | `topic`, `held_on`, `status`, `notes`, attendance counts | manage (own) |
+| DELETE | `/sessions/{id}` | Only a planned session without attendance | manage (own) |
+
+`PUT /registrations/{id}` also takes `completed` from the organiser. For an initiative, places can join until `register_by`, or else until its last day.
+
+**Overview** (`kind=initiative`): active (published, not ended), places taking part, sessions held, attendance rate (attendance at held sessions against who each session is for: its "Places for" size, else the people the places below signed up; none when neither is known), the average per session, and sessions held by month.
+
+**Reports:** `activity.summary` covers an initiative too: its sessions, attendance per session, attendance rate and how many finished.
+
+### Permissions and menu (L2)
+- Per level: `{L}.initiatives.initiatives.read`, `.manage`, `.register`, and `{L}.initiatives.below.read` (region and diocese). The grants are the same as for Events.
+- `ActivitiesAccessSeeder` seeds both modules. **Initiatives** is a page per level in `{L}-programs` at `/{L}/initiatives/`. The diocese reuses the placeholder "Diocese Initiatives Management" (M13), and its unbuilt sub-pages are switched off. Region and church get a new module.
+
+### L2 as built
+- **Access:** `EventsAccess` became `App\Support\ActivityAccess`, with one ability map per kind; routes that don't know the kind yet accept either kind's read, then check the activity's own kind.
+- **Sessions:** `App\Services\Activities\Sessions` (`dates`, `sync`, `renumber`, `summary`). Dates are taken in Africa/Nairobi time. Generated sessions aren't written to the history; sessions people add, change or remove are.
+- **"In a year"** for an initiative means it runs during any part of that year (`Activity::scopeInYear`), so a programme that started last year still shows.
+- **Reports:** `activity.summary` covers both kinds (a Sessions section and "Finished" for initiatives); `initiative.year` (module `initiatives`) is the Initiatives page's Export.
+- **Wording:** money is "Income" and "Expenses" everywhere on these pages and reports.
+
+### Pages (L2)
+The Events pages, shared, with the kind set by the wrapper (`{L}/initiatives/{index,new,initiative}.php`):
+- **List:** KPI cards (active, places taking part, sessions held, attendance rate), the same tabs, and cards with a progress bar of sessions held.
+- **Form:** step 1 adds how often it meets (frequency, meeting day and time) and the certificate switch, and the preview lists the first sessions.
+- **Initiative page:** tabs **Details**, **Sessions** (a timeline; record attendance in place), **Taking part** (as Who's coming, plus "finished"), **Progress** (attendance per session chart), **Money**, **How it went** and **History**.
+
 ## Acceptance Criteria
 
 ### L1a: foundation
@@ -224,3 +281,12 @@ Menu (`ActivitiesAccessSeeder`, DatabaseSeeder phase 31):
 ### L1c: Events pages
 - [x] Each level's Events page shows the tabs, KPI cards, hero and list. The stepper creates and publishes an event. An invited church registers from the event page. The organiser sees it under Who's coming.
 - [x] No console errors. Light and dark. 390 px works.
+
+### L2: Initiatives
+- [x] An initiative's sessions are generated from its frequency (once, weekly, fortnightly, monthly, quarterly) between its start and end, at most 104; changing the schedule keeps held sessions and replaces untouched planned ones.
+- [x] The organiser edits a session, records attendance (it becomes held), adds one, and removes an untouched planned one; nobody else can.
+- [x] Initiative permissions are `initiatives.*`: an events-only role can't create an initiative, and an initiatives-only role can't create an event.
+- [x] Places below join with counts until `register_by` or the last day; the organiser records how many finished.
+- [x] The overview gives active, places taking part, sessions held and attendance rate. `activity.summary` builds for an initiative.
+- [x] The seeder adds an Initiatives page per level, reuses "Diocese Initiatives Management", and stays idempotent.
+- [x] Each level's Initiatives pages work end to end; no console errors; light and dark; 390 px.

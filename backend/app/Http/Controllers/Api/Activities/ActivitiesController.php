@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Api\Activities;
 use App\Http\Controllers\Controller;
 use App\Models\Activity;
 use App\Models\ActivityRegistration;
+use App\Models\ActivitySession;
 use App\Models\Territory;
 use App\Models\User;
 use App\Services\Activities\Activities;
+use App\Services\Activities\Sessions;
 use App\Services\Budgets\BudgetBook;
-use App\Support\EventsAccess;
+use App\Support\ActivityAccess;
 use App\Support\PlaceAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -42,7 +44,10 @@ class ActivitiesController extends Controller
         $kind = $data['kind'] ?? 'event';
         $year = (int) ($data['year'] ?? now()->year);
         $scope = $data['scope'] ?? 'own';
-        if ($scope === 'below' && ($place->territory_type->value === 'church' || ! EventsAccess::can($request->user(), $place, 'below'))) {
+        if ($denied = $this->readDenied($request, $place, $kind)) {
+            return $denied;
+        }
+        if ($scope === 'below' && ($place->territory_type->value === 'church' || ! ActivityAccess::can($request->user(), $place, 'below', $kind))) {
             return $this->forbidden("Your role can't see the places below.");
         }
 
@@ -51,7 +56,7 @@ class ActivitiesController extends Controller
             'below' => $this->activities->below($place, $kind),
             default => Activity::where('kind', $kind)->where('territory_id', $place->id),
         };
-        $items = $query->with(['territory', 'registrations.territory', 'invitees'])->whereYear('starts_at', $year)->orderBy('starts_at')->get();
+        $items = $query->with(['territory', 'registrations.territory', 'invitees', ...($kind === 'initiative' ? ['sessions'] : [])])->inYear($year, $kind)->orderBy('starts_at')->get();
         $mine = ActivityRegistration::where('territory_id', $place->id)->whereIn('activity_id', $items->pluck('id')->all() ?: [0])->get()->keyBy('activity_id');
 
         return $this->ok($items->map(fn (Activity $a) => $this->listItem($a, $scope, $mine->get($a->id)))->values());
@@ -67,16 +72,20 @@ class ActivitiesController extends Controller
         $kind = in_array($request->query('kind'), Activity::KINDS, true) ? $request->query('kind') : 'event';
         $user = $request->user();
         $level = $place->territory_type->value;
+        if ($denied = $this->readDenied($request, $place, $kind)) {
+            return $denied;
+        }
 
         return $this->ok($this->activities->overview($place, $kind, (int) ($request->query('year') ?: now()->year)) + [
             'place' => ['id' => $place->id, 'name' => $place->name, 'type' => $level],
             'can' => [
-                'manage' => EventsAccess::can($user, $place, 'manage'),
-                'register' => EventsAccess::can($user, $place, 'register'),
-                'below' => $level !== 'church' && EventsAccess::can($user, $place, 'below'),
+                'manage' => ActivityAccess::can($user, $place, 'manage', $kind),
+                'register' => ActivityAccess::can($user, $place, 'register', $kind),
+                'below' => $level !== 'church' && ActivityAccess::can($user, $place, 'below', $kind),
             ],
-            'types' => Activity::TYPES[$level] ?? Activity::TYPES['church'],
-            'all_types' => Activity::TYPES['church'] + Activity::TYPES['diocese'],
+            'types' => Activity::typesFor($kind, $level),
+            'all_types' => Activity::typesFor($kind, 'church') + Activity::typesFor($kind, 'diocese'),
+            'frequencies' => $kind === 'initiative' ? Activity::FREQUENCIES : null,
             'audiences' => Activity::AUDIENCES,
             'open_to' => Activity::OPEN_TO[$level] ?? Activity::OPEN_TO['church'],
             'invitable' => $level === 'church' ? [] : Territory::whereIn('id', PlaceAccess::descendantIds($place))
@@ -104,12 +113,14 @@ class ActivitiesController extends Controller
         if ($place instanceof JsonResponse) {
             return $place;
         }
-        if (! PlaceAccess::isOwn($request->user(), $place) || ! EventsAccess::can($request->user(), $place, 'manage')) {
-            return $this->forbidden("Your role can't add events here.");
+        $kind = $request->input('kind') === 'initiative' ? 'initiative' : 'event';
+        if (! PlaceAccess::isOwn($request->user(), $place) || ! ActivityAccess::can($request->user(), $place, 'manage', $kind)) {
+            return $this->forbidden($kind === 'initiative' ? "Your role can't add initiatives here." : "Your role can't add events here.");
         }
         [$fields, $invitees] = $this->validated($request, $place);
         $activity = Activity::create($fields + ['territory_id' => $place->id, 'status' => 'draft', 'created_by' => $request->user()->id, 'updated_by' => $request->user()->id]);
         $activity->invitees()->sync($invitees);
+        Sessions::sync($activity, $request->user()->id);
 
         return $this->ok($this->detail($activity->fresh(['territory', 'invitees', 'registrations']), $place, 'own', $request->user()), 'Saved as a draft.', 201);
     }
@@ -122,12 +133,15 @@ class ActivitiesController extends Controller
             return $error;
         }
         if (! in_array($activity->status, ['draft', 'published'], true)) {
-            return $this->unprocessable('status', 'A completed or cancelled event can\'t be changed.');
+            return $this->unprocessable('status', "A completed or cancelled {$activity->kind} can't be changed.");
         }
         [$fields, $invitees] = $this->validated($request, $place, $activity);
         $activity->fill($fields + ['updated_by' => $request->user()->id])->save();
         $activity->invitees()->sync($invitees);
         $this->refreshFees($activity);
+        if ($activity->wasChanged(['starts_at', 'ends_at', 'frequency', 'meeting_day'])) {
+            Sessions::sync($activity, $request->user()->id);
+        }
 
         return $this->ok($this->detail($activity->fresh(['territory', 'invitees', 'registrations']), $place, 'own', $request->user()), 'Saved.');
     }
@@ -157,7 +171,7 @@ class ActivitiesController extends Controller
             return $error;
         }
         if ($activity->status !== 'published') {
-            return $this->unprocessable('status', 'Only a published event can be marked done.');
+            return $this->unprocessable('status', "Only a published {$activity->kind} can be marked done.");
         }
         $data = $request->validate(['report_back' => ['nullable', 'string', 'max:5000']]);
         $activity->forceFill(['status' => 'completed', 'report_back' => $data['report_back'] ?? null, 'updated_by' => $request->user()->id])->save();
@@ -209,11 +223,11 @@ class ActivitiesController extends Controller
         if ($error) {
             return $error;
         }
-        if ($relation !== 'invited' || ! PlaceAccess::isOwn($request->user(), $place) || ! EventsAccess::can($request->user(), $place, 'register')) {
+        if ($relation !== 'invited' || ! PlaceAccess::isOwn($request->user(), $place) || ! ActivityAccess::can($request->user(), $place, 'register', $activity->kind)) {
             return $this->forbidden('Only a place it was opened to can register.');
         }
         if (! $activity->registrationOpen()) {
-            return $this->unprocessable('activity', 'Registration for this event is closed.');
+            return $this->unprocessable('activity', "Registration for this {$activity->kind} is closed.");
         }
         $counts = $this->counts($request);
         $existing = ActivityRegistration::where('activity_id', $activity->id)->where('territory_id', $place->id)->first();
@@ -245,20 +259,27 @@ class ActivitiesController extends Controller
         }
         $activity = $registration->activity;
         $user = $request->user();
-        $isOrganiser = EventsAccess::canManage($user, $place, $activity) && PlaceAccess::isOwn($user, $place);
-        $isRegistrant = (int) $registration->territory_id === (int) $place->id && PlaceAccess::isOwn($user, $place) && EventsAccess::can($user, $place, 'register');
+        $isOrganiser = ActivityAccess::canManage($user, $place, $activity) && PlaceAccess::isOwn($user, $place);
+        $isRegistrant = (int) $registration->territory_id === (int) $place->id && PlaceAccess::isOwn($user, $place) && ActivityAccess::can($user, $place, 'register', $activity->kind);
 
         if ($isOrganiser && ! $isRegistrant) {
-            $data = $request->validate(['fee_paid' => ['required', 'numeric', 'min:0', 'max:99999999']]);
-            $registration->forceFill(['fee_paid' => $data['fee_paid'], 'updated_by' => $user->id])->save();
+            // The organiser records what was paid, and (initiatives) how many finished.
+            $data = $request->validate([
+                'fee_paid' => ['required_without:completed', 'numeric', 'min:0', 'max:99999999'],
+                'completed' => ['required_without:fee_paid', 'nullable', 'integer', 'between:0,100000'],
+            ]);
+            if (array_key_exists('completed', $data) && $activity->kind !== 'initiative') {
+                return $this->unprocessable('completed', 'Only an initiative records how many finished.');
+            }
+            $registration->forceFill(array_intersect_key($data, array_flip(['fee_paid', 'completed'])) + ['updated_by' => $user->id])->save();
 
-            return $this->ok($this->registrationItem($registration->fresh('territory'), $activity, $place, $user), 'Fee recorded.');
+            return $this->ok($this->registrationItem($registration->fresh('territory'), $activity, $place, $user), isset($data['fee_paid']) ? 'Fee recorded.' : 'Saved.');
         }
         if (! $isRegistrant) {
             return $this->forbidden('Only the place that registered can change its numbers.');
         }
-        if ($request->has('fee_paid')) {
-            return $this->forbidden('The organiser records what was paid.');
+        if ($request->has('fee_paid') || $request->has('completed')) {
+            return $this->forbidden('The organiser records that.');
         }
 
         $started = $activity->starts_at->isPast() || $activity->status === 'completed';
@@ -296,11 +317,11 @@ class ActivitiesController extends Controller
             return $place;
         }
         $registration = ActivityRegistration::with('activity')->find($id);
-        if (! $registration || (int) $registration->territory_id !== (int) $place->id || ! PlaceAccess::isOwn($request->user(), $place) || ! EventsAccess::can($request->user(), $place, 'register')) {
+        if (! $registration || (int) $registration->territory_id !== (int) $place->id || ! PlaceAccess::isOwn($request->user(), $place) || ! ActivityAccess::can($request->user(), $place, 'register', $registration->activity->kind)) {
             return $this->forbidden('Only the place that registered can withdraw.');
         }
-        if ($registration->activity->starts_at->isPast()) {
-            return $this->unprocessable('activity', 'It has already started.');
+        if (($registration->activity->kind === 'initiative' ? $registration->activity->ends_at : $registration->activity->starts_at)->isPast()) {
+            return $this->unprocessable('activity', $registration->activity->kind === 'initiative' ? 'It has already ended.' : 'It has already started.');
         }
         $registration->forceFill(['status' => 'withdrawn', 'updated_by' => $request->user()->id])->save();
 
@@ -343,20 +364,37 @@ class ActivitiesController extends Controller
             return $this->forbidden('Only the organiser sees the history.');
         }
         $regIds = $activity->registrations()->pluck('id')->all();
+        $sessionIds = $activity->sessions()->pluck('id')->all();
         $audits = Audit::query()
             ->where(fn ($q) => $q->where(fn ($q) => $q->where('auditable_type', 'activity')->where('auditable_id', $activity->id))
-                ->orWhere(fn ($q) => $q->where('auditable_type', 'activity_registration')->whereIn('auditable_id', $regIds ?: [0])))
+                ->orWhere(fn ($q) => $q->where('auditable_type', 'activity_registration')->whereIn('auditable_id', $regIds ?: [0]))
+                ->orWhere(fn ($q) => $q->where('auditable_type', 'activity_session')->whereIn('auditable_id', $sessionIds ?: [0])))
             ->latest('id')->limit(200)->get();
         $people = User::whereIn('id', $audits->pluck('user_id')->filter()->unique())->get()->keyBy('id');
         $regs = ActivityRegistration::with('territory')->whereIn('id', $regIds ?: [0])->get()->keyBy('id');
+        $sessions = ActivitySession::whereIn('id', $sessionIds ?: [0])->get()->keyBy('id');
 
-        return $this->ok($audits->map(function (Audit $a) use ($people, $regs) {
+        return $this->ok($audits->map(function (Audit $a) use ($people, $regs, $sessions) {
             $who = ($p = $people->get($a->user_id)) ? trim("{$p->firstname} {$p->lastname}") : 'The system';
             $new = (array) $a->new_values;
+            $old = (array) $a->old_values;
+            if ($a->auditable_type === 'activity_session') {
+                $n = $new['number'] ?? $old['number'] ?? $sessions->get($a->auditable_id)?->number;
+                $label = $n ? "session {$n}" : 'a session';
+
+                return ['id' => $a->id, 'at' => $a->created_at?->toIso8601String(), 'who' => $who, 'sentence' => match (true) {
+                    $a->event === 'created' => "{$who} added {$label}",
+                    $a->event === 'deleted' => "{$who} removed {$label}",
+                    collect(array_keys($new))->intersect(ActivityRegistration::GROUPS)->isNotEmpty() => "{$who} recorded attendance for {$label}",
+                    ($new['status'] ?? null) === 'cancelled' => "{$who} cancelled {$label}",
+                    default => "{$who} changed {$label}",
+                }];
+            }
             $sentence = $a->auditable_type === 'activity_registration'
                 ? (($r = $regs->get($a->auditable_id)) ? match (true) {
                     $a->event === 'created' => "{$who} registered {$r->territory?->name}",
                     isset($new['fee_paid']) => "{$who} recorded {$r->territory?->name}'s fee paid: KES ".number_format((float) $new['fee_paid'], 2),
+                    array_key_exists('completed', $new) => "{$who} recorded how many finished from {$r->territory?->name}: ".(int) $new['completed'],
                     isset($new['status']) && $new['status'] === 'withdrawn' => "{$who} withdrew {$r->territory?->name}",
                     collect($new)->keys()->contains(fn ($k) => str_starts_with($k, 'came_')) => "{$who} said how many came from {$r->territory?->name}",
                     default => "{$who} changed {$r->territory?->name}'s numbers",
@@ -374,17 +412,132 @@ class ActivitiesController extends Controller
         })->values());
     }
 
+    // ------------------------------------------------------------------ sessions (initiatives)
+
+    /** GET /activities/{id}/sessions - the schedule with attendance, for anyone who can see it. */
+    public function sessions(Request $request, int $id): JsonResponse
+    {
+        [$place, $activity, $relation, $error] = $this->visible($request, $id);
+        if ($error) {
+            return $error;
+        }
+        if ($activity->kind !== 'initiative') {
+            return $this->unprocessable('activity', 'Only an initiative has sessions.');
+        }
+        $manage = $relation === 'own' && ActivityAccess::canManage($request->user(), $place, $activity) && PlaceAccess::isOwn($request->user(), $place);
+
+        return $this->ok([
+            'summary' => Sessions::summary($activity->load('sessions')),
+            'items' => $activity->sessions->map(fn (ActivitySession $s) => $this->sessionItem($s))->values(),
+            'can_manage' => $manage && $activity->status !== 'cancelled',
+        ]);
+    }
+
+    /** POST /activities/{id}/sessions - {held_on, topic} */
+    public function addSession(Request $request, int $id): JsonResponse
+    {
+        [, $activity, $error] = $this->manageable($request, $id);
+        if ($error) {
+            return $error;
+        }
+        if ($activity->kind !== 'initiative' || $activity->status === 'cancelled') {
+            return $this->unprocessable('activity', 'Sessions can only be added to an initiative that is still on.');
+        }
+        if ($activity->sessions()->count() >= Sessions::MAX) {
+            return $this->unprocessable('held_on', 'An initiative can have at most '.Sessions::MAX.' sessions.');
+        }
+        $data = $request->validate(['held_on' => ['required', 'date'], 'topic' => ['nullable', 'string', 'max:160']], ['held_on.required' => 'Pick the day.']);
+        $session = ActivitySession::create(['activity_id' => $activity->id, 'number' => 0, 'held_on' => $data['held_on'], 'topic' => $data['topic'] ?? null, 'status' => 'planned', 'updated_by' => $request->user()->id]);
+        Sessions::renumber($activity);
+
+        return $this->ok($this->sessionItem($session->fresh()), 'Session added.', 201);
+    }
+
+    /** PUT /sessions/{id} - topic, date, status, notes, attendance (recording attendance marks it held). */
+    public function updateSession(Request $request, int $id): JsonResponse
+    {
+        $session = ActivitySession::find($id);
+        if (! $session) {
+            return response()->json(['success' => false, 'status' => 404, 'message' => 'That session no longer exists.'], 404);
+        }
+        [, $activity, $error] = $this->manageable($request, (int) $session->activity_id);
+        if ($error) {
+            return $error;
+        }
+        if ($activity->status === 'cancelled') {
+            return $this->unprocessable('activity', 'This initiative was cancelled.');
+        }
+        $data = $request->validate([
+            'held_on' => ['sometimes', 'date'],
+            'topic' => ['sometimes', 'nullable', 'string', 'max:160'],
+            'status' => ['sometimes', Rule::in(ActivitySession::STATUSES)],
+            'notes' => ['sometimes', 'nullable', 'string', 'max:2000'],
+            'youth' => ['sometimes', 'nullable', 'integer', 'between:0,100000'],
+            'adults' => ['sometimes', 'nullable', 'integer', 'between:0,100000'],
+            'children' => ['sometimes', 'nullable', 'integer', 'between:0,100000'],
+            'leaders' => ['sometimes', 'nullable', 'integer', 'between:0,100000'],
+        ]);
+        $counts = array_intersect_key($data, array_flip(ActivityRegistration::GROUPS));
+        if ($counts && ! isset($data['status']) && array_filter($counts, fn ($v) => $v !== null) !== []) {
+            $data['status'] = 'held';
+        }
+        if (($data['status'] ?? $session->status) === 'held' && ($data['held_on'] ?? $session->held_on->toDateString()) > now(Sessions::LOCAL_TZ)->toDateString()) {
+            return $this->unprocessable('held_on', 'A session in the future can\'t be marked as held yet.');
+        }
+        $session->fill($data + ['updated_by' => $request->user()->id])->save();
+        if ($session->wasChanged('held_on')) {
+            Sessions::renumber($activity);
+        }
+
+        return $this->ok($this->sessionItem($session->fresh()), $counts ? 'Attendance saved.' : 'Saved.');
+    }
+
+    /** DELETE /sessions/{id} - only a planned session with nothing recorded. */
+    public function removeSession(Request $request, int $id): JsonResponse
+    {
+        $session = ActivitySession::find($id);
+        if (! $session) {
+            return response()->json(['success' => false, 'status' => 404, 'message' => 'That session no longer exists.'], 404);
+        }
+        [, $activity, $error] = $this->manageable($request, (int) $session->activity_id);
+        if ($error) {
+            return $error;
+        }
+        if (! $session->untouched()) {
+            return $this->unprocessable('session', 'A session that was held or has attendance stays - cancel it instead.');
+        }
+        $session->delete();
+        Sessions::renumber($activity);
+
+        return $this->ok(['id' => $id], 'Session removed.');
+    }
+
+    private function sessionItem(ActivitySession $s): array
+    {
+        return [
+            'id' => $s->id,
+            'number' => $s->number,
+            'held_on' => $s->held_on->toDateString(),
+            'topic' => $s->topic,
+            'status' => $s->status,
+            'youth' => $s->youth, 'adults' => $s->adults, 'children' => $s->children, 'leaders' => $s->leaders,
+            'attendance' => $s->attendance(),
+            'notes' => $s->notes,
+        ];
+    }
+
     // ------------------------------------------------------------------ helpers
 
     /** @return array{0: array, 1: int[]} the activity fields, and the invitee ids */
     private function validated(Request $request, Territory $place, ?Activity $activity = null): array
     {
         $level = $place->territory_type->value;
+        $kind = $activity?->kind ?? ($request->input('kind') === 'initiative' ? 'initiative' : 'event');
         $data = $request->validate([
             'kind' => ['sometimes', Rule::in(Activity::KINDS)],
             'title' => ['required', 'string', 'max:160'],
             'description' => ['nullable', 'string', 'max:5000'],
-            'type' => ['required', Rule::in(array_keys(Activity::TYPES[$level] ?? []))],
+            'type' => ['required', Rule::in(array_keys(Activity::typesFor($kind, $level)))],
             'audience' => ['sometimes', Rule::in(array_keys(Activity::AUDIENCES))],
             'starts_at' => ['required', 'date'],
             'ends_at' => ['required', 'date', 'after_or_equal:starts_at'],
@@ -401,11 +554,16 @@ class ActivitiesController extends Controller
             'fee_per_person' => ['nullable', 'numeric', 'min:0', 'max:9999999'],
             'planned_income' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
             'planned_spend' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
+            'frequency' => [$kind === 'initiative' ? 'required' : 'nullable', Rule::in(array_keys(Activity::FREQUENCIES))],
+            'meeting_day' => ['nullable', 'integer', 'between:0,6'],
+            'meeting_time' => ['nullable', 'date_format:H:i'],
+            'certificate' => ['sometimes', 'boolean'],
         ], [
             'ends_at.after_or_equal' => 'It can\'t end before it starts.',
             'register_by.before_or_equal' => 'Registration has to close by the day it starts.',
             'invitees.required_if' => 'Pick the places it\'s open to.',
-            'type.in' => 'Pick a kind of event from the list.',
+            'type.in' => "Pick a kind of {$kind} from the list.",
+            'frequency.required' => 'Say how often it meets.',
         ]);
 
         $below = PlaceAccess::descendantIds($place);
@@ -417,7 +575,7 @@ class ActivitiesController extends Controller
         $reachesOthers = $data['open_to'] !== 'own';
 
         return [[
-            'kind' => $activity?->kind ?? ($data['kind'] ?? 'event'),
+            'kind' => $kind,
             'title' => trim($data['title']),
             'description' => $data['description'] ?? null,
             'type' => $data['type'],
@@ -436,6 +594,10 @@ class ActivitiesController extends Controller
             'fee_per_person' => $reachesOthers ? ($data['fee_per_person'] ?? null) : null,
             'planned_income' => $data['planned_income'] ?? null,
             'planned_spend' => $data['planned_spend'] ?? null,
+            'frequency' => $kind === 'initiative' ? $data['frequency'] : null,
+            'meeting_day' => $kind === 'initiative' && in_array($data['frequency'] ?? null, ['weekly', 'fortnightly'], true) ? ($data['meeting_day'] ?? null) : null,
+            'meeting_time' => $kind === 'initiative' ? ($data['meeting_time'] ?? null) : null,
+            'certificate' => $kind === 'initiative' && (bool) ($data['certificate'] ?? false),
         ], $invitees];
     }
 
@@ -486,13 +648,17 @@ class ActivitiesController extends Controller
             'fee_per_person' => $a->fee_per_person !== null ? (float) $a->fee_per_person : null,
             'totals' => $scope === 'invited' ? null : ['places' => $totals['places'], 'expected' => $totals['expected'], 'came' => $totals['came']],
             'mine' => $mine ? ['status' => $mine->status, 'expected' => $mine->expected()] : null,
+            'frequency' => $a->frequency,
+            'frequency_label' => $a->frequency ? Activity::FREQUENCIES[$a->frequency] ?? null : null,
+            'meeting_day' => $a->meeting_day,
+            'sessions' => $a->kind === 'initiative' ? Sessions::summary($a) : null,
         ];
     }
 
     private function detail(Activity $a, Territory $place, string $relation, User $user): array
     {
         $mine = ActivityRegistration::where('activity_id', $a->id)->where('territory_id', $place->id)->first();
-        $manage = $relation === 'own' && EventsAccess::canManage($user, $place, $a) && PlaceAccess::isOwn($user, $place);
+        $manage = $relation === 'own' && ActivityAccess::canManage($user, $place, $a) && PlaceAccess::isOwn($user, $place);
         $level = $a->level();
 
         return [
@@ -510,6 +676,12 @@ class ActivitiesController extends Controller
             'coordinator' => $a->coordinator,
             'speakers' => $a->speakers,
             'agenda' => $a->agenda,
+            'frequency' => $a->frequency,
+            'frequency_label' => $a->frequency ? Activity::FREQUENCIES[$a->frequency] ?? null : null,
+            'meeting_day' => $a->meeting_day,
+            'meeting_time' => $a->meeting_time ? substr($a->meeting_time, 0, 5) : null,
+            'certificate' => (bool) $a->certificate,
+            'sessions' => $a->kind === 'initiative' ? Sessions::summary($a) : null,
             'open_to' => $a->open_to,
             'open_to_label' => Activity::OPEN_TO[$level][$a->open_to] ?? $a->open_to,
             'invitees' => $a->invitees->map(fn ($t) => ['id' => $t->id, 'name' => $t->name, 'type' => $t->territory_type->value])->values(),
@@ -531,9 +703,11 @@ class ActivitiesController extends Controller
                 'publish' => $manage && $a->status === 'draft',
                 'complete' => $manage && $a->status === 'published',
                 'cancel' => $manage && in_array($a->status, ['draft', 'published'], true),
-                'register' => $relation === 'invited' && $a->registrationOpen() && PlaceAccess::isOwn($user, $place) && EventsAccess::can($user, $place, 'register'),
-                'say_came' => $relation === 'invited' && $mine !== null && $mine->status === 'registered' && ($a->starts_at->isPast() || $a->status === 'completed'),
+                'register' => $relation === 'invited' && $a->registrationOpen() && PlaceAccess::isOwn($user, $place) && ActivityAccess::can($user, $place, 'register', $a->kind),
+                // Initiatives count attendance per session instead.
+                'say_came' => $a->kind === 'event' && $relation === 'invited' && $mine !== null && $mine->status === 'registered' && ($a->starts_at->isPast() || $a->status === 'completed'),
                 'record_money' => $manage && $a->status !== 'cancelled',
+                'manage_sessions' => $manage && $a->kind === 'initiative' && $a->status !== 'cancelled',
                 'record_attendance' => $manage && $level === 'church' && $a->kind === 'event' && $a->starts_at->isPast() && $a->status !== 'cancelled',
             ],
         ];
@@ -556,11 +730,12 @@ class ActivitiesController extends Controller
             'fee_paid' => (float) $r->fee_paid,
             'came_youth' => $r->came_youth, 'came_adults' => $r->came_adults, 'came_children' => $r->came_children, 'came_leaders' => $r->came_leaders,
             'came' => $r->came(),
+            'completed' => $r->completed,
             'rating' => $r->rating,
             'comment' => $r->comment,
             'status' => $r->status,
             'updated_at' => $r->updated_at?->toIso8601String(),
-            'can_record_fee' => EventsAccess::canManage($user, $place, $activity) && PlaceAccess::isOwn($user, $place),
+            'can_record_fee' => ActivityAccess::canManage($user, $place, $activity) && PlaceAccess::isOwn($user, $place),
         ];
     }
 
@@ -574,10 +749,13 @@ class ActivitiesController extends Controller
         $activity = Activity::with(['territory', 'invitees', 'registrations'])->find($id);
         $relation = $activity ? $this->activities->relation($activity, $place) : null;
         if (! $activity || ! $relation || ($relation === 'own' && $activity->status === 'draft' && ! PlaceAccess::isOwn($request->user(), $place))) {
-            return [$place, null, null, response()->json(['success' => false, 'status' => 404, 'message' => 'That event isn\'t one you can see.'], 404)];
+            return [$place, null, null, response()->json(['success' => false, 'status' => 404, 'message' => 'That isn\'t one you can see.'], 404)];
         }
-        if ($relation === 'below' && ! EventsAccess::can($request->user(), $place, 'below')) {
+        if ($relation === 'below' && ! ActivityAccess::can($request->user(), $place, 'below', $activity->kind)) {
             return [$place, null, null, $this->forbidden("Your role can't see the places below.")];
+        }
+        if ($relation !== 'below' && ($denied = $this->readDenied($request, $place, $activity->kind))) {
+            return [$place, null, null, $denied];
         }
 
         return [$place, $activity, $relation, null];
@@ -592,9 +770,9 @@ class ActivitiesController extends Controller
         }
         $activity = Activity::with(['territory', 'invitees', 'registrations'])->find($id);
         if (! $activity) {
-            return [$place, null, response()->json(['success' => false, 'status' => 404, 'message' => 'That event no longer exists.'], 404)];
+            return [$place, null, response()->json(['success' => false, 'status' => 404, 'message' => 'That no longer exists.'], 404)];
         }
-        if (! PlaceAccess::isOwn($request->user(), $place) || ! EventsAccess::canManage($request->user(), $place, $activity)) {
+        if (! PlaceAccess::isOwn($request->user(), $place) || ! ActivityAccess::canManage($request->user(), $place, $activity)) {
             return [$place, null, $this->forbidden('Only the place that organises it can change it.')];
         }
 
@@ -609,9 +787,17 @@ class ActivitiesController extends Controller
             return $this->forbidden("This isn't your place.");
         }
 
-        return EventsAccess::can($request->user(), $place, 'read') || PlaceAccess::isBelow($request->user(), $place)
+        return ActivityAccess::canReadAny($request->user(), $place) || PlaceAccess::isBelow($request->user(), $place)
             ? $place
-            : $this->forbidden("Your role can't see events.");
+            : $this->forbidden("Your role can't see events or initiatives.");
+    }
+
+    /** 403 when the role can't read this kind here (a place above looking down may). */
+    private function readDenied(Request $request, Territory $place, string $kind): ?JsonResponse
+    {
+        return ActivityAccess::can($request->user(), $place, 'read', $kind) || PlaceAccess::isBelow($request->user(), $place)
+            ? null
+            : $this->forbidden($kind === 'initiative' ? "Your role can't see initiatives." : "Your role can't see events.");
     }
 
     private function ok(mixed $data, string $message = 'OK', int $status = 200): JsonResponse
