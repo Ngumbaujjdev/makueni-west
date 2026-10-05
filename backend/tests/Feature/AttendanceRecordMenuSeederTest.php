@@ -37,10 +37,15 @@ class AttendanceRecordMenuSeederTest extends TestCase
         $committee = Role::create(['name' => 'Church Committee Member', 'guard_name' => 'web']);
         $committee->givePermissionTo($read); // read only
 
+        // The first version pointed the menu at record.php (one saved record).
+        $old = Submodule::create(['module_id' => $attendance->id, 'title' => 'Record Attendance', 'path' => '/church/attendance/record.php', 'is_active' => true]);
+
         $this->seed(AttendanceRecordMenuSeeder::class);
         $this->seed(AttendanceRecordMenuSeeder::class); // twice: nothing doubles
 
-        $page = Submodule::where('path', '/church/attendance/record.php')->sole();
+        $page = Submodule::where('path', '/church/attendance/new.php')->sole();
+        $this->assertSame($old->id, $page->id);
+        $this->assertSame(0, Submodule::where('path', '/church/attendance/record.php')->count());
         $this->assertSame('Record Attendance', $page->title);
         $this->assertSame($page->id, Permission::where('name', 'attendancemanagement.recordattendance.create')->value('submodule_id'));
 

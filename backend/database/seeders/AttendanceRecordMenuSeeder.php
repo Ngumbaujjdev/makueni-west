@@ -10,7 +10,7 @@ use Spatie\Permission\Models\Role;
 /**
  * The two "record" pages, easy to find in the church menu:
  *
- * - **Record Attendance** (church/attendance/record.php) joins the Attendance
+ * - **Record Attendance** (church/attendance/new.php) joins the Attendance
  *   module. Its permission goes to every role that can already record any
  *   attendance (service, ministry or special event) - by permission, not by
  *   role name, so Role Management decides.
@@ -42,10 +42,14 @@ class AttendanceRecordMenuSeeder extends Seeder
             return;
         }
 
-        $submodule = Submodule::updateOrCreate(
-            ['module_id' => $moduleId, 'path' => '/church/attendance/record.php'],
-            ['title' => 'Record Attendance', 'description' => 'Record a Sunday service, ministry gathering or special event', 'is_active' => true],
-        );
+        // The page to choose what to record (new.php). The first version of
+        // this row pointed at record.php - the page for one saved record -
+        // so that row is moved, not doubled.
+        $submodule = Submodule::where('module_id', $moduleId)
+            ->whereIn('path', ['/church/attendance/new.php', '/church/attendance/record.php'])
+            ->orderByRaw("path = '/church/attendance/new.php' desc")
+            ->first() ?? new Submodule(['module_id' => $moduleId]);
+        $submodule->fill(['path' => '/church/attendance/new.php', 'title' => 'Record Attendance', 'description' => 'Record a Sunday service, ministry gathering or special event', 'is_active' => true])->save();
         $permission = Permission::firstOrCreate(
             ['name' => self::PERMISSION, 'guard_name' => 'web'],
             ['module_id' => $moduleId, 'submodule_id' => $submodule->id, 'sub_submodule_id' => null, 'action' => 'create', 'territory_scope' => 'church'],
