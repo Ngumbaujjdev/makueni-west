@@ -240,10 +240,17 @@ class DatabaseSeeder extends Seeder
             ActivitiesAccessSeeder::class,
 
             // ==========================================
+            // PHASE 32: Monthly reports - churches and regions send one a
+            // month, those above see and comment; {level}.reports.*
+            // (docs/specs/monthly-reports-spec.md)
+            // ==========================================
+            MonthlyReportsAccessSeeder::class,
+
+            // ==========================================
             // PHASE 33: the record pages in the church menu - Record
             // Attendance for whoever can record attendance, Demographics
             // Tracking named Record Demographics, and the demographics entry
-            // grants put back where a role lost them. (32 is Monthly reports.)
+            // grants put back where a role lost them.
             // ==========================================
             AttendanceRecordMenuSeeder::class,
         ]);

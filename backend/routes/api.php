@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\NotificationsController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\Reports\MonthlyReportsController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\Settings\AuditController as SettingsAuditController;
 use App\Http\Controllers\Api\Settings\CommunicationController as SettingsCommunicationController;
@@ -78,6 +79,20 @@ Route::get('settings/logo/{territory}', [SettingsProfileController::class, 'logo
 Route::middleware(['auth:sanctum'])->group(function () {
 
     // Events (and initiatives) of church, region and diocese (docs/specs/events-initiatives-spec.md)
+    // Monthly reports (docs/specs/monthly-reports-spec.md)
+    Route::get('monthly-reports', [MonthlyReportsController::class, 'index']);
+    Route::get('monthly-reports/below', [MonthlyReportsController::class, 'below']);
+    Route::get('monthly-reports/{id}', [MonthlyReportsController::class, 'show'])->whereNumber('id');
+    Route::post('monthly-reports/{id}/seen', [MonthlyReportsController::class, 'seen'])->whereNumber('id');
+    Route::post('monthly-reports/{id}/comments', [MonthlyReportsController::class, 'comment'])->whereNumber('id')->middleware('throttle:30,1');
+    Route::post('monthly-reports/{id}/attachments', [MonthlyReportsController::class, 'attach'])->whereNumber('id');
+    Route::delete('monthly-reports/{id}/attachments/{media}', [MonthlyReportsController::class, 'detach'])->whereNumber(['id', 'media']);
+    Route::get('monthly-reports/{id}/attachments/{media}', [MonthlyReportsController::class, 'file'])->whereNumber(['id', 'media']);
+    Route::get('monthly-reports/{year}/{month}', [MonthlyReportsController::class, 'month'])->whereNumber(['year', 'month']);
+    Route::put('monthly-reports/{year}/{month}', [MonthlyReportsController::class, 'save'])->whereNumber(['year', 'month']);
+    Route::post('monthly-reports/{year}/{month}/send', [MonthlyReportsController::class, 'send'])->whereNumber(['year', 'month']);
+    Route::post('monthly-reports/{year}/{month}/reopen', [MonthlyReportsController::class, 'reopen'])->whereNumber(['year', 'month']);
+
     Route::get('activities', [ActivitiesController::class, 'index']);
     Route::get('activities/overview', [ActivitiesController::class, 'overview']);
     Route::post('activities', [ActivitiesController::class, 'store']);

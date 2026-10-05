@@ -51,6 +51,12 @@ class MuteNonDemographicsChurchModulesSeeder extends Seeder
 
                 continue;
             }
+            // Monthly reports too (docs/specs/monthly-reports-spec.md) - it reuses "Church Reporting".
+            if ($module->submodules()->where('path', '/church/monthly-reports/')->exists()) {
+                $this->command->info("   🔊 Kept: {$module->name} (ID: {$module->id}) - the church's Monthly reports");
+
+                continue;
+            }
             if ($module->is_active) {
                 $module->is_active = false;
                 $module->save();
