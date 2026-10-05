@@ -111,9 +111,10 @@ final class PlaceMessenger
 
     /**
      * @param  string[]  $secrets
+     * @param  bool  $signed  add the place's SMS signature (not when sending a logged message again)
      * @return array{ok: bool, status: string, error: ?string, via: string, log_id: ?int}
      */
-    public function sms(Territory $place, string $to, string $text, string $kind, array $secrets = [], ?User $by = null): array
+    public function sms(Territory $place, string $to, string $text, string $kind, array $secrets = [], ?User $by = null, bool $signed = true): array
     {
         $c = $this->channels($place);
         $own = $c['sms']['via'] === 'own';
@@ -124,7 +125,8 @@ final class PlaceMessenger
             'sender_id' => $this->settings->get('comms.sms.sender_id', $place) ?: null,
             'sandbox' => (bool) $this->settings->get('comms.sms.sandbox', $place),
         ] : $this->sms->dioceseAccount();
-        $message = $c['sms_signature'] ? "{$text}\n- {$c['sms_signature']}" : $text;
+        // A message being sent again already carries its signature.
+        $message = $signed && $c['sms_signature'] ? "{$text}\n- {$c['sms_signature']}" : $text;
 
         $result = $this->sms->sendWith($account, $to, $message, [
             'territory_id' => $place->id, 'sent_by' => $by?->id, 'via' => $c['sms']['via'], 'kind' => $kind, 'secrets' => $secrets,

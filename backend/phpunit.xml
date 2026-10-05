@@ -38,6 +38,8 @@
         </exclude>
     </source>
     <php>
+        <!-- The suite peaks around 128M (PDF/Excel report tests) - PHP's default limit. -->
+        <ini name="memory_limit" value="512M"/>
         <!-- Application Environment -->
         <env name="APP_ENV" value="testing"/>
         <env name="APP_NAME" value="Makueni-West-Diocese-Test"/>

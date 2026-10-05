@@ -24,6 +24,17 @@ Artisan::command('reports:prune', function () {
 
 Schedule::command('reports:prune')->daily();
 
+// Message text is kept for the preview for MessageLog::KEEP_BODY_DAYS, then
+// cleared - the row (who, when, status) stays. docs/specs/settings-spec.md, S6c.
+Artisan::command('messages:prune-bodies', function () {
+    $count = \App\Models\MessageLog::whereNotNull('body')
+        ->where('created_at', '<', now()->subDays(\App\Models\MessageLog::KEEP_BODY_DAYS))
+        ->update(['body' => null, 'body_cleared_at' => now()]);
+    $this->info("Cleared the text of {$count} old message(s).");
+})->purpose('Clear the text of messages older than 90 days');
+
+Schedule::command('messages:prune-bodies')->daily();
+
 // Settings > System health checks this heartbeat to tell whether the
 // scheduler (php artisan schedule:work, or cron) is running.
 Schedule::call(fn () => \Illuminate\Support\Facades\Cache::forever(\App\Support\Settings\Health::HEARTBEAT, now()->toIso8601String()))

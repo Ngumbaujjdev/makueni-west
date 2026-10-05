@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\Settings\AuditController as SettingsAuditController;
 use App\Http\Controllers\Api\Settings\CommunicationController as SettingsCommunicationController;
 use App\Http\Controllers\Api\Settings\HubController as SettingsHubController;
+use App\Http\Controllers\Api\Settings\MessagesController as SettingsMessagesController;
 use App\Http\Controllers\Api\Settings\ProfileController as SettingsProfileController;
 use App\Http\Controllers\Api\Settings\SectionController as SettingsSectionController;
 use App\Http\Controllers\Api\Settings\ServiceTimesController as SettingsServiceTimesController;
@@ -98,6 +99,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('maintenance/{tool}', [SettingsSystemController::class, 'maintenance'])->whereIn('tool', array_keys(SettingsSystemController::TOOLS));
         Route::get('notice', [SettingsSystemController::class, 'notice']);
         Route::post('communication/test', [SettingsCommunicationController::class, 'test'])->middleware('throttle:5,1');
+        Route::get('messages', [SettingsMessagesController::class, 'index']);
+        Route::get('messages/{id}', [SettingsMessagesController::class, 'show'])->whereNumber('id');
+        Route::post('messages/{id}/resend', [SettingsMessagesController::class, 'resend'])->whereNumber('id')->middleware('throttle:10,1');
         Route::get('access', [SettingsSystemController::class, 'access']);
         Route::get('audit', [SettingsAuditController::class, 'index']);
     });
