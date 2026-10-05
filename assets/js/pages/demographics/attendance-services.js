@@ -194,7 +194,7 @@ const AttendanceServices = (function () {
                   ? `<button type="button" class="btn btn-sm btn-primary-light" data-edit="${r.id}" title="Edit" aria-label="Edit ${A.shortDate(s.iso)}"><i class="ri-edit-line"></i></button>`
                   : ""
                 : s.status === "missing" && CAN_WRITE_ATTENDANCE
-                  ? `<button type="button" class="btn btn-sm btn-primary" data-record="${s.iso}"><i class="ri-add-line me-1"></i>Record</button>`
+                  ? `<button type="button" class="btn btn-sm btn-primary" data-record="${s.iso}" aria-label="Record this Sunday" title="Record this Sunday"><i class="ri-add-line"></i><span class="ms-1 d-none d-sm-inline">Record</span></button>`
                   : "";
             return `
               <tr data-row-id="${r ? r.id : ""}" data-date="${s.iso}" class="${s.status === "missing" ? "att-row-missing" : ""}">
