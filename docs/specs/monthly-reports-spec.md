@@ -2,7 +2,7 @@
 
 Part of the **Church life** plan (2026-10-05), L4. Each church writes a short report every month and sends it to its region; each region writes its own and sends it to the diocese. The figures are **filled in for you** from what is already recorded (Demographics, Attendance, Budgets, Events and Initiatives); the pastor adds what only they know. Those above **see and comment**. Nothing is approved or sent back (decided with the owner).
 
-**Status:** planned 2026-10-05.
+**Status:** planned 2026-10-05; L4a (backend) done the same day.
 - **L4a:** data, API, figures, reminders, reports, permissions and menu (this PR).
 - **L4b:** the pages.
 
@@ -108,17 +108,26 @@ Per level (`church`, `region`, `diocese`):
 
 The placeholders' unbuilt sub-pages are switched off.
 
+### L4a as built
+- **Code:** `App\Services\Reports\MonthlyFigures` (the figures), `App\Services\Reports\MonthlyReports` (due date, a month's state, notifications), `App\Support\ReportsAccess`, `MonthlyReportsController`, `RemindMonthlyReports` (`reports:remind`, daily at 08:00 Nairobi, `--date` for testing), the exports `monthly.report` and `monthly.status`, and `MonthlyReportsAccessSeeder` (phase 32).
+- **Dates** (due days, "late", the month a report is for) are Africa/Nairobi days.
+- **The calendar** only flags last month's report and later; older months are on the Monthly reports page, so a new place isn't shown a row of late months.
+- **"Reports below"** at the diocese lists the regions, then the churches (grouped by region); at a region, its churches (grouped by subregion), from `BudgetRollup::placesBelow()`.
+- **The diocese** has read, below and review only: it reads, it doesn't send a report.
+- The church "mute" seeder now leaves the module holding `/church/monthly-reports/` on, as it does for Budgets.
+- Tests: the new `Reporting` suite (`tests/Feature/Reporting/MonthlyReportsTest.php`, 8).
+
 ## Acceptance Criteria
 
 ### L4a: backend
-- [ ] The figures come from Demographics, Attendance, Budgets, Events and Initiatives for the month; a draft shows them live; sending freezes them.
-- [ ] A church saves its draft, sends it, and can reopen it until it's seen; a sent report can't be edited; nobody else can write it.
-- [ ] The region sees its churches' reports (not another region's), marks one seen and comments; the church is told; the diocese sees regions and churches.
-- [ ] The 12-month list gives status and late against the due day from Settings.
-- [ ] Attachments: up to 5, the right types, streamed only to those who can read the report.
-- [ ] `reports:remind` sends on the right days, once each, in the app and by SMS (logged).
-- [ ] The calendar shows the report's due date.
-- [ ] `monthly.report` and `monthly.status` build; the seeder is idempotent and reuses the placeholders.
+- [x] The figures come from Demographics, Attendance, Budgets, Events and Initiatives for the month; a draft shows them live; sending freezes them.
+- [x] A church saves its draft, sends it, and can reopen it until it's seen; a sent report can't be edited; nobody else can write it.
+- [x] The region sees its churches' reports (not another region's), marks one seen and comments; the church is told; the diocese sees regions and churches.
+- [x] The 12-month list gives status and late against the due day from Settings.
+- [x] Attachments: up to 5, the right types, streamed only to those who can read the report.
+- [x] `reports:remind` sends on the right days, once each, in the app and by SMS (logged).
+- [x] The calendar shows the report's due date.
+- [x] `monthly.report` and `monthly.status` build; the seeder is idempotent and reuses the placeholders.
 
 ### L4b: pages
 - [ ] Church and region: Monthly reports (the year at a glance, KPI cards, comments), Write (stepper with the live figures and Send), and the report page.
