@@ -42,7 +42,9 @@ $breadcrumbs = $messagesCtx['page'] === 'index'
 
         <div class="main-content app-content">
             <div class="container-fluid">
+                <?php if ($messagesCtx['page'] !== 'index'): // the Inbox is the template's chat page, first on the page, as in chat.html ?>
                 <?php include __DIR__ . '/../page-header.php' ?>
+                <?php endif ?>
                 <?php include __DIR__ . "/body-{$messagesCtx['page']}.php" ?>
             </div>
         </div>
