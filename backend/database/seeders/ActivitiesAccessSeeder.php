@@ -27,7 +27,7 @@ class ActivitiesAccessSeeder extends Seeder
 {
     private const MODULE_NAME = 'Events';
 
-    private const MODULE_ICON = 'ri-calendar-star-line';
+    private const MODULE_ICON = 'ri-calendar-check-line';
 
     /** The old placeholder module each level reuses (matched by name). */
     private const REUSE = [

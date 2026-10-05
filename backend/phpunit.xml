@@ -14,6 +14,8 @@
             <exclude>tests/Feature/Financial</exclude>
             <exclude>tests/Feature/Demographics</exclude>
             <exclude>tests/Feature/Settings</exclude>
+            <exclude>tests/Feature/Activities</exclude>
+            <exclude>tests/Feature/Calendar</exclude>
         </testsuite>
         <testsuite name="Diocese">
             <directory>tests/Feature/Diocese</directory>

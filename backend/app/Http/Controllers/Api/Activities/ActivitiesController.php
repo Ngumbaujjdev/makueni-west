@@ -8,6 +8,7 @@ use App\Models\ActivityRegistration;
 use App\Models\Territory;
 use App\Models\User;
 use App\Services\Activities\Activities;
+use App\Services\Budgets\BudgetBook;
 use App\Support\EventsAccess;
 use App\Support\PlaceAccess;
 use Illuminate\Http\JsonResponse;
@@ -317,7 +318,18 @@ class ActivitiesController extends Controller
             return $this->forbidden("Only the organiser sees the event's money.");
         }
 
-        return $this->ok($this->activities->money($activity));
+        // Where "Record money" puts it: the organiser's budget in use on the event's day, else today.
+        $budget = null;
+        if ($relation === 'own') {
+            $book = app(BudgetBook::class);
+            $level = $place->territory_type->value;
+            $budget = $book->budgetInUseOn($level, (int) $place->id, $activity->starts_at->toDateString())
+                ?? $book->budgetInUseOn($level, (int) $place->id, now()->toDateString());
+        }
+
+        return $this->ok($this->activities->money($activity) + [
+            'budget_in_use' => $budget ? ['id' => $budget->id, 'label' => $budget->period_label] : null,
+        ]);
     }
 
     /** GET /activities/{id}/history - what happened, in plain sentences. */

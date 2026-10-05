@@ -191,6 +191,12 @@ class EventsTest extends TestCase
         $this->assertCount(2, $m['entries']);
         $this->assertSame(2, BudgetEntry::where('activity_id', $id)->count());
 
+        // "Record money" goes to the budget in use on the event's day - else today's.
+        $this->assertSame($budget->id, $m['budget_in_use']['id']);
+        $day = now()->addDays(30);
+        $thatMonth = $this->budgetFor($this->myChurch, 'active', [$this->incomeLine], (int) $day->year, (int) $day->month);
+        $this->assertSame($thatMonth->id, $this->getJson("/api/activities/{$id}/money")->json('data.budget_in_use.id'));
+
         $other = $this->published($this->overseer, ['title' => 'Not ours']);
         Sanctum::actingAs($this->pastor);
         $this->postJson('/api/budget-entries', ['budget_id' => $budget->id, 'budget_line_id' => $this->incomeLine->id, 'amount' => 10, 'entry_date' => now()->toDateString(), 'description' => 'x', 'activity_id' => $other])

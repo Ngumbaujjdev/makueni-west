@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\UserTerritoryAssignment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -72,7 +73,7 @@ class AdminEndpointsAuthorizationTest extends TestCase
         ];
     }
 
-    /** @dataProvider adminRoutes */
+    #[DataProvider('adminRoutes')]
     public function test_a_church_pastor_is_refused(string $method, string $path): void
     {
         Sanctum::actingAs($this->pastor);
@@ -80,7 +81,7 @@ class AdminEndpointsAuthorizationTest extends TestCase
         $this->json($method, $this->url($path))->assertForbidden();
     }
 
-    /** @dataProvider adminRoutes */
+    #[DataProvider('adminRoutes')]
     public function test_a_global_admin_gets_past_the_check(string $method, string $path): void
     {
         Sanctum::actingAs($this->globalAdmin);
