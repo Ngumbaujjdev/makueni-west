@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\Territory;
 use App\Models\User;
 use App\Models\UserTerritoryAssignment;
+use App\Rules\UniquePhone;
 use App\Support\PasswordPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -754,7 +755,7 @@ class UserController extends Controller
             'lastname' => 'required|string|max:255',
             'email' => 'nullable|email|unique:users',
             'username' => 'nullable|string|unique:users|max:255',
-            'phone' => 'nullable|string|max:20',
+            'phone' => ['nullable', 'string', 'max:20', new UniquePhone],
             'position' => 'nullable|string|max:255',
             'password' => 'nullable|string|min:'.PasswordPolicy::min(),
             'employee_code' => 'nullable|string|size:6|unique:users',
@@ -951,7 +952,7 @@ class UserController extends Controller
             'lastname' => 'required|string|max:255',
             'email' => 'nullable|email|unique:users,email,'.$user->id,
             'username' => 'nullable|string|unique:users,username,'.$user->id,
-            'phone' => 'nullable|string|max:20',
+            'phone' => ['nullable', 'string', 'max:20', new UniquePhone($user->id)],
             'position' => 'nullable|string|max:255',
             'password' => 'nullable|string|min:'.PasswordPolicy::min(),
             'employee_code' => 'nullable|string|size:6|unique:users,employee_code,'.$user->id,

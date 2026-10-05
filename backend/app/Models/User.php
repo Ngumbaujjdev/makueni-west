@@ -18,6 +18,16 @@ class User extends Authenticatable implements Auditable
 {
     use HasFactory, Notifiable, HasRoles, HasApiTokens, \OwenIt\Auditing\Auditable;
 
+    /** Keep users.phone_key (unique) in step with the phone, so no two people share a number. */
+    protected static function booted(): void
+    {
+        static::saving(function (User $user) {
+            if ($user->isDirty('phone') || ! $user->exists) {
+                $user->phone_key = \App\Support\Phone::key($user->phone);
+            }
+        });
+    }
+
     protected $fillable = [
         'firstname',
         'lastname',
@@ -95,6 +105,7 @@ class User extends Authenticatable implements Auditable
         'password',           // Never audit the actual password hash
         'pin',               // Never audit the actual PIN hash
         'remember_token',    // Never audit tokens
+        'phone_key',         // Derived from phone
         'created_at',
         'updated_at',
     ];

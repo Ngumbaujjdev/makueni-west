@@ -31,6 +31,38 @@
 
 return [
 
+    // One line per role for the Add someone window (S6a) - most roles have no
+    // description in the roles table. A role's own description wins.
+    'role_blurbs' => [
+        'Church Administrator' => 'Runs the church office and can manage its settings and team.',
+        'Associate Pastor' => 'Shares pastoral work with the Senior Pastor.',
+        'Youth Pastor' => 'Leads the youth ministry.',
+        'Church Secretary' => 'Keeps the church\'s records, attendance and minutes.',
+        'Church Treasurer' => 'Looks after the church\'s money and budgets.',
+        'Elder' => 'A church elder, supporting the pastors.',
+        'Deacon' => 'Serves the church in practical ministry.',
+        'Church Committee Member' => 'Sits on the church committee.',
+        'Youth Leader' => 'Leads youth activities.',
+        "Women's Ministry Leader" => 'Leads the women\'s ministry.',
+        "Men's Ministry Leader" => 'Leads the men\'s ministry.',
+        "Children's Ministry Leader" => 'Leads the children\'s ministry and Sunday school.',
+        'Music Director' => 'Leads the music ministry.',
+        'Worship Leader' => 'Leads worship in services.',
+        'Choir Director' => 'Leads the choir.',
+        'Sunday School Teacher' => 'Teaches Sunday school.',
+        'Usher Coordinator' => 'Coordinates the ushers.',
+        'Prayer Group Leader' => 'Leads a prayer group.',
+        'Regional Secretary' => 'Keeps the region\'s records and minutes.',
+        'Regional Treasurer' => 'Looks after the region\'s money and its payment details.',
+        'Regional Coordinator' => 'Coordinates the region\'s programmes.',
+        'Regional Committee Member' => 'Sits on the regional committee.',
+        'Diocese Administrator' => 'Runs the diocese office and can manage its settings and team.',
+        'Diocese Secretary' => 'Keeps the diocese\'s records and minutes.',
+        'Diocese Treasurer' => 'Looks after the diocese\'s money and its payment details.',
+        'Diocese Finance Officer' => 'Handles the diocese\'s finance work.',
+        'Diocese Council Member' => 'Sits on the diocese council.',
+    ],
+
     'groups' => [
         'our-place' => 'Our place',
         'money' => 'Money',
