@@ -12,7 +12,14 @@
   const esc = F.esc;
 
   F.extras.communication = function (root, payload) {
-    if (SettingsRail.data?.level === "diocese") return null; // the diocese only chooses and locks the default
+    // The message log goes last, after "Check it works" (S6c).
+    const after = () => {
+      root.insertAdjacentHTML("beforeend", '<div id="commsMessages"></div>');
+      window.SettingsMessages?.mount(root.querySelector("#commsMessages"));
+    };
+    const links = [{ id: "card-messages", label: "Messages" }];
+    // The diocese only chooses (and locks) how churches and regions send - and sees every message.
+    if (SettingsRail.data?.level === "diocese") return { after, links };
     const c = payload.extra;
     root.insertAdjacentHTML(
       "afterbegin",
@@ -84,6 +91,6 @@
     }
 
     update({});
-    return { update };
+    return { update, after, links };
   };
 })();
