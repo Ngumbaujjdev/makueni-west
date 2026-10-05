@@ -27,7 +27,7 @@ abstract class ActivityReport extends Report
 
     public function icon(): string
     {
-        return 'ri-calendar-star-line';
+        return 'ri-calendar-check-line';
     }
 
     public function authorize(User $user, Territory $territory): ?string

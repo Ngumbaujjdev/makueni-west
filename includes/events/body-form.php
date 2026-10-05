@@ -1,0 +1,170 @@
+<?php
+// New / edit event: one step at a time on the left, a live preview on the right - the same
+// stepper as the Budget form (.intake-*). Filled in by assets/js/pages/events/form.js.
+$steps = [
+    1 => ['What and when', 'The event and its dates'],
+    2 => ['Where and who', 'Venue, people, who it is open to'],
+    3 => ['Registration and money', 'Numbers, fees and the plan'],
+    4 => ['Check and publish', 'Look it over, then save'],
+];
+$stepIcons = [1 => 'ri-calendar-event-line', 2 => 'ri-map-pin-user-line', 3 => 'ri-hand-coin-line', 4 => 'ri-send-plane-line'];
+?>
+<div id="eventForm">
+    <nav class="card custom-card intake-steps" id="intakeSteps" aria-label="Steps">
+        <?php foreach ($steps as $n => [$label, $hint]) { ?>
+            <button type="button" class="intake-step-btn<?= $n === 1 ? ' is-on' : '' ?>" data-go="<?= $n ?>">
+                <span class="intake-step-dot"><span><?= $n ?></span><i class="ri-check-line"></i></span>
+                <span class="intake-step-text"><strong><?= $label ?></strong><small><?= $hint ?></small></span>
+            </button>
+        <?php } ?>
+        <span class="intake-steps-mobile" id="intakeStepsMobile">Step 1 of <?= count($steps) ?> · <?= $steps[1][0] ?></span>
+        <span class="intake-steps-bar"><i id="intakeStepsBar" style="width: <?= round(100 / count($steps)) ?>%"></i></span>
+    </nav>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <form class="card custom-card intake-form" id="eventFormCard" novalidate autocomplete="off">
+                <?php foreach ($steps as $n => [$label, $hint]) { ?>
+                <section class="intake-step" data-step="<?= $n ?>" <?= $n > 1 ? 'hidden' : '' ?>>
+                    <div class="intake-step-head">
+                        <span class="intake-step-num"><i class="<?= $stepIcons[$n] ?>"></i></span>
+                        <div><h5><?= $label ?></h5><p><?= $hint ?></p></div>
+                    </div>
+                    <div class="intake-errors" data-errors-for="<?= $n ?>" hidden role="alert"></div>
+                    <div class="intake-step-body">
+                        <?php if ($n === 1) { ?>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label" for="f_title">Name of the event <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="f_title" name="title" maxlength="160" placeholder="e.g. Regional Youth Convention 2026">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="f_type">Kind of event <span class="text-danger">*</span></label>
+                                <select class="form-select" id="f_type" name="type"></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="f_audience">Who it is for</label>
+                                <select class="form-select" id="f_audience" name="audience"></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="f_start_date">Starts <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="date" class="form-control" id="f_start_date" name="starts_at">
+                                    <input type="time" class="form-control" id="f_start_time" value="09:00" style="max-width: 8.5rem">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="f_end_date">Ends <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="date" class="form-control" id="f_end_date" name="ends_at">
+                                    <input type="time" class="form-control" id="f_end_time" value="16:00" style="max-width: 8.5rem">
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="f_description">What it is about</label>
+                                <textarea class="form-control" id="f_description" name="description" rows="4" maxlength="5000" placeholder="A few lines the invited places will read"></textarea>
+                            </div>
+                        </div>
+                        <?php } elseif ($n === 2) { ?>
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label class="form-label" for="f_venue">Venue</label>
+                                <input type="text" class="form-control" id="f_venue" name="venue" maxlength="160" placeholder="e.g. CCI Wote church grounds">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="f_capacity">Room for (people)</label>
+                                <input type="number" class="form-control" id="f_capacity" name="capacity" min="1" placeholder="Optional">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="f_coordinator">Coordinator</label>
+                                <input type="text" class="form-control" id="f_coordinator" name="coordinator" maxlength="120" placeholder="Who to call about it">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="f_speakers">Speakers</label>
+                                <input type="text" class="form-control" id="f_speakers" name="speakers" maxlength="255" placeholder="e.g. Bishop, Rev. Mutua">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="f_agenda">Programme</label>
+                                <textarea class="form-control" id="f_agenda" name="agenda" rows="3" maxlength="5000" placeholder="One item per line"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label mb-2">Who it is open to <span class="text-danger">*</span></label>
+                                <div class="ev-choices" id="f_open_to" role="radiogroup" aria-label="Who it is open to"></div>
+                            </div>
+                            <div class="col-12" id="inviteesWrap" hidden>
+                                <label class="form-label" for="f_invitees">Which places <span class="text-danger">*</span></label>
+                                <select class="form-select" id="f_invitees" name="invitees" multiple></select>
+                                <div class="form-text">Inviting a region invites every church in it.</div>
+                            </div>
+                        </div>
+                        <?php } elseif ($n === 3) { ?>
+                        <div id="regBox">
+                            <div class="ev-switch-row">
+                                <div>
+                                    <strong>Places register how many are coming</strong>
+                                    <span>Each place gives its numbers - youth, adults, children, leaders - not names.</span>
+                                </div>
+                                <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" role="switch" id="f_registration" name="registration" aria-label="Places register"></div>
+                            </div>
+                            <div class="row g-3 mt-1" id="regFields" hidden>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="f_register_by">Register by</label>
+                                    <input type="date" class="form-control" id="f_register_by" name="register_by">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="f_fee">Fee per person (KES)</label>
+                                    <input type="number" class="form-control" id="f_fee" name="fee_per_person" min="0" step="1" placeholder="0 = free">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="alert alert-primary d-flex gap-2 mb-3 d-none" id="regOff"><i class="ri-information-line fs-16"></i><span>Only your own church comes, so there is nothing to register. Open it to other churches in step 2 to take registrations.</span></div>
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-6">
+                                <label class="form-label" for="f_planned_income">Money we hope to raise (KES)</label>
+                                <input type="number" class="form-control" id="f_planned_income" name="planned_income" min="0" step="1" placeholder="Optional">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="f_planned_spend">What we plan to spend (KES)</label>
+                                <input type="number" class="form-control" id="f_planned_spend" name="planned_spend" min="0" step="1" placeholder="Optional">
+                            </div>
+                        </div>
+                        <?php } else { ?>
+                        <div id="reviewBody"></div>
+                        <?php } ?>
+                    </div>
+                </section>
+                <?php } ?>
+
+                <div class="intake-foot">
+                    <span class="intake-saved me-auto" id="intakeSaved">Not saved yet</span>
+                    <a href="<?= $eventsCtx['baseUrl'] ?>/" class="btn btn-light" id="cancelBtn">Cancel</a>
+                    <button type="button" class="btn btn-light" id="backBtn" hidden><i class="ri-arrow-left-line"></i><span class="intake-btn-text ms-1">Back</span></button>
+                    <button type="button" class="btn btn-outline-primary" id="saveDraftBtn"><i class="ri-draft-line"></i><span class="intake-btn-text ms-1">Save as draft</span></button>
+                    <button type="button" class="btn btn-primary" id="nextBtn">Next<i class="ri-arrow-right-line ms-1"></i></button>
+                    <button type="button" class="btn btn-success" id="publishBtn" hidden><i class="ri-send-plane-line me-1"></i>Save and publish</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Live preview: how the invited places will see it -->
+        <div class="col-lg-4">
+            <div class="intake-aside">
+                <div class="card custom-card preview-card">
+                    <div class="preview-head">
+                        <span class="preview-label"><i class="ri-eye-line"></i>How places will see it</span>
+                        <span id="previewStatus"></span>
+                    </div>
+                    <div class="preview-section" id="previewCard"></div>
+                </div>
+                <div class="card custom-card intake-tips">
+                    <strong><i class="ri-lightbulb-line"></i>Good to know</strong>
+                    <ul>
+                        <li><b>Save as draft</b> keeps it to yourself. Nobody else sees it until you <b>publish</b>.</li>
+                        <li>When you publish, the leaders of the places it is open to get a notification in their bell.</li>
+                        <li>Places give <b>numbers, not names</b>. You see who is coming, grouped by region.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
