@@ -197,7 +197,7 @@ $ph = fn (string $w = 'col-6', string $extra = '') => '<span class="placeholder 
                                     <div class="card-body pb-0"><div id="rolesToolbar"></div></div>
                                     <div class="card-body p-0">
                                         <div class="table-responsive">
-                                            <table class="table table-hover mb-0" id="rolesTable">
+                                            <table class="table table-hover mb-0" id="rolesTable" width="100%">
                                                 <thead><tr><th>Role</th><th>Place</th><th class="d-none d-md-table-cell">Given by</th><th>Since</th><th>Status</th></tr></thead>
                                                 <tbody id="rolesTableBody"></tbody>
                                             </table>
@@ -209,16 +209,24 @@ $ph = fn (string $w = 'col-6', string $extra = '') => '<span class="placeholder 
                             <!-- Activity -->
                             <div class="tab-pane fade" id="tab-activity" role="tabpanel" aria-labelledby="tab-activity-btn">
                                 <div class="card custom-card">
-                                    <div class="card-header">
+                                    <div class="card-header justify-content-between flex-wrap gap-2">
                                         <div>
                                             <div class="card-title">Your activity</div>
                                             <div class="fs-12" id="activitySub">Sign-ins and changes to your account, newest first</div>
                                         </div>
+                                        <div id="activityViewWrap"></div>
                                     </div>
                                     <div class="card-body pb-0"><div id="activityToolbar"></div></div>
-                                    <div class="card-body p-0">
+                                    <div class="card-body pt-2" id="activityTimelineWrap">
+                                        <div id="activityTimeline"></div>
+                                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 border-top pt-3" id="activityTimelineFoot" hidden>
+                                            <span class="fs-12 fw-semibold" id="activityTimelineCount"></span>
+                                            <button type="button" class="btn btn-sm btn-outline-primary" id="activityMore"><i class="ri-arrow-down-line me-1"></i>Show 20 more</button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-0" id="activityTableWrap" hidden>
                                         <div class="table-responsive">
-                                            <table class="table table-hover mb-0" id="activityTable">
+                                            <table class="table table-hover mb-0" id="activityTable" width="100%">
                                                 <thead><tr><th>When</th><th>What happened</th><th class="d-none d-md-table-cell">Where</th><th class="text-end">Details</th></tr></thead>
                                                 <tbody id="activityTableBody"></tbody>
                                             </table>
@@ -256,7 +264,7 @@ $ph = fn (string $w = 'col-6', string $extra = '') => '<span class="placeholder 
                                     <div class="card-body pb-0"><div id="signinToolbar"></div></div>
                                     <div class="card-body p-0">
                                         <div class="table-responsive">
-                                            <table class="table table-hover mb-0" id="signinTable">
+                                            <table class="table table-hover mb-0" id="signinTable" width="100%">
                                                 <thead><tr><th>When</th><th>Browser</th><th class="d-none d-md-table-cell">Network (IP)</th><th>Result</th></tr></thead>
                                                 <tbody id="signinTableBody"></tbody>
                                             </table>

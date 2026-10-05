@@ -24,6 +24,12 @@
   let signins = [];
   let passwords = [];
   let userId = null;
+  // Tables in a hidden tab are set up the first time it opens, so DataTables
+  // measures them at their real width (set up hidden, they stay narrow).
+  const pending = {};
+  let activityTable = null;
+  let timelineLimit = 20;
+  let timelineKey = "";
 
   // ---------------------------------------------------------------- helpers
 
@@ -510,8 +516,10 @@
       searchPlaceholder: "Search roles and places...",
       filters: [{ id: "roleStatus", label: "Active and ended", options: [{ value: "Active", label: "Active" }, { value: "Ended", label: "Ended" }] }],
     });
-    const table = UI.initListDataTable("rolesTable", { order: [[3, "desc"]], hideDefaultSearch: true, noun: "roles", pageLength: 10 });
-    UI.wireFilterToolbar("rolesToolbar", table, [{ id: "roleStatus", columnIndex: 4, exact: true }], { noun: "roles", urlSync: false });
+    whenShown("roles", () => {
+      const table = UI.initListDataTable("rolesTable", { order: [[3, "desc"]], hideDefaultSearch: true, noun: "roles", pageLength: 10 });
+      UI.wireFilterToolbar("rolesToolbar", table, [{ id: "roleStatus", columnIndex: 4, exact: true }], { noun: "roles", urlSync: false });
+    });
   }
 
   // --------------------------------------------------------------- activity
@@ -522,8 +530,9 @@
     setFigure("activity", activity.length ? `${activity.length}${activity.length >= 200 ? "+" : ""} entries` : "Nothing yet");
     document.getElementById("activitySub").textContent = activity.length >= 200 ? "Your 200 most recent sign-ins and changes, newest first" : "Sign-ins and changes to your account, newest first";
     if (!activity.length) {
-      body.innerHTML = `<tr><td colspan="4">${emptyState("ri-history-line", "purple", "No activity yet", "Your sign-ins and changes will show here.")}</td></tr>`;
-      UI.initListDataTable("activityTable", {});
+      // Nothing to filter or switch between - just say so where the timeline goes.
+      document.getElementById("activityTimeline").innerHTML = emptyState("ri-history-line", "purple", "No activity yet", "Your sign-ins and changes will show here.");
+      document.getElementById("activityTimelineFoot").hidden = true;
       return;
     }
     body.innerHTML = activity
@@ -562,12 +571,117 @@
       filters: [{ id: "activityKind", label: "Everything", options: Object.entries(KINDS).map(([key, k]) => ({ value: `k-${key}`, label: k.label })) }],
       dateRange: true,
     });
-    const table = UI.initListDataTable("activityTable", { order: [[0, "desc"]], nonSortableColumns: [3], hideDefaultSearch: true, noun: "entries", pageLength: 10 });
-    UI.wireFilterToolbar("activityToolbar", table, [{ id: "activityKind", columnIndex: 1 }], { noun: "entries" });
     body.onclick = (ev) => {
       const btn = ev.target.closest("[data-activity]");
       if (btn) openActivity(activity[Number(btn.dataset.activity)]);
     };
+    renderActivityView();
+    whenShown("activity", () => {
+      activityTable = UI.initListDataTable("activityTable", { order: [[0, "desc"]], nonSortableColumns: [3], hideDefaultSearch: true, noun: "entries", pageLength: 10 });
+      // The timeline shows exactly what the filters let through: redraw it with the table.
+      activityTable.on("draw", renderTimeline);
+      UI.wireFilterToolbar("activityToolbar", activityTable, [{ id: "activityKind", columnIndex: 1 }], { noun: "entries" });
+      renderTimeline();
+    });
+  }
+
+  /** Timeline (default) or Table - one filter bar drives both; kept in the URL as ?view=. */
+  function renderActivityView() {
+    const wrap = document.getElementById("activityViewWrap");
+    const view = new URLSearchParams(window.location.search).get("view") === "table" ? "table" : "timeline";
+    wrap.innerHTML = UI.renderSegmented(
+      "activityView",
+      [
+        { value: "timeline", label: '<i class="ri-git-commit-line me-1"></i>Timeline' },
+        { value: "table", label: '<i class="ri-table-line me-1"></i>Table' },
+      ],
+      view,
+      { ariaLabel: "Show activity as" },
+    );
+    const apply = (v) => {
+      document.getElementById("activityTimelineWrap").hidden = v !== "timeline";
+      document.getElementById("activityTableWrap").hidden = v !== "table";
+      const params = new URLSearchParams(window.location.search);
+      if (v === "table") params.set("view", "table");
+      else params.delete("view");
+      const qs = params.toString();
+      history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+      if (v === "table" && activityTable) activityTable.columns.adjust();
+    };
+    UI.wireSegmented("activityView", apply);
+    apply(view);
+    document.getElementById("activityMore").onclick = () => {
+      timelineLimit += 20;
+      renderTimeline();
+    };
+    document.getElementById("activityTimeline").onclick = (ev) => {
+      const item = ev.target.closest("[data-activity]");
+      if (item) openActivity(activity[Number(item.dataset.activity)]);
+    };
+  }
+
+  function dayLabel(d) {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    return dayKey(d) === dayKey(today) ? "Today" : dayKey(d) === dayKey(yesterday) ? "Yesterday" : dateText(d);
+  }
+
+  /** The template's "Recent Activity" look (as a budget's History), grouped by day. */
+  function renderTimeline() {
+    const box = document.getElementById("activityTimeline");
+    const foot = document.getElementById("activityTimelineFoot");
+    const indexes = activityTable ? activityTable.rows({ search: "applied", order: "applied" }).indexes().toArray() : activity.map((_, i) => i);
+    // A new filter starts the list again from the newest 20.
+    const key = `${indexes.length}:${indexes[0]}`;
+    if (key !== timelineKey) {
+      timelineKey = key;
+      timelineLimit = 20;
+    }
+    if (!indexes.length) {
+      box.innerHTML = emptyState("ri-filter-off-line", "purple", "Nothing matches your filters", "Try another kind or date, or Reset.");
+      foot.hidden = true;
+      return;
+    }
+    const shown = indexes.slice(0, timelineLimit);
+    const groups = [];
+    shown.forEach((i) => {
+      const a = activity[i];
+      const d = when(a.created_at);
+      const label = d ? dayLabel(d) : "Earlier";
+      if (!groups.length || groups[groups.length - 1].label !== label) groups.push({ label, items: [] });
+      groups[groups.length - 1].items.push({ a, i, d });
+    });
+    box.innerHTML = groups
+      .map(
+        (g) => `
+        <div class="budget-timeline-day">${esc(g.label)}</div>
+        <ul class="list-unstyled mb-3 crm-recent-activity budget-timeline">
+          ${g.items
+            .map(({ a, i, d }) => {
+              const k = KINDS[kindOf(a)];
+              const b = browserOf(a.user_agent);
+              return `
+              <li class="crm-recent-activity-content" style="--tl-rgb: var(--${k.color}-rgb)">
+                <a href="javascript:void(0);" class="budget-timeline-link" data-activity="${i}">
+                  <div class="d-flex align-items-start gap-3">
+                    <span class="avatar avatar-xs avatar-rounded bg-${k.color} text-white flex-shrink-0"><i class="${k.icon}"></i></span>
+                    <div class="crm-timeline-content">
+                      <span class="d-block fw-semibold budget-timeline-text">${esc(sentence(a))}</span>
+                      <span class="d-block fs-12"><i class="${b.icon} me-1"></i>${esc(b.name)}${a.ip_address ? ` · ${esc(a.ip_address)}` : ""}</span>
+                    </div>
+                    <span class="budget-timeline-time">${esc(timeText(d))}</span>
+                  </div>
+                </a>
+              </li>`;
+            })
+            .join("")}
+        </ul>`,
+      )
+      .join("");
+    foot.hidden = false;
+    document.getElementById("activityTimelineCount").textContent = `Showing ${shown.length} of ${indexes.length}`;
+    document.getElementById("activityMore").hidden = shown.length >= indexes.length;
   }
 
   function openActivity(a) {
@@ -723,11 +837,22 @@
       filters: [{ id: "signinResult", label: "Any result", options: ["Signed in", "Failed", "Locked"].map((r) => ({ value: r, label: r })) }],
       dateRange: true,
     });
-    const table = UI.initListDataTable("signinTable", { order: [[0, "desc"]], hideDefaultSearch: true, noun: "sign-ins", pageLength: 10 });
-    UI.wireFilterToolbar("signinToolbar", table, [{ id: "signinResult", columnIndex: 3, exact: true }], { noun: "sign-ins", urlSync: false });
+    whenShown("signins", () => {
+      const table = UI.initListDataTable("signinTable", { order: [[0, "desc"]], hideDefaultSearch: true, noun: "sign-ins", pageLength: 10 });
+      UI.wireFilterToolbar("signinToolbar", table, [{ id: "signinResult", columnIndex: 3, exact: true }], { noun: "sign-ins", urlSync: false });
+    });
   }
 
   // ------------------------------------------------------------------- tabs
+
+  function whenShown(tab, setup) {
+    if (document.getElementById(`tab-${tab}`)?.classList.contains("active")) {
+      delete pending[tab];
+      setup();
+    } else {
+      pending[tab] = setup;
+    }
+  }
 
   function showTab(key) {
     const btn = document.getElementById(`tab-${key}-btn`);
@@ -742,6 +867,9 @@
         else params.set("tab", btn.dataset.tab);
         const qs = params.toString();
         history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+        const setup = pending[btn.dataset.tab];
+        delete pending[btn.dataset.tab];
+        if (setup) setup();
         // Tables drawn in a hidden tab need their widths worked out again.
         if (window.jQuery?.fn?.dataTable) window.jQuery.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
         window.dispatchEvent(new Event("resize"));
@@ -821,6 +949,7 @@
       if (acts.ok) {
         activity = acts.data?.audits || [];
         rebuildTable("activityTable");
+        activityTable = null;
         renderActivity();
       }
     });
