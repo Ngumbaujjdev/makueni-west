@@ -18,7 +18,7 @@ use App\Support\BudgetAccess;
  */
 final class BudgetContributionsReport extends BudgetReport
 {
-    private const STATUS = ['sent' => 'Sent', 'pending' => 'Still to send', 'late' => 'Late', 'none' => 'Nothing due'];
+    private const STATUS = ['sent' => 'Sent', 'pending' => 'Still to send', 'late' => 'Late', 'none' => 'Nothing due', 'no_budget' => 'No budget'];
 
     public function key(): string
     {
@@ -55,7 +55,7 @@ final class BudgetContributionsReport extends BudgetReport
         [$year] = $this->period($context);
         $rollup = app(BudgetRollup::class);
         $place = $context->territory;
-        $rows = $rollup->contributionsOf($place->territory_type->value, (int) $place->id, $year);
+        $rows = $rollup->contributionsOf($place->territory_type->value, (int) $place->id, $year, $place->territory_type === TerritoryType::CHURCH);
         $t = BudgetRollup::contributionTotals($rows);
         $isChurch = $context->type() === TerritoryType::CHURCH;
         $below = ! $isChurch && ($context->user->hasGlobalAccess() || BudgetAccess::can($context->user, 'below'))

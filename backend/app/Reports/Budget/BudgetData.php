@@ -12,6 +12,7 @@ use App\Support\Reports\Insights\Rules\BudgetBalanceRule;
 use App\Support\Reports\Insights\Rules\BudgetDeductionsOwedRule;
 use App\Support\Reports\Insights\Rules\BudgetIncomeShortfallRule;
 use App\Support\Reports\Insights\Rules\BudgetOverPlanRule;
+use App\Support\Reports\Insights\Rules\BudgetSharesLateRule;
 use App\Support\Reports\Insights\Rules\BudgetSpendingPaceRule;
 use App\Support\Reports\Insights\Rules\BudgetStatusRule;
 use App\Support\Reports\Insights\Rules\BudgetUnplannedRule;
@@ -176,6 +177,8 @@ final class BudgetData
             'unplanned' => collect([...$lines['in'], ...$lines['out']])->where('is_unplanned', true)->values()->all(),
             'days_since_entry' => $lastEntry ? (int) CarbonImmutable::parse($lastEntry)->diffInDays($today) : null,
             'deductions' => $deductions['rows'],
+            // Months of the year whose share was not all sent after the month ended (Contributions).
+            'late_shares' => array_values(array_filter(app(BudgetRollup::class)->contributionsOf($this->type, $this->id, $this->year), fn ($r) => $r['status'] === 'late')),
         ]);
 
         return [
@@ -206,6 +209,7 @@ final class BudgetData
                 new BudgetIncomeShortfallRule,
                 new BudgetUnplannedRule,
                 new BudgetDeductionsOwedRule,
+                new BudgetSharesLateRule,
             ], $facts, 6)),
         ];
     }

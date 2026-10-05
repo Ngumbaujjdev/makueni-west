@@ -181,7 +181,8 @@ class BudgetController extends Controller
         }
         $year = $request->integer('year') ?: (int) now()->year;
         $own = BudgetAccess::isOwn($user, $place['type'], $place['id']);
-        $rows = $rollup->contributionsOf($place['type'], $place['id'], $year);
+        // A church's year reads month by month, all twelve; above a church only its own shares (if any).
+        $rows = $rollup->contributionsOf($place['type'], $place['id'], $year, $place['type'] === 'church');
         $showBelow = $place['type'] !== 'church' && ($user->hasGlobalAccess() || ($own && BudgetAccess::can($user, 'below')));
 
         return response()->json([
@@ -192,7 +193,16 @@ class BudgetController extends Controller
                 'place' => $this->placeInfo($place),
                 'rows' => $rows,
                 'totals' => \App\Reports\Budget\BudgetRollup::contributionTotals($rows),
-                'below' => $showBelow ? $rollup->contributionsBelow(\App\Models\Territory::findOrFail($place['id']), $year) : null,
+                'below' => $below = $showBelow ? $rollup->contributionsBelow(\App\Models\Territory::findOrFail($place['id']), $year) : null,
+                // Per region (diocese) or subregion (region): due, sent, still to send, churches late.
+                'groups' => $below === null ? null : collect($below)->groupBy(fn ($p) => $p['group'] ?? 'Not in a region')->map(fn ($g, $name) => [
+                    'name' => $name,
+                    'churches' => $g->count(),
+                    'due' => round($g->sum('due'), 2),
+                    'sent' => round($g->sum('sent'), 2),
+                    'owed' => round($g->sum('owed'), 2),
+                    'late' => $g->where('late', '>', 0)->count(),
+                ])->values()->all(),
                 // How to pay each place the shares go to (Settings > Payment details).
                 'pay_to' => $this->payTo($rows, $place['id']),
                 'view_only' => ! $own && ! $user->hasGlobalAccess(),

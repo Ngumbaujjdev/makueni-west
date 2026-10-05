@@ -62,7 +62,9 @@ class BudgetContributionsTest extends TestCase
         Sanctum::actingAs($this->pastor);
         $d = $this->getJson('/api/budgets/contributions?year=2026')->assertOk()->json('data');
 
-        $this->assertSame(['late', 'sent', 'none', 'pending'], array_column($d['rows'], 'status'));
+        // All twelve months: no budget in April, May and July-December.
+        $this->assertSame(['late', 'sent', 'none', 'no_budget', 'no_budget', 'pending', 'no_budget', 'no_budget', 'no_budget', 'no_budget', 'no_budget', 'no_budget'], array_column($d['rows'], 'status'));
+        $this->assertSame('April 2026', $d['rows'][3]['label']);
         $this->assertEquals([100, 40, 60], [$d['rows'][0]['due'], $d['rows'][0]['sent'], $d['rows'][0]['owed']]);
         $this->assertSame('Test Diocese', $d['rows'][0]['to']);
         $this->assertEquals(['received' => 1700, 'due' => 170, 'sent' => 90, 'owed' => 80, 'late' => 1, 'status' => 'late'], $d['totals']);
@@ -87,6 +89,32 @@ class BudgetContributionsTest extends TestCase
         $this->assertEquals(['late', 30, 1], [$diocese->firstWhere('name', 'Far Church')['status'], $diocese->firstWhere('name', 'Far Church')['owed'], $diocese->firstWhere('name', 'Far Church')['late']]);
     }
 
+    public function test_a_whole_year_budget_is_one_row_and_the_diocese_gets_region_totals(): void
+    {
+        $budget = $this->budgetFor($this->myChurch, 'active', [$this->incomeLine], 2026, null);
+        app(\App\Services\Budgets\BudgetBook::class)->record($this->pastor, $budget, ['budget_line_id' => $this->incomeLine->id, 'amount' => 2000, 'entry_date' => '2026-03-05', 'description' => 'Tithes']);
+        $this->month($this->farChurch, 1, 500, 0);
+
+        Sanctum::actingAs($this->pastor);
+        $rows = $this->getJson('/api/budgets/contributions?year=2026')->assertOk()->json('data.rows');
+        $this->assertCount(1, $rows);
+        $this->assertEquals(['Whole of 2026', 200, 'pending'], [$rows[0]['label'], $rows[0]['due'], $rows[0]['status']]);
+
+        Sanctum::actingAs($this->bishop);
+        $groups = collect($this->getJson('/api/budgets/contributions?year=2026')->json('data.groups'))->keyBy('name');
+        $this->assertEquals(['churches' => 2, 'due' => 200, 'owed' => 200, 'late' => 0], array_intersect_key($groups['Region A'], array_flip(['churches', 'due', 'owed', 'late'])));
+        $this->assertEquals(['churches' => 1, 'due' => 50, 'late' => 1], array_intersect_key($groups['Region B'], array_flip(['churches', 'due', 'late'])));
+    }
+
+    public function test_the_overview_notices_a_late_month(): void
+    {
+        $this->month($this->myChurch, 1, 1000, 0);
+
+        Sanctum::actingAs($this->pastor);
+        $titles = collect($this->getJson('/api/budgets/dashboard?year=2026')->json('data.insights'))->pluck('title');
+        $this->assertContains("1 month's share still to send", $titles);
+    }
+
     public function test_view_only_below_and_never_upward(): void
     {
         $this->month($this->myChurch, 1, 1000, 0);
@@ -95,7 +123,8 @@ class BudgetContributionsTest extends TestCase
         $d = $this->getJson("/api/budgets/contributions?year=2026&territory_id={$this->myChurch->id}")->assertOk()->json('data');
         $this->assertTrue($d['view_only']);
         $this->assertFalse($d['can_record']);
-        $this->assertCount(1, $d['rows']);
+        $this->assertCount(12, $d['rows']);
+        $this->assertSame('late', $d['rows'][0]['status']);
 
         Sanctum::actingAs($this->pastor);
         $this->getJson("/api/budgets/contributions?territory_id={$this->region->id}")->assertForbidden();
