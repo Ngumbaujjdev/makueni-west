@@ -1,9 +1,9 @@
 <?php
 /**
- * Monthly reports pages are shared by every level (docs/specs/monthly-reports-spec.md):
- * the bodies live in includes/monthly-reports/*.php and each level has thin wrappers -
- * {church,region,diocese}/monthly-reports/{index,report}.php. What the API allows is
- * decided server-side (App\Support\ReportsAccess); this only checks the page may open
+ * Messages pages are shared by every level (docs/specs/messages-spec.md):
+ * the bodies live in includes/messages/*.php and each level has thin wrappers -
+ * {church,region,diocese}/messages/{index,new,message}.php. What the API allows is
+ * decided server-side (App\Support\MessagesAccess); this only checks the page may open
  * and tells the scripts where they are and what they may offer.
  */
 require_once __DIR__ . '/../session-manager.php';
@@ -12,34 +12,29 @@ require_once __DIR__ . '/../permission-check.php';
 
 /**
  * @param string $level church | region | diocese
- * @param string $page index | report
+ * @param string $page index | new | message
  */
-function reportsPageContext(string $level, string $page): array
+function messagesPageContext(string $level, string $page): array
 {
-    requirePermission("{$level}.reports.monthly.read");
+    requirePermission("{$level}.messages.inbox.read");
     $role = getCurrentRole() ?? [];
     $can = fn (string $permission) => hasGlobalAccess() || hasPermission("{$level}.{$permission}");
-    $reports = in_array($level, ['church', 'region'], true); // the diocese reads; it doesn't send one
 
     return [
         'level' => $level,
         'page' => $page,
-        'baseUrl' => SITE_URL . "/{$level}/monthly-reports",
+        'baseUrl' => SITE_URL . "/{$level}/messages",
         'homeUrl' => SITE_URL . "/{$level}/dashboard",
         'siteUrl' => SITE_URL,
         'place' => ['id' => (int) ($role['territory_id'] ?? 0), 'name' => $role['territory']['name'] ?? $role['territory_name'] ?? ''],
-        'reports' => $reports,
         'can' => [
-            'write' => $reports && $can('reports.monthly.write'),
-            'send' => $reports && $can('reports.monthly.send'),
-            'below' => $level !== 'church' && ($can('reports.below.read') || $can('reports.below.review')),
-            'review' => $level !== 'church' && $can('reports.below.review'),
-            'message' => $can('messages.messages.send'), // "Remind" (docs/specs/messages-spec.md)
+            'read' => $can('messages.messages.read') || $can('messages.messages.send'),
+            'send' => $can('messages.messages.send'),
         ],
     ];
 }
 
-function reportsPageStyles(): void
+function messagesPageStyles(): void
 {
     $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
     foreach (['assets/libs/select2/select2.min.css', 'assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css', 'assets/data-tables/responsive/2.3.0/css/responsive.bootstrap.min.css'] as $css) {
@@ -48,7 +43,7 @@ function reportsPageStyles(): void
     echo '<link href="' . $v('assets/css/styles.min.css') . '" rel="stylesheet" />' . "\n";
 }
 
-function reportsPageScripts(string $page): void
+function messagesPageScripts(string $page): void
 {
     $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
     foreach ([
@@ -63,7 +58,7 @@ function reportsPageScripts(string $page): void
     foreach (['assets/libs/select2/select2.min.js', 'assets/data-tables/1.12.1/js/jquery.dataTables.min.js', 'assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js', 'assets/data-tables/responsive/2.3.0/js/dataTables.responsive.min.js'] as $src) {
         echo '<script src="' . SITE_URL . "/{$src}\"></script>\n";
     }
-    foreach (['assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/monthly-reports/api.js', 'assets/js/pages/monthly-reports/ui.js', "assets/js/pages/monthly-reports/{$page}.js"] as $src) {
+    foreach (['assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/messages/api.js', 'assets/js/pages/messages/ui.js', "assets/js/pages/messages/{$page}.js"] as $src) {
         echo '<script src="' . $v($src) . '"></script>' . "\n";
     }
 }

@@ -163,8 +163,20 @@
     $("belowCardsRow").innerHTML = cards.map((x) => `<div class="col-xl-3 col-lg-6 col-md-6">${UI.renderSparkCard(x)}</div>`).join("");
     const figure = document.querySelector('[data-tab-figure="below"]');
     if (figure) figure.textContent = `${c.sent} of ${c.places} sent for ${d.label.split(" ")[0]}`;
+    const late = d.rows.filter((r) => r.late);
+    const month = d.label.split(" ")[0];
+    const remind = late.length && CTX.can.message
+      ? `<a class="btn btn-sm btn-danger ms-auto flex-shrink-0" href="${CTX.siteUrl}/${CTX.level}/messages/new?${new URLSearchParams({
+          places: late.map((r) => r.place.id).join(","),
+          roles: "Senior Pastor,Regional Overseer",
+          levels: "region,church",
+          channel: "sms",
+          subject: `${month}'s monthly report`,
+          body: `Dear {name}, ${month}'s monthly report for {place} hasn't been sent yet. It only takes a few minutes - the figures are filled in. Thank you. - {sender}`,
+        })}"><i class="ri-chat-3-line me-1"></i>Remind them</a>`
+      : "";
     $("noticed").innerHTML = d.noticed.length
-      ? `<div class="mr-noticed">${d.noticed.map((n) => `<div class="alert alert-${n.tone === "danger" ? "danger" : n.tone === "success" ? "success" : "primary"} d-flex gap-2 mb-2"><i class="${n.tone === "danger" ? "ri-alarm-warning-line" : n.tone === "success" ? "ri-checkbox-circle-line" : "ri-mail-unread-line"} fs-16"></i><span>${R.esc(n.text)}</span></div>`).join("")}</div>`
+      ? `<div class="mr-noticed">${d.noticed.map((n) => `<div class="alert alert-${n.tone === "danger" ? "danger" : n.tone === "success" ? "success" : "primary"} d-flex align-items-center gap-2 mb-2"><i class="${n.tone === "danger" ? "ri-alarm-warning-line" : n.tone === "success" ? "ri-checkbox-circle-line" : "ri-mail-unread-line"} fs-16"></i><span>${R.esc(n.text)}</span>${n.tone === "danger" ? remind : ""}</div>`).join("")}</div>`
       : "";
 
     const named = d.groups.filter((g) => g.name);
