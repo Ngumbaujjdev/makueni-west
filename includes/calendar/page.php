@@ -44,6 +44,7 @@ $breadcrumbs = ['Home' => $calendarCtx['homeUrl'], 'Calendar' => null];
                     <div class="page-toolbar-sub" id="placeLine"><?= htmlspecialchars($calendarCtx['place']['name'] ?: 'Your calendar') ?></div>
                     <div class="page-toolbar-controls">
                         <div id="viewSwitchWrap"></div>
+                        <button type="button" class="btn btn-outline-primary" id="icsBtn" title="Download what's on screen, to import into Google or Outlook"><i class="ri-download-2-line me-1"></i>Download (.ics)</button>
                         <button type="button" class="btn btn-primary d-none" id="addEventBtn"><i class="ri-add-line me-1"></i>Add event</button>
                     </div>
                 </div>
@@ -62,10 +63,25 @@ $breadcrumbs = ['Home' => $calendarCtx['homeUrl'], 'Calendar' => null];
                 <div class="tab-content section-tab-content">
                     <div class="tab-pane fade<?= $calendarCtx['tab'] === 'calendar' ? ' show active' : '' ?>" id="tab-calendar" role="tabpanel">
                         <div class="row" id="calStats"></div>
-                        <div class="card custom-card">
-                            <div class="card-body calendar-filters" id="calFilters"></div>
-                            <div class="card-body pt-0">
-                                <div id="calendar" class="cal-board" aria-live="polite"></div>
+                        <div class="row g-4">
+                            <div class="col-xxl-9 col-xl-8">
+                                <div class="card custom-card">
+                                    <div class="card-body calendar-filters" id="calFilters"></div>
+                                    <div class="card-body pt-0">
+                                        <div id="calendar" class="cal-board" aria-live="polite"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Coming up and due soon (C3): the next week, and what needs doing -->
+                            <div class="col-xxl-3 col-xl-4">
+                                <div class="card custom-card">
+                                    <div class="card-header justify-content-between"><div class="card-title">Due soon</div><span id="dueCount"></span></div>
+                                    <div class="card-body" id="dueSoon"><span class="skel skel-line"></span><span class="skel skel-line mt-2" style="width:70%"></span></div>
+                                </div>
+                                <div class="card custom-card">
+                                    <div class="card-header justify-content-between"><div class="card-title">Coming up</div><span class="soft-chip soft-primary">Next 7 days</span></div>
+                                    <div class="card-body" id="comingUp"><span class="skel skel-line"></span><span class="skel skel-line mt-2" style="width:70%"></span></div>
+                                </div>
                             </div>
                         </div>
                     </div>

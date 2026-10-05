@@ -27,10 +27,23 @@ const CalendarMeta = (function () {
     holiday: "ri-sun-line",
     celebration: "ri-cake-2-line",
     other: "ri-calendar-line",
+    // Church life items (C3) - read from Events, Initiatives, Settings and Budgets.
+    event: "ri-calendar-check-line",
+    session: "ri-seedling-line",
+    service: "ri-book-open-line",
+    due: "ri-alarm-warning-line",
+  };
+  /** What the calendar can show besides its own events (docs/specs/calendar-spec.md, C3). */
+  const SOURCES = {
+    calendar: { label: "Calendar", icon: "ri-calendar-event-line", colour: "primary" },
+    events: { label: "Events", icon: "ri-calendar-check-line", colour: "purple" },
+    sessions: { label: "Initiative sessions", icon: "ri-seedling-line", colour: "success" },
+    services: { label: "Services", icon: "ri-book-open-line", colour: "pink" },
+    due: { label: "Due dates", icon: "ri-alarm-warning-line", colour: "secondary" },
   };
   const REPEATS = { none: "Doesn't repeat", weekly: "Every week", monthly: "Every month", yearly: "Every year" };
 
-  return { LAYERS, KIND_ICONS, REPEATS };
+  return { LAYERS, KIND_ICONS, REPEATS, SOURCES };
 })();
 
 const CalendarEventModal = (function () {

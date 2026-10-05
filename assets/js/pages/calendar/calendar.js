@@ -8,6 +8,9 @@
  * clicking a day adds one (when this place may). The view, date, layers and
  * kind live in the URL, so a refresh or a shared link keeps them. At the
  * diocese, global admins also get the CCI national calendar tab.
+ * Church life (C3): events, initiative sessions, our services and due dates
+ * come in too (the "Include" chips), open their own pages, and fill the
+ * Coming up / Due soon column; Download (.ics) gives what's on screen.
  * ============================================================================
  */
 const CalendarPage = (function () {
@@ -23,6 +26,8 @@ const CalendarPage = (function () {
   let calendar = null;
   let layers = [];
   let kind = "";
+  const ALL_SOURCES = Object.keys(CalendarMeta.SOURCES);
+  let sources = [...ALL_SOURCES];
   let cciMounted = false;
 
   const params = () => new URLSearchParams(window.location.search);
@@ -34,6 +39,7 @@ const CalendarPage = (function () {
     if (calendar) p.set("date", calendar.getDate().toISOString().slice(0, 10));
     p.set("layers", layers.join(","));
     kind ? p.set("kind", kind) : p.delete("kind");
+    sources.length === ALL_SOURCES.length ? p.delete("sources") : p.set("sources", sources.join(","));
     history.replaceState(null, "", `${window.location.pathname}?${p}`);
   }
 
@@ -44,9 +50,9 @@ const CalendarPage = (function () {
     const next = info.next_cci;
     const cards = [
       UI.renderSparkCard({ icon: "ri-calendar-event-line", label: "Events this month", value: String(info.this_month), color: "primary", delta: UI.periodDelta(info.this_month, info.last_month), series: { labels: months, data: info.by_month } }),
-      UI.renderSparkCard({ icon: "ri-calendar-check-line", label: "This week", value: String(info.this_week), color: "purple", sub: "Everything you can see" }),
+      UI.renderSparkCard({ icon: "ri-calendar-check-line", label: "This week", value: String(info.this_week), color: "purple", sub: "Events and sessions you can see" }),
       UI.renderSparkCard({ icon: "ri-government-line", label: "Next CCI event", value: next ? new Date(`${next.start.slice(0, 10)}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "None yet", color: "danger", sub: next ? next.title : "The CCI calendar is empty" }),
-      UI.renderSparkCard({ icon: "ri-home-heart-line", label: "Our next 30 days", value: String(info.ours_upcoming), color: "success", sub: "Events we added" }),
+      UI.renderSparkCard({ icon: "ri-home-heart-line", label: "Our next 30 days", value: String(info.ours_upcoming), color: "success", sub: "Our events, sessions and dates" }),
     ];
     document.getElementById("calStats").innerHTML = cards.map((c) => `<div class="col-xxl-3 col-md-6">${c}</div>`).join("");
     UI.mountSparklines(document.getElementById("calStats"));
@@ -75,8 +81,25 @@ const CalendarPage = (function () {
               .join("")}
           </select>
         </div>
+      </div>
+      <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+        <span class="fw-semibold me-1">Include</span>
+        ${ALL_SOURCES.map((k) => {
+          const m = CalendarMeta.SOURCES[k];
+          return `<button type="button" class="cal-layer cal-source${sources.includes(k) ? " active" : ""}" data-source="${k}" data-colour="${m.colour}" aria-pressed="${sources.includes(k)}"><span class="cal-layer-dot bg-${m.colour}"></span><i class="${m.icon}"></i>${m.label}</button>`;
+        }).join("")}
       </div>`;
-    document.querySelectorAll(".cal-layer").forEach((b) =>
+    document.querySelectorAll(".cal-source").forEach((b) =>
+      b.addEventListener("click", () => {
+        const k = b.dataset.source;
+        sources = sources.includes(k) ? sources.filter((x) => x !== k) : [...sources, k];
+        b.classList.toggle("active", sources.includes(k));
+        b.setAttribute("aria-pressed", sources.includes(k));
+        calendar.refetchEvents();
+        syncUrl();
+      }),
+    );
+    document.querySelectorAll(".cal-layer[data-layer]").forEach((b) =>
       b.addEventListener("click", () => {
         const l = b.dataset.layer;
         layers = layers.includes(l) ? layers.filter((x) => x !== l) : [...layers, l];
@@ -98,17 +121,18 @@ const CalendarPage = (function () {
   // -------------------------------------------------------------- calendar
 
   async function fetchEvents(fetchInfo, success, failure) {
-    if (!layers.length) return success([]);
+    if (!layers.length || !sources.length) return success([]);
     const end = new Date(fetchInfo.end);
     end.setDate(end.getDate() - 1);
-    const res = await CalendarAPI.events({ from: fetchInfo.startStr.slice(0, 10), to: end.toISOString().slice(0, 10), layers, kinds: kind ? [kind] : [] });
+    const res = await CalendarAPI.events({ from: fetchInfo.startStr.slice(0, 10), to: end.toISOString().slice(0, 10), layers, kinds: kind ? [kind] : [], sources });
     if (!res.ok) {
       Toast.error(res.message);
       return failure(new Error(res.message));
     }
     success(
       res.data.map((o) => {
-        const m = CalendarMeta.LAYERS[o.layer] || CalendarMeta.LAYERS.below;
+        const name = colourOf(o);
+        const m = { colour: name };
         const colour = UI.cssColor(m.colour);
         return {
           id: o.key,
@@ -119,7 +143,7 @@ const CalendarPage = (function () {
           backgroundColor: colour,
           borderColor: colour,
           textColor: m.colour === "secondary" ? "#0d0d0d" : "#ffffff",
-          classNames: [`cal-ev-${o.layer}`],
+          classNames: [`cal-ev-${o.layer}`, `cal-src-${o.source || "calendar"}`, ...(o.status === "draft" ? ["cal-ev-draft"] : [])],
           extendedProps: { o },
         };
       }),
@@ -143,13 +167,18 @@ const CalendarPage = (function () {
       eventContent: (arg) => {
         const o = arg.event.extendedProps.o;
         const icon = CalendarMeta.KIND_ICONS[o.kind] || "ri-calendar-line";
-        const badge = o.layer === "cci" ? '<span class="cal-ev-badge">CCI</span>' : "";
+        const badge = o.layer === "cci" ? '<span class="cal-ev-badge">CCI</span>' : o.status === "draft" ? '<span class="cal-ev-badge">Draft</span>' : o.status === "late" ? '<span class="cal-ev-badge">Late</span>' : "";
         const time = !o.all_day && arg.view.type !== "listMonth" ? `<span class="cal-ev-time">${esc(o.start.slice(11, 16))}</span>` : "";
         return { html: `<div class="cal-ev"><i class="${icon}"></i>${badge}${time}<span class="cal-ev-title">${esc(o.title)}</span></div>` };
       },
       eventClick: (arg) => {
         arg.jsEvent.preventDefault();
         const o = arg.event.extendedProps.o;
+        // Events, sessions, services and due dates live on their own pages.
+        if (o.source && o.source !== "calendar" && o.url) {
+          window.location.href = `${ctx.siteUrl || ""}${o.url}`;
+          return;
+        }
         CalendarEventModal.details(o, {
           kinds: info.kinds,
           onEdit: () => CalendarEventModal.form(CalendarEventModal.eventFromOccurrence(o), { kinds: info.kinds, level: ctx.level, cci: o.layer === "cci", onSaved: changed }),
@@ -173,10 +202,81 @@ const CalendarPage = (function () {
     }
   }
 
+  /** Late is red, due dates gold, services pink; everything else takes its layer's colour. */
+  function colourOf(o) {
+    if (o.tone) return o.tone;
+    if (o.source === "due") return "secondary";
+    if (o.source === "services") return "pink";
+    return (CalendarMeta.LAYERS[o.layer] || CalendarMeta.LAYERS.below).colour;
+  }
+
+  // ------------------------------------------------- coming up / due soon
+
+  const isoDay = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const dayLabel = (iso) => new Date(`${iso.slice(0, 10)}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+
+  function sideItem(o) {
+    const src = CalendarMeta.SOURCES[o.source] || CalendarMeta.SOURCES.calendar;
+    const colour = colourOf(o);
+    const time = !o.all_day && o.start.length > 10 ? ` · ${o.start.slice(11, 16)}` : "";
+    const tag = o.status === "late" ? UI.pill("Late", "danger") : o.layer === "cci" ? UI.pill("CCI", "danger") : "";
+    const inner = `
+      <span class="avatar avatar-sm avatar-rounded bg-${colour} ${colour === "secondary" ? "text-dark" : "text-white"} flex-shrink-0"><i class="${CalendarMeta.KIND_ICONS[o.kind] || src.icon}"></i></span>
+      <span class="flex-fill" style="min-width:0"><strong class="d-block text-break">${esc(o.title)}</strong><small>${dayLabel(o.start)}${time}${o.description && o.source === "due" ? ` · ${esc(o.description)}` : ""}</small></span>
+      ${tag}`;
+    return o.url && o.source !== "calendar"
+      ? `<a class="cal-side-item" href="${ctx.siteUrl || ""}${o.url}">${inner}</a>`
+      : `<div class="cal-side-item">${inner}</div>`;
+  }
+
+  async function loadSide() {
+    const today = new Date();
+    const from = new Date(today);
+    from.setDate(from.getDate() - 90);
+    const to = new Date(today);
+    to.setDate(to.getDate() + 30);
+    const week = new Date(today);
+    week.setDate(week.getDate() + 7);
+    const available = (LAYERS_BY_LEVEL[ctx.level] || LAYERS_BY_LEVEL.church).filter((l) => l !== "below");
+    const res = await CalendarAPI.events({ from: isoDay(from), to: isoDay(to), layers: available, sources: ALL_SOURCES });
+    const due = document.getElementById("dueSoon");
+    const coming = document.getElementById("comingUp");
+    if (!res.ok) {
+      due.innerHTML = coming.innerHTML = `<p class="mb-0 fw-semibold">${esc(res.message)}</p>`;
+      return;
+    }
+    const t = isoDay(today);
+    const w = isoDay(week);
+    const dues = res.data
+      .filter((o) => o.source === "due" && (o.status === "late" || o.start.slice(0, 10) >= t))
+      .sort((a, b) => (a.status === "late") === (b.status === "late") ? a.start.localeCompare(b.start) : a.status === "late" ? -1 : 1);
+    const next = res.data.filter((o) => o.source !== "due" && o.start.slice(0, 10) >= t && o.start.slice(0, 10) <= w).slice(0, 12);
+    const late = dues.filter((o) => o.status === "late").length;
+    document.getElementById("dueCount").innerHTML = dues.length ? `<span class="soft-chip soft-${late ? "danger" : "secondary"}">${late ? `${late} late` : `${dues.length} coming`}</span>` : "";
+    due.innerHTML = dues.length
+      ? `<div class="cal-side">${dues.map(sideItem).join("")}</div>`
+      : `<div class="cal-side-empty"><span class="avatar avatar-md avatar-rounded bg-success text-white mb-2"><i class="ri-checkbox-circle-line"></i></span><p class="mb-0 fw-semibold">Nothing due - the diocese share is sent and next month's budget is ready.</p></div>`;
+    coming.innerHTML = next.length
+      ? `<div class="cal-side">${next.map(sideItem).join("")}</div>`
+      : `<div class="cal-side-empty"><p class="mb-0 fw-semibold">Nothing in the next 7 days.</p></div>`;
+  }
+
+  async function downloadIcs() {
+    const btn = document.getElementById("icsBtn");
+    const start = calendar.view.activeStart;
+    const end = new Date(calendar.view.activeEnd);
+    end.setDate(end.getDate() - 1);
+    UI.setButtonLoading(btn, "Preparing...");
+    const ok = await CalendarAPI.ics({ from: isoDay(start), to: isoDay(end), layers, sources, kinds: kind ? [kind] : [] }, `calendar-${isoDay(start)}-to-${isoDay(end)}.ics`);
+    UI.restoreButton(btn);
+    ok ? Toast.success("Downloaded - open it to add these to Google or Outlook.") : Toast.error("Couldn't download the calendar. Please try again.");
+  }
+
   /** After an add, edit or delete: the calendar, the figures and (if open) the CCI list. */
   function changed() {
     calendar?.refetchEvents();
     reloadStats();
+    loadSide();
     if (cciMounted) CalendarCci.reload();
   }
 
@@ -198,6 +298,7 @@ const CalendarPage = (function () {
     const fromUrl = (p.get("layers") || "").split(",").filter((l) => available.includes(l));
     layers = p.has("layers") ? fromUrl : available.filter((l) => l !== "below");
     kind = info.kinds[p.get("kind")] ? p.get("kind") : "";
+    if (p.has("sources")) sources = p.get("sources").split(",").filter((k) => ALL_SOURCES.includes(k));
 
     drawStats();
     drawFilters();
@@ -250,6 +351,8 @@ const CalendarPage = (function () {
     }
 
     renderCalendar();
+    loadSide();
+    document.getElementById("icsBtn").addEventListener("click", downloadIcs);
   }
 
   return { init };
