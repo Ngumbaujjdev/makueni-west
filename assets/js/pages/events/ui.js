@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * EVENTS - shared look (list, form and event pages)
+ * EVENTS AND INITIATIVES - shared look (list, form and event pages)
  * ============================================================================
  * Status pills, a type's icon and colour, the date block, money and dates in
  * words, the event card of the list, and a small confirm / text window.
@@ -11,12 +11,17 @@ const EventsUI = (function () {
 
   const UI = DemographicsUI;
   const CTX = window.EVENTS_CTX || {};
+  const IS_INITIATIVE = CTX.kind === "initiative";
+  /** The words for this page's kind. */
+  const NOUN = IS_INITIATIVE
+    ? { one: "initiative", One: "Initiative", many: "initiatives", Many: "Initiatives", page: "initiative" }
+    : { one: "event", One: "Event", many: "events", Many: "Events", page: "event" };
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const textOn = (c) => (c === "secondary" || c === "warning" ? "text-dark" : "text-white");
 
   const STATUS = {
     draft: { label: "Draft", color: "secondary", icon: "ri-draft-line" },
-    published: { label: "Open", color: "primary", icon: "ri-broadcast-line" },
+    published: { label: IS_INITIATIVE ? "Running" : "Open", color: "primary", icon: "ri-broadcast-line" },
     completed: { label: "Done", color: "success", icon: "ri-checkbox-circle-line" },
     cancelled: { label: "Cancelled", color: "danger", icon: "ri-close-circle-line" },
   };
@@ -26,6 +31,9 @@ const EventsUI = (function () {
     special_service: "ri-star-line", conference: "ri-team-line", leadership_meeting: "ri-group-line", youth_convention: "ri-user-star-line",
     womens: "ri-women-line", mens: "ri-men-line", prayer_conference: "ri-hand-heart-line", worship_night: "ri-music-2-line",
     outreach: "ri-road-map-line", training: "ri-book-2-line", celebration: "ri-cake-2-line", other: "ri-calendar-event-line",
+    bible_study: "ri-book-open-line", discipleship: "ri-user-heart-line", prayer_group: "ri-hand-heart-line", youth_programme: "ri-user-star-line",
+    children_programme: "ri-emotion-happy-line", welfare: "ri-heart-pulse-line", pastors_training: "ri-book-2-line",
+    leadership_training: "ri-team-line", evangelism: "ri-volume-up-line",
   };
   const GROUPS = { youth: "Youth", adults: "Adults", children: "Children", leaders: "Leaders" };
   const GROUP_COLORS = { youth: "purple", adults: "primary", children: "secondary", leaders: "success" };
@@ -75,20 +83,27 @@ const EventsUI = (function () {
     const coming = it.totals
       ? it.totals.came != null
         ? `<span><i class="ri-user-follow-line"></i>${num(it.totals.came)} came</span>`
-        : `<span><i class="ri-group-line"></i>${num(it.totals.expected)} coming from ${num(it.totals.places)} ${it.totals.places === 1 ? "place" : "places"}</span>`
+        : it.totals.places
+          ? `<span><i class="ri-group-line"></i>${num(it.totals.expected)} ${IS_INITIATIVE ? "taking part" : "coming"} from ${num(it.totals.places)} ${it.totals.places === 1 ? "place" : "places"}</span>`
+          : ""
       : "";
     let mine = "";
     if (it.relation === "invited") {
       mine = it.mine?.status === "registered"
-        ? `<span class="soft-chip soft-success"><i class="ri-checkbox-circle-line"></i>Registered · ${num(it.mine.expected)}</span>`
+        ? `<span class="soft-chip soft-success"><i class="ri-checkbox-circle-line"></i>${IS_INITIATIVE ? "Joined" : "Registered"} · ${num(it.mine.expected)}</span>`
         : it.registration_open
-          ? `<span class="soft-chip soft-danger"><i class="ri-mail-unread-line"></i>Not registered${it.register_by ? ` · by ${shortDate(d(it.register_by))}` : ""}</span>`
+          ? `<span class="soft-chip soft-danger"><i class="ri-mail-unread-line"></i>${IS_INITIATIVE ? "Not joined" : "Not registered"}${it.register_by ? ` · by ${shortDate(d(it.register_by))}` : ""}</span>`
           : "";
     }
     const from = it.relation === "own" ? "" : `<span><i class="ri-building-4-line"></i>${esc(it.owner.name)}</span>`;
+    const s = it.sessions;
+    const progress =
+      IS_INITIATIVE && s
+        ? `<div class="ev-progress mt-2"><div class="d-flex justify-content-between"><span>${num(s.held)} of ${num(s.total)} sessions held</span>${s.next ? `<span>Next ${shortDate(d(s.next + "T12:00:00"))}</span>` : ""}</div><div class="progress progress-sm mt-1"><div class="progress-bar bg-${color}" style="width:${s.total ? Math.round((s.held / s.total) * 100) : 0}%"></div></div></div>`
+        : "";
     return `
       <div class="col-xxl-4 col-lg-6" data-ev-card data-status="${it.status}" data-type="${it.type}" data-search="${esc(`${it.title} ${it.type_label} ${it.venue || ""} ${it.owner.name}`.toLowerCase())}">
-        <a class="card custom-card ev-card h-100${past ? " is-past" : ""}" href="${CTX.baseUrl}/event?id=${it.id}">
+        <a class="card custom-card ev-card h-100${past ? " is-past" : ""}" href="${CTX.baseUrl}/${NOUN.page}?id=${it.id}">
           <div class="card-body d-flex gap-3">
             ${dateBlock(it.starts_at, color)}
             <div class="flex-fill" style="min-width:0">
@@ -98,11 +113,12 @@ const EventsUI = (function () {
               </div>
               <div class="ev-card-meta">
                 <span class="soft-chip soft-${color}"><i class="${typeIcon(it.type)}"></i>${esc(it.type_label)}</span>
-                <span><i class="ri-time-line"></i>${relative(it.starts_at)}</span>
+                ${IS_INITIATIVE ? `<span><i class="ri-repeat-line"></i>${esc(meets(it))}</span>` : `<span><i class="ri-time-line"></i>${relative(it.starts_at)}</span>`}
                 ${it.venue ? `<span><i class="ri-map-pin-line"></i>${esc(it.venue)}</span>` : ""}
                 ${from}
                 ${coming}
               </div>
+              ${progress}
               ${mine ? `<div class="mt-2">${mine}</div>` : ""}
             </div>
           </div>
@@ -157,5 +173,14 @@ const EventsUI = (function () {
     });
   }
 
-  return { esc, textOn, STATUS, GROUPS, GROUP_COLORS, typeIcon, typeColor, statusPill, money, num, when, relative, longDate, shortDate, dateBlock, eventCard, empty, ask };
+  /** "Every Wednesday · 6:00 PM" */
+  function meets(item) {
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const parts = [item.frequency_label || ""];
+    if ((item.frequency === "weekly" || item.frequency === "fortnightly") && item.meeting_day != null) parts[0] = `${item.frequency === "weekly" ? "Every" : "Every other"} ${days[item.meeting_day]}`;
+    if (item.starts_at) parts.push(time(d(item.starts_at)));
+    return parts.filter(Boolean).join(" · ");
+  }
+
+  return { IS_INITIATIVE, NOUN, meets, esc, textOn, STATUS, GROUPS, GROUP_COLORS, typeIcon, typeColor, statusPill, money, num, when, relative, longDate, shortDate, dateBlock, eventCard, empty, ask };
 })();

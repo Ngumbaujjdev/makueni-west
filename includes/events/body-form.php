@@ -1,8 +1,10 @@
 <?php
 // New / edit event: one step at a time on the left, a live preview on the right - the same
 // stepper as the Budget form (.intake-*). Filled in by assets/js/pages/events/form.js.
+$isInit = $eventsCtx['kind'] === 'initiative';
+$one = $isInit ? 'initiative' : 'event';
 $steps = [
-    1 => ['What and when', 'The event and its dates'],
+    1 => ['What and when', $isInit ? 'The initiative and how often it meets' : 'The event and its dates'],
     2 => ['Where and who', 'Venue, people, who it is open to'],
     3 => ['Registration and money', 'Numbers, fees and the plan'],
     4 => ['Check and publish', 'Look it over, then save'],
@@ -35,11 +37,11 @@ $stepIcons = [1 => 'ri-calendar-event-line', 2 => 'ri-map-pin-user-line', 3 => '
                         <?php if ($n === 1) { ?>
                         <div class="row g-3">
                             <div class="col-12">
-                                <label class="form-label" for="f_title">Name of the event <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="f_title" name="title" maxlength="160" placeholder="e.g. Regional Youth Convention 2026">
+                                <label class="form-label" for="f_title">Name of the <?= $one ?> <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="f_title" name="title" maxlength="160" placeholder="<?= $isInit ? 'e.g. Discipleship Class 2026' : 'e.g. Regional Youth Convention 2026' ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label" for="f_type">Kind of event <span class="text-danger">*</span></label>
+                                <label class="form-label" for="f_type">Kind of <?= $one ?> <span class="text-danger">*</span></label>
                                 <select class="form-select" id="f_type" name="type"></select>
                             </div>
                             <div class="col-md-6">
@@ -47,19 +49,42 @@ $stepIcons = [1 => 'ri-calendar-event-line', 2 => 'ri-map-pin-user-line', 3 => '
                                 <select class="form-select" id="f_audience" name="audience"></select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label" for="f_start_date">Starts <span class="text-danger">*</span></label>
+                                <label class="form-label" for="f_start_date"><?= $isInit ? 'First day, and the time it starts' : 'Starts' ?> <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <input type="date" class="form-control" id="f_start_date" name="starts_at">
                                     <input type="time" class="form-control" id="f_start_time" value="09:00" style="max-width: 8.5rem">
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label" for="f_end_date">Ends <span class="text-danger">*</span></label>
+                                <label class="form-label" for="f_end_date"><?= $isInit ? 'Last day, and the time it ends' : 'Ends' ?> <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <input type="date" class="form-control" id="f_end_date" name="ends_at">
                                     <input type="time" class="form-control" id="f_end_time" value="16:00" style="max-width: 8.5rem">
                                 </div>
                             </div>
+                            <?php if ($isInit) { ?>
+                            <div class="col-md-6">
+                                <label class="form-label" for="f_frequency">How often it meets <span class="text-danger">*</span></label>
+                                <select class="form-select" id="f_frequency" name="frequency"></select>
+                            </div>
+                            <div class="col-md-6" id="meetingDayWrap">
+                                <label class="form-label" for="f_meeting_day">On</label>
+                                <select class="form-select" id="f_meeting_day" name="meeting_day">
+                                    <?php foreach (['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as $i => $d) { ?>
+                                    <option value="<?= $i ?>"><?= $d ?></option>
+                                    <?php } ?>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <div class="ev-switch-row">
+                                    <div>
+                                        <strong>A certificate for those who finish</strong>
+                                        <span>Shown on the initiative. You record how many finished from each place at the end.</span>
+                                    </div>
+                                    <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" role="switch" id="f_certificate" name="certificate" aria-label="Certificate"></div>
+                                </div>
+                            </div>
+                            <?php } ?>
                             <div class="col-12">
                                 <label class="form-label" for="f_description">What it is about</label>
                                 <textarea class="form-control" id="f_description" name="description" rows="4" maxlength="5000" placeholder="A few lines the invited places will read"></textarea>
@@ -72,20 +97,20 @@ $stepIcons = [1 => 'ri-calendar-event-line', 2 => 'ri-map-pin-user-line', 3 => '
                                 <input type="text" class="form-control" id="f_venue" name="venue" maxlength="160" placeholder="e.g. CCI Wote church grounds">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label" for="f_capacity">Room for (people)</label>
+                                <label class="form-label" for="f_capacity"><?= $isInit ? 'Places for (people)' : 'Room for (people)' ?></label>
                                 <input type="number" class="form-control" id="f_capacity" name="capacity" min="1" placeholder="Optional">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label" for="f_coordinator">Coordinator</label>
-                                <input type="text" class="form-control" id="f_coordinator" name="coordinator" maxlength="120" placeholder="Who to call about it">
+                                <label class="form-label" for="f_coordinator"><?= $isInit ? 'Facilitator' : 'Coordinator' ?></label>
+                                <input type="text" class="form-control" id="f_coordinator" name="coordinator" maxlength="120" placeholder="<?= $isInit ? 'Who leads the sessions' : 'Who to call about it' ?>">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="f_speakers">Speakers</label>
                                 <input type="text" class="form-control" id="f_speakers" name="speakers" maxlength="255" placeholder="e.g. Bishop, Rev. Mutua">
                             </div>
                             <div class="col-12">
-                                <label class="form-label" for="f_agenda">Programme</label>
-                                <textarea class="form-control" id="f_agenda" name="agenda" rows="3" maxlength="5000" placeholder="One item per line"></textarea>
+                                <label class="form-label" for="f_agenda"><?= $isInit ? 'What it covers' : 'Programme' ?></label>
+                                <textarea class="form-control" id="f_agenda" name="agenda" rows="3" maxlength="5000" placeholder="<?= $isInit ? 'One topic per line' : 'One item per line' ?>"></textarea>
                             </div>
                             <div class="col-12">
                                 <label class="form-label mb-2">Who it is open to <span class="text-danger">*</span></label>
@@ -101,14 +126,14 @@ $stepIcons = [1 => 'ri-calendar-event-line', 2 => 'ri-map-pin-user-line', 3 => '
                         <div id="regBox">
                             <div class="ev-switch-row">
                                 <div>
-                                    <strong>Places register how many are coming</strong>
+                                    <strong><?= $isInit ? 'Places join and say how many are taking part' : 'Places register how many are coming' ?></strong>
                                     <span>Each place gives its numbers - youth, adults, children, leaders - not names.</span>
                                 </div>
                                 <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" role="switch" id="f_registration" name="registration" aria-label="Places register"></div>
                             </div>
                             <div class="row g-3 mt-1" id="regFields" hidden>
                                 <div class="col-md-6">
-                                    <label class="form-label" for="f_register_by">Register by</label>
+                                    <label class="form-label" for="f_register_by"><?= $isInit ? 'Join by (optional - else until the last day)' : 'Register by' ?></label>
                                     <input type="date" class="form-control" id="f_register_by" name="register_by">
                                 </div>
                                 <div class="col-md-6">
@@ -117,14 +142,14 @@ $stepIcons = [1 => 'ri-calendar-event-line', 2 => 'ri-map-pin-user-line', 3 => '
                                 </div>
                             </div>
                         </div>
-                        <div class="alert alert-primary d-flex gap-2 mb-3 d-none" id="regOff"><i class="ri-information-line fs-16"></i><span>Only your own church comes, so there is nothing to register. Open it to other churches in step 2 to take registrations.</span></div>
+                        <div class="alert alert-primary d-flex gap-2 mb-3 d-none" id="regOff"><i class="ri-information-line fs-16"></i><span>Only your own place takes part, so there is nothing to register. Open it to other places in step 2 to take registrations.</span></div>
                         <div class="row g-3 mt-1">
                             <div class="col-md-6">
-                                <label class="form-label" for="f_planned_income">Money we hope to raise (KES)</label>
+                                <label class="form-label" for="f_planned_income">Income we expect (KES)</label>
                                 <input type="number" class="form-control" id="f_planned_income" name="planned_income" min="0" step="1" placeholder="Optional">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label" for="f_planned_spend">What we plan to spend (KES)</label>
+                                <label class="form-label" for="f_planned_spend">Expenses we plan (KES)</label>
                                 <input type="number" class="form-control" id="f_planned_spend" name="planned_spend" min="0" step="1" placeholder="Optional">
                             </div>
                         </div>
@@ -161,7 +186,11 @@ $stepIcons = [1 => 'ri-calendar-event-line', 2 => 'ri-map-pin-user-line', 3 => '
                     <ul>
                         <li><b>Save as draft</b> keeps it to yourself. Nobody else sees it until you <b>publish</b>.</li>
                         <li>When you publish, the leaders of the places it is open to get a notification in their bell.</li>
+                        <?php if ($isInit) { ?>
+                        <li>Sessions are made from <b>how often it meets</b>. You can change, add or remove them later, and record attendance at each.</li>
+                        <?php } else { ?>
                         <li>Places give <b>numbers, not names</b>. You see who is coming, grouped by region.</li>
+                        <?php } ?>
                     </ul>
                 </div>
             </div>

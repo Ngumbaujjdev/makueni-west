@@ -1,9 +1,11 @@
 <?php
 /**
- * Events pages are shared by every level (docs/specs/events-initiatives-spec.md):
- * the bodies live in includes/events/*.php and each level has thin wrappers
- * - {church,region,diocese}/events/{index,new,event}.php. What the API allows
- * is decided server-side (App\Support\EventsAccess); this only checks the
+ * Events and Initiatives pages are shared by every level and by both kinds
+ * (docs/specs/events-initiatives-spec.md): the bodies live in
+ * includes/events/*.php and each level has thin wrappers -
+ * {church,region,diocese}/events/{index,new,event}.php and
+ * {church,region,diocese}/initiatives/{index,new,initiative}.php. What the API allows
+ * is decided server-side (App\Support\ActivityAccess); this only checks the
  * page may open and tells the scripts where they are and what they may offer.
  */
 require_once __DIR__ . '/../session-manager.php';
@@ -14,10 +16,12 @@ require_once __DIR__ . '/../budget/context.php'; // BUDGET_LEVELS, for the Recor
 /**
  * @param string $level church | region | diocese
  * @param string $page list | form | event
+ * @param string $kind event | initiative - the same pages serve both
  */
-function eventsPageContext(string $level, string $page): array
+function eventsPageContext(string $level, string $page, string $kind = 'event'): array
 {
-    requirePermission("{$level}.events.events.read");
+    $module = $kind === 'initiative' ? 'initiatives' : 'events';
+    requirePermission("{$level}.{$module}.{$module}.read");
     $role = getCurrentRole() ?? [];
     $can = fn (string $permission) => hasGlobalAccess() || hasPermission("{$level}.{$permission}");
     $place = ['id' => (int) ($role['territory_id'] ?? 0), 'name' => $role['territory']['name'] ?? $role['territory_name'] ?? ''];
@@ -25,13 +29,14 @@ function eventsPageContext(string $level, string $page): array
     return [
         'level' => $level,
         'page' => $page,
-        'baseUrl' => SITE_URL . "/{$level}/events",
+        'kind' => $kind,
+        'baseUrl' => SITE_URL . "/{$level}/{$module}",
         'homeUrl' => SITE_URL . "/{$level}/dashboard",
         'place' => $place,
         'can' => [
-            'manage' => $can('events.events.manage'),
-            'register' => $can('events.events.register'),
-            'below' => $level !== 'church' && $can('events.below.read'),
+            'manage' => $can("{$module}.{$module}.manage"),
+            'register' => $can("{$module}.{$module}.register"),
+            'below' => $level !== 'church' && $can("{$module}.below.read"),
         ],
         // What BudgetsUI expects (window.BUDGET_CTX) when the Record money window opens here.
         'budget' => [

@@ -36447,9 +36447,69 @@ tr.is-clickable {
   color: var(--v2-heading);
   overflow-wrap: anywhere;
 }
+/* Initiatives (L2): the card's sessions progress and the sessions timeline */
+.ev-progress {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--default-text-color);
+}
+.ev-sessions {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ev-session {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.75rem 0;
+}
+.ev-session + .ev-session {
+  border-top: 1px solid var(--default-border);
+}
+.ev-session.is-cancelled .ev-session-day,
+.ev-session.is-cancelled .fw-semibold {
+  text-decoration: line-through;
+}
+.ev-session-no {
+  display: inline-flex;
+  flex: 0 0 2.1rem;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.ev-session-day {
+  flex: 0 0 4.2rem;
+  line-height: 1.15;
+}
+.ev-session-day strong {
+  display: block;
+  font-size: 0.88rem;
+  color: var(--v2-heading);
+}
+.ev-session-day small {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--default-text-color);
+}
+.ev-session-none {
+  font-style: italic;
+  font-weight: 500;
+  color: var(--default-text-color);
+}
 @media (max-width: 767.98px) {
   .ev-hero-actions {
     width: 100%;
     margin-inline-start: 0;
+  }
+  .ev-session {
+    flex-wrap: wrap;
+  }
+  .ev-session > .flex-shrink-0 {
+    margin-inline-start: calc(2.1rem + 0.85rem);
   }
 }
