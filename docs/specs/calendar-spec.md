@@ -2,7 +2,7 @@
 
 One **Calendar** for each church, region and the diocese, built once and inherited like Budgets and Settings. Each place sees its own events and everything above it. At the top sits the **CCI calendar**: the national calendar of Christian Church International Kenya, which global admins type in or import each year. Every place sees it, marked as a CCI calendar event.
 
-**Status:** C1 (data, API, permissions, menu, CCI import) and C2 (the page) done 2026-10-05. Decided with the owner:
+**Status:** C1 (data, API, permissions, menu, CCI import) and C2 (the page) done 2026-10-05; C3 (Church life on the calendar) done the same day. Decided with the owner:
 - only **global admins** manage the CCI calendar;
 - CCI events are **typed in or imported from an Excel/CSV file**;
 - **every level** adds its own events from the first build.
@@ -130,6 +130,43 @@ All routes are under `auth:sanctum`, and the acting place comes from `X-Assignme
 - **The import's save is one transaction:** all the ready rows or none.
 - The old `diocese/calendar/{views,management,sync,meetings,reports}.php` stubs redirect to the calendar.
 
+## C3: Church life on the calendar (L3 of the Church life plan)
+The calendar also shows what the other modules already know, so nothing is typed twice. These items are **read from their own tables, never copied** into `calendar_events`. They can't be edited here; clicking one opens its own page.
+
+**Sources** (`sources[]` on `GET /calendar/events`; all on by default):
+| Source | What | Layer | Opens |
+|---|---|---|---|
+| `calendar` | The calendar's own events (C1) | by owner | the event window |
+| `events` | Events (L1): our own (not cancelled; drafts marked), invitations from above (published or done), and with "Churches below" the published ones below | by owner | `/{L}/events/event?id=` |
+| `sessions` | Initiative sessions (L2) that aren't cancelled, for the same initiatives | by owner | `/{L}/initiatives/initiative?id=` |
+| `services` | Each weekly service from **our** service times (Settings) | ours | Settings, Service times |
+| `due` | **Our** due dates (below) | ours | the page to act on it |
+
+- Events and sessions follow the Events / Initiatives read permissions (`{L}.events.*`, `{L}.initiatives.*`); without them those sources are empty. "Below" also needs that module's `below.read`.
+- Times from Events and Initiatives (stored in UTC) are shown in Africa/Nairobi time, like the calendar's own times.
+
+**Due dates** (our place only, from today on, plus anything late):
+- **Diocese share:** each budget period whose share is still to send, on the period's last day. It reads `BudgetRollup::contributionsOf()`, the one source, and never works the share out again. "Send April's diocese share · KES 4,500 still to send". It turns red ("late") once the period has ended. Needs `{L}.budgets.budgets.read`.
+- **Next month's budget:** on the 25th, when no budget (any status) covers the next month: "Prepare May 2026's budget". Needs `{L}.budgets.budgets.read`.
+- **Monthly report:** added with Monthly reports (L4).
+
+**Occurrence fields** (added to C1's): `source`, `url` (relative, or null), `tone` (`danger` for late, else null), `status` (an event's or session's status, or `due` / `late`). Items that aren't calendar events have `event_id: null` and `can_edit: false`.
+
+**.ics download:** `GET /calendar/ics?from=&to=&layers[]=&sources[]=` returns `text/calendar` (UTF-8, CRLF lines, folded at 75 octets) of what the page shows. Each item gets a stable UID (`{source}-{id}-{date}@makueniwest`). All-day items use `VALUE=DATE`; timed ones use floating local times. There's no live sync: download, then import into Google or Outlook.
+
+**Page:**
+- A second chip row, **Show**: Calendar · Events · Initiative sessions · Services · Due dates (kept in the URL).
+- A right column with **Coming up** (the next 7 days) and **Due soon** (due dates in the next 30 days, late ones first), each item opening its page.
+- **Download (.ics)** for the shown range.
+
+### C3 as built
+- `App\Services\Calendar\LifeFeed` reads the sources; `Calendar::occurrences()` takes `sources` (default: calendar only, so older callers are unchanged) and merges them. `App\Services\Calendar\Ics` writes the file. One `feed()` in the controller serves the page and the download.
+- Choosing a calendar **kind** (Conference, Meeting...) narrows the feed to calendar events, since a kind belongs to them.
+- **KPI cards** now count calendar events, events and initiative sessions (not the weekly services or due dates), so "this month" matches what happens.
+- **Colours:** due dates gold, late ones red, services pink, everything else its layer's colour; drafts dashed with a "Draft" badge.
+- The side column asks for 90 days back to 30 ahead: late due dates first, then the next 30 days; Coming up is the next 7 days without due dates.
+- Tests: `tests/Feature/Calendar/CalendarLifeTest.php` (4).
+
 ## Acceptance Criteria
 
 ### C1: data, API, CCI management
@@ -148,3 +185,10 @@ All routes are under `auth:sanctum`, and the acting place comes from `X-Assignme
 - [ ] Add event, edit and delete happen in place (no reload), and the calendar refreshes.
 - [ ] The diocese page shows the CCI national calendar tab to global admins only, with import and a template.
 - [ ] No page errors; the phone width works.
+
+### C3: Church life on the calendar
+- [x] The feed merges calendar events, events, initiative sessions, services and due dates, each with its `source` and `url`; `sources[]` narrows it.
+- [x] A church sees an event the region opened to everyone below, but not another region's; drafts and cancelled events of others never show; a role without Events/Initiatives read gets none of those.
+- [x] Services repeat weekly from the service times; due dates come from the share rows (pending vs late) and a missing next-month budget, only for our own place.
+- [x] `/calendar/ics` returns a valid VCALENDAR with one VEVENT per item.
+- [x] The page shows the Show chips, Coming up, Due soon and the download; clicking an item opens its page; no console errors; light and dark; 390 px.

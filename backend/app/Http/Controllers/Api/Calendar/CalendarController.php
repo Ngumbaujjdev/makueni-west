@@ -6,12 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\CalendarEvent;
 use App\Models\Territory;
 use App\Services\Calendar\Calendar;
+use App\Services\Calendar\Ics;
+use App\Services\Calendar\LifeFeed;
 use App\Support\CalendarAccess;
 use App\Support\SettingsAccess;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -27,13 +31,33 @@ class CalendarController extends Controller
 
     public function __construct(private Calendar $calendar) {}
 
-    /** GET /calendar/events?from=&to=&layers[]=&kinds[]= */
+    /** GET /calendar/events?from=&to=&layers[]=&kinds[]=&sources[]= */
     public function events(Request $request): JsonResponse
     {
         $place = $this->place($request);
         if ($place instanceof JsonResponse) {
             return $place;
         }
+
+        return $this->ok($this->feed($request, $place));
+    }
+
+    /** GET /calendar/ics - the same items as a .ics file to import into Google or Outlook (no live sync). */
+    public function ics(Request $request): JsonResponse|Response
+    {
+        $place = $this->place($request);
+        if ($place instanceof JsonResponse) {
+            return $place;
+        }
+        $body = Ics::build($this->feed($request, $place), "{$place->name} calendar");
+        $name = Str::slug($place->name).'-calendar.ics';
+
+        return response($body, 200, ['Content-Type' => 'text/calendar; charset=utf-8', 'Content-Disposition' => "attachment; filename=\"{$name}\""]);
+    }
+
+    /** The occurrences asked for: one set of rules for the page and the download. */
+    private function feed(Request $request, Territory $place): array
+    {
         $data = $request->validate([
             'from' => ['required', 'date'],
             'to' => ['required', 'date', 'after_or_equal:from'],
@@ -41,6 +65,8 @@ class CalendarController extends Controller
             'layers.*' => [Rule::in(Calendar::LAYERS)],
             'kinds' => ['sometimes', 'array'],
             'kinds.*' => [Rule::in(array_keys(CalendarEvent::KINDS))],
+            'sources' => ['sometimes', 'array'],
+            'sources.*' => [Rule::in(LifeFeed::SOURCES)],
         ]);
         $from = CarbonImmutable::parse($data['from'])->startOfDay();
         $to = CarbonImmutable::parse($data['to'])->startOfDay();
@@ -48,7 +74,7 @@ class CalendarController extends Controller
             throw ValidationException::withMessages(['to' => ['Ask for at most '.self::MAX_RANGE_DAYS.' days at a time.']]);
         }
 
-        return $this->ok($this->calendar->occurrences($place, $from, $to, $data['layers'] ?? ['cci', 'diocese', 'region', 'ours'], $data['kinds'] ?? [], $request->user()));
+        return $this->calendar->occurrences($place, $from, $to, $data['layers'] ?? ['cci', 'diocese', 'region', 'ours'], $data['kinds'] ?? [], $request->user(), $data['sources'] ?? LifeFeed::SOURCES);
     }
 
     /** GET /calendar/overview - the KPI cards, plus what the page needs to know about this place. */
