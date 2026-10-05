@@ -81,15 +81,6 @@
                                                 pattern="[0-9]{6}" required />
                                             <small class="text-muted">Enter your 6-digit employee code</small>
                                         </div>
-                                        <div class="col-xl-12">
-                                            <label for="employee-pin" class="form-label text-default">
-                                                PIN
-                                            </label>
-                                            <input type="password" class="form-control form-control-lg text-center"
-                                                id="employee-pin" placeholder="Enter your PIN" maxlength="6"
-                                                inputmode="numeric" autocomplete="current-password" pattern="[0-9]{4,6}" required />
-                                            <small class="text-muted">Your 4 to 6-digit PIN</small>
-                                        </div>
                                         <div class="col-xl-12 d-grid mt-4">
                                             <button type="submit" class="btn btn-lg btn-primary">
                                                 <i class="ri-login-circle-line me-1"></i> Sign In with Code
