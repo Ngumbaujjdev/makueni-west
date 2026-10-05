@@ -115,6 +115,11 @@ The placeholders' unbuilt sub-pages are switched off.
   - The header's phone and video buttons → this message's two actions (Reply and Send a new message; Everyone it went to; Use it and Edit). They show from small tablets up; on a phone they're in the ⋮ menu.
   - The footer's second button → put a saved message into the reply.
   - The details panel's three round buttons → the same actions plus Copy; "Shared Files" → **About this message**, and for Sent, **Who it went to** with View All.
+- **Send a message is v1-events' "Send campaign" composer** (2026-10-05), as a page card:
+  - **Compose (left):** channel cards (In the app / SMS / Email / SMS and email); saved messages as template chips (with "Write my own"; it asks before replacing typed text); subject and message; placeholder chips that insert at the cursor; the SMS counter ("80 / 160 · 1 SMS"); and **Send a test**, which sends to your own phone or email through the typed-in route, subject marked [TEST].
+  - **Who gets it (right):** role chips, the places below, typed-in contacts; the live counter (in the app / SMS / emails, and notes for people with no phone or email); **How it reads** (v1's template-writer phone); and Send now / Schedule.
+  - **Review & send** opens v1's window: review (summary rows) → sending → done (result tiles, "Who it went to") or error.
+  - The saved-message editor has v1's writer layout: the fields beside the phone preview.
 - **Send a message:**
   - who: role chips here; below: None / All / By subregion or region / Pick places, the roles there, and the places' own contacts; typed entries;
   - the message: the channel, a part counter, `{name}` / `{place}` / `{sender}`, and "Use a saved message";
