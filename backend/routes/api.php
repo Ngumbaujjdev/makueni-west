@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\Settings\AuditController as SettingsAuditController;
+use App\Http\Controllers\Api\Settings\CommunicationController as SettingsCommunicationController;
 use App\Http\Controllers\Api\Settings\HubController as SettingsHubController;
 use App\Http\Controllers\Api\Settings\ProfileController as SettingsProfileController;
 use App\Http\Controllers\Api\Settings\SectionController as SettingsSectionController;
@@ -96,6 +97,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('maintenance/retry-failed', [SettingsSystemController::class, 'retryFailed']);
         Route::post('maintenance/{tool}', [SettingsSystemController::class, 'maintenance'])->whereIn('tool', array_keys(SettingsSystemController::TOOLS));
         Route::get('notice', [SettingsSystemController::class, 'notice']);
+        Route::post('communication/test', [SettingsCommunicationController::class, 'test'])->middleware('throttle:5,1');
         Route::get('access', [SettingsSystemController::class, 'access']);
         Route::get('audit', [SettingsAuditController::class, 'index']);
     });

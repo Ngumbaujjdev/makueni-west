@@ -154,6 +154,10 @@ final class Settings
         $chain = $this->chain($place);
         $cards = [];
         foreach (SettingsRegistry::fields($section) as $key => $field) {
+            // A place's own setting (not inherited) means nothing at a level that can't set it.
+            if ($field['inherits'] === false && ! in_array($level, $field['levels'], true)) {
+                continue;
+            }
             $r = $this->resolve($key, $place, $chain);
             $editable = in_array($level, $field['levels'], true) && $r['locked_by'] === null;
             $cards[$field['card']][] = [
@@ -164,6 +168,7 @@ final class Settings
                 'used_by' => $field['used_by'],
                 'span' => $field['span'],
                 'options' => $field['options'],
+                'show_if' => $field['show_if'] ?? null,
                 'value' => $field['secret'] ? null : $r['value'],
                 'default' => $field['secret'] ? null : $this->defaultFor($field),
                 'secret' => (bool) $field['secret'],

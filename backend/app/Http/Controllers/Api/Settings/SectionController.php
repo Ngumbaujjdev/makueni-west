@@ -75,6 +75,10 @@ class SectionController extends SettingsController
             'section' => SettingsRegistry::section($section),
             'cards' => $settings->present($section, $place, SettingsAccess::level($place)),
             'can' => ['update' => SettingsAccess::can($request->user(), $place, $section, 'update')],
+            // Communication (S6b): how messages go out right now, for the view-only card.
+            'extra' => (SettingsRegistry::section($section)['extra'] ?? null) === 'communication'
+                ? app(\App\Services\Messaging\PlaceMessenger::class)->channels($place)
+                : null,
         ];
     }
 }

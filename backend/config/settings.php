@@ -213,6 +213,21 @@ return [
             'sentence' => 'Who can sign in and what each role can see and do.',
         ],
 
+        // S6b - how a church's or region's own messages go out: through the
+        // diocese's Email and SMS (view only, with its own name, reply-to and
+        // signature) or its own account. Read by App\Services\Messaging\PlaceMessenger.
+        'communication' => [
+            'label' => 'Communication',
+            'icon' => 'ri-chat-settings-line',
+            'colour' => 'purple',
+            'group' => 'messages',
+            'levels' => ['church', 'region', 'diocese'],
+            'kind' => 'form',
+            'test' => 'place',
+            'extra' => 'communication',
+            'sentence' => 'How your emails and SMS go out - through the diocese, or your own account - and what they look like.',
+        ],
+
         // S5 - how to pay a region or the diocese. Read by Contributions ("How to
         // send it", for the places below). Churches get theirs with the first
         // page that shows a church's payment details.
@@ -300,6 +315,24 @@ return [
         'sms.api_key' => ['section' => 'sms', 'card' => 'Gateway', 'label' => 'API key', 'type' => 'secret', 'secret' => true, 'rules' => ['nullable', 'string', 'max:200'], 'default' => null, 'levels' => ['diocese']],
         'sms.sandbox' => ['section' => 'sms', 'card' => 'Gateway', 'label' => 'Use the sandbox (no real messages)', 'type' => 'switch', 'default' => false, 'levels' => ['diocese']],
         'sms.sender_id' => ['section' => 'sms', 'card' => 'Who SMS comes from', 'label' => 'Sender ID', 'rules' => ['nullable', 'string', 'max:11', 'regex:/^[A-Za-z0-9 ]*$/'], 'default' => null, 'levels' => ['diocese'], 'help' => 'Up to 11 letters or digits, approved by your provider. Leave empty for their default.', 'used_by' => 'Every SMS - churches send under it'],
+
+        // Communication (S6b). comms.mode flows down and can be locked; everything
+        // else is the place's own ('inherits' => false) - a church never sends
+        // with another place's account.
+        'comms.mode' => ['section' => 'communication', 'card' => 'How messages are sent', 'label' => 'Send our email and SMS through', 'type' => 'select', 'options' => ['diocese' => "The diocese's email and SMS", 'own' => 'Our own email server and SMS account'], 'rules' => ['required'], 'default' => 'diocese', 'levels' => ['church', 'region', 'diocese'], 'lockable' => true, 'span' => 12, 'help' => 'Your own email or SMS is used once it\'s filled in below; until then that one still goes through the diocese\'s. The diocese, or a region, can lock this.', 'used_by' => 'Every email and SMS sent for this place'],
+        'comms.display_name' => ['section' => 'communication', 'card' => 'How our messages look', 'label' => 'Name messages come from', 'rules' => ['nullable', 'string', 'max:80'], 'default' => null, 'levels' => ['church', 'region'], 'inherits' => false, 'help' => 'Leave empty to use your place\'s name.'],
+        'comms.reply_to' => ['section' => 'communication', 'card' => 'How our messages look', 'label' => 'Replies go to', 'type' => 'email', 'rules' => ['nullable', 'email', 'max:255'], 'default' => null, 'levels' => ['church', 'region'], 'inherits' => false, 'help' => 'An email you read, e.g. the church office.'],
+        'comms.sms_signature' => ['section' => 'communication', 'card' => 'How our messages look', 'label' => 'SMS signature', 'rules' => ['nullable', 'string', 'max:30'], 'default' => null, 'levels' => ['church', 'region'], 'inherits' => false, 'span' => 12, 'help' => 'Added to the end of each SMS, e.g. "CCI Sultan Hamud". Up to 30 characters.'],
+        'comms.mail.host' => ['section' => 'communication', 'card' => 'Our own email server (SMTP)', 'label' => 'Server', 'rules' => ['nullable', 'string', 'max:255', 'public_mail_host'], 'default' => null, 'levels' => ['church', 'region'], 'inherits' => false, 'show_if' => ['comms.mode' => 'own'], 'help' => 'e.g. mail.yourchurch.or.ke or smtp.gmail.com'],
+        'comms.mail.port' => ['section' => 'communication', 'card' => 'Our own email server (SMTP)', 'label' => 'Port', 'type' => 'select', 'options' => ['587' => '587 (STARTTLS - most common)', '465' => '465 (SSL)', '2525' => '2525', '25' => '25'], 'default' => '587', 'levels' => ['church', 'region'], 'inherits' => false, 'show_if' => ['comms.mode' => 'own']],
+        'comms.mail.scheme' => ['section' => 'communication', 'card' => 'Our own email server (SMTP)', 'label' => 'Security', 'type' => 'select', 'options' => ['' => 'Automatic (STARTTLS)', 'smtps' => 'SSL (port 465)'], 'default' => '', 'levels' => ['church', 'region'], 'inherits' => false, 'show_if' => ['comms.mode' => 'own']],
+        'comms.mail.username' => ['section' => 'communication', 'card' => 'Our own email server (SMTP)', 'label' => 'Username', 'rules' => ['nullable', 'string', 'max:255'], 'default' => null, 'levels' => ['church', 'region'], 'inherits' => false, 'show_if' => ['comms.mode' => 'own']],
+        'comms.mail.password' => ['section' => 'communication', 'card' => 'Our own email server (SMTP)', 'label' => 'Password', 'type' => 'secret', 'secret' => true, 'rules' => ['nullable', 'string', 'max:255'], 'default' => null, 'levels' => ['church', 'region'], 'inherits' => false, 'show_if' => ['comms.mode' => 'own']],
+        'comms.mail.from_address' => ['section' => 'communication', 'card' => 'Our own email server (SMTP)', 'label' => 'Send from (email)', 'type' => 'email', 'rules' => ['nullable', 'email', 'max:255'], 'default' => null, 'levels' => ['church', 'region'], 'inherits' => false, 'show_if' => ['comms.mode' => 'own']],
+        'comms.sms.username' => ['section' => 'communication', 'card' => "Our own SMS (Africa's Talking)", 'label' => "Africa's Talking username", 'rules' => ['nullable', 'string', 'max:100'], 'default' => null, 'levels' => ['church', 'region'], 'inherits' => false, 'show_if' => ['comms.mode' => 'own']],
+        'comms.sms.api_key' => ['section' => 'communication', 'card' => "Our own SMS (Africa's Talking)", 'label' => 'API key', 'type' => 'secret', 'secret' => true, 'rules' => ['nullable', 'string', 'max:200'], 'default' => null, 'levels' => ['church', 'region'], 'inherits' => false, 'show_if' => ['comms.mode' => 'own']],
+        'comms.sms.sender_id' => ['section' => 'communication', 'card' => "Our own SMS (Africa's Talking)", 'label' => 'Sender ID', 'rules' => ['nullable', 'string', 'max:11', 'regex:/^[A-Za-z0-9 ]*$/'], 'default' => null, 'levels' => ['church', 'region'], 'inherits' => false, 'show_if' => ['comms.mode' => 'own'], 'help' => 'Up to 11 letters or digits, approved by Africa\'s Talking. Leave empty for their default.'],
+        'comms.sms.sandbox' => ['section' => 'communication', 'card' => "Our own SMS (Africa's Talking)", 'label' => 'Use the sandbox (no real messages)', 'type' => 'switch', 'default' => false, 'levels' => ['church', 'region'], 'inherits' => false, 'show_if' => ['comms.mode' => 'own']],
 
         // Payment details (S5) - each place's own: never inherited ('inherits' => false),
         // so a region without details never shows the diocese's paybill as its own.
