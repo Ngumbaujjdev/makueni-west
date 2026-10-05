@@ -238,6 +238,14 @@ class DatabaseSeeder extends Seeder
             // (docs/specs/events-initiatives-spec.md)
             // ==========================================
             ActivitiesAccessSeeder::class,
+
+            // ==========================================
+            // PHASE 33: the record pages in the church menu - Record
+            // Attendance for whoever can record attendance, Demographics
+            // Tracking named Record Demographics, and the demographics entry
+            // grants put back where a role lost them. (32 is Monthly reports.)
+            // ==========================================
+            AttendanceRecordMenuSeeder::class,
         ]);
     }
 }
