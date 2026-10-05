@@ -24,6 +24,9 @@
         <testsuite name="Demographics">
             <directory>tests/Feature/Demographics</directory>
         </testsuite>
+        <testsuite name="Activities">
+            <directory>tests/Feature/Activities</directory>
+        </testsuite>
         <testsuite name="Calendar">
             <directory>tests/Feature/Calendar</directory>
         </testsuite>

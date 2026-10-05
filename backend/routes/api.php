@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\GatheringCategoryController;
 use App\Http\Controllers\Api\GatheringTypeController;
 use App\Http\Controllers\Api\ModuleController;
 use App\Http\Controllers\Api\ModuleGroupController;
+use App\Http\Controllers\Api\NotificationsController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\ReportController;
@@ -74,6 +75,11 @@ Route::get('/system-admin/contact', [UserController::class, 'getSystemAdminConta
 Route::get('settings/logo/{territory}', [SettingsProfileController::class, 'logo']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
+
+    // In-app notifications - the header bell and the Notifications page (docs/specs/events-initiatives-spec.md)
+    Route::get('notifications', [NotificationsController::class, 'index']);
+    Route::post('notifications/read-all', [NotificationsController::class, 'readAll']);
+    Route::post('notifications/{id}/read', [NotificationsController::class, 'read']);
 
     // Calendar - one per church, region and diocese, the CCI calendar on top (docs/specs/calendar-spec.md)
     Route::prefix('calendar')->group(function () {

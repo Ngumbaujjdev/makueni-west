@@ -49,6 +49,7 @@ php artisan test --testsuite=Financial
 php artisan test --testsuite=Demographics # suite dir exists, no tests yet — first real content per docs/specs/demographics-module-spec.md
 php artisan test --testsuite=Settings     # the Settings hub (docs/specs/settings-spec.md)
 php artisan test --testsuite=Calendar     # the Calendar and the CCI national calendar (docs/specs/calendar-spec.md)
+php artisan test --testsuite=Activities   # Church life: events, initiatives and their foundation (docs/specs/events-initiatives-spec.md)
 ```
 
 Only `tests/Feature/ExampleTest.php` and `tests/Unit/ExampleTest.php` exist today — there is no real coverage yet. New modules should NOT ship without Feature tests covering their permission boundaries (who can read/write what, scoped by territory) — that's the highest-value test surface in this codebase given how central the territory/permission system is.
