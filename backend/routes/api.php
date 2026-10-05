@@ -106,6 +106,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('calendar')->group(function () {
         Route::get('events', [CalendarController::class, 'events']);
         Route::get('overview', [CalendarController::class, 'overview']);
+        Route::get('ics', [CalendarController::class, 'ics']);
         Route::post('events', [CalendarController::class, 'store']);
         Route::put('events/{id}', [CalendarController::class, 'update'])->whereNumber('id');
         Route::delete('events/{id}', [CalendarController::class, 'destroy'])->whereNumber('id');

@@ -47,9 +47,10 @@ final class Calendar
      * The occurrences a place sees between two dates.
      *
      * @param  string[]  $layers  which layers to include
-     * @param  string[]  $kinds  only these kinds (empty = all)
+     * @param  string[]  $kinds  only these calendar kinds (empty = all); a kind narrows the feed to calendar events
+     * @param  string[]  $sources  calendar events and/or Church life items (LifeFeed::SOURCES, C3)
      */
-    public function occurrences(Territory $place, CarbonImmutable $from, CarbonImmutable $to, array $layers, array $kinds = [], ?User $user = null): array
+    public function occurrences(Territory $place, CarbonImmutable $from, CarbonImmutable $to, array $layers, array $kinds = [], ?User $user = null, array $sources = ['calendar']): array
     {
         $map = $this->layersFor($place);
         $layerOf = [];
@@ -60,8 +61,15 @@ final class Calendar
         }
         $own = in_array('ours', $layers, true) ? $map['ours'] : [];
         $shared = collect($layers)->reject(fn ($l) => $l === 'ours')->flatMap(fn ($l) => $map[$l] ?? [])->unique()->values()->all();
-        if (! $own && ! $shared) {
-            return [];
+        if ($kinds) {
+            // A calendar kind (Conference, Meeting...) is about calendar events only.
+            $sources = array_values(array_intersect($sources, ['calendar']));
+        }
+        $out = array_diff($sources, ['calendar'])
+            ? app(LifeFeed::class)->occurrences($place, $from, $to, $layerOf, $layers, $sources, $user)
+            : [];
+        if ((! $own && ! $shared) || ! in_array('calendar', $sources, true)) {
+            return $this->sorted($out);
         }
 
         $events = CalendarEvent::with('territory:id,name,territory_type')
@@ -81,13 +89,18 @@ final class Calendar
             ->orderBy('starts_on')
             ->get();
 
-        $out = [];
         foreach ($events as $event) {
             $canEdit = CalendarAccess::canEdit($user, $place, $event);
             foreach (self::expand($event, $from, $to) as [$start, $end]) {
                 $out[] = $this->occurrence($event, $start, $end, $layerOf[(int) $event->territory_id] ?? 'below', $canEdit);
             }
         }
+
+        return $this->sorted($out);
+    }
+
+    private function sorted(array $out): array
+    {
         usort($out, fn ($a, $b) => [$a['start'], $a['title']] <=> [$b['start'], $b['title']]);
 
         return $out;
@@ -140,7 +153,8 @@ final class Calendar
     {
         $today = CarbonImmutable::today();
         $from = $today->startOfYear()->min($today->subMonthNoOverflow()->startOfMonth());
-        $all = $this->occurrences($place, $from, $today->endOfYear()->max($today->addDays(60)), ['cci', 'diocese', 'region', 'ours'], [], $user);
+        // What happens on the calendar: its own events, plus events and initiative sessions (not the weekly services or due dates).
+        $all = $this->occurrences($place, $from, $today->endOfYear()->max($today->addDays(60)), ['cci', 'diocese', 'region', 'ours'], [], $user, ['calendar', 'events', 'sessions']);
         $in = fn (CarbonImmutable $a, CarbonImmutable $b) => collect($all)->filter(fn ($o) => substr($o['start'], 0, 10) >= $a->toDateString() && substr($o['start'], 0, 10) <= $b->toDateString());
 
         $byMonth = [];
@@ -182,6 +196,10 @@ final class Calendar
             'shared_below' => $e->shared_below,
             'can_edit' => $canEdit,
             // The event itself (not this occurrence) - what the edit form starts from.
+            'source' => 'calendar',
+            'url' => null,
+            'status' => null,
+            'tone' => null,
             'base' => $canEdit ? [
                 'starts_on' => $e->starts_on->toDateString(), 'ends_on' => $e->ends_on->toDateString(),
                 'start_time' => $time($e->start_time), 'end_time' => $time($e->end_time), 'repeat_until' => $e->repeat_until?->toDateString(),
