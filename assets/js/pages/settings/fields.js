@@ -326,6 +326,7 @@ const SettingsFields = (function () {
         ...[...root.querySelectorAll(".card[id^='card-']")].filter((el) => !el.hidden && el.id !== "card-test" && el.id !== "card-tools").map((el) => ({ id: el.id, label: el.querySelector(".card-title")?.textContent.trim() || "" })),
         ...(payload.section?.test ? [{ id: "card-test", label: "Check it works" }] : []),
         ...(payload.section?.tools?.length ? [{ id: "card-tools", label: "Housekeeping" }] : []),
+        ...(extra?.links || []),
       ];
       const extra = payload.extra && extras[payload.section?.extra] ? extras[payload.section.extra](root, payload) : null;
       root.querySelectorAll("[data-key]").forEach((el) => el.addEventListener("change", applyShowIf));
@@ -335,6 +336,7 @@ const SettingsFields = (function () {
       if (payload.section?.tools?.length) root.insertAdjacentHTML("beforeend", toolsCard(payload.section.tools));
       wireTools(root);
       root.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((t) => window.bootstrap && new bootstrap.Tooltip(t));
+      extra?.after?.();
       linksReady = true;
       SettingsHub.subLinks(links());
     }

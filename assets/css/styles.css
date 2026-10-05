@@ -35841,3 +35841,68 @@ tr.is-clickable {
   font-size: 0.85rem;
   white-space: pre-line;
 }
+
+/* Communication > Messages: the log and its preview window (S6c) */
+.msg-table td:nth-child(3) {
+  max-width: 22rem;
+}
+.msg-preview {
+  max-width: 22rem;
+}
+.msg-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.6rem 1.25rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(var(--primary-rgb), 0.14);
+  border-radius: 0.75rem;
+  background: rgba(var(--primary-rgb), 0.04);
+}
+.msg-facts > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 0.85rem;
+}
+.msg-facts span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.msg-facts b {
+  word-break: break-word;
+}
+.msg-frame {
+  display: block;
+  width: 100%;
+  height: 26rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.75rem;
+  background: #fff;
+}
+.msg-phone {
+  max-width: 22rem;
+  margin: 0 auto;
+  padding: 1rem;
+  border: 1px solid var(--default-border);
+  border-radius: 1.5rem;
+  background: rgb(var(--light-rgb));
+}
+.msg-phone-sender {
+  margin-bottom: 0.6rem;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.msg-bubble {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0.65rem 0.9rem;
+  border-radius: 1rem 1rem 1rem 0.25rem;
+  background: var(--custom-white);
+  border: 1px solid var(--default-border);
+  white-space: pre-line;
+  word-break: break-word;
+  font-size: 0.9rem;
+}

@@ -90,6 +90,7 @@ function settingsPageScripts(bool $withMap = true): void
         'assets/js/pages/settings/sections/team.js',
         'assets/js/pages/settings/sections/health.js',
         'assets/js/pages/settings/sections/communication.js',
+        'assets/js/pages/settings/sections/messages.js',
         'assets/js/pages/settings/sections/audit.js',
         'assets/js/pages/settings/sections/access.js',
         'assets/js/pages/settings/hub.js',
