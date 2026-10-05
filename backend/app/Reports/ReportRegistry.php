@@ -61,6 +61,8 @@ final class ReportRegistry
         \App\Reports\Activities\ActivitySummaryReport::class,
         \App\Reports\Activities\ActivityYearReport::class,
         \App\Reports\Activities\InitiativeYearReport::class,
+        \App\Reports\Monthly\MonthlyReportExport::class,
+        \App\Reports\Monthly\MonthlyStatusReport::class,
     ];
 
     /** @return Report[] */
