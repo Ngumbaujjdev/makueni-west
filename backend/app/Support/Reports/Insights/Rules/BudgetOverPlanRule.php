@@ -7,7 +7,7 @@ use App\Support\Reports\Insights\InsightRule;
 use App\Support\Reports\Insights\ReportFacts;
 
 /**
- * Money out lines that have gone over what was planned.
+ * Expense lines that have gone over what was planned.
  * Facts: `over_lines` ([{name, over}], biggest first), `period_label`.
  */
 final class BudgetOverPlanRule implements InsightRule

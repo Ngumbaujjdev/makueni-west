@@ -13,7 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * Money in and out against a budget - the Spending page and the Record money
+ * Income & Expenses against a budget - the Spending page and the Record money
  * window (docs/specs/budgets-spec.md). A place records against its own
  * budgets in use; a level above can look (read-only) at the places below it.
  * Every change goes through BudgetBook, which keeps the totals and History.

@@ -94,7 +94,7 @@ final class BudgetLineReport extends BudgetReport
             ],
             meta: $this->meta($context, array_filter([
                 'Line' => $name.($item->is_unplanned ? ' (unplanned)' : ''),
-                'Money' => $isIn ? 'Money in' : 'Money out',
+                'Kind' => $isIn ? 'Income' : 'Expense',
                 'Budget' => "{$budget->period_label} ({$budget->status_label})",
                 'Last entry' => self::day($rows[0]['entry_date'] ?? null),
             ])),

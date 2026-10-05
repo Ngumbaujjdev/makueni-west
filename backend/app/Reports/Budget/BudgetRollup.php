@@ -323,7 +323,7 @@ final class BudgetRollup
         return 'none';
     }
 
-    /** Planned money in and out per budget: [budget id => ['income' => x, 'expense' => y]]. */
+    /** Planned income and expenses per budget: [budget id => ['income' => x, 'expense' => y]]. */
     private function planned(array $budgetIds): array
     {
         $out = [];

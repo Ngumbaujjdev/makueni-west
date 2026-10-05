@@ -119,7 +119,7 @@ final class BudgetRollupReport extends BudgetReport
             charts: $top->isEmpty() ? [] : [ReportChart::hbars('Spent against plan, by church', $top->pluck('name')->all(), [
                 ['name' => 'Planned', 'tone' => 'primary', 'soft' => true, 'values' => $top->pluck('out_planned')->all()],
                 ['name' => 'Spent', 'tone' => 'danger', 'values' => $top->pluck('out_actual')->all()],
-            ], 'The ten churches with the most money out.', true)],
+            ], 'The ten churches with the most expenses.', true)],
         );
     }
 

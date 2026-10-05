@@ -24,7 +24,7 @@ final class BudgetRollupOwedRule implements InsightRule
             'KES '.number_format($total, 2).' still owed in deductions',
             count($owing).' '.(count($owing) === 1 ? "{$one} still owes: " : "{$many} still owe: ")
                 .implode('; ', array_map(fn ($r) => "{$r['name']} KES ".number_format($r['deductions']['owed'], 2), array_slice($owing, 0, 4))).'.',
-            'Remind them to send it and record it as money out on the deduction\'s line.',
+            'Remind them to send it and record it as an expense on the deduction\'s line.',
         );
     }
 }

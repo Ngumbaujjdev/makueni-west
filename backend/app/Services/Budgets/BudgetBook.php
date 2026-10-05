@@ -28,7 +28,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  */
 final class BudgetBook
 {
-    /** The lines a place can use, grouped by Money in / Money out. */
+    /** The lines a place can use, grouped by Income / Expenses. */
     public function linesFor(string $type, int $id): Collection
     {
         return BudgetLine::with('budgetCategory')
@@ -91,7 +91,7 @@ final class BudgetBook
             $amounts[$lineId] = ($amounts[$lineId] ?? 0) + $amount;
         }
 
-        // Deductions are worked out from the planned money in and fill their own lines.
+        // Deductions are worked out from the planned income and fill their own lines.
         $deductions = app(Deductions::class);
         $planned = array_filter(
             $deductions->plan($deductions->applicable($type, $id), $amounts, $month),
@@ -198,7 +198,7 @@ final class BudgetBook
 
     /*
     |--------------------------------------------------------------------------
-    | Money in and out ("Spending")
+    | Income & Expenses ("Spending")
     |--------------------------------------------------------------------------
     | Recorded against a line of a budget that is In use, on a date inside its
     | period. A line the budget didn't plan for is added as "unplanned".
@@ -369,7 +369,7 @@ final class BudgetBook
         return trim("{$verb} KES ".number_format((float) $entry->amount, 2)." {$what} on {$line} ({$entry->description}, ".CarbonImmutable::parse($entry->entry_date)->format('j M').')');
     }
 
-    /** Totals, worked out once from the lines: planned and actual, money in and out, money left. */
+    /** Totals, worked out once from the lines: planned and actual, income and expenses, money left. */
     public function recalculate(Budget $budget): void
     {
         $sums = DB::table('budget_line_items as i')

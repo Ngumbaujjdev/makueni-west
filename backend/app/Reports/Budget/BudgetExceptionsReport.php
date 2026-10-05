@@ -78,11 +78,11 @@ final class BudgetExceptionsReport extends BudgetReport
                     ReportColumn::text('Date'),
                     ReportColumn::text('What for', true),
                     ReportColumn::text('Line'),
-                    ReportColumn::text('In or out'),
+                    ReportColumn::text('Income or expense'),
                     ReportColumn::text('Recorded by'),
                     ReportColumn::money('Amount'),
                 ], array_map(fn ($e) => [
-                    self::day($e['entry_date']), $e['description'], $e['line'], $e['direction'] === 'in' ? 'Money in' : 'Money out', $e['recorded_by'], $e['amount'],
+                    self::day($e['entry_date']), $e['description'], $e['line'], $e['direction'] === 'in' ? 'Income' : 'Expense', $e['recorded_by'], $e['amount'],
                 ], $unplanned), $unplanned === [] ? 'No money was recorded on an unplanned line.' : 'Lines the budget didn\'t plan, added when money was recorded on them.'),
             ],
             insights: $data->insights(),

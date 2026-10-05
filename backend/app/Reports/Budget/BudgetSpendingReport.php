@@ -15,7 +15,7 @@ final class BudgetSpendingReport extends BudgetReport
 
     public function title(): string
     {
-        return 'Money in and out';
+        return 'Income & Expenses';
     }
 
     public function description(): string
@@ -30,7 +30,7 @@ final class BudgetSpendingReport extends BudgetReport
 
     public function subject(): string
     {
-        return 'money in and out report';
+        return 'income and expenses report';
     }
 
     public function build(ReportContext $context): ReportData
@@ -43,12 +43,12 @@ final class BudgetSpendingReport extends BudgetReport
 
         return new ReportData(
             kicker: $context->kicker($this->subject()),
-            title: 'Money in and out',
+            title: 'Income & Expenses',
             periodLabel: $this->periodLabel($d['period']),
             scopeLabel: $context->scopeLabel(),
             tiles: [
-                ['label' => 'Money in', 'value' => self::money($in), 'tone' => 'success'],
-                ['label' => 'Money out', 'value' => self::money($out), 'tone' => 'danger'],
+                ['label' => 'Income', 'value' => self::money($in), 'tone' => 'success'],
+                ['label' => 'Expenses', 'value' => self::money($out), 'tone' => 'danger'],
                 ['label' => 'Difference', 'value' => self::money($in - $out), 'tone' => $in - $out < 0 ? 'danger' : 'purple'],
                 ['label' => 'Entries', 'value' => (string) count($entries), 'tone' => 'primary'],
             ],

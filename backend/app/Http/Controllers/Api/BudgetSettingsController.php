@@ -141,7 +141,7 @@ class BudgetSettingsController extends Controller
         if (isset($data['side'])) {
             $category = $this->category($data['side']);
             if ($category->id !== $line->budget_category_id && $line->budgetLineItems()->exists()) {
-                return response()->json(['success' => false, 'status' => 422, 'message' => 'This line is already used in a budget, so it can\'t move between money in and money out.'], 422);
+                return response()->json(['success' => false, 'status' => 422, 'message' => 'This line is already used in a budget, so it can\'t move between income and expense.'], 422);
             }
             $changes['budget_category_id'] = $category->id;
         }
@@ -282,7 +282,7 @@ class BudgetSettingsController extends Controller
         ], [
             'name.required' => 'Give the deduction a name.',
             'deduction_value.min' => 'Type the % or the amount.',
-            'basis_line_ids.required_if' => 'Choose the money in lines it is worked out on.',
+            'basis_line_ids.required_if' => 'Choose the income lines it is worked out on.',
         ]);
         if ($data['deduction_type'] === 'percentage' && $data['deduction_value'] > 100) {
             return response()->json(['success' => false, 'status' => 422, 'message' => 'A % can\'t be more than 100.', 'errors' => ['deduction_value' => ['At most 100%.']]], 422);
@@ -290,7 +290,7 @@ class BudgetSettingsController extends Controller
         $level = $data['applies_to_level'];
         if (empty($data['budget_line_id'])) {
             if (empty($data['new_line_name'])) {
-                return response()->json(['success' => false, 'status' => 422, 'message' => 'Choose the money out line it is paid through.', 'errors' => ['budget_line_id' => ['Required.']]], 422);
+                return response()->json(['success' => false, 'status' => 422, 'message' => 'Choose the expense line it is paid through.', 'errors' => ['budget_line_id' => ['Required.']]], 422);
             }
             if ($level !== 'own' && $place['type'] !== 'diocese') {
                 return response()->json(['success' => false, 'status' => 422, 'message' => 'Choose one of the shared lines - only the diocese adds lines for others.'], 422);

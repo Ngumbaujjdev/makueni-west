@@ -6,7 +6,7 @@ namespace App\Reports;
  * A chart in a report, drawn into the PDF (DioceseReportPdf::charts()) and
  * listed in the preview. Excel keeps the tables the charts are drawn from.
  *
- *   bars  - grouped columns per category (money in and out by month)
+ *   bars  - grouped columns per category (income and expenses by month)
  *   hbars - one row per category, the first series soft behind the second
  *           (planned against actual per line); a second-series value above
  *           the first is drawn red when `overIsBad`

@@ -22,7 +22,7 @@ final class BudgetBalanceRule implements InsightRule
         return new Insight(
             Insight::CONCERN,
             'More has gone out than came in',
-            'Money out is KES '.number_format(-$left, 2).' more than money in so far.',
+            'Expenses are KES '.number_format(-$left, 2).' more than income so far.',
             'Record any money received that is missing, and pause spending that isn\'t urgent.',
         );
     }
