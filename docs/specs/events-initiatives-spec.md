@@ -8,7 +8,7 @@ Part of the **Church life** plan (2026-10-05): Events, Initiatives, Calendar add
 
 Both use one model, so the pages are shared.
 
-**Status:** planned 2026-10-05; L1a (the foundation), L1b (the Events backend) and L1c (the Events pages) done; L2 (Initiatives) in progress.
+**Status:** planned 2026-10-05; L1a (the foundation), L1b (the Events backend) and L1c (the Events pages) and L2 (Initiatives) done.
 - **L1a:** the shared foundation: place access, in-app notifications, and the header bell.
 - **L1b:** the Events backend.
 - **L1c:** the Events pages.
@@ -238,13 +238,20 @@ The L1b routes take `kind=initiative`. The permission checks follow the activity
 
 `PUT /registrations/{id}` also takes `completed` from the organiser. For an initiative, places can join until `register_by`, or else until its last day.
 
-**Overview** (`kind=initiative`): active (published, not ended), places taking part, sessions held, attendance rate (attendance at held sessions against the people expected per session; the average per session when nobody registered), by month.
+**Overview** (`kind=initiative`): active (published, not ended), places taking part, sessions held, attendance rate (attendance at held sessions against who each session is for: its "Places for" size, else the people the places below signed up; none when neither is known), the average per session, and sessions held by month.
 
 **Reports:** `activity.summary` covers an initiative too: its sessions, attendance per session, attendance rate and how many finished.
 
 ### Permissions and menu (L2)
 - Per level: `{L}.initiatives.initiatives.read`, `.manage`, `.register`, and `{L}.initiatives.below.read` (region and diocese). The grants are the same as for Events.
 - `ActivitiesAccessSeeder` seeds both modules. **Initiatives** is a page per level in `{L}-programs` at `/{L}/initiatives/`. The diocese reuses the placeholder "Diocese Initiatives Management" (M13), and its unbuilt sub-pages are switched off. Region and church get a new module.
+
+### L2 as built
+- **Access:** `EventsAccess` became `App\Support\ActivityAccess`, with one ability map per kind; routes that don't know the kind yet accept either kind's read, then check the activity's own kind.
+- **Sessions:** `App\Services\Activities\Sessions` (`dates`, `sync`, `renumber`, `summary`). Dates are taken in Africa/Nairobi time. Generated sessions aren't written to the history; sessions people add, change or remove are.
+- **"In a year"** for an initiative means it runs during any part of that year (`Activity::scopeInYear`), so a programme that started last year still shows.
+- **Reports:** `activity.summary` covers both kinds (a Sessions section and "Finished" for initiatives); `initiative.year` (module `initiatives`) is the Initiatives page's Export.
+- **Wording:** money is "Income" and "Expenses" everywhere on these pages and reports.
 
 ### Pages (L2)
 The Events pages, shared, with the kind set by the wrapper (`{L}/initiatives/{index,new,initiative}.php`):
@@ -276,10 +283,10 @@ The Events pages, shared, with the kind set by the wrapper (`{L}/initiatives/{in
 - [x] No console errors. Light and dark. 390 px works.
 
 ### L2: Initiatives
-- [ ] An initiative's sessions are generated from its frequency (once, weekly, fortnightly, monthly, quarterly) between its start and end, at most 104; changing the schedule keeps held sessions and replaces untouched planned ones.
-- [ ] The organiser edits a session, records attendance (it becomes held), adds one, and removes an untouched planned one; nobody else can.
-- [ ] Initiative permissions are `initiatives.*`: an events-only role can't create an initiative, and an initiatives-only role can't create an event.
-- [ ] Places below join with counts until `register_by` or the last day; the organiser records how many finished.
-- [ ] The overview gives active, places taking part, sessions held and attendance rate. `activity.summary` builds for an initiative.
-- [ ] The seeder adds an Initiatives page per level, reuses "Diocese Initiatives Management", and stays idempotent.
-- [ ] Each level's Initiatives pages work end to end; no console errors; light and dark; 390 px.
+- [x] An initiative's sessions are generated from its frequency (once, weekly, fortnightly, monthly, quarterly) between its start and end, at most 104; changing the schedule keeps held sessions and replaces untouched planned ones.
+- [x] The organiser edits a session, records attendance (it becomes held), adds one, and removes an untouched planned one; nobody else can.
+- [x] Initiative permissions are `initiatives.*`: an events-only role can't create an initiative, and an initiatives-only role can't create an event.
+- [x] Places below join with counts until `register_by` or the last day; the organiser records how many finished.
+- [x] The overview gives active, places taking part, sessions held and attendance rate. `activity.summary` builds for an initiative.
+- [x] The seeder adds an Initiatives page per level, reuses "Diocese Initiatives Management", and stays idempotent.
+- [x] Each level's Initiatives pages work end to end; no console errors; light and dark; 390 px.
