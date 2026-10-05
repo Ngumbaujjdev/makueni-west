@@ -238,6 +238,16 @@ class EventsTest extends TestCase
         $this->assertTrue($senior->fresh()->hasPermissionTo('church.events.events.manage'));
         $this->assertTrue($treasurer->fresh()->hasPermissionTo('church.events.events.read'));
         $this->assertFalse($treasurer->fresh()->hasPermissionTo('church.events.events.register'));
+
+        // The way in: "New event", holding manage - so the menu shows it only to those who can add.
+        foreach (['church', 'region', 'diocese'] as $level) {
+            $new = Submodule::where('path', "/{$level}/events/new.php")->sole();
+            $this->assertSame('New event', $new->title);
+            $this->assertTrue((bool) $new->is_active);
+            $this->assertSame($new->id, Permission::where('name', "{$level}.events.events.manage")->value('submodule_id'));
+            $this->assertSame(Submodule::where('path', "/{$level}/events/")->value('id'), Permission::where('name', "{$level}.events.events.read")->value('submodule_id'));
+        }
+        $this->assertSame('New initiative', Submodule::where('path', '/church/initiatives/new.php')->value('title'));
     }
 
     public function test_attendance_can_only_be_tagged_with_the_churchs_own_event(): void

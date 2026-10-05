@@ -16,9 +16,10 @@ use Spatie\Permission\Models\Role;
  * (docs/specs/events-initiatives-spec.md).
  *
  * Each level's Programs group gets an "Events" and an "Initiatives" module,
- * each with one page (/{level}/events/, /{level}/initiatives/) and
- * {level}.{events|initiatives}.*.read / manage / register (plus .below.read
- * for region and diocese) linked to it. The empty placeholder modules are
+ * each with its list (/{level}/events/, /{level}/initiatives/) holding
+ * {level}.{events|initiatives}.*.read / register (plus .below.read for
+ * region and diocese), and a "New event" / "New initiative" page (new.php)
+ * holding .manage - so whoever can add one finds it in the menu. The empty placeholder modules are
  * reused rather than duplicated - the diocese's "Diocese Events Management"
  * and "Diocese Initiatives Management" and the region's "Regional Programs" -
  * and their unbuilt sub-pages are switched off.
@@ -33,12 +34,14 @@ class ActivitiesAccessSeeder extends Seeder
             'name' => 'Events', 'path' => 'events', 'icon' => 'ri-calendar-check-line',
             'description' => 'Events of this place, invitations from above, and who is coming.',
             'page' => 'Our events, invitations from above, and who is coming.',
+            'new' => 'Plan an event: when and where, who it is open to, and any fee.',
             'reuse' => ['diocese' => 'Diocese Events Management', 'region' => 'Regional Programs'],
         ],
         'initiative' => [
             'name' => 'Initiatives', 'path' => 'initiatives', 'icon' => 'ri-seedling-line',
             'description' => 'Programmes that meet over time: sessions, attendance and the places taking part.',
             'page' => 'Our initiatives, their sessions, and the places taking part.',
+            'new' => 'Start an initiative: its sessions, who it is open to, and the places taking part.',
             'reuse' => ['diocese' => 'Diocese Initiatives Management'],
         ],
     ];
@@ -96,13 +99,21 @@ class ActivitiesAccessSeeder extends Seeder
                     ['title' => $spec['name'], 'description' => $spec['page'], 'is_active' => true],
                 );
 
+                // The way in for those who can add one: "New event" / "New initiative".
+                $newPage = Submodule::updateOrCreate(
+                    ['module_id' => $module->id, 'path' => "/{$level}/{$spec['path']}/new.php"],
+                    ['title' => 'New '.strtolower(substr($spec['name'], 0, -1)), 'description' => $spec['new'], 'is_active' => true],
+                );
+
                 $abilities = $level === 'church' ? ['read', 'manage', 'register'] : ['read', 'manage', 'register', 'below'];
                 $permissions = [];
                 foreach ($abilities as $ability) {
                     $name = "{$level}.".ActivityAccess::permission($kind, $ability);
+                    // Each permission sits on the page it opens: manage on the new page.
+                    $on = $ability === 'manage' ? $newPage : $page;
                     $permissions[$ability] = Permission::updateOrCreate(
                         ['name' => $name, 'guard_name' => 'web'],
-                        ['module_id' => $module->id, 'submodule_id' => $page->id, 'sub_submodule_id' => null, 'action' => substr($name, strrpos($name, '.') + 1), 'territory_scope' => $level],
+                        ['module_id' => $module->id, 'submodule_id' => $on->id, 'sub_submodule_id' => null, 'action' => substr($name, strrpos($name, '.') + 1), 'territory_scope' => $level],
                     );
                 }
 
@@ -119,7 +130,7 @@ class ActivitiesAccessSeeder extends Seeder
                         }
                     }
                 }
-                $this->command?->info("   ✅ {$level}: {$spec['name']} page, {$granted} new grant(s)");
+                $this->command?->info("   ✅ {$level}: {$spec['name']} and {$newPage->title} pages, {$granted} new grant(s)");
             }
         }
 
@@ -144,7 +155,7 @@ class ActivitiesAccessSeeder extends Seeder
         ])->save();
 
         // The placeholder's unbuilt pages (planning, execution, analytics...) go off.
-        $unbuilt = Submodule::where('module_id', $module->id)->where('path', '!=', "/{$level}/{$spec['path']}/");
+        $unbuilt = Submodule::where('module_id', $module->id)->whereNotIn('path', ["/{$level}/{$spec['path']}/", "/{$level}/{$spec['path']}/new.php"]);
         SubSubmodule::whereIn('submodule_id', (clone $unbuilt)->pluck('id'))->update(['is_active' => false]);
         $unbuilt->update(['is_active' => false]);
 
