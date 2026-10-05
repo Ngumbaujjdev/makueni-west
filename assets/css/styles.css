@@ -36453,3 +36453,87 @@ tr.is-clickable {
     margin-inline-start: 0;
   }
 }
+
+/* ==========================================================================
+   MY PROFILE (profile.php) - fact rows with a coloured icon tile, role
+   cards, the copy button and the password strength bar. Colours come from
+   the theme variables, so light and dark both work.
+   ========================================================================== */
+.profile-fact,
+.profile-detail {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.6rem;
+  background: var(--custom-white);
+}
+.profile-fact + .profile-fact {
+  margin-top: 0.5rem;
+}
+.profile-fact-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.profile-fact-value {
+  font-weight: 600;
+  color: var(--default-text-color);
+}
+.profile-code {
+  font-family: var(--bs-font-monospace);
+  letter-spacing: 0.15em;
+}
+.profile-copy {
+  flex-shrink: 0;
+}
+.profile-role {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  height: 100%;
+  padding: 1rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.75rem;
+  background: var(--custom-white);
+}
+.profile-role.is-acting {
+  border-color: rgba(var(--success-rgb), 0.55);
+  background: rgba(var(--success-rgb), 0.06);
+}
+.profile-strength {
+  height: 0.4rem;
+  border-radius: 1rem;
+  background: rgba(var(--dark-rgb), 0.08);
+  overflow: hidden;
+}
+.profile-strength > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 1rem;
+  transition: width 0.2s ease;
+}
+[data-theme-mode="dark"] .profile-strength {
+  background: rgba(255, 255, 255, 0.12);
+}
+.profile-fact .avatar i,
+.profile-detail .avatar i {
+  font-size: 1rem;
+}
+/* Five section tabs in one row on a wide screen (the base style has four). */
+@media (min-width: 992px) {
+  .section-tabs.is-five {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .section-tabs.is-five .section-tab {
+    gap: 0.55rem;
+    padding: 0.55rem 0.6rem;
+  }
+}
+.profile-signin-fact > .card {
+  height: 100%;
+  margin-bottom: 0;
+}

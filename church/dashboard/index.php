@@ -1812,7 +1812,6 @@ $currentRole = getCurrentRole();
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
     <!-- pforile js -->
     <!-- Toast JS -->
-    <script src="<?= SITE_URL ?>/assets/js/pages/profile/profile.js<?= assetVersion('assets/js/pages/profile/profile.js') ?>"></script>
 
 </body>
 

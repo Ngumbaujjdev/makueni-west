@@ -473,9 +473,6 @@ include __DIR__ . '/includes/page-header.php';
     <!-- Gallery JS -->
     <script src="<?= SITE_URL ?>/assets/libs/glightbox/js/glightbox.min.js"></script>
 
-    <!-- Internal Profile JS -->
-    <script src="<?= SITE_URL ?>/assets/js/profile.js"></script>
-
 
     <!-- Dropzone JS -->
     <script src="<?= SITE_URL ?>/assets/libs/dropzone/dropzone-min.js"></script>
@@ -498,7 +495,6 @@ include __DIR__ . '/includes/page-header.php';
     <script src="<?= SITE_URL ?>/assets/js/utils/auth-helpers.js<?= assetVersion('assets/js/utils/auth-helpers.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
-    <script src="<?= SITE_URL ?>/assets/js/pages/profile/profile.js<?= assetVersion('assets/js/pages/profile/profile.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/support/support.js<?= assetVersion('assets/js/pages/support/support.js') ?>"></script>
 
 
