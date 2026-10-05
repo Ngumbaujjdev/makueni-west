@@ -191,6 +191,8 @@ class ReportController extends Controller
             'budget_id' => 'nullable|integer',
             // Budget line report: the line of that budget.
             'line_id' => 'nullable|integer',
+            // Event summary: the event it's about.
+            'activity_id' => 'nullable|integer',
         ]);
         if ($validator->fails()) {
             return $this->fail(422, $validator->errors()->first(), $validator->errors()->toArray());
@@ -231,7 +233,18 @@ class ReportController extends Controller
             return $this->fail(422, 'Choose a metric to report on.', ['metric' => ['Unknown metric.']]);
         }
 
-        $params = array_filter($request->only(['fiscal_year_id', 'years', 'demographic_id', 'metric', 'month', 'gathering_type_id', 'from', 'to', 'budget_id', 'line_id']), fn ($v) => $v !== null && $v !== '');
+        if (in_array('activity', $report->inputs(), true)) {
+            $activity = \App\Models\Activity::find($request->integer('activity_id'));
+            // The organiser's own event, or (from above) one of a place below.
+            if (! $activity || ! in_array(app(\App\Services\Activities\Activities::class)->relation($activity, $territory), ['own', 'below'], true)) {
+                return $this->fail(422, 'Choose the event to report on.', ['activity_id' => ['Unknown event for this place.']]);
+            }
+        }
+
+        $params = array_filter($request->only(['fiscal_year_id', 'years', 'demographic_id', 'metric', 'month', 'gathering_type_id', 'from', 'to', 'budget_id', 'line_id', 'activity_id']), fn ($v) => $v !== null && $v !== '');
+        if (! in_array('activity', $report->inputs(), true)) {
+            unset($params['activity_id']);
+        }
         if (! in_array('budget', $report->inputs(), true)) {
             unset($params['budget_id']);
         }

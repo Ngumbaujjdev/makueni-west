@@ -22,6 +22,7 @@ class ChurchAttendanceRecord extends Model implements Auditable
         'fiscal_month_id',
         'gathering_category_id',
         'gathering_type_id',
+        'activity_id',
         'event_name',
         'adults_count',
         'youth_count',

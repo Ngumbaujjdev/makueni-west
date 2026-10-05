@@ -231,6 +231,13 @@ class DatabaseSeeder extends Seeder
             // (docs/specs/calendar-spec.md)
             // ==========================================
             CalendarAccessSeeder::class,
+
+            // ==========================================
+            // PHASE 31: Events (and, from L2, initiatives) - one page per
+            // church, region and diocese; {level}.events.* permissions
+            // (docs/specs/events-initiatives-spec.md)
+            // ==========================================
+            ActivitiesAccessSeeder::class,
         ]);
     }
 }

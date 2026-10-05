@@ -58,6 +58,8 @@ final class ReportRegistry
         BudgetLineReport::class,
         BudgetRollupReport::class,
         BudgetContributionsReport::class,
+        \App\Reports\Activities\ActivitySummaryReport::class,
+        \App\Reports\Activities\ActivityYearReport::class,
     ];
 
     /** @return Report[] */
