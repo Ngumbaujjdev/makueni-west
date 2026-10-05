@@ -35811,3 +35811,33 @@ tr.is-clickable {
 .team-add-panel .alert {
   font-size: 0.85rem;
 }
+
+/* Settings > Communication: how a place's email and SMS go out (S6b) */
+.comms-way {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.75rem;
+}
+.comms-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+.comms-line > span {
+  min-width: 5.5rem;
+  font-weight: 600;
+}
+.comms-line > b {
+  word-break: break-word;
+}
+.comms-bubble {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0.6rem 0.85rem;
+  border-radius: 1rem 1rem 1rem 0.25rem;
+  background: rgba(var(--pink-rgb), 0.1);
+  font-size: 0.85rem;
+  white-space: pre-line;
+}

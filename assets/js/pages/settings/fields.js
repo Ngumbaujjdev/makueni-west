@@ -75,6 +75,7 @@ const SettingsFields = (function () {
 
   /** "Check it works": send a test email or SMS with the saved settings. */
   function testCard(channel) {
+    if (channel === "place") return placeTestCard();
     const sms = channel === "sms";
     return card({
       id: "card-test",
@@ -149,9 +150,47 @@ const SettingsFields = (function () {
     );
   }
 
+  /** Communication (S6b): a test email or SMS sent exactly the way this place's messages go. */
+  function placeTestCard() {
+    return card({
+      id: "card-test",
+      title: "Check it works",
+      icon: "ri-send-plane-line",
+      colour: "success",
+      sub: "Sends a test the way your real messages go - save your changes first.",
+      body: `
+        <div class="row g-2 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label" for="testChannel">Send a test</label>
+            <select class="form-select" id="testChannel"><option value="email">Email</option><option value="sms">SMS</option></select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="testTo" id="testToLabel">Email address</label>
+            <input class="form-control" id="testTo" type="email" placeholder="you@example.com">
+          </div>
+          <div class="col-md-3 d-grid">
+            <button type="button" class="btn btn-success" id="testSend" data-channel="place"><i class="ri-send-plane-line me-1"></i>Send a test</button>
+          </div>
+        </div>
+        <div id="testResult" class="mt-3" aria-live="polite"></div>`,
+    });
+  }
+
   function wireTest(root) {
     const btn = root.querySelector("#testSend");
     if (!btn) return;
+    const channelSel = root.querySelector("#testChannel");
+    if (channelSel) {
+      UI.enhanceSelect(channelSel);
+      channelSel.addEventListener("change", () => {
+        const sms = channelSel.value === "sms";
+        root.querySelector("#testToLabel").textContent = sms ? "Phone number" : "Email address";
+        const to = root.querySelector("#testTo");
+        to.type = sms ? "tel" : "email";
+        to.placeholder = sms ? "0712 345 678" : "you@example.com";
+        to.value = "";
+      });
+    }
     btn.addEventListener("click", async () => {
       const to = root.querySelector("#testTo").value.trim();
       const out = root.querySelector("#testResult");
@@ -160,7 +199,7 @@ const SettingsFields = (function () {
         return;
       }
       UI.setButtonLoading(btn, "Sending…");
-      const res = await SettingsAPI.testSend(btn.dataset.channel, to);
+      const res = channelSel ? await SettingsAPI.placeTest(channelSel.value, to) : await SettingsAPI.testSend(btn.dataset.channel, to);
       UI.restoreButton(btn);
       out.innerHTML = `<div class="${res.ok ? "soft-success" : "soft-danger"} rounded p-2 d-flex align-items-start gap-2">
         <span class="avatar avatar-xs ${res.ok ? "bg-success" : "bg-danger"} text-white flex-shrink-0"><i class="${res.ok ? "ri-check-line" : "ri-close-line"}"></i></span>
@@ -266,16 +305,38 @@ const SettingsFields = (function () {
           SettingsHub.changed();
         }),
       );
+      // Fields that only matter for one choice (e.g. own email server when "own" is picked).
+      const applyShowIf = () => {
+        const now = values();
+        root.querySelectorAll("[data-field]").forEach((col) => {
+          const f = fieldByKey(col.dataset.field);
+          if (!f?.show_if) return;
+          col.hidden = !Object.entries(f.show_if).every(([k, v]) => String(now[k] ?? "") === String(v));
+        });
+        root.querySelectorAll(".card[id^='card-']").forEach((cardEl) => {
+          const cols = [...cardEl.querySelectorAll("[data-field]")];
+          if (cols.length) cardEl.hidden = cols.every((c) => c.hidden);
+        });
+        if (extra) extra.update?.(now);
+        if (linksReady) SettingsHub.subLinks(links());
+      };
+      // The rail lists only the cards on show.
+      let linksReady = false;
+      const links = () => [
+        ...[...root.querySelectorAll(".card[id^='card-']")].filter((el) => !el.hidden && el.id !== "card-test" && el.id !== "card-tools").map((el) => ({ id: el.id, label: el.querySelector(".card-title")?.textContent.trim() || "" })),
+        ...(payload.section?.test ? [{ id: "card-test", label: "Check it works" }] : []),
+        ...(payload.section?.tools?.length ? [{ id: "card-tools", label: "Housekeeping" }] : []),
+      ];
+      const extra = payload.extra && extras[payload.section?.extra] ? extras[payload.section.extra](root, payload) : null;
+      root.querySelectorAll("[data-key]").forEach((el) => el.addEventListener("change", applyShowIf));
+      applyShowIf();
       if (payload.section?.test) root.insertAdjacentHTML("beforeend", testCard(payload.section.test));
       wireTest(root);
       if (payload.section?.tools?.length) root.insertAdjacentHTML("beforeend", toolsCard(payload.section.tools));
       wireTools(root);
       root.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((t) => window.bootstrap && new bootstrap.Tooltip(t));
-      SettingsHub.subLinks([
-        ...payload.cards.map((c) => ({ id: `card-${slug(c.title)}`, label: c.title })),
-        ...(payload.section?.test ? [{ id: "card-test", label: "Check it works" }] : []),
-        ...(payload.section?.tools?.length ? [{ id: "card-tools", label: "Housekeeping" }] : []),
-      ]);
+      linksReady = true;
+      SettingsHub.subLinks(links());
     }
 
     return {
@@ -324,7 +385,10 @@ const SettingsFields = (function () {
     };
   }
 
-  return { esc, slug, card, chips, formSection, textOn };
+  /** Extra cards a section draws around its fields (config 'extra'), keyed by name: fn(root, payload) -> {update(values)} */
+  const extras = {};
+
+  return { esc, slug, card, chips, formSection, textOn, extras };
 })();
 
 window.SettingsFields = SettingsFields;

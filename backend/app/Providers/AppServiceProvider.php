@@ -21,6 +21,19 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // A church's own mail server must be a real, public one (Settings > Communication, S6b).
+        \Illuminate\Support\Facades\Validator::extend('public_mail_host', function ($attribute, $value, $parameters, $validator) {
+            if ($value === null || $value === '') {
+                return true;
+            }
+            $problem = \App\Services\Messaging\PlaceMessenger::hostProblem((string) $value);
+            if ($problem) {
+                $validator->setCustomMessages([$attribute.'.public_mail_host' => $problem]);
+            }
+
+            return $problem === null;
+        });
+
         // Register morph map for polymorphic relationships
         Relation::enforceMorphMap([
             // Territory models
