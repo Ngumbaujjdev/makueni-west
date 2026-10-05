@@ -389,9 +389,11 @@ Removed once nothing live used them:
 
 ## Finance follow-up (2026-10-02)
 
+**Names (2026-10-05):** pages, reports and insights say **Income** (money received) and **Expenses** (money paid out) - "Income & Expenses" for both - instead of "money in / money out". Only the words changed: every income or expense is still recorded on a budget line and taken off it, and the API keeps `direction: in|out`, `in_planned`, `out_actual` and the rest. The Budgets menu has **Income** (`income.php`, `{level}.budgets.income.read`) and **Expenses** (`expenses.php`, `{level}.budgets.spending.read`) - the same page (`includes/budget/spending.php`) opened filtered, with an Income | Expenses | Both switch (`?dir=`); `spending.php` remains the "Both" view for links, out of the menu.
+
 Built here, on the budgets engine (the Settings session keeps Finance *settings*):
 
-**F1. Money in and out** - the Spending page, renamed (menu and page): every amount received and spent in a month or a year, across the place's budgets, with search, filters (in/out, line, how paid, **recorded by**) and Export (`budget.spending`). A 📎 marks entries with a receipt.
+**F1. Income & Expenses** - the Spending page, renamed (menu and page): every amount received and spent in a month or a year, across the place's budgets, with search, filters (in/out, line, how paid, **recorded by**) and Export (`budget.spending`). A 📎 marks entries with a receipt.
 
 **F2. Receipts on entries** - a photo (JPG, PNG, WEBP) or PDF, at most 5 MB and 3 per entry:
 - attached when recording (Record money → "Attach a receipt", optional) or later on the entry's page (a **Receipts** card: thumbnails, open full size, remove);
