@@ -150,7 +150,36 @@
     if (!res.errors) Toast.error(res.message);
   }
 
-  function credentialsHtml(name, creds) {
+  /** What happened to "Send their sign-in details by" (S6d). */
+  function deliveryHtml(delivery) {
+    if (!delivery?.length) return "";
+    const label = (d) => (d.channel === "sms" ? "SMS" : "Email");
+    return `<div class="d-flex flex-column gap-2 mb-3">${delivery
+      .map((d) =>
+        d.ok
+          ? `<div class="alert alert-${d.status === "logged" ? "warning" : "success"} py-2 mb-0 d-flex gap-2 align-items-center"><i class="${d.channel === "sms" ? "ri-message-3-line" : "ri-mail-line"} fs-18"></i><span>${label(d)} ${d.status === "logged" ? "written to the log only (not really sent yet)" : "sent"} to <b>${esc(d.to)}</b>.</span></div>`
+          : `<div class="alert alert-danger py-2 mb-0 d-flex gap-2 align-items-center"><i class="ri-error-warning-line fs-18"></i><span>${label(d)} not sent: ${esc(d.error || d.status)}</span></div>`,
+      )
+      .join("")}</div>`;
+  }
+
+  /** "Send their sign-in details by": SMS and Email switches, on when there's a number / address. */
+  function sendChoiceHtml(hasPhone, hasEmail) {
+    const sw = (id, label, icon, on, enabled) => `
+      <div class="form-check form-switch mb-0">
+        <input class="form-check-input" type="checkbox" role="switch" id="${id}"${on ? " checked" : ""}${enabled ? "" : " disabled"}>
+        <label class="form-check-label" for="${id}"><i class="${icon} me-1"></i>${label}</label>
+      </div>`;
+    return `
+      <div class="team-send-choice">
+        <div class="fw-semibold mb-2"><i class="ri-send-plane-line me-1"></i>Send their sign-in details by</div>
+        <div class="d-flex flex-wrap gap-4">${sw("tmSendSms", "SMS", "ri-message-3-line", hasPhone, hasPhone)}${sw("tmSendEmail", "Email", "ri-mail-line", hasEmail, hasEmail)}</div>
+        <div class="fs-12 mt-2" id="tmSendNote">Sent the way your messages go (Settings > Communication). You'll still see the details here once.</div>
+      </div>`;
+  }
+  const chosenChannels = (el) => [el.querySelector("#tmSendSms")?.checked && !el.querySelector("#tmSendSms").disabled ? "sms" : null, el.querySelector("#tmSendEmail")?.checked && !el.querySelector("#tmSendEmail").disabled ? "email" : null].filter(Boolean);
+
+  function credentialsHtml(name, creds, delivery = []) {
     const copy = (label, value) => `
       <div class="team-credential">
         <span class="team-credential-label">${label}</span>
@@ -158,6 +187,7 @@
         <button type="button" class="btn btn-sm btn-primary" data-copy="${esc(value)}"><i class="ri-file-copy-line me-1"></i>Copy</button>
       </div>`;
     return `
+      ${deliveryHtml(delivery)}
       <div class="app-modal-state is-done mb-3">
         <span class="avatar avatar-md bg-success text-white"><i class="ri-check-line"></i></span>
         <div><b>Sign-in details for ${esc(name)}</b><br>Share them privately. The password is shown only this once, and they'll choose their own at first sign-in.</div>
@@ -165,9 +195,8 @@
       <div class="soft-primary rounded p-3">
         ${copy("Employee code", creds.employee_code)}
         ${copy("Temporary password", creds.temporary_password)}
-        ${creds.pin ? copy("PIN", creds.pin) : ""}
       </div>
-      <div class="fs-12 mt-2">They sign in either with the employee code and PIN (the Employee Code tab), or with the employee code (or email) and the password (the password tab). They'll choose their own password at first sign-in. Keep all three private.</div>`;
+      <div class="fs-12 mt-2">They sign in with the employee code (the Employee Code tab), or with the employee code (or email) and the password (the password tab), and choose their own password at first sign-in. Keep both private.</div>`;
   }
 
   function wireCopy(el) {
@@ -240,7 +269,8 @@
               <div class="form-text">For sign-in details and password resets.</div>
             </div>
           </div>
-          <div id="tmMatch" class="mt-3" aria-live="polite"></div>`)}
+          <div id="tmMatch" class="mt-3" aria-live="polite"></div>
+          <div class="mt-3" id="tmSendWrap">${sendChoiceHtml(false, false)}</div>`)}
         ${panel("ri-shield-user-line", "pink", "Their role", `Roles below yours at ${esc(place)}`, `
           <select class="form-select" id="tmRole" name="role_id">${roleOptions(startRole)}</select>
           <div class="invalid-feedback d-block" data-error-for="role_id"></div>
@@ -281,6 +311,17 @@
       const emailOk = !email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
       const named = (first && last) || !!check?.match;
       $("#tmSave").disabled = pending || !named || !(phone || email) || !phoneOk || !emailOk || !!check?.conflict;
+      // Sign-in details only go to someone new, by a channel they have.
+      const existing = !!check?.match && !check?.conflict;
+      [["#tmSendSms", phone && phoneOk], ["#tmSendEmail", email && emailOk]].forEach(([sel, ok]) => {
+        const box = $(sel);
+        const was = box.disabled;
+        box.disabled = !ok || existing;
+        if (was && !box.disabled) box.checked = true;
+      });
+      $("#tmSendNote").textContent = existing
+        ? "They already have an account, so they keep their own sign-in - nothing to send."
+        : "Sent the way your messages go (Settings > Communication). You'll still see the details here once.";
     }
 
     function drawMatch() {
@@ -356,7 +397,7 @@
       const btn = e.currentTarget;
       UI.setButtonLoading(btn, "Adding…");
       const val = (n) => $(`[name="${n}"]`).value.trim() || null;
-      const res = await SettingsAPI.addPerson({ firstname: val("firstname"), lastname: val("lastname"), phone: kenyaMobile(val("phone")), email: val("email"), role_id: Number(roleSel.value) });
+      const res = await SettingsAPI.addPerson({ firstname: val("firstname"), lastname: val("lastname"), phone: kenyaMobile(val("phone")), email: val("email"), role_id: Number(roleSel.value), send: chosenChannels(el) });
       UI.restoreButton(btn);
       if (!res.ok) return showErrors(el, res);
       data = res.data.team;
@@ -366,7 +407,7 @@
       if (res.data.credentials) {
         $("#teamModalTitle").textContent = `${res.data.person.user.name} is on the team`;
         $("#teamModalSub").textContent = res.data.person.role.name;
-        $("#teamModalBody").innerHTML = credentialsHtml(res.data.person.user.name, res.data.credentials);
+        $("#teamModalBody").innerHTML = credentialsHtml(res.data.person.user.name, res.data.credentials, res.data.delivery);
         $("#teamModalFoot").innerHTML = '<button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>';
         wireCopy(el);
       } else {
@@ -401,17 +442,26 @@
   }
 
   function confirmReset(person) {
-    Toast.confirm(
-      `Give ${esc(person.user.name)} a new temporary password? Their old password stops working and they're signed out everywhere.`,
-      async () => {
-        const res = await SettingsAPI.resetAccess(person.assignment_id);
-        if (!res.ok) return Toast.error(res.message);
-        const el = open({ icon: "ri-key-2-line", colour: "secondary", title: `New sign-in details`, sub: person.user.name, body: credentialsHtml(person.user.name, res.data.credentials), foot: '<button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>' });
-        wireCopy(el);
-      },
-      null,
-      { title: "New sign-in details", confirmText: "Yes, reset", cancelText: "Cancel", type: "warning" },
-    );
+    const el = open({
+      icon: "ri-key-2-line",
+      colour: "secondary",
+      title: "New sign-in details",
+      sub: person.user.name,
+      body: `
+        <div class="alert alert-warning d-flex gap-2"><i class="ri-alert-line fs-18"></i><span>${esc(person.user.name)} gets a new employee code and temporary password. The old ones stop working and they're signed out everywhere.</span></div>
+        ${sendChoiceHtml(!!person.user.phone, !!person.user.email)}`,
+      foot: '<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-warning" id="tmResetGo"><i class="ri-key-2-line me-1"></i>Reset their sign-in</button>',
+    });
+    el.querySelector("#tmResetGo").addEventListener("click", async (e) => {
+      const btn = e.currentTarget;
+      UI.setButtonLoading(btn, "Resetting…");
+      const res = await SettingsAPI.resetAccess(person.assignment_id, chosenChannels(el));
+      UI.restoreButton(btn);
+      if (!res.ok) return Toast.error(res.message);
+      el.querySelector("#teamModalBody").innerHTML = credentialsHtml(person.user.name, res.data.credentials, res.data.delivery);
+      el.querySelector("#teamModalFoot").innerHTML = '<button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>';
+      wireCopy(el);
+    });
   }
 
   function confirmRemove(person) {

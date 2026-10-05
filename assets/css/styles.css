@@ -35906,3 +35906,11 @@ tr.is-clickable {
   word-break: break-word;
   font-size: 0.9rem;
 }
+
+/* Leadership & team: "Send their sign-in details by" (S6d) */
+.team-send-choice {
+  padding: 0.75rem 0.9rem;
+  border: 1px dashed rgba(var(--primary-rgb), 0.35);
+  border-radius: 0.65rem;
+  background: var(--custom-white);
+}

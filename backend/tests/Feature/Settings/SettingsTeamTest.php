@@ -285,4 +285,52 @@ class SettingsTeamTest extends TestCase
         $elder = collect($this->getJson('/api/settings/team')->json('data.grantable'))->firstWhere('name', 'Elder');
         $this->assertSame('A church elder, supporting the pastors.', $elder['blurb']);
     }
+
+    // S6d: sending sign-in details ---------------------------------------------
+
+    public function test_sign_in_details_go_out_by_sms_and_email_and_are_masked_in_the_log(): void
+    {
+        Sanctum::actingAs($this->pastor);
+        $res = $this->postJson('/api/settings/team', [
+            'firstname' => 'Jane', 'lastname' => 'Mwende', 'phone' => '0712 345 678', 'email' => 'jane@example.test',
+            'role_id' => $this->roles['Elder']->id, 'send' => ['sms', 'email'],
+        ])->assertCreated();
+        $creds = $res->json('data.credentials');
+
+        $this->assertSame([['sms', 'logged', '+254 7•• ••• 678'], ['email', 'sent', 'j•••@example.test']],
+            collect($res->json('data.delivery'))->map(fn ($d) => [$d['channel'], $d['status'], $d['to']])->all());
+
+        $email = \Illuminate\Support\Facades\Mail::mailer('array')->getSymfonyTransport()->messages()->first()->getOriginalMessage();
+        $this->assertStringContainsString($creds['temporary_password'], $email->getHtmlBody(), 'the person gets the real password');
+        $this->assertSame('jane@example.test', $email->getTo()[0]->getAddress());
+
+        $logs = \App\Models\MessageLog::where('kind', 'sign_in_details')->get();
+        $this->assertCount(2, $logs);
+        foreach ($logs as $log) {
+            $this->assertStringNotContainsString($creds['temporary_password'], $log->body);
+            $this->assertStringNotContainsString($creds['employee_code'], $log->body);
+            $this->assertStringContainsString('••••', $log->body);
+            $this->assertSame($this->church->id, $log->territory_id);
+        }
+    }
+
+    public function test_reset_access_can_send_the_new_details_and_missing_contacts_are_skipped(): void
+    {
+        Sanctum::actingAs($this->pastor);
+        $noPhone = $this->postJson('/api/settings/team', ['firstname' => 'Mail', 'lastname' => 'Only', 'email' => 'mail.only@example.test', 'role_id' => $this->roles['Elder']->id, 'send' => ['sms']])->assertCreated();
+        $this->assertSame([['sms', 'skipped']], collect($noPhone->json('data.delivery'))->map(fn ($d) => [$d['channel'], $d['status']])->all());
+
+        $reset = $this->postJson("/api/settings/team/{$this->assignmentOf($this->secretary)->id}/reset-access", ['send' => ['sms']])->assertOk();
+        $this->assertSame('logged', $reset->json('data.delivery.0.status'));
+        $this->assertStringContainsString('were reset', \App\Models\MessageLog::latest('id')->value('body'));
+    }
+
+    public function test_nothing_is_sent_to_someone_who_already_had_an_account(): void
+    {
+        $this->member('other', 'Associate Pastor', '+254 711 111 111', $this->otherChurch);
+        Sanctum::actingAs($this->pastor);
+        $res = $this->postJson('/api/settings/team', ['firstname' => 'Test', 'lastname' => 'Other', 'phone' => '0711111111', 'role_id' => $this->roles['Elder']->id, 'send' => ['sms']])->assertCreated();
+        $this->assertSame([], $res->json('data.delivery'));
+        $this->assertSame(0, \App\Models\MessageLog::count());
+    }
 }

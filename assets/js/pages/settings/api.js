@@ -84,7 +84,7 @@ const SettingsAPI = (function () {
     teamCheck: (phone, email) => request("GET", `/settings/team/check?${new URLSearchParams({ phone, email })}`),
     changeRole: (id, roleId) => request("PUT", `/settings/team/${id}`, { role_id: roleId }),
     removePerson: (id) => request("DELETE", `/settings/team/${id}`),
-    resetAccess: (id) => request("POST", `/settings/team/${id}/reset-access`),
+    resetAccess: (id, send = []) => request("POST", `/settings/team/${id}/reset-access`, { send }),
     health: (quick = false) => request("GET", `/settings/health${quick ? "?quick=1" : ""}`),
     testSend: (channel, to) => request("POST", `/settings/test/${channel === "sms" ? "sms" : "email"}`, { to }),
     retryFailed: () => request("POST", "/settings/maintenance/retry-failed"),
