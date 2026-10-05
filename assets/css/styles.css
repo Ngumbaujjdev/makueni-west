@@ -36775,6 +36775,7 @@ a.cal-side-item:hover {
   background: rgba(var(--primary-rgb), 0.05);
   border-color: rgba(var(--primary-rgb), 0.35);
   color: inherit;
+}
 /* ==========================================================================
    Monthly reports (2026-10-05) - the year at a glance, the reports below,
    and the report page (docs/specs/monthly-reports-spec.md)
@@ -37226,6 +37227,7 @@ a.mr-tile:hover {
 /* A message's subject keeps its own capitals (card titles are otherwise title-cased). */
 .card-title.msg-subject {
   text-transform: none;
+}
 
 /* Record Attendance on a phone: each choice is a compact row - icon, title,
    the live fact and the link - so the recent list isn't pushed far down. */
