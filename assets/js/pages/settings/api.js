@@ -88,6 +88,7 @@ const SettingsAPI = (function () {
     health: (quick = false) => request("GET", `/settings/health${quick ? "?quick=1" : ""}`),
     testSend: (channel, to) => request("POST", `/settings/test/${channel === "sms" ? "sms" : "email"}`, { to }),
     retryFailed: () => request("POST", "/settings/maintenance/retry-failed"),
+    placeTest: (channel, to) => request("POST", "/settings/communication/test", { channel, to }),
     maintenance: (tool) => request("POST", `/settings/maintenance/${encodeURIComponent(tool)}`),
     audit: () => request("GET", "/settings/audit"),
     access: () => request("GET", "/settings/access"),
