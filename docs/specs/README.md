@@ -37,3 +37,4 @@ assertion, rewrite it until it can.
 | [appearance-settings-spec.md](appearance-settings-spec.md) | Complete — `GET`/`PUT`/`DELETE /api/appearance`, self-scoped per-user preferences |
 | [budgets-spec.md](budgets-spec.md) | Complete — budgets for church, region and diocese: a month or a year, no approval, spending, deductions, Overview, reports, the places below read-only; old approval-era code removed |
 | [settings-spec.md](settings-spec.md) | Planned (2026-10-02) — one Settings hub for church, region and diocese: profile, service times, team, finance, communication, module settings, diocese system settings; built in phases S0–S5 |
+| [calendar-spec.md](calendar-spec.md) | Planned (2026-10-05) — one Calendar for church, region and diocese with the CCI national calendar on top (global admins type it in or import it); each place sees the levels above, view only; phases C1–C2 |
