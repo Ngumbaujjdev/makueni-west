@@ -37070,6 +37070,29 @@ a.mr-tile:hover {
    Messages (2026-10-05) - the Inbox, the composer, a sent message
    (docs/specs/messages-spec.md)
    ========================================================================== */
+/* The Inbox is the template's chat page. Its panels are sized to the screen
+   (100vh less the header); our sub-tab bar sits above them too, so its
+   height (--secondary-nav-h, set by secondary-nav.js) comes off as well. */
+.main-chart-wrapper .chat-info,
+.main-chart-wrapper .main-chat-area,
+.main-chart-wrapper .chat-user-details {
+  height: calc(100vh - 8rem - var(--secondary-nav-h, 0px));
+}
+.main-chart-wrapper .chat-users-tab,
+.main-chart-wrapper .chat-groups-tab,
+.main-chart-wrapper .chat-calls-tab {
+  max-height: calc(100vh - 21rem - var(--secondary-nav-h, 0px));
+}
+.main-chart-wrapper .chat-content {
+  max-height: calc(100vh - 17rem - var(--secondary-nav-h, 0px));
+}
+@media (max-width: 354px) {
+  .main-chart-wrapper .chat-users-tab,
+  .main-chart-wrapper .chat-groups-tab,
+  .main-chart-wrapper .chat-calls-tab {
+    max-height: calc(100vh - 22rem - var(--secondary-nav-h, 0px));
+  }
+}
 .msg-list {
   max-height: 70vh;
   margin: 0;

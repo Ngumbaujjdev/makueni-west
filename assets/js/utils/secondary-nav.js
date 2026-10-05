@@ -97,6 +97,7 @@
         if (!visible) {
             container.style.display = 'none';
             if (mainContent) mainContent.style.paddingBlockStart = '';
+            document.documentElement.style.setProperty('--secondary-nav-h', '0px');
             return;
         }
 
@@ -121,6 +122,9 @@
             const baseOffset = parseFloat(mainContent.dataset.baseTopOffset) || 0;
             const barHeight = container.getBoundingClientRect().height;
             mainContent.style.paddingBlockStart = (baseOffset + barHeight) + 'px';
+            // For full-height pages (Messages, the template's chat) that
+            // size themselves to the screen and must leave the bar out.
+            document.documentElement.style.setProperty('--secondary-nav-h', barHeight + 'px');
         }
     }
 

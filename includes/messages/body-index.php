@@ -1,31 +1,28 @@
 <?php
 // Messages - the template's chat page (chat.html), its markup, classes and
-// ids as they are: the list (.chat-info), the conversation (.main-chat-area)
+// ids as they are, and as the first thing on the page (no page header, as in
+// the template): the list (.chat-info), the conversation (.main-chat-area)
 // and the details (#chat-user-details). Our tabs are Inbox / Sent / Saved in
 // the template's Recent / Groups / Calls panes. Filled in by
 // assets/js/pages/messages/index.js.
 $canSend = $messagesCtx['can']['send'];
 $canRead = $messagesCtx['can']['read'];
 ?>
-<div class="page-toolbar">
-    <div class="page-toolbar-sub" id="placeLine"><?= htmlspecialchars($messagesCtx['place']['name'] ?: 'Messages') ?></div>
-    <div class="page-toolbar-controls">
-        <?php if ($canSend): ?>
-        <a class="btn btn-primary" href="<?= $messagesCtx['baseUrl'] ?>/new"><i class="ri-send-plane-line me-1"></i>Send a message</a>
-        <?php endif ?>
-    </div>
-</div>
-
-<div class="row" id="msgCards"></div>
-
 <div class="main-chart-wrapper p-2 gap-2 d-lg-flex">
     <div class="chat-info border">
         <?php if ($canSend): ?>
-        <a aria-label="Send a message" href="<?= $messagesCtx['baseUrl'] ?>/new" class="btn btn-secondary btn-icon rounded-circle chat-add-icon"><i class="ri-add-line"></i></a>
+        <a aria-label="Send a message" title="Send a message" href="<?= $messagesCtx['baseUrl'] ?>/new" class="btn btn-secondary btn-icon rounded-circle chat-add-icon"><i class="ri-add-line"></i></a>
         <?php endif ?>
         <div class="d-flex align-items-center justify-content-between w-100 p-3 border-bottom">
-            <div><h5 class="fw-semibold mb-0">Messages</h5></div>
-            <span class="badge bg-primary rounded-pill" id="unreadBadge" hidden></span>
+            <div>
+                <h5 class="fw-semibold mb-0">Messages <span class="badge bg-primary rounded-pill fs-11 ms-1 align-middle" id="unreadBadge" hidden></span></h5>
+            </div>
+            <div class="dropdown">
+                <button aria-label="Show messages from" title="Show messages from" class="btn btn-icon btn-secondary-light btn-wave waves-light" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ri-settings-3-line"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" id="fromMenu"></ul>
+            </div>
         </div>
         <div class="chat-search p-3 border-bottom">
             <div class="input-group">
@@ -66,14 +63,28 @@ $canRead = $messagesCtx['can']['read'];
             <div class="me-2 lh-1">
                 <span class="avatar avatar-lg me-2 avatar-rounded bg-primary text-white chatstatusperson"><i class="ri-chat-3-line fs-20"></i></span>
             </div>
-            <div class="flex-fill" style="min-width:0">
-                <p class="mb-0 fw-semibold fs-14 text-truncate"><a href="javascript:void(0);" class="chatnameperson responsive-userinfo-open">Messages</a></p>
+            <div class="flex-fill overflow-hidden">
+                <p class="mb-0 fw-semibold fs-14 text-truncate">
+                    <a href="javascript:void(0);" class="chatnameperson responsive-userinfo-open">Messages</a>
+                </p>
                 <p class="text-muted mb-0 chatpersonstatus text-truncate">Pick one on the left</p>
             </div>
-            <div class="d-flex flex-wrap rightIcons">
-                <span class="my-1 ms-2 align-self-center" id="chatChannel"></span>
-                <button aria-label="About this message" type="button" class="btn btn-icon btn-outline-light my-1 ms-2 responsive-userinfo-open"><i class="ri-information-line"></i></button>
-                <button aria-label="Back to the list" type="button" class="btn btn-icon btn-outline-light my-1 ms-2 responsive-chat-close"><i class="ri-close-line"></i></button>
+            <div class="d-flex flex-nowrap rightIcons">
+                <!-- The template's phone and video buttons: this message's two actions (index.js). -->
+                <button type="button" class="btn btn-icon btn-outline-light my-1 ms-2 d-none" id="chatAct1"></button>
+                <button type="button" class="btn btn-icon btn-outline-light my-1 ms-2 d-none" id="chatAct2"></button>
+                <button aria-label="About this message" title="About this message" type="button" class="btn btn-icon btn-outline-light my-1 ms-2 responsive-userinfo-open">
+                    <i class="ti ti-user-circle" id="responsive-chat-close"></i>
+                </button>
+                <div class="dropdown ms-2">
+                    <button aria-label="More" title="More" class="btn btn-icon btn-outline-light my-1 btn-wave waves-light" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="ti ti-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" id="chatMenu"></ul>
+                </div>
+                <button aria-label="Back to the list" title="Back to the list" type="button" class="btn btn-icon btn-outline-light my-1 ms-2 responsive-chat-close">
+                    <i class="ri-close-line"></i>
+                </button>
             </div>
         </div>
         <div class="chat-content" id="main-chat-content">
@@ -81,7 +92,7 @@ $canRead = $messagesCtx['can']['read'];
         </div>
         <div class="chat-footer" id="chatFooter">
             <input class="form-control" placeholder="Pick a message to reply" type="text" disabled>
-            <a aria-label="Send" class="btn btn-primary btn-icon btn-send ms-2 disabled" href="javascript:void(0)"><i class="ri-send-plane-2-line"></i></a>
+            <a aria-label="Send" class="btn btn-primary btn-icon btn-send disabled" href="javascript:void(0)"><i class="ri-send-plane-2-line"></i></a>
         </div>
     </div>
 
@@ -90,7 +101,8 @@ $canRead = $messagesCtx['can']['read'];
         <div class="text-center mb-5">
             <span class="avatar avatar-rounded avatar-xxl me-2 mb-3 bg-primary text-white chatstatusperson" id="detailsAvatar"><i class="ri-chat-3-line fs-24"></i></span>
             <p class="mb-1 fs-15 fw-semibold text-dark lh-1 chatnameperson">Messages</p>
-            <p class="fs-12 text-muted mb-0" id="detailsSub">&nbsp;</p>
+            <p class="fs-12 text-muted" id="detailsSub">&nbsp;</p>
+            <p class="text-center mb-0" id="detailsActions"></p>
         </div>
         <div class="mb-5" id="detailsBody"></div>
     </div>

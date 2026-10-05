@@ -11,6 +11,12 @@
  *
  * Tabs: Inbox (the template's Recent), Sent (Groups), Saved (Calls).
  * The tab and the open item stay in the URL (?tab=, ?open=).
+ * The template's slots, filled with ours: the list header's settings menu
+ * (show messages from...), its "ACTIVE / ALL CHATS" labels (Unread /
+ * Earlier), the header's phone and video buttons (this message's two
+ * actions), its dots menu, the footer's second button (a saved message
+ * into the reply), and the details panel's three round buttons and
+ * "Shared Files" block (About this message, View All).
  * ============================================================================
  */
 (function () {
@@ -36,7 +42,13 @@
 
   const initials = (name) => (name || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("");
   const nl = (s) => M.esc(s).replace(/\n/g, "<br>");
-  const timeOf = (iso) => new Date(iso).toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit", hour12: true });
+  const timeOf = (iso) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }).replace(" ", "");
+  /** The list's time, as the template shows it: 1:32PM today, else the day. */
+  const listTime = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return d.toDateString() === new Date().toDateString() ? timeOf(iso) : d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  };
   const dayLabel = (iso) => {
     const d = new Date(iso);
     const t = new Date();
@@ -100,30 +112,31 @@
     else Toast.error(inbox?.message || "Your inbox couldn't be loaded");
     data.sent = sent?.ok ? sent.data : null;
     data.saved = saved?.ok ? saved.data : null;
-    renderCards();
+    renderBadge();
+    renderFromMenu();
     renderLists();
     const btn = $(TAB_BUTTON[state.tab]);
     if (btn && state.tab !== "inbox") bootstrap.Tab.getOrCreateInstance(btn).show();
     else openFirst();
   }
 
-  function renderCards() {
-    const items = data.inbox.items;
-    const replies = items.reduce((n, m) => n + m.my_replies.length, 0);
-    const f = data.sent?.figures;
-    UI.renderStatCardsRow("msgCards", [
-      { icon: "ri-mail-unread-line", label: "Unread", value: M.num(data.inbox.unread), color: "primary", sub: data.inbox.unread ? "Waiting in your Inbox" : "You're up to date" },
-      { icon: "ri-inbox-line", label: "In your Inbox", value: M.num(items.length), color: "purple", sub: `${replies} ${replies === 1 ? "reply" : "replies"} from you` },
-      f
-        ? { icon: "ri-send-plane-line", label: "Sent this month", value: M.num(f.sent), color: "success", sub: `${M.num(f.delivered)} people reached` }
-        : { icon: "ri-building-4-line", label: "From the diocese", value: M.num(items.filter((m) => m.from.type === "diocese").length), color: "success", sub: "In your Inbox" },
-      f
-        ? { icon: "ri-reply-line", label: "Replies to us", value: M.num(f.replies), color: "warning", sub: f.failed ? `${f.failed} didn't go - open one to retry` : "This month" }
-        : { icon: "ri-map-2-line", label: "From the region", value: M.num(items.filter((m) => m.from.type === "region").length), color: "warning", sub: "In your Inbox" },
-    ]);
+  function renderBadge() {
     const badge = $("unreadBadge");
     badge.hidden = !data.inbox.unread;
     badge.textContent = `${data.inbox.unread} unread`;
+  }
+
+  /** The list header's settings menu (the template's): whose messages to show. */
+  const FROM_CHOICES = [
+    ["", "Everyone", "ri-inbox-line"],
+    ["diocese", "The diocese", M.FROM.diocese.icon],
+    ["region", "The region", M.FROM.region.icon],
+    ["church", "Our church", M.FROM.church.icon],
+  ];
+  function renderFromMenu() {
+    $("fromMenu").innerHTML =
+      `<li><h6 class="dropdown-header">Show messages from</h6></li>` +
+      FROM_CHOICES.map(([v, l, icon]) => `<li><a class="dropdown-item d-flex align-items-center${state.from === v ? " active" : ""}" href="javascript:void(0);" data-from="${v}"><i class="${icon} me-2"></i>${l}</a></li>`).join("");
   }
 
   // ================================================================ lists (left)
@@ -138,6 +151,7 @@
 
   const label = (text) => `<li class="pb-0"><p class="text-muted fs-11 fw-semibold mb-2 op-7">${text}</p></li>`;
 
+  /** The template's li.checkforactive row, with our icon avatar for its photo. */
   function row(tab, x) {
     let icon = "ri-send-plane-line";
     let color = "success";
@@ -147,21 +161,23 @@
     let extra = "";
     if (tab === "inbox") {
       const f = M.FROM[x.from.type] || M.FROM.church;
-      [icon, color, name, time, line] = [f.icon, f.color, x.from.name, M.ago(x.at), x.subject];
-      extra = x.read_at ? '<span class="chat-read-icon float-end align-middle"><i class="ri-check-double-fill"></i></span>' : '<span class="badge bg-primary rounded-circle float-end">1</span>';
+      [icon, color, name, time, line] = [f.icon, f.color, x.from.name, listTime(x.at), x.subject];
+      extra = x.read_at ? '<span class="chat-read-icon float-end align-middle"><i class="ri-check-double-fill"></i></span>' : '<span class="badge bg-success-transparent rounded-circle float-end">1</span>';
     } else if (tab === "sent") {
-      [name, time, line] = [x.subject || x.preview.slice(0, 50), M.ago(x.sent_at || x.scheduled_at || x.created_at), x.summary || ""];
-      extra = x.replies ? `<span class="badge bg-purple rounded-pill float-end">${x.replies}</span>` : "";
+      [name, time, line] = [x.subject || x.preview.slice(0, 50), listTime(x.sent_at || x.scheduled_at || x.created_at), x.summary || ""];
+      extra = x.replies ? `<span class="badge bg-success-transparent rounded-circle float-end" title="Replies">${x.replies}</span>` : '<span class="chat-read-icon float-end align-middle"><i class="ri-check-double-fill"></i></span>';
     } else {
       [icon, color, name, line] = ["ri-bookmark-line", "purple", x.name, x.body];
     }
-    return `<li class="checkforactive${tab === "inbox" && !x.read_at ? " chat-msg-unread" : ""}${state.open === x.id && state.tab === tab ? " active" : ""}" data-id="${x.id}">
+    return `<li class="${tab === "inbox" && !x.read_at ? "chat-msg-unread " : ""}checkforactive${state.open === x.id && state.tab === tab ? " active" : ""}" data-id="${x.id}">
       <a href="javascript:void(0);" data-open="${x.id}" data-tab="${tab}">
         <div class="d-flex align-items-top">
-          <div class="me-1 lh-1"><span class="avatar avatar-md me-2 avatar-rounded bg-${color} text-white"><i class="${icon}"></i></span></div>
-          <div class="flex-fill" style="min-width:0">
-            <p class="mb-0 fw-semibold text-truncate">${M.esc(name)}${time ? `<span class="float-end text-muted fw-normal fs-11">${time}</span>` : ""}</p>
-            <p class="fs-12 mb-0"><span class="chat-msg text-truncate">${M.esc(line)}</span>${extra}</p>
+          <div class="me-1 lh-1">
+            <span class="avatar avatar-md me-2 avatar-rounded bg-${color} text-white"><i class="${icon}"></i></span>
+          </div>
+          <div class="flex-fill">
+            <p class="mb-0 fw-semibold">${M.esc(name)}${time ? ` <span class="float-end text-muted fw-normal fs-11">${time}</span>` : ""}</p>
+            <p class="fs-12 mb-0"><span class="chat-msg text-truncate">${M.esc(line)}</span> ${extra}</p>
           </div>
         </div>
       </a>
@@ -172,18 +188,25 @@
     const target = tab === "inbox" ? inner($("chat-msg-scroll")) : $(tab === "sent" ? "sentList" : "savedList");
     if (!target) return;
     const list = listFor(tab);
-    const head =
-      tab === "inbox"
-        ? `<li class="pb-2"><div class="d-flex flex-wrap gap-1">${[["", "All"], ["diocese", "Diocese"], ["region", "Region"], ["church", "Church"]]
-            .map(([v, l]) => `<button type="button" class="btn btn-sm ${state.from === v ? "btn-primary" : "btn-light"}" data-from="${v}">${l}</button>`)
-            .join("")}</div></li>`
-        : label(tab === "sent" ? "WHAT WE SENT" : "SAVED MESSAGES");
     const none = {
-      inbox: ["ri-inbox-line", state.q || state.from ? "Nothing matches" : "Nothing here yet", state.q || state.from ? "Try All, or another word." : "Messages sent to you by your church, region or the diocese show here."],
+      inbox: ["ri-inbox-line", state.q || state.from ? "Nothing matches" : "Nothing here yet", state.q || state.from ? "Try Everyone in the menu above, or another word." : "Messages sent to you by your church, region or the diocese show here."],
       sent: ["ri-send-plane-line", "Nothing sent yet", "Messages you send show here, with their replies."],
       saved: ["ri-bookmark-line", "No saved messages", "Save a message you send often and use it again in one click."],
     }[tab];
-    target.innerHTML = head + (list.length ? list.map((x) => row(tab, x)).join("") : `<li>${M.empty(...none)}</li>`);
+    let html = "";
+    if (!list.length) html = `<li>${M.empty(...none)}</li>`;
+    else if (tab === "inbox") {
+      // The template's ACTIVE CHATS / ALL CHATS: unread first, then the rest.
+      const from = FROM_CHOICES.find(([v]) => v === state.from);
+      const suffix = state.from ? ` · ${from[1].toUpperCase()}` : "";
+      const unread = list.filter((m) => !m.read_at);
+      const earlier = list.filter((m) => m.read_at);
+      if (unread.length) html += label(`UNREAD${suffix}`) + unread.map((x) => row(tab, x)).join("");
+      if (earlier.length) html += label(`${unread.length ? "EARLIER" : "ALL MESSAGES"}${suffix}`) + earlier.map((x) => row(tab, x)).join("");
+    } else {
+      html = label(tab === "sent" ? "WHAT WE SENT" : "SAVED MESSAGES") + list.map((x) => row(tab, x)).join("");
+    }
+    target.innerHTML = html;
     if (tab === "saved" && CTX.can.send) target.insertAdjacentHTML("beforeend", `<li><button type="button" class="btn btn-outline-primary btn-sm w-100" id="tplNew"><i class="ri-add-line me-1"></i>New saved message</button></li>`);
   }
 
@@ -207,11 +230,59 @@
     syncUrl();
     changeTheInfo({ name: "Messages", sub: "Pick one on the left", icon: "ri-chat-3-line", color: "primary", slide: false });
     $("chatThread").innerHTML = `<li>${M.empty("ri-chat-3-line", "Pick a message", "Choose one on the left to read it.")}</li>`;
-    $("chatChannel").innerHTML = "";
+    actions({});
     $("chatFooter").innerHTML = `<input class="form-control" placeholder="Pick a message to reply" type="text" disabled><a aria-label="Send" class="btn btn-primary btn-icon btn-send ms-2 disabled" href="javascript:void(0)"><i class="ri-send-plane-2-line"></i></a>`;
     $("detailsSub").innerHTML = "&nbsp;";
     $("detailsBody").innerHTML = "";
   }
+
+  /**
+   * This message's actions in the template's places: the header's two
+   * buttons (its phone and video), its dots menu, and the details panel's
+   * three round buttons. Each action: { icon, label, href } or { icon, label, run }.
+   */
+  function actions({ top = [], menu = [], round = [] }) {
+    const go = (a) => (a.href ? (window.location.href = a.href) : a.run());
+    ["chatAct1", "chatAct2"].forEach((id, i) => {
+      const b = $(id);
+      const a = top[i];
+      // From a small tablet up; on a phone the same actions are in the dots menu.
+      b.classList.toggle("d-sm-inline-flex", !!a);
+      b.onclick = a ? () => go(a) : null;
+      if (!a) return;
+      b.innerHTML = `<i class="${a.icon}"></i>`;
+      b.title = a.label;
+      b.setAttribute("aria-label", a.label);
+    });
+    $("chatMenu").innerHTML = menu.length
+      ? menu.map((a, i) => `<li><a class="dropdown-item d-flex align-items-center" href="javascript:void(0);" data-menu="${i}"><i class="${a.icon} me-2"></i>${a.label}</a></li>`).join("")
+      : `<li><span class="dropdown-item-text fs-12">Pick a message first</span></li>`;
+    $("chatMenu").onclick = (e) => {
+      const el = e.target.closest("[data-menu]");
+      if (el) go(menu[el.dataset.menu]);
+    };
+    $("detailsActions").innerHTML = round
+      .map((a, i) => `<button type="button" class="btn btn-icon rounded-pill btn-primary-light${i ? " ms-2" : ""}" data-round="${i}" title="${a.label}" aria-label="${a.label}"><i class="${a.icon}"></i></button>`)
+      .join("");
+    $("detailsActions").onclick = (e) => {
+      const el = e.target.closest("[data-round]");
+      if (el) go(round[el.dataset.round]);
+    };
+  }
+
+  const copy = (text) => ({
+    icon: "ri-file-copy-line",
+    label: "Copy the message",
+    run: async () => {
+      try {
+        await navigator.clipboard.writeText(text);
+        Toast.success("Copied");
+      } catch (e) {
+        Toast.error("Couldn't copy - select the text instead");
+      }
+    },
+  });
+  const newMessage = () => (CTX.can.send ? [{ icon: "ri-send-plane-line", label: "Send a new message", href: `${CTX.baseUrl}/new` }] : []);
 
   /** The template's li.chat-item-start / li.chat-item-end. */
   function bubble(side, who, at, body, read = false) {
@@ -250,9 +321,9 @@
   }
 
   /** The details panel's list, in the template's "Shared Files" rows. */
-  function details(title, rows, extra = "") {
+  function details(title, rows, extra = "", viewAll = "") {
     $("detailsBody").innerHTML = `
-      <div class="fw-semibold mb-4">${title}</div>
+      <div class="fw-semibold mb-4">${title}${viewAll ? `<span class="float-end fs-11"><a href="${viewAll}" class="link-primary text-underline"><u>View All</u></a></span>` : ""}</div>
       <ul class="shared-files list-unstyled">${rows
         .map(([icon, k, v]) => `<li><div class="d-flex align-items-center"><div class="me-2"><span class="shared-file-icon"><i class="${icon}"></i></span></div><div class="flex-fill" style="min-width:0"><p class="fs-12 fw-semibold mb-0 text-break">${M.esc(v)}</p><p class="mb-0 text-muted fs-11">${k}</p></div></div></li>`)
         .join("")}</ul>${extra}`;
@@ -264,9 +335,28 @@
     if (!m) return blank();
     const f = M.FROM[m.from.type] || M.FROM.church;
     changeTheInfo({ name: m.from.name, sub: `${m.subject}${m.by ? ` · ${m.by}` : ""}`, icon: f.icon, color: f.color, slide });
-    $("chatChannel").innerHTML = M.channelChip(m.channel);
     $("chatThread").innerHTML = thread([{ side: "start", who: m.by || m.from.name, at: m.at, body: m.body }, ...m.my_replies.map((r) => ({ side: "end", at: r.at, body: r.body, read: true }))]);
-    $("chatFooter").innerHTML = `<input class="form-control" id="replyBody" placeholder="Reply to ${M.esc(m.from.name)}..." type="text" maxlength="2000"><a aria-label="Send the reply" class="btn btn-primary btn-icon btn-send ms-2" href="javascript:void(0)" id="replyBtn"><i class="ri-send-plane-2-line"></i></a>`;
+    // The template's footer: the input, its second button (here: a saved message into the reply), send.
+    const saved = data.saved || [];
+    $("chatFooter").innerHTML = `<input class="form-control" id="replyBody" placeholder="Reply to ${M.esc(m.from.name)}..." type="text" maxlength="2000">
+      <div class="dropup">
+        <a aria-label="Put in a saved message" title="Put in a saved message" class="btn btn-icon mx-2 btn-success-light" href="javascript:void(0)" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false"><i class="ri-bookmark-line"></i></a>
+        <ul class="dropdown-menu dropdown-menu-end" id="savedPick">${
+          saved.length
+            ? `<li><h6 class="dropdown-header">Put in a saved message</h6></li>` + saved.map((t) => `<li><a class="dropdown-item" href="javascript:void(0);" data-saved="${t.id}">${M.esc(t.name)}</a></li>`).join("")
+            : `<li><span class="dropdown-item-text fs-12">No saved messages yet</span></li>`
+        }</ul>
+      </div>
+      <a aria-label="Send the reply" class="btn btn-primary btn-icon btn-send" href="javascript:void(0)" id="replyBtn"><i class="ri-send-plane-2-line"></i></a>`;
+    $("savedPick").addEventListener("click", (e) => {
+      const el = e.target.closest("[data-saved]");
+      const t = el && saved.find((x) => x.id === Number(el.dataset.saved));
+      if (!t) return;
+      $("replyBody").value = t.body.replace(/\{name\}/g, m.by || m.from.name).replace(/\{place\}/g, m.from.name).replace(/\{sender\}/g, myName());
+      $("replyBody").focus();
+    });
+    const reply = { icon: "ri-reply-line", label: "Reply", run: () => $("replyBody").focus() };
+    actions({ top: [reply, ...newMessage()], menu: [reply, copy(m.body), ...newMessage()], round: [reply, copy(m.body), ...newMessage()] });
     $("detailsSub").textContent = LEVEL[m.from.type] || "";
     details("About this message", [
       ["ri-user-line", "Sent by", m.by || "-"],
@@ -283,7 +373,6 @@
       if (!res.ok) return Toast.error(res.message);
       Object.assign(m, res.data);
       Toast.success("Reply sent");
-      renderCards();
       openInbox(id, false);
     };
     $("replyBtn").addEventListener("click", send);
@@ -293,7 +382,7 @@
       if (res.ok) {
         m.read_at = res.data.read_at;
         data.inbox.unread = Math.max(0, data.inbox.unread - 1);
-        renderCards();
+        renderBadge();
         renderList("inbox");
       }
     }
@@ -304,7 +393,6 @@
     const b0 = (data.sent?.items || []).find((x) => x.id === id);
     if (!b0) return blank();
     changeTheInfo({ name: b0.subject || b0.preview.slice(0, 60), sub: `To ${b0.summary || ""}`, icon: "ri-send-plane-line", color: "success", slide });
-    $("chatChannel").innerHTML = M.channelChip(b0.channel);
     $("chatThread").innerHTML = `<li class="text-center py-4"><span class="spinner-border spinner-border-sm"></span></li>`;
     const res = await MessagesAPI.get(id);
     if (state.open !== id || state.tab !== "sent") return;
@@ -316,6 +404,8 @@
     ]);
     $("chatFooter").innerHTML = `<span class="flex-fill fs-12 fw-semibold">${b.replies ? `${b.replies} ${b.replies === 1 ? "reply" : "replies"}` : "Replies from people with a login show here"}</span><a class="btn btn-outline-primary btn-sm ms-2" href="${CTX.baseUrl}/message?id=${b.id}"><i class="ri-list-check-2 me-1"></i>Everyone it went to</a>`;
     $("detailsSub").textContent = M.STATUS[b.status]?.label || "";
+    const everyone = { icon: "ri-group-line", label: "Everyone it went to", href: `${CTX.baseUrl}/message?id=${b.id}` };
+    actions({ top: [everyone, ...newMessage()], menu: [everyone, copy(b.body), ...newMessage()], round: [everyone, copy(b.body), ...newMessage()] });
     const people = (b.recipients || []).slice(0, 8);
     details(
       "What we sent",
@@ -328,7 +418,7 @@
         ...(b.failed_count ? [["ri-error-warning-line", "Didn't go", M.num(b.failed_count)]] : []),
       ],
       people.length
-        ? `<div class="fw-semibold mb-4 mt-5">Who it went to <span class="badge bg-primary rounded-circle ms-1">${b.recipients.length}</span></div>
+        ? `<div class="fw-semibold mb-4 mt-5">Who it went to <span class="badge bg-primary-transparent rounded-circle ms-1">${b.recipients.length}</span><span class="float-end fs-11"><a href="${everyone.href}" class="link-primary text-underline"><u>View All</u></a></span></div>
            <ul class="shared-files list-unstyled">${people
              .map((r) => `<li><div class="d-flex align-items-center"><div class="me-2"><span class="avatar avatar-sm avatar-rounded bg-${UI.colorFor(r.name)} text-white">${M.esc(initials(r.name))}</span></div><div class="flex-fill" style="min-width:0"><p class="fs-12 fw-semibold mb-0 text-truncate">${M.esc(r.name || r.phone || r.email)}</p><p class="mb-0 text-muted fs-11 text-truncate">${M.esc(r.place || r.role || "")}</p></div><div class="fs-18">${r.read_at ? '<i class="ri-check-double-line text-success" title="Read"></i>' : '<i class="ri-check-line text-muted" title="Not read yet"></i>'}</div></div></li>`)
              .join("")}</ul>`
@@ -343,11 +433,13 @@
     if (!t) return blank();
     const p = M.smsParts(t.body);
     changeTheInfo({ name: t.name, sub: t.subject || "Saved message", icon: "ri-bookmark-line", color: "purple", slide });
-    $("chatChannel").innerHTML = M.channelChip(t.channel);
     $("chatThread").innerHTML = bubble("end", "", null, t.body);
     $("chatFooter").innerHTML = `<button type="button" class="btn btn-light btn-sm" id="tplEdit"><i class="ri-edit-line me-1"></i>Edit</button><span class="flex-fill"></span><a class="btn btn-primary btn-sm" href="${CTX.baseUrl}/new?template=${t.id}"><i class="ri-send-plane-line me-1"></i>Use it</a>`;
     $("tplEdit").addEventListener("click", () => editTemplate(t));
     $("detailsSub").textContent = "Saved message";
+    const use = { icon: "ri-send-plane-line", label: "Use it", href: `${CTX.baseUrl}/new?template=${t.id}` };
+    const edit = { icon: "ri-edit-line", label: "Edit", run: () => editTemplate(t) };
+    actions({ top: [use, edit], menu: [use, edit, copy(t.body)], round: [use, edit, copy(t.body)] });
     details(
       "About it",
       [
@@ -428,7 +520,7 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     templateBehaviour();
-    $("msgCards").innerHTML = UI.skeletonCards(4);
+    renderFromMenu();
     if (!$(TAB_BUTTON[state.tab])) state.tab = "inbox";
 
     // Bootstrap switches the panes (as in the template); we follow it.
@@ -439,13 +531,15 @@
         openFirst();
       }),
     );
-    // One click handler for every list: open a row, filter the Inbox, add a saved message.
+    // One click handler for every list: open a row, filter the Inbox (the header menu), add a saved message.
     document.querySelector(".chat-info").addEventListener("click", (ev) => {
       const a = ev.target.closest("[data-open]");
       if (a) return open(Number(a.dataset.open));
       const f = ev.target.closest("[data-from]");
       if (f) {
         state.from = f.dataset.from;
+        renderFromMenu();
+        if (state.tab !== "inbox") bootstrap.Tab.getOrCreateInstance($("users-tab")).show();
         return renderList("inbox");
       }
       if (ev.target.closest("#tplNew")) editTemplate(null);
