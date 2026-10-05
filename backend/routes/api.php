@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BudgetController;
 use App\Http\Controllers\Api\BudgetPeriodController;
 use App\Http\Controllers\Api\BudgetTypeController;
+use App\Http\Controllers\Api\Calendar\CalendarController;
+use App\Http\Controllers\Api\Calendar\CciCalendarController;
 use App\Http\Controllers\Api\DemographicsController;
 use App\Http\Controllers\Api\DemographicsReportController;
 use App\Http\Controllers\Api\FiscalYearController;
@@ -72,6 +74,18 @@ Route::get('/system-admin/contact', [UserController::class, 'getSystemAdminConta
 Route::get('settings/logo/{territory}', [SettingsProfileController::class, 'logo']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
+
+    // Calendar - one per church, region and diocese, the CCI calendar on top (docs/specs/calendar-spec.md)
+    Route::prefix('calendar')->group(function () {
+        Route::get('events', [CalendarController::class, 'events']);
+        Route::get('overview', [CalendarController::class, 'overview']);
+        Route::post('events', [CalendarController::class, 'store']);
+        Route::put('events/{id}', [CalendarController::class, 'update'])->whereNumber('id');
+        Route::delete('events/{id}', [CalendarController::class, 'destroy'])->whereNumber('id');
+        Route::get('cci', [CciCalendarController::class, 'index']);
+        Route::get('cci/template', [CciCalendarController::class, 'template']);
+        Route::post('cci/import', [CciCalendarController::class, 'import'])->middleware('throttle:20,1');
+    });
 
     // Settings hub - one page per church, region and diocese (docs/specs/settings-spec.md)
     Route::prefix('settings')->group(function () {

@@ -224,6 +224,13 @@ class DatabaseSeeder extends Seeder
             // {level}.settings.hub.* permissions (docs/specs/settings-spec.md)
             // ==========================================
             SettingsHubSeeder::class,
+
+            // ==========================================
+            // PHASE 30: the Calendar - one per church, region and diocese,
+            // the CCI national calendar on top; {level}.calendar.events.*
+            // (docs/specs/calendar-spec.md)
+            // ==========================================
+            CalendarAccessSeeder::class,
         ]);
     }
 }
