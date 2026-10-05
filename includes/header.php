@@ -145,22 +145,27 @@ $baseUrl = '/makueni-west';
                     <span class="badge bg-secondary rounded-pill header-icon-badge pulse pulse-secondary" id="notification-icon-badge">0</span>
                 </a>
                 <!-- End::header-link|dropdown-toggle -->
-                <!-- Start::main-header-dropdown -->
-                <div class="main-header-dropdown dropdown-menu dropdown-menu-end" data-popper-placement="none">
+                <!-- Start::main-header-dropdown - filled by assets/js/utils/notifications.js (GET /notifications) -->
+                <div class="main-header-dropdown dropdown-menu dropdown-menu-end notif-dropdown" data-popper-placement="none">
                     <div class="p-3">
-                        <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center justify-content-between gap-2">
                             <p class="mb-0 fs-17 fw-semibold">Notifications</p>
-                            <span class="badge bg-secondary-transparent" id="notifiation-data">0 Unread</span>
+                            <span class="badge bg-secondary text-dark" id="notifiation-data">0 Unread</span>
                         </div>
                     </div>
-                    <div class="dropdown-divider"></div>
-                    <div class="p-5 empty-item1">
+                    <div class="dropdown-divider mb-0"></div>
+                    <ul class="list-unstyled mb-0 notif-list" id="notifList" aria-live="polite"></ul>
+                    <div class="p-5 empty-item1" id="notifEmpty">
                         <div class="text-center">
-                            <span class="avatar avatar-xl avatar-rounded bg-secondary-transparent">
+                            <span class="avatar avatar-xl avatar-rounded bg-secondary text-dark">
                                 <i class="ri-notification-off-line fs-2"></i>
                             </span>
                             <h6 class="fw-semibold mt-3">No New Notifications</h6>
                         </div>
+                    </div>
+                    <div class="notif-foot d-flex align-items-center justify-content-between gap-2 p-2">
+                        <button type="button" class="btn btn-sm btn-light border" id="notifReadAll"><i class="ri-check-double-line me-1"></i>Mark all read</button>
+                        <a class="btn btn-sm btn-primary" href="<?= $baseUrl ?>/notifications"><i class="ri-notification-3-line me-1"></i>See all</a>
                     </div>
                 </div>
                 <!-- End::main-header-dropdown -->
@@ -268,4 +273,5 @@ $baseUrl = '/makueni-west';
 <script src="<?= $baseUrl ?>/assets/js/utils/global-search.js<?= assetVersion('assets/js/utils/global-search.js') ?>"></script>
 <script src="<?= $baseUrl ?>/assets/js/utils/report-center.js<?= assetVersion('assets/js/utils/report-center.js') ?>"></script>
 <script src="<?= $baseUrl ?>/assets/js/utils/system-notice.js<?= assetVersion('assets/js/utils/system-notice.js') ?>"></script>
+<script src="<?= $baseUrl ?>/assets/js/utils/notifications.js<?= assetVersion('assets/js/utils/notifications.js') ?>"></script>
 
