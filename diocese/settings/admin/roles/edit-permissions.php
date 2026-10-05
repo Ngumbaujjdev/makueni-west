@@ -217,8 +217,8 @@ include __DIR__ . '/../../../../includes/page-header.php';
                                     <table class="table table-hover mb-0" id="permissionsTable">
                                         <thead class="bg-light">
                                             <tr>
-                                                <th style="width: 20%;">Module</th>
-                                                <th style="width: 25%;">Submodule</th>
+                                                <th style="width: 16%;">Module</th>
+                                                <th style="width: 20%;">Submodule</th>
                                                 <th class="text-center" style="width: 9%;">
                                                     <i class="ri-add-circle-line text-success"></i> Create
                                                 </th>
@@ -234,15 +234,18 @@ include __DIR__ . '/../../../../includes/page-header.php';
                                                 <th class="text-center" style="width: 9%;">
                                                     <i class="ri-check-line text-primary"></i> Approve
                                                 </th>
-                                                <th class="text-center" style="width: 10%;">
+                                                <th class="text-center" style="width: 8%;">
                                                     <i class="ri-download-line text-secondary"></i> Export
+                                                </th>
+                                                <th style="width: 14%;">
+                                                    <i class="ri-more-line text-primary"></i> More
                                                 </th>
                                             </tr>
                                         </thead>
                                         <tbody id="permissionsTableBody">
                                             <!-- Populated by JavaScript -->
                                             <tr>
-                                                <td colspan="8" class="text-center p-5">
+                                                <td colspan="9" class="text-center p-5">
                                                     <div class="spinner-border text-primary" role="status">
                                                         <span class="visually-hidden">Loading...</span>
                                                     </div>
@@ -315,8 +318,7 @@ include __DIR__ . '/../../../../includes/page-header.php';
     <script src="<?= SITE_URL ?>/assets/js/Toasts.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/utils/toast.js<?= assetVersion('assets/js/utils/toast.js') ?>"></script>
 
-    <!-- Constants -->
-    <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
+    <!-- Constants: already loaded in the head - a second copy threw "Constants has already been declared" -->
 
     <!-- API Handler -->
     <script src="<?= SITE_URL ?>/assets/js/pages/system-administration/api-handler.js<?= assetVersion('assets/js/pages/system-administration/api-handler.js') ?>"></script>

@@ -45,7 +45,7 @@ $breadcrumbs = ['Home' => $calendarCtx['homeUrl'], 'Calendar' => null];
                     <div class="page-toolbar-controls">
                         <div id="viewSwitchWrap"></div>
                         <button type="button" class="btn btn-outline-primary" id="icsBtn" title="Download what's on screen, to import into Google or Outlook"><i class="ri-download-2-line me-1"></i>Download (.ics)</button>
-                        <button type="button" class="btn btn-primary d-none" id="addEventBtn"><i class="ri-add-line me-1"></i>Add event</button>
+                        <button type="button" class="btn btn-primary d-none" id="addEventBtn"><i class="ri-add-line me-1"></i>New date</button>
                     </div>
                 </div>
 

@@ -146,7 +146,17 @@
             return;
         }
 
-        const currentPath = window.location.pathname;
+        // Only the most specific match is the current page: on
+        // /church/events/new both "Events" (/church/events/) and "New event"
+        // match - the page is "New event".
+        const rawPath = window.location.pathname;
+        const hrefs = [];
+        submodules.forEach(submodule => {
+            hrefs.push(formatPath(submodule.path));
+            (submodule.sub_submodules || []).forEach(sub => hrefs.push(formatPath(sub.path)));
+        });
+        const best = hrefs.filter(href => pathsMatch(rawPath, href)).sort((a, b) => b.length - a.length)[0];
+        const isCurrent = (href) => !!best && href === best;
         let html = '<ul class="nav nav-tabs">';
 
         submodules.forEach(submodule => {
@@ -163,8 +173,8 @@
                 // y axis - an absolutely positioned menu showed only its
                 // top ~6px. A fixed menu is placed against the viewport, so
                 // the row's scroll box can't cut it off.
-                const isActive = pathsMatch(currentPath, ownHref) ||
-                    submodule.sub_submodules.some(sub => pathsMatch(currentPath, formatPath(sub.path)));
+                const isActive = isCurrent(ownHref) ||
+                    submodule.sub_submodules.some(sub => isCurrent(formatPath(sub.path)));
 
                 html += `
                     <li class="nav-item dropdown">
@@ -174,13 +184,13 @@
                         <ul class="dropdown-menu">
                             ${submodule.sub_submodules.map(sub => {
                                 const subHref = formatPath(sub.path) || '#';
-                                const subActive = pathsMatch(currentPath, subHref);
+                                const subActive = isCurrent(subHref);
                                 return `<li><a class="dropdown-item${subActive ? ' active' : ''}" href="${escapeHtml(subHref)}">${escapeHtml(sub.title)}</a></li>`;
                             }).join('')}
                         </ul>
                     </li>`;
             } else {
-                const isActive = pathsMatch(currentPath, ownHref);
+                const isActive = isCurrent(ownHref);
                 html += `
                     <li class="nav-item">
                         <a class="nav-link${isActive ? ' active' : ''}" href="${escapeHtml(ownHref || '#')}">

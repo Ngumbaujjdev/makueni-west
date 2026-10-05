@@ -735,43 +735,46 @@ $userEmail = $currentUser['email'] ?? '';
     function highlightActivePage() {
         try {
             const currentPath = window.location.pathname;
-            const links = document.querySelectorAll('.side-menu__item[href]');
-
-            links.forEach(link => {
+            const normalizedCurrent = currentPath.replace(/\.php$/, '');
+            const hrefOf = (link) => {
                 const href = link.getAttribute('href');
-                if (href && href !== 'javascript:void(0);' && href !== '#') {
-                    const normalizedHref = href.replace(/\.php$/, '');
-                    const normalizedCurrent = currentPath.replace(/\.php$/, '');
+                return href && href !== 'javascript:void(0);' && href !== '#' ? href.replace(/\.php$/, '') : null;
+            };
+            // One-directional only: matching the other way too (href
+            // contains current) falsely matches every sibling submodule at
+            // once when the current path is a short prefix shared by all of
+            // them (e.g. a module's own bare landing page).
+            const matching = [...document.querySelectorAll('.side-menu__item[href]')].filter(link => {
+                const href = hrefOf(link);
+                return href && normalizedCurrent.includes(href);
+            });
+            // Only the most specific match: on /church/events/new both
+            // "Events" (/church/events/) and "New event" match - the page
+            // is "New event".
+            const longest = Math.max(0, ...matching.map(link => hrefOf(link).length));
 
-                    // One-directional only: matching the other way too
-                    // (href contains current) falsely matches every
-                    // sibling submodule at once when the current path is a
-                    // short prefix shared by all of them (e.g. a module's
-                    // own bare landing page).
-                    if (normalizedCurrent.includes(normalizedHref)) {
-                        link.classList.add('active');
+            matching.filter(link => hrefOf(link).length === longest).forEach(link => {
+                link.classList.add('active');
 
-                        // Expand any nested (child2+) sub-submodule accordion
-                        // ancestor inline, same as before - but stop at the
-                        // top-level flyout panel (.child1) rather than
-                        // forcing it open on page load.
-                        let parent = link.closest('.slide-menu');
-                        while (parent && !parent.classList.contains('child1')) {
-                            parent.style.display = 'block';
-                            const parentSlide = parent.closest('.slide');
-                            if (parentSlide) parentSlide.classList.add('open');
-                            parent = parent.parentElement.closest('.slide-menu');
-                        }
+                // Expand any nested (child2+) sub-submodule accordion
+                // ancestor inline, same as before - but stop at the
+                // top-level flyout panel (.child1) rather than
+                // forcing it open on page load.
+                let parent = link.closest('.slide-menu');
+                while (parent && !parent.classList.contains('child1')) {
+                    parent.style.display = 'block';
+                    const parentSlide = parent.closest('.slide');
+                    if (parentSlide) parentSlide.classList.add('open');
+                    parent = parent.parentElement.closest('.slide-menu');
+                }
 
-                        // Mark the owning top-level module as "current" so
-                        // its icon/label reads as active without forcing
-                        // the flyout open.
-                        const moduleLi = link.closest('li[data-module-id]');
-                        if (moduleLi) {
-                            const moduleTrigger = moduleLi.querySelector(':scope > .side-menu__item');
-                            if (moduleTrigger) moduleTrigger.classList.add('active');
-                        }
-                    }
+                // Mark the owning top-level module as "current" so
+                // its icon/label reads as active without forcing
+                // the flyout open.
+                const moduleLi = link.closest('li[data-module-id]');
+                if (moduleLi) {
+                    const moduleTrigger = moduleLi.querySelector(':scope > .side-menu__item');
+                    if (moduleTrigger) moduleTrigger.classList.add('active');
                 }
             });
         } catch (error) {

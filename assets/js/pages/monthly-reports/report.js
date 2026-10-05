@@ -384,10 +384,31 @@
     render();
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+  // No month in the link (the menu's "Write this month's report"): the
+  // month to write - the one due next, else the latest still open - as the
+  // list's Write button picks it. Last year too, for December's in January.
+  async function monthToWrite() {
+    const now = new Date().getFullYear();
+    for (const y of [now, now - 1]) {
+      const res = await ReportsAPI.year(y);
+      if (!res.ok) continue;
+      const d = res.data;
+      const target = d.figures?.next || d.months.filter((m) => m.open && ["draft", "not_started"].includes(m.status)).pop();
+      if (target) return target;
+    }
+    return null;
+  }
+
+  document.addEventListener("DOMContentLoaded", async () => {
     if (!byId && (!year || !month)) {
-      window.location.href = `${CTX.baseUrl}/`;
-      return;
+      const target = await monthToWrite();
+      if (!target) {
+        window.location.href = `${CTX.baseUrl}/`;
+        return;
+      }
+      year = target.year;
+      month = target.month;
+      history.replaceState(null, "", R.ownUrl(CTX.baseUrl, year, month));
     }
     $("nextBtn").addEventListener("click", () => go(Math.min(4, step + 1)));
     $("backBtn").addEventListener("click", () => go(Math.max(1, step - 1)));
