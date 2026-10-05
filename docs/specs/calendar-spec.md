@@ -2,7 +2,7 @@
 
 One **Calendar** for each church, region and the diocese, built once and inherited like Budgets and Settings. Each place sees its own events and everything above it. At the top sits the **CCI calendar**: the national calendar of Christian Church International Kenya, which global admins type in or import each year. Every place sees it, marked as a CCI calendar event.
 
-**Status:** planned 2026-10-05. Decided with the owner:
+**Status:** planned 2026-10-05; C1 (data, API, permissions, menu, CCI import) done. Decided with the owner:
 - only **global admins** manage the CCI calendar;
 - CCI events are **typed in or imported from an Excel/CSV file**;
 - **every level** adds its own events from the first build.
@@ -84,6 +84,12 @@ All routes are under `auth:sanctum`, and the acting place comes from `X-Assignme
 - **CCI events:** global admins only (`hasGlobalAccess()`). There is no permission to grant, as decided.
 - Nobody edits an event from another place, up or down. `can_edit` is true only for your own place's events, and for CCI events when you're a global admin.
 - Menu: a **Calendar** module in each level's Programs group (`{level}-programs`) with one page `/{level}/calendar/`, created idempotently by `CalendarAccessSeeder`. It also switches off the dead "Diocese Calendar" module and its 0-byte pages.
+
+### C1 as built
+- `App\Services\Calendar\Calendar` works out the layers (`layersFor`: ancestors by type, `below` by walking `parent_territory_id`), the occurrences (`expand`: jumps close to the range, then steps; at most 600 per event) and the overview.
+- `CalendarController::validated()` is the one set of event rules, shared by the API and the import. It forces `shared_below` on CCI and diocese events, and defaults it to false for a church.
+- The import reads CSV and XLSX with PhpSpreadsheet (already installed through `maatwebsite/excel`). Each row goes through the same rules. Duplicates are matched on title and start date, against the CCI calendar and earlier rows of the same file.
+- The tests are in the new `Calendar` suite (`tests/Feature/Calendar`).
 
 ## Pages
 - `/{level}/calendar/` is a 5-line wrapper around `includes/calendar/page.php`, shared like Budgets.
