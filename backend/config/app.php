@@ -71,6 +71,9 @@ return [
     */
     'frontend_url' => rtrim(env('FRONTEND_URL', 'http://localhost/makueni-west'), '/'),
 
+    // Where people sign in - in sign-in details messages (Settings, S6d) and account emails.
+    'login_url' => env('APP_LOGIN_URL', rtrim(env('FRONTEND_URL', 'http://localhost/makueni-west'), '/').'/authentication/login'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

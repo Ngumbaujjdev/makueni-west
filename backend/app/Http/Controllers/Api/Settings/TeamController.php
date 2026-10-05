@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Settings;
 
 use App\Actions\Users\AddPersonToPlace;
+use App\Actions\Users\SendSignInDetails;
 use App\Models\Territory;
 use App\Models\User;
 use App\Models\UserTerritoryAssignment;
@@ -63,7 +64,7 @@ class TeamController extends SettingsController
     }
 
     /** POST /settings/team - {firstname, lastname, email?, phone?, role_id} */
-    public function store(Request $request, AddPersonToPlace $add, Settings $settings): JsonResponse
+    public function store(Request $request, AddPersonToPlace $add, Settings $settings, SendSignInDetails $send): JsonResponse
     {
         $place = $this->place($request);
         if ($place instanceof JsonResponse) {
@@ -79,6 +80,8 @@ class TeamController extends SettingsController
             'email' => ['nullable', 'email', 'max:255', 'required_without:phone'],
             'phone' => ['nullable', 'string', 'max:30', 'required_without:email'],
             'role_id' => ['required', 'integer', Rule::in($grantable->pluck('id')->all())],
+            'send' => ['sometimes', 'array'],
+            'send.*' => ['in:sms,email'],
         ], [
             'role_id.in' => "You can only give roles below your own at {$place->name}.",
             'email.required_without' => 'Give an email address or a phone number.',
@@ -100,10 +103,16 @@ class TeamController extends SettingsController
         $name = trim("{$result['user']->firstname} {$result['user']->lastname}");
         $settings->audit($place, self::SECTION, [$name => ['old' => null, 'new' => $role->name]], $request->user(), 'settings.team');
 
+        // S6d: their sign-in details by SMS / email, the way this place's messages go.
+        $delivery = $result['credentials'] && ! empty($data['send'])
+            ? $send($result['user'], $place, $role->name, $result['credentials'], $data['send'], $request->user())
+            : [];
+
         return $this->ok([
             'person' => $this->person($result['assignment']->fresh(['user', 'role']), $request, $place),
             'existing' => $result['existing'],
             'credentials' => $result['credentials'],
+            'delivery' => $delivery,
             'team' => $this->payload($request, $place),
         ], $result['existing'] ? "{$name} already had an account - they're now on the team." : "{$name} is on the team.", 201);
     }
@@ -164,12 +173,13 @@ class TeamController extends SettingsController
      * new temporary password and a new PIN, so whoever knew the old details is
      * locked out; every existing sign-in ends.
      */
-    public function resetAccess(Request $request, int $assignment, Settings $settings): JsonResponse
+    public function resetAccess(Request $request, int $assignment, Settings $settings, SendSignInDetails $send): JsonResponse
     {
         [$place, $target, $error] = $this->target($request, $assignment);
         if ($error) {
             return $error;
         }
+        $channels = $request->validate(['send' => ['sometimes', 'array'], 'send.*' => ['in:sms,email']])['send'] ?? [];
         $user = $target->user;
         $password = AddPersonToPlace::temporaryPassword();
         $pin = AddPersonToPlace::temporaryPin();
@@ -191,9 +201,12 @@ class TeamController extends SettingsController
         $name = trim("{$user->firstname} {$user->lastname}");
         $settings->audit($place, self::SECTION, [$name => ['old' => 'sign-in details', 'new' => 'new code and temporary password']], $request->user(), 'settings.team');
 
+        $credentials = ['employee_code' => $code, 'temporary_password' => $password, 'pin' => $pin];
+
         return $this->ok([
             'person' => $this->person($target, $request, $place),
-            'credentials' => ['employee_code' => $code, 'temporary_password' => $password, 'pin' => $pin],
+            'credentials' => $credentials,
+            'delivery' => $channels ? $send($user, $place, $target->role?->name, $credentials, $channels, $request->user(), reset: true) : [],
         ], "New sign-in details for {$name}.");
     }
 
