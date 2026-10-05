@@ -43,3 +43,6 @@ Schedule::call(fn () => \Illuminate\Support\Facades\Cache::forever(\App\Support\
 // Monthly reports: a reminder 3 days before the due day, on it, and 3 days
 // after - in the app and by SMS. docs/specs/monthly-reports-spec.md.
 Schedule::command('reports:remind')->dailyAt('08:00')->timezone('Africa/Nairobi');
+
+// Messages scheduled for later go out when they're due. docs/specs/messages-spec.md.
+Schedule::command('messages:send-scheduled')->everyMinute()->withoutOverlapping();
