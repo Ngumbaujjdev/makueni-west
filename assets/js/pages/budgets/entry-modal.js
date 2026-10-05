@@ -169,7 +169,7 @@ const BudgetsEntryModal = (function () {
   }
 
   /** Open the window for a budget (and optionally an entry to change). */
-  async function open({ budgetId, direction = "out", entry = null, lineId = null, onSaved = null } = {}) {
+  async function open({ budgetId, direction = "out", entry = null, lineId = null, onSaved = null, activityId = null } = {}) {
     mount();
     const [detail, form] = await Promise.all([BudgetsAPI.get(budgetId), BudgetsAPI.formFor(budgetId)]);
     if (!detail.ok) {
@@ -191,7 +191,8 @@ const BudgetsEntryModal = (function () {
     }
     // Opened from a line's page, the line is already chosen (and its side with it).
     const lineSide = lineId && (inBudget.in.some((l) => l.line_id === lineId) ? "in" : inBudget.out.some((l) => l.line_id === lineId) ? "out" : null);
-    ctx = { budget: detail.data.budget, lines: inBudget, extra, entry, lineId, direction: entry?.direction || lineSide || direction, onSaved, deductions: detail.data.deductions || [] };
+    // activityId: opened from an event's page - the money is tagged with the event (docs/specs/events-initiatives-spec.md).
+    ctx = { budget: detail.data.budget, lines: inBudget, extra, entry, lineId, activityId, direction: entry?.direction || lineSide || direction, onSaved, deductions: detail.data.deductions || [] };
     fill(entry);
     modal.show();
   }
@@ -360,6 +361,7 @@ const BudgetsEntryModal = (function () {
       counterparty: document.getElementById("entryCounterparty").value.trim() || null,
       reference: document.getElementById("entryReference").value.trim() || null,
       method: methodBtn?.dataset.value || null,
+      ...(ctx.activityId && !ctx.entry ? { activity_id: ctx.activityId } : {}),
     };
     const el = document.getElementById(MODAL_ID);
     el.classList.add("is-busy");

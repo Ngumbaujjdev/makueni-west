@@ -828,6 +828,8 @@ const AttendanceFormShared = (function () {
       gathering_type_id: null,
       event_name: null,
       notes: document.getElementById("attendanceNotes").value.trim() || null,
+      // Opened from an event's page: the record is tagged with the event (docs/specs/events-initiatives-spec.md).
+      ...(currentConfig.activityId ? { activity_id: currentConfig.activityId } : {}),
     };
     GROUPS.forEach((g) => {
       const v = document.getElementById(g.id).value;
