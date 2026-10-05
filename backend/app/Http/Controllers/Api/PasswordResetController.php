@@ -263,7 +263,16 @@ class PasswordResetController extends Controller
     public function changeOwnPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            // Asked again so an open, unattended session can't change it.
+            'current_password' => ['required', 'string', function ($attribute, $value, $fail) use ($request) {
+                if (! Hash::check((string) $value, $request->user()->password)) {
+                    $fail('That is not your current password.');
+                }
+            }],
             'new_password' => 'required|string|min:'.PasswordPolicy::min().'|confirmed',
+        ], [
+            'new_password.min' => 'Use at least :min characters.',
+            'new_password.confirmed' => 'The two new passwords do not match.',
         ]);
 
         if ($validator->fails()) {

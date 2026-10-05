@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Jobs\SendPasswordChangedNotification;
 use App\Jobs\SendSupportEmail;
 use App\Models\User;
+use App\Rules\UniquePhone;
 use App\Support\PasswordPolicy;
+use App\Support\Phone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -182,7 +184,12 @@ class AuthController extends Controller
             'firstname' => 'nullable|string|max:255',
             'lastname' => 'nullable|string|max:255',
             'username' => 'nullable|string|unique:users,username,'.$user->id,
-            'phone' => 'nullable|string|max:20',
+            // One stored form (+254…) and no two people on one number (S6a).
+            'phone' => ['nullable', 'string', 'max:20', new UniquePhone($user->id), function ($attribute, $value, $fail) {
+                if ($value && ! Phone::kenyaMobile($value)) {
+                    $fail('Enter a Kenyan mobile number, e.g. 0712 345 678.');
+                }
+            }],
             'position' => 'nullable|string|max:255',
             'email' => 'nullable|email|unique:users,email,'.$user->id,
             'current_password' => 'required_with:password|string',
@@ -203,6 +210,9 @@ class AuthController extends Controller
                 'position',
                 'phone',
             ]))->filter()->toArray();
+            if (isset($updateData['phone'])) {
+                $updateData['phone'] = Phone::kenyaMobile($updateData['phone']);
+            }
 
             // Handle password change
             if ($request->filled('password')) {
@@ -322,11 +332,12 @@ class AuthController extends Controller
             $query->where('created_at', '>=', $fromDate);
         }
         if ($toDate) {
-            $query->where('created_at', '<=', $toDate);
+            // A date means the whole of that day.
+            $query->whereDate('created_at', '<=', $toDate);
         }
 
-        // Apply limit (max 100)
-        $limit = min($limit, 100);
+        // Apply limit (max 500 - the profile page pages through them)
+        $limit = min((int) $limit, 500);
 
         $audits = $query->orderBy('created_at', 'desc')
             ->limit($limit)
@@ -385,7 +396,7 @@ class AuthController extends Controller
         try {
             $user = User::findOrFail($userId);
 
-            $loginHistory = $user->getLoginAuditHistory();
+            $loginHistory = $user->getLoginAuditHistory(min((int) $request->input('limit', 20), 200));
 
             return successResponse('Login history retrieved successfully', $loginHistory);
         } catch (\Exception $e) {
