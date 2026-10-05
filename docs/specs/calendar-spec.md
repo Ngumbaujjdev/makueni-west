@@ -2,7 +2,7 @@
 
 One **Calendar** for each church, region and the diocese, built once and inherited like Budgets and Settings. Each place sees its own events and everything above it. At the top sits the **CCI calendar**: the national calendar of Christian Church International Kenya, which global admins type in or import each year. Every place sees it, marked as a CCI calendar event.
 
-**Status:** C1 (data, API, permissions, menu, CCI import) and C2 (the page) done 2026-10-05; C3 (Church life on the calendar) in progress. Decided with the owner:
+**Status:** C1 (data, API, permissions, menu, CCI import) and C2 (the page) done 2026-10-05; C3 (Church life on the calendar) done the same day. Decided with the owner:
 - only **global admins** manage the CCI calendar;
 - CCI events are **typed in or imported from an Excel/CSV file**;
 - **every level** adds its own events from the first build.
@@ -159,6 +159,14 @@ The calendar also shows what the other modules already know, so nothing is typed
 - A right column with **Coming up** (the next 7 days) and **Due soon** (due dates in the next 30 days, late ones first), each item opening its page.
 - **Download (.ics)** for the shown range.
 
+### C3 as built
+- `App\Services\Calendar\LifeFeed` reads the sources; `Calendar::occurrences()` takes `sources` (default: calendar only, so older callers are unchanged) and merges them. `App\Services\Calendar\Ics` writes the file. One `feed()` in the controller serves the page and the download.
+- Choosing a calendar **kind** (Conference, Meeting...) narrows the feed to calendar events, since a kind belongs to them.
+- **KPI cards** now count calendar events, events and initiative sessions (not the weekly services or due dates), so "this month" matches what happens.
+- **Colours:** due dates gold, late ones red, services pink, everything else its layer's colour; drafts dashed with a "Draft" badge.
+- The side column asks for 90 days back to 30 ahead: late due dates first, then the next 30 days; Coming up is the next 7 days without due dates.
+- Tests: `tests/Feature/Calendar/CalendarLifeTest.php` (4).
+
 ## Acceptance Criteria
 
 ### C1: data, API, CCI management
@@ -179,8 +187,8 @@ The calendar also shows what the other modules already know, so nothing is typed
 - [ ] No page errors; the phone width works.
 
 ### C3: Church life on the calendar
-- [ ] The feed merges calendar events, events, initiative sessions, services and due dates, each with its `source` and `url`; `sources[]` narrows it.
-- [ ] A church sees an event the region opened to everyone below, but not another region's; drafts and cancelled events of others never show; a role without Events/Initiatives read gets none of those.
-- [ ] Services repeat weekly from the service times; due dates come from the share rows (pending vs late) and a missing next-month budget, only for our own place.
-- [ ] `/calendar/ics` returns a valid VCALENDAR with one VEVENT per item.
-- [ ] The page shows the Show chips, Coming up, Due soon and the download; clicking an item opens its page; no console errors; light and dark; 390 px.
+- [x] The feed merges calendar events, events, initiative sessions, services and due dates, each with its `source` and `url`; `sources[]` narrows it.
+- [x] A church sees an event the region opened to everyone below, but not another region's; drafts and cancelled events of others never show; a role without Events/Initiatives read gets none of those.
+- [x] Services repeat weekly from the service times; due dates come from the share rows (pending vs late) and a missing next-month budget, only for our own place.
+- [x] `/calendar/ics` returns a valid VCALENDAR with one VEVENT per item.
+- [x] The page shows the Show chips, Coming up, Due soon and the download; clicking an item opens its page; no console errors; light and dark; 390 px.
