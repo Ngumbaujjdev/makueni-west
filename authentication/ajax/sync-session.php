@@ -29,6 +29,21 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+/** Add the flat keys the PHP pages read when only the nested shape was sent. */
+function normalizeCurrentRole($role)
+{
+    if (!is_array($role)) {
+        return $role;
+    }
+    $territory = is_array($role['territory'] ?? null) ? $role['territory'] : [];
+    $role['role_name'] = $role['role_name'] ?? ($role['role']['name'] ?? null);
+    $role['territory_id'] = $role['territory_id'] ?? ($territory['id'] ?? null);
+    $role['territory_name'] = $role['territory_name'] ?? ($territory['name'] ?? null);
+    $role['territory_type'] = $role['territory_type'] ?? ($territory['territory_type'] ?? ($role['territory_scope'] ?? null));
+
+    return $role;
+}
+
 try {
     // Get JSON input
     $input = file_get_contents('php://input');
@@ -52,7 +67,12 @@ try {
     $_SESSION['user'] = $data['user'];
     $_SESSION['permissions'] = $data['permissions'];
     $_SESSION['territorial_roles'] = $data['territorial_roles'];
-    $_SESSION['current_role'] = $data['current_role'];
+    // The role arrives flat ({role_name, territory_name, ...}) from a fresh
+    // login, but nested ({role: {name}, territory: {...}}) from
+    // auth-helpers.js's background refresh and switch-role. The header and
+    // sidebar read the flat keys, so the nested shape made them fall back to
+    // "Member" a few minutes after signing in. Store both shapes.
+    $_SESSION['current_role'] = normalizeCurrentRole($data['current_role']);
     $_SESSION['last_activity'] = time();
     $_SESSION['login_time'] = time();
     $_SESSION['is_authenticated'] = true;
