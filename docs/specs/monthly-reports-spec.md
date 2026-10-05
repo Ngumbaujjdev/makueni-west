@@ -2,7 +2,7 @@
 
 Part of the **Church life** plan (2026-10-05), L4. Each church writes a short report every month and sends it to its region; each region writes its own and sends it to the diocese. The figures are **filled in for you** from what is already recorded (Demographics, Attendance, Budgets, Events and Initiatives); the pastor adds what only they know. Those above **see and comment**. Nothing is approved or sent back (decided with the owner).
 
-**Status:** planned 2026-10-05; L4a (backend) done the same day.
+**Status:** planned 2026-10-05; L4a (backend) and L4b (pages) done the same day.
 - **L4a:** data, API, figures, reminders, reports, permissions and menu (this PR).
 - **L4b:** the pages.
 
@@ -57,7 +57,7 @@ All routes are under `auth:sanctum` and the acting role. Responses are `{success
 | Method | Path | Notes | Permission |
 |---|---|---|---|
 | GET | `/monthly-reports?year=` | The 12 months: status (`sent`, `seen`, `draft`, `not_started`, `late`), due date, comments, plus the year's figures (sent on time, late, the current month's due-in days) | `{L}.reports.monthly.read` |
-| GET | `/monthly-reports/{year}/{month}` | The report (or a blank one), live figures while a draft, comments, attachments, `can` | read |
+| GET | `/monthly-reports/{year}/{month}` | The report (or a blank one), live figures while a draft, the comment `thread` (`comments` is its count), attachments, `can` | read |
 | PUT | `/monthly-reports/{year}/{month}` | Save the draft: the words, `pastoral_visits`, `outreach`. A sent report can't be changed | `.monthly.write` |
 | POST | `/monthly-reports/{year}/{month}/send` | Freezes the figures, status `sent`, tells the place above. Not before the month has started | `.monthly.send` |
 | POST | `/monthly-reports/{year}/{month}/reopen` | Back to a draft, while it is sent but not yet seen | `.monthly.send` |
@@ -117,6 +117,13 @@ The placeholders' unbuilt sub-pages are switched off.
 - The church "mute" seeder now leaves the module holding `/church/monthly-reports/` on, as it does for Budgets.
 - Tests: the new `Reporting` suite (`tests/Feature/Reporting/MonthlyReportsTest.php`, 8).
 
+### L4b as built
+- **Pages:** `includes/monthly-reports/` (`context.php`, `page.php`, `body-index.php`, `body-report.php`) with wrappers `{church,region,diocese}/monthly-reports/{index,report}.php`; scripts in `assets/js/pages/monthly-reports/` (`api.js`, `ui.js`, `index.js`, `report.js`).
+- **The list:** a church sees its year; a region gets two tabs (its own, and "Our churches' reports"); the diocese gets the reports below only, with a tile per region that filters the table. The table puts reports waiting to be read first.
+- **The report page:** our own draft opens as the four-step form (it saves as you type); anything else opens as the read view, with photos loaded through the API (they need the sign-in), the comments and "Where it is". "Take it back" and "Mark as seen" sit in the header.
+- **Months before monthly reports began** (`MONTHLY_REPORTS_FROM`, default `2026-09`) show as "Before reports" (`not_tracked`): never late, never chosen as the one to write next.
+- **The due day** is read once per request: only the diocese sets it.
+
 ## Acceptance Criteria
 
 ### L4a: backend
@@ -130,6 +137,6 @@ The placeholders' unbuilt sub-pages are switched off.
 - [x] `monthly.report` and `monthly.status` build; the seeder is idempotent and reuses the placeholders.
 
 ### L4b: pages
-- [ ] Church and region: Monthly reports (the year at a glance, KPI cards, comments), Write (stepper with the live figures and Send), and the report page.
-- [ ] Region and diocese: the reports below for a month, with tiles that filter, Mark as seen and Comment.
-- [ ] No console errors; light and dark; 390 px.
+- [x] Church and region: Monthly reports (the year at a glance, KPI cards, comments), Write (stepper with the live figures and Send), and the report page.
+- [x] Region and diocese: the reports below for a month, with tiles that filter, Mark as seen and Comment.
+- [x] No console errors; light and dark; 390 px.
