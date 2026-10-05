@@ -2,7 +2,7 @@
 
 One **Settings** page for each level: church, region and diocese. Each place fills in its own profile, service times, team, finance details and communication there, and the module settings (Budgets, Attendance, Demographics) live under it. The diocese's global admins also get the system settings: email and SMS, health, security, documents, access control, the audit log and maintenance.
 
-**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (PR #165); S2 done (PR #166); S3 done (PR #168); S4a done (PR #170, Email, SMS, System health); S4b done (PR #173, Security, Documents & PDF, Maintenance, Audit log, Access control); S5 done (PR #174, Payment details for regions and the diocese). **S6 (planned 2026-10-05; S6a done):** adding people safely, Communication for churches and regions, a message log with preview, and sending sign-in details. Still deferred: church payment details and a currency setting.
+**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (PR #165); S2 done (PR #166); S3 done (PR #168); S4a done (PR #170, Email, SMS, System health); S4b done (PR #173, Security, Documents & PDF, Maintenance, Audit log, Access control); S5 done (PR #174, Payment details for regions and the diocese). **S6 (planned 2026-10-05; S6a and S6b done):** adding people safely, Communication for churches and regions, a message log with preview, and sending sign-in details. Still deferred: church payment details and a currency setting.
 - **S0:** lock down the access-control APIs.
 - **S1:** the hub, Overview, Profile and Service times.
 - **S2:** Leadership & team.
@@ -243,6 +243,15 @@ Asked for on 2026-10-05:
   - Through the diocese: the From name is the place's display name, Reply-To is its reply-to, and SMS get its signature.
   - Own email is sent through a mailer built for that one send (`Mail::build`). Own SMS uses the place's Africa's Talking account through `Sms`.
 - **Test:** `POST /settings/communication/test {channel, to}` (update) sends through `PlaceMessenger`, so it tests the real path.
+
+**S6b as built:**
+- `comms.mode` is set at church, region and diocese and is lockable. At the diocese the Communication section shows only that choice and its lock. Fields that aren't inherited are hidden at levels that can't set them (`Settings::present`).
+- The registry's `show_if` (`['comms.mode' => 'own']`) shows the own email and SMS cards only when "own" is picked; `fields.js` hides a card once all its fields are hidden, and the rail lists only the cards on show.
+- The section's `extra` (`PlaceMessenger::channels`) feeds the **How your messages go out** card (`sections/communication.js`). It shows the From line, reply-to, SMS sender and signature as a live preview, which account each channel uses, whether it really sends, and notes for "locked by the diocese", "save to switch" and "own chosen but not filled in yet".
+- `Sms::sendWith($account, …)` sends with any account; `Sms::send()` is the diocese's.
+- `message_logs` gained `kind`, `via`, `from`, `reply_to`, `body`, `body_type`, `body_cleared_at` and `meta` here (used by S6c). `MessageLog::mask()` replaces secrets with `••••`.
+- **Account emails** (password and code resets, support) are logged by `LogSentEmail` with `via = system` and **no text**, because they can carry a private link. Emails sent through `PlaceMessenger` carry `X-MWD-Logged` and log themselves.
+- The rule `public_mail_host` (registered in `AppServiceProvider`) checks a place's mail server on save; `PlaceMessenger` checks it again just before connecting.
 
 ### S6c: message log with preview
 - **`message_logs` gains:**
