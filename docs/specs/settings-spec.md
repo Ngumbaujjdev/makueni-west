@@ -2,13 +2,18 @@
 
 One **Settings** page for each level: church, region and diocese. Each place fills in its own profile, service times, team, finance details and communication there, and the module settings (Budgets, Attendance, Demographics) live under it. The diocese's global admins also get the system settings: email and SMS, health, security, documents, access control, the audit log and maintenance.
 
-**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (PR #165); S2 done (PR #166); S3 done (PR #168); S4a done (PR #170, Email, SMS, System health); S4b done (PR #173, Security, Documents & PDF, Maintenance, Audit log, Access control); S5 done (Payment details for regions and the diocese). Deferred until something reads them: church payment details, a church/region Communication section, and a currency setting (see "S5 as built").
+**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (PR #165); S2 done (PR #166); S3 done (PR #168); S4a done (PR #170, Email, SMS, System health); S4b done (PR #173, Security, Documents & PDF, Maintenance, Audit log, Access control); S5 done (PR #174, Payment details for regions and the diocese). **S6 (planned 2026-10-05):** adding people safely, Communication for churches and regions, a message log with preview, and sending sign-in details. Still deferred: church payment details and a currency setting.
 - **S0:** lock down the access-control APIs.
 - **S1:** the hub, Overview, Profile and Service times.
 - **S2:** Leadership & team.
 - **S3:** the module settings move in. This waits for Budgets phase 6.
 - **S4:** the diocese's system settings.
 - **S5:** payment details for regions and the diocese (church payment details and a Communication section deferred until something reads them).
+- **S6:** adding people safely, and Communication with a message log (see "S6: Communication and adding people" below).
+  - **S6a:** a clearer "Add someone" window; phone and email are checked as you type, clashes are blocked, and phone numbers are unique across all users.
+  - **S6b:** a Communication section for churches and regions. They either use the diocese's email and SMS (view only, with their own reply-to, display name and SMS signature) or their own SMTP and Africa's Talking account. The diocese, or a region, can lock everyone onto the diocese's.
+  - **S6c:** a message log with preview at church, region and diocese.
+  - **S6d:** "Send sign-in details" by SMS or email when adding someone or resetting their access.
 - **Later:** message templates, notification switches, and leaders without a login.
 
 ## Principles
@@ -188,6 +193,79 @@ Subregions inherit settings but get no Settings page of their own.
   - A currency setting: every amount is KES.
   - The church/region Communication section: the system only sends account messages, from the diocese's Email/SMS settings.
   - These come with the first page or message that needs them.
+
+## S6: Communication and adding people
+
+Asked for on 2026-10-05:
+- the Add someone window needs placeholders and a clearer layout;
+- phone numbers and emails must not be shared between people;
+- a church or region can set up its own email and SMS, or use the diocese's (view only);
+- every email and SMS sent for a place is logged, with a preview.
+
+### S6a: adding people safely
+- **Phone numbers** are saved as `+254` followed by 9 digits.
+  - The window accepts 07…, 01…, 7…, 2547… and +2547…; anything that isn't a Kenyan mobile (7xx or 1xx) is refused.
+  - New column `users.phone_key` holds the last 9 digits and is **unique**. It's backfilled (no duplicates on 2026-10-05) and kept up to date by a `User` saving hook.
+  - The Users admin page (`UserController` store/update) refuses a number already in use.
+- **Check as you type:** `GET /settings/team/check?phone=&email=` (team.manage, 30 a minute) returns:
+  - `phone`: `{valid, normalized, error}`
+  - `email`: `{valid, error}`
+  - `match`: `{name, roles: [{role, place}], phone_masked, email_masked, on_this_team}` or null
+  - `conflict`: a message, or null
+- **Blocked**, on the check and again on `POST /settings/team`:
+  - the phone is one person's and the email another's;
+  - the email is someone's and the phone given isn't theirs (when they have one);
+  - the person is already on this team;
+  - the phone isn't a Kenyan mobile.
+- **Privacy:** a match shows only the name, their roles and places, and the phone and email masked (`+254 7•• ••• 678`, `j•••@gmail.com`).
+- **The window** has three tinted panels: Who they are (first and last name, with placeholders), How to reach them (a fixed `+254` prefix on the phone, and email), and Their role. Each role option shows a one-line description from `config('settings.role_blurbs')`, since most roles have no description in the table. The save button stays off until the form is valid.
+
+### S6b: Communication (church and region)
+- **Section** `communication` in the Messages group, at **church, region and diocese**, with read/update permissions (granted like the other sections; treasurers read).
+- **`comms.mode`:** `diocese` (default) or `own`.
+  - It's lockable. At the diocese the section shows only this setting and its lock, so the diocese can keep every place on its own email and SMS.
+  - A region can lock it for its churches.
+- **Always available** to the church or region (own, never inherited):
+  - `comms.display_name`: the From name, defaulting to the place's name;
+  - `comms.reply_to`: an email;
+  - `comms.sms_signature`: up to 30 characters, added to the end of each SMS.
+- **With `own`** (never inherited; secrets encrypted):
+  - email: `comms.mail.host`, `.port` (25, 465, 587 or 2525), `.scheme`, `.username`, `.password`, `.from_address`;
+  - SMS: `comms.sms.username`, `.api_key`, `.sender_id`, `.sandbox`.
+  - The form shows these cards only when `own` is chosen (registry `show_if`).
+- **With the diocese's (view only):** a card shows what's used: the diocese's from address, SMS sender ID and whether each works. Passwords and keys are never shown.
+- **Safety:**
+  - a non-global user's mail server must not resolve to a loopback, private or link-local address;
+  - test sends are limited to 5 a minute;
+  - own settings are never inherited by the places below.
+- **Sending:** `App\Services\Messaging\PlaceMessenger`
+  - `email(place, to, subject, html, kind, secrets)` and `sms(place, to, text, kind, secrets)` pick the place's own account when `own` is set and complete, otherwise the diocese's.
+  - Through the diocese: the From name is the place's display name, Reply-To is its reply-to, and SMS get its signature.
+  - Own email is sent through a mailer built for that one send (`Mail::build`). Own SMS uses the place's Africa's Talking account through `Sms`.
+- **Test:** `POST /settings/communication/test {channel, to}` (update) sends through `PlaceMessenger`, so it tests the real path.
+
+### S6c: message log with preview
+- **`message_logs` gains:**
+  - `kind` (test, sign_in_details, password_reset, …), `via` (`diocese`, `own` or `system`);
+  - `from`, `reply_to`;
+  - `body` (capped at 200 KB), `body_type` (`html` or `text`), `body_cleared_at`;
+  - `meta` (json).
+  - `territory_id` is the place the message was sent for (null for system messages).
+- **Secrets are masked before saving:** a temporary password or sign-in code in a message is stored as `••••`, so a preview never shows it.
+- **Retention:** message text older than 90 days is cleared by a daily `messages:prune-bodies`; the row stays.
+- **API:**
+  - `GET /settings/messages?channel=&status=&territory=&from=&to=` (communication.read). A church sees its own; a region its own plus its churches'; the diocese everything, including system messages.
+  - `GET /settings/messages/{id}`: the full message with its body.
+  - `POST /settings/messages/{id}/resend` (update): failed messages only, and never sign-in details (those need Reset access).
+- **Page:** a Messages card in Communication, with:
+  - KPI cards (sent this month with a sparkline and delta, failed, emails vs SMS, last sent);
+  - the shared filter bar and DataTable;
+  - a preview window: emails in a sandboxed iframe with From, To, Reply-to and Subject above; SMS as a phone bubble with the sender ID and SMS count; delivery details and the error.
+
+### S6d: sending sign-in details
+- Add someone and Reset access get "Send their sign-in details by: SMS / Email". Both are ticked when the person has that contact.
+- The message goes out through `PlaceMessenger` for the place (`kind = sign_in_details`), with the code and temporary password masked in the log.
+- The response says what was sent, or why not. The credentials are still shown once on screen.
 
 ## Resolution
 
@@ -386,6 +464,27 @@ S4a (PR #170) covers email, SMS and Health; S4b covers the rest.
 - [ ] Maintenance: a notice shows on every signed-in page until it's cleared; each tool runs straight away and is written to the audit log; an unknown tool is 404.
 - [ ] Audit log: every place's changes are listed with who, where and the old and new values, with secrets masked.
 - [ ] Access control: a role with one of the System Administration read permissions sees the section with only those pages; the seeder moves System Administration under Settings as Access control without renaming any permission.
+
+### S6a: adding people safely
+- [ ] `0712 345 678`, `712345678`, `254712345678` and `+254 712 345 678` are saved as `+254712345678`; `0201234567` and `12345` are refused.
+- [ ] A phone already used by someone gives a match with masked contacts; on this team, adding is refused.
+- [ ] A phone belonging to A with an email belonging to B is refused on the check and on save.
+- [ ] Two users can never share a phone (`phone_key` unique), including through the Users admin page.
+
+### S6b: Communication
+- [ ] With `diocese`, the section is view only for email and SMS, and the display name, reply-to and signature are used on messages sent for the place.
+- [ ] With `own`, a test email goes through the place's SMTP server and a test SMS through its Africa's Talking account; secrets are never returned.
+- [ ] The diocese can lock `comms.mode`; a church then can't choose `own` (422).
+- [ ] A mail server on 127.0.0.1, 10.x, 192.168.x or 169.254.x, or a port other than 25/465/587/2525, is refused for a church.
+
+### S6c: message log
+- [ ] Every message sent for a place is logged with its body; secrets in it are stored as `••••`.
+- [ ] A church sees only its own messages, a region its own and its churches', the diocese all.
+- [ ] Message text older than 90 days is cleared; the row stays.
+- [ ] Resend works for a failed message, but not for sign-in details.
+
+### S6d: sending sign-in details
+- [ ] Adding someone with "SMS" ticked sends an SMS through the place's channel, and the log shows it with the password masked.
 
 ### S5: payment details
 - [ ] A church's Contributions page shows how to pay each place its share goes to (M-Pesa and bank details, and the note), with `{code}` in the account number replaced by the church's code. A place with nothing filled in shows "hasn't added its payment details yet".
