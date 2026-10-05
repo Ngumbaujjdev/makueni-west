@@ -56,7 +56,7 @@ final class MonthlyStatusReport extends MonthlyReportBase
         $levels = $place->territory_type === TerritoryType::DIOCESE ? ['region', 'church'] : ['church'];
         $places = collect($levels)->flatMap(fn ($l) => $rollup->placesBelow($place, $l));
         $reports = MonthlyReport::whereIn('territory_id', $places->pluck('id')->all() ?: [0])->where('year', $year)->where('month', $month)->get()->keyBy('territory_id');
-        $words = ['sent' => 'Sent', 'seen' => 'Seen', 'draft' => 'Started', 'not_started' => 'Not started'];
+        $words = ['sent' => 'Sent', 'seen' => 'Seen', 'draft' => 'Started', 'not_started' => 'Not started', 'not_tracked' => 'Before reports'];
 
         $rows = $places->map(function ($p) use ($reports, $service, $year, $month, $words) {
             $r = $reports->get($p['id']);

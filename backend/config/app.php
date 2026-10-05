@@ -74,6 +74,10 @@ return [
     // Where people sign in - in sign-in details messages (Settings, S6d) and account emails.
     'login_url' => env('APP_LOGIN_URL', rtrim(env('FRONTEND_URL', 'http://localhost/makueni-west'), '/').'/authentication/login'),
 
+    // The first month monthly reports are asked for (docs/specs/monthly-reports-spec.md):
+    // months before it show as "Before reports", never late.
+    'monthly_reports_from' => env('MONTHLY_REPORTS_FROM', '2026-09'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

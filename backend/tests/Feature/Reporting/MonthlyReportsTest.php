@@ -50,6 +50,7 @@ class MonthlyReportsTest extends TestCase
         // "Today" is 2 May 2026 - the roles have to have started by then.
         \App\Models\UserTerritoryAssignment::query()->update(['effective_from' => '2020-01-01']);
         $this->travelTo(now()->setDate(2026, 5, 2)->setTime(10, 0));
+        config(['app.monthly_reports_from' => '2026-01']);
     }
 
     private function give(User $user, string $level, array $abilities): void
@@ -124,7 +125,8 @@ class MonthlyReportsTest extends TestCase
         $this->assertSame(['My Church', 'Other Church'], array_column(array_column($below['rows'], 'place'), 'name'));
         $this->assertSame(1, $below['counts']['waiting']);
         $this->getJson("/api/monthly-reports/{$id}")->assertOk()->assertJsonPath('data.can.seen', true)->assertJsonPath('data.can.write', false);
-        $this->postJson("/api/monthly-reports/{$id}/comments", ['body' => 'Praying for you.'])->assertCreated();
+        $this->postJson("/api/monthly-reports/{$id}/comments", ['body' => 'Praying for you.'])->assertCreated()
+            ->assertJsonPath('data.comments', 1)->assertJsonPath('data.thread.0.body', 'Praying for you.')->assertJsonPath('data.thread.0.from_above', true);
         $this->postJson("/api/monthly-reports/{$id}/seen")->assertOk()->assertJsonPath('data.status', 'seen');
         $titles = $this->pastor->fresh()->notifications->pluck('data.body');
         $this->assertTrue($titles->contains('Region A has read it.'));
@@ -163,6 +165,12 @@ class MonthlyReportsTest extends TestCase
         $this->assertFalse($m[3]['on_time']);
         $this->assertFalse($m[6]['open']);
         $this->assertSame(4, $data['figures']['next']['month']);
+
+        // Months before monthly reports began aren't late.
+        config(['app.monthly_reports_from' => '2026-03']);
+        $m = collect($this->getJson('/api/monthly-reports?year=2026')->json('data.months'))->keyBy('month');
+        $this->assertSame(['not_tracked', false], [$m[2]['status'], $m[2]['late']]);
+        $this->assertSame('sent', $m[3]['status']);
     }
 
     public function test_attachments(): void
