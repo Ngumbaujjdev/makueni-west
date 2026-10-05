@@ -105,6 +105,7 @@ Per level (`church`, `region`, `diocese`):
 - church: reuses the placeholder "Church Reports" (M37);
 - region: reuses "Regional Reporting" (M25);
 - diocese: a new module in `diocese-overview`.
+- **Write our report** (`/{L}/monthly-reports/report.php`, church and region) is the way in for writers (2026-10-05). `{L}.reports.monthly.write` is linked to it. With no month in the link, the page opens the report due next (else the latest still open), as the list's Write button does. Each permission is linked to the page it opens, so the menu shows the way in only to roles that can use it.
 
 The placeholders' unbuilt sub-pages are switched off.
 

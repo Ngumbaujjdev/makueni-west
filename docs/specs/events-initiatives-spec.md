@@ -149,6 +149,7 @@ Menu (`ActivitiesAccessSeeder`, DatabaseSeeder phase 31):
   - diocese `/diocese/events/`
 - It reuses the placeholder modules: diocese "Diocese Events Management" (M14) and region "Regional Programs" (M22). Each is renamed **Events**, re-pointed, and its unbuilt sub-pages are switched off.
 - A church Events module is created in `church-programs`.
+- **New event** (`/{L}/events/new.php`) is the way in for whoever can add one (2026-10-05). `{L}.events.events.manage` is linked to it, and read / register / below stay on Events. Initiatives get **New initiative** the same way. Each permission is linked to the page it opens, so the menu shows the way in only to roles that can use it.
 
 ### L1b as built
 - **Code:**
