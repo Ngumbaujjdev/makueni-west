@@ -2,7 +2,7 @@
 
 One **Calendar** for each church, region and the diocese, built once and inherited like Budgets and Settings. Each place sees its own events and everything above it. At the top sits the **CCI calendar**: the national calendar of Christian Church International Kenya, which global admins type in or import each year. Every place sees it, marked as a CCI calendar event.
 
-**Status:** planned 2026-10-05; C1 (data, API, permissions, menu, CCI import) done. Decided with the owner:
+**Status:** C1 (data, API, permissions, menu, CCI import) and C2 (the page) done 2026-10-05. Decided with the owner:
 - only **global admins** manage the CCI calendar;
 - CCI events are **typed in or imported from an Excel/CSV file**;
 - **every level** adds its own events from the first build.
@@ -113,6 +113,22 @@ All routes are under `auth:sanctum`, and the acting place comes from `X-Assignme
 - **CCI national calendar** (global admins, at the diocese): a second section tab with:
   - the year's CCI events in a DataTable, with Add, Edit and Delete;
   - **Import** with a template download: upload the file, check each row (errors and duplicates shown), then save the valid rows.
+
+### C2 as built
+- `assets/js/pages/calendar/`:
+  - `api.js` (`CalendarAPI`; the template downloads through `fetch` because it needs the sign-in header);
+  - `event-modal.js` (`CalendarMeta` for layer colours and kind icons, `CalendarEventModal.details/form`);
+  - `calendar.js` (the page);
+  - `cci.js` (the CCI tab).
+- **Layer chips by level:**
+  - church: CCI · Diocese · Region · Ours;
+  - region: CCI · Diocese · Ours · Churches below;
+  - diocese: CCI · Ours · Churches below.
+  - "Below" starts off; the view, date, layers and kind are kept in the URL.
+- **Occurrences carry `base`** (the event's own dates and times) when editable, so editing a repeating event starts from the event, not the occurrence clicked.
+- **`CalendarEvent` is in the morph map** (`calendar_event`). Without it the audit failed on the first save in a web request. Console tests don't audit, so `test_events_are_audited` switches auditing on.
+- **The import's save is one transaction:** all the ready rows or none.
+- The old `diocese/calendar/{views,management,sync,meetings,reports}.php` stubs redirect to the calendar.
 
 ## Acceptance Criteria
 
