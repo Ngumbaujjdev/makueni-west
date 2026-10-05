@@ -14,7 +14,7 @@ const SettingsMessages = (function () {
 
   const STATUS = { sent: ["Sent", "success"], failed: ["Failed", "danger"], logged: ["Log only", "warning"] };
   const VIA = { diocese: ["Diocese", "primary"], own: ["Own account", "success"], system: ["System", "secondary"] };
-  const KINDS = { test: "Test", sign_in_details: "Sign-in details", account: "Account email", resend: "Sent again" };
+  const KINDS = { test: "Test", sign_in_details: "Sign-in details", account: "Account email", resend: "Sent again", broadcast: "Message", report_reminder: "Report reminder" };
 
   let host = null;
   let data = null;

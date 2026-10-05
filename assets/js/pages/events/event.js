@@ -43,6 +43,7 @@
             <ul class="dropdown-menu dropdown-menu-end"><li><button class="dropdown-item" data-act="money-in"><i class="ri-arrow-down-circle-line me-2 text-success"></i>Income (offerings, fees)</button></li><li><button class="dropdown-item" data-act="money-out"><i class="ri-arrow-up-circle-line me-2 text-danger"></i>Expenses (spending)</button></li></ul></div>`
         : "",
       can.record_attendance ? `<button class="btn btn-outline-primary" data-act="attendance"><i class="ri-user-follow-line me-1"></i>Record attendance</button>` : "",
+      inviteLink(),
       ev.relation !== "invited" ? `<button class="btn btn-outline-primary" data-report-key="activity.summary" data-module="events" data-activity-id="${ev.id}"><i class="ri-download-2-line me-1"></i>Export</button>` : "",
       more ? `<div class="dropdown"><button class="btn btn-light btn-icon" data-bs-toggle="dropdown" aria-label="More"><i class="ri-more-2-fill"></i></button><ul class="dropdown-menu dropdown-menu-end">${more}</ul></div>` : "",
     ].join("");
@@ -67,6 +68,23 @@
         </div>
         ${heroNote()}
       </div>`;
+  }
+
+  /** "Invite by message": the composer, filled in with the places it's open to (never sideways, so not for a church). */
+  function inviteLink() {
+    const ev = state.ev;
+    if (!CTX.can.message || ev.relation !== "own" || CTX.level === "church" || ev.status !== "published" || ev.open_to === "own") return "";
+    const when = new Date(ev.starts_at).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+    const params = new URLSearchParams({
+      roles: "Senior Pastor" + (CTX.level === "diocese" ? ",Regional Overseer" : ""),
+      levels: CTX.level === "diocese" ? "region,church" : "church",
+      channel: "sms",
+      subject: ev.title,
+      body: `Dear {name}, you're invited to ${ev.title} on ${when}${ev.venue ? ` at ${ev.venue}` : ""}.${ev.registration_open ? ` Please register ${INIT ? "to join" : "your numbers"} in ${N.Many}.` : ""} - {sender}`,
+    });
+    if (ev.open_to === "selected" && ev.invitees?.length) params.set("places", ev.invitees.map((p) => p.id).join(","));
+    else params.set("scope", "all");
+    return `<a class="btn btn-outline-primary" href="${CTX.siteUrl}/${CTX.level}/messages/new?${params}"><i class="ri-chat-3-line me-1"></i>Invite by message</a>`;
   }
 
   function heroNote() {

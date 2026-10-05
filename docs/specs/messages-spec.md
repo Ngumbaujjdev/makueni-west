@@ -2,7 +2,7 @@
 
 Part of the **Church life** plan (2026-10-05), L5. A church, region or the diocese sends a message (by SMS, email, or just in the app) to its own leaders and to the leaders of the places below it, plus numbers or emails typed in. Everyone with a login gets it in their **Inbox** and the bell, and can **reply**. Nothing goes upwards except a reply.
 
-**Status:** planned 2026-10-05; L5a (backend) done the same day.
+**Status:** planned 2026-10-05; L5a (backend) and L5b (pages) done the same day.
 - **L5a:** data, recipients, sending, scheduling, the inbox, replies, saved messages, permissions and menu (this PR).
 - **L5b:** the pages.
 
@@ -105,6 +105,21 @@ The placeholders' unbuilt sub-pages are switched off.
 - **The summary** counts the places picked ("Senior Pastors of 2 churches in Region A"), whether or not each has someone in that role.
 - Tests: the new `Communications` suite (`tests/Feature/Communications/MessagesTest.php`, 7).
 
+### L5b as built
+- **Pages:** `includes/messages/` (`context.php`, `page.php`, `body-{index,new,message}.php`) with wrappers `{church,region,diocese}/messages/{index,new,message}.php`; scripts in `assets/js/pages/messages/` (`api.js`, `ui.js`, `index.js`, `new.js`, `message.js`).
+- **Messages page:** section tabs **Inbox** (everyone), **Sent** and **Saved messages** (those who send). The Inbox reads in place, chat-style, with a reply box; `?open=` opens one (the bell links there).
+- **Send a message:**
+  - who: role chips here; below: None / All / By subregion or region / Pick places, the roles there, and the places' own contacts; typed entries;
+  - the message: the channel, a part counter, `{name}` / `{place}` / `{sender}`, and "Use a saved message";
+  - a live preview (reach, by SMS / email / app, names, a phone bubble and an email card);
+  - Send now or Schedule, with a confirmation naming who it goes to.
+  
+  It opens filled in from the URL (`scope`, `places`, `roles`, `levels`, `channel`, `subject`, `body`, `template`).
+- **"Invite by message"** sits on a published event or initiative of a region or the diocese that reaches other places. A church has none: it can't message sideways. **"Remind them"** sits on the late notice in the reports below. Both need `.messages.send`.
+- **Without a subject,** the Inbox title is the start of the message as the person reads it, with their name filled in.
+- **The Settings message log** names the new kinds: "Message" and "Report reminder".
+- **A queue worker** started before this code exists must be restarted (`php artisan queue:restart`) to know the new job.
+
 ## Acceptance Criteria
 
 ### L5a: backend
@@ -117,6 +132,6 @@ The placeholders' unbuilt sub-pages are switched off.
 - [x] The seeder adds Messages per level, reuses the placeholders and stays idempotent.
 
 ### L5b: pages
-- [ ] Inbox, Send a message (who, message, live count and preview), Sent with each message's page, Saved messages.
-- [ ] "Invite by message" on an event or initiative, and "Remind" on the reports below, open the composer filled in.
-- [ ] No console errors; light and dark; 390 px.
+- [x] Inbox, Send a message (who, message, live count and preview), Sent with each message's page, Saved messages.
+- [x] "Invite by message" on an event or initiative, and "Remind" on the reports below, open the composer filled in.
+- [x] No console errors; light and dark; 390 px.

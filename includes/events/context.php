@@ -32,11 +32,13 @@ function eventsPageContext(string $level, string $page, string $kind = 'event'):
         'kind' => $kind,
         'baseUrl' => SITE_URL . "/{$level}/{$module}",
         'homeUrl' => SITE_URL . "/{$level}/dashboard",
+        'siteUrl' => SITE_URL,
         'place' => $place,
         'can' => [
             'manage' => $can("{$module}.{$module}.manage"),
             'register' => $can("{$module}.{$module}.register"),
             'below' => $level !== 'church' && $can("{$module}.below.read"),
+            'message' => $can('messages.messages.send'), // "Invite by message" (docs/specs/messages-spec.md)
         ],
         // What BudgetsUI expects (window.BUDGET_CTX) when the Record money window opens here.
         'budget' => [

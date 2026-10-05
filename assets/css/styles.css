@@ -37064,3 +37064,166 @@ a.mr-tile:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ==========================================================================
+   Messages (2026-10-05) - the Inbox, the composer, a sent message
+   (docs/specs/messages-spec.md)
+   ========================================================================== */
+.msg-list {
+  max-height: 70vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.msg-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: 0;
+  border-bottom: 1px solid var(--default-border);
+  background: transparent;
+  color: var(--default-text-color);
+}
+.msg-item:hover {
+  background: rgba(var(--primary-rgb), 0.04);
+}
+.msg-item.is-on {
+  background: rgba(var(--primary-rgb), 0.08);
+  box-shadow: inset 3px 0 0 rgb(var(--primary-rgb));
+}
+.msg-item strong {
+  font-size: 0.86rem;
+  color: var(--v2-heading);
+}
+.msg-item small {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.msg-item-subject,
+.msg-item-preview {
+  display: block;
+  font-size: 0.8rem;
+}
+.msg-item-subject {
+  font-weight: 600;
+  color: var(--v2-heading);
+}
+.msg-item-preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.msg-item.is-unread .msg-item-subject,
+.msg-item.is-unread strong {
+  font-weight: 800;
+}
+.msg-dot {
+  flex: 0 0 0.6rem;
+  width: 0.6rem;
+  height: 0.6rem;
+  margin-top: 0.4rem;
+  border-radius: 50%;
+  background: rgb(var(--primary-rgb));
+}
+.msg-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.msg-bubble {
+  max-width: 85%;
+  padding: 0.75rem 0.95rem;
+  border-radius: 0.9rem;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.msg-bubble.is-them {
+  align-self: flex-start;
+  border-bottom-left-radius: 0.25rem;
+  background: rgba(var(--primary-rgb), 0.1);
+  color: var(--v2-heading);
+}
+.msg-bubble.is-me {
+  align-self: flex-end;
+  border-bottom-right-radius: 0.25rem;
+  background: rgb(var(--primary-rgb));
+  color: #fff;
+}
+.msg-bubble.is-me small {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.7rem;
+  opacity: 0.85;
+}
+.msg-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+}
+.msg-who + .msg-who {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px dashed var(--default-border);
+}
+.msg-who .ev-sub {
+  margin-bottom: 0.65rem;
+}
+.msg-phone {
+  padding: 0.75rem;
+  border: 1px solid var(--default-border);
+  border-radius: 1.1rem;
+  background: rgba(var(--success-rgb), 0.05);
+}
+.msg-phone-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--v2-heading);
+}
+.msg-phone .msg-bubble {
+  max-width: 100%;
+  background: var(--custom-white);
+  border: 1px solid var(--default-border);
+  font-size: 0.85rem;
+}
+.msg-email {
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--default-border);
+  border-radius: 0.65rem;
+  font-size: 0.85rem;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.msg-email-head {
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--default-border);
+}
+.msg-email-head small {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgb(var(--primary-rgb));
+  text-transform: uppercase;
+}
+.msg-email-head strong {
+  color: var(--v2-heading);
+}
+.msg-saved-body {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 0.85rem;
+  white-space: pre-line;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+}
+/* A message's subject keeps its own capitals (card titles are otherwise title-cased). */
+.card-title.msg-subject {
+  text-transform: none;
+}

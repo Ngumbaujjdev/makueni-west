@@ -374,12 +374,14 @@ class MessagesController extends Controller
     private function inboxItem(MessageRecipient $r): array
     {
         $b = $r->batch;
+        $body = Broadcaster::fill($b->body, $r->name, null, $b->territory?->name ?? '');
 
         return [
             'id' => $r->id,
             'batch_id' => $b->id,
-            'subject' => $b->subject ?: Str::limit(Str::before($b->body, "\n"), 60),
-            'body' => Broadcaster::fill($b->body, $r->name, null, $b->territory?->name ?? ''),
+            // Without a subject, the start of the message - as this person reads it.
+            'subject' => $b->subject ?: Str::limit(Str::before($body, "\n"), 60),
+            'body' => $body,
             'from' => ['id' => $b->territory_id, 'name' => $b->territory?->name, 'type' => $b->territory?->territory_type?->value],
             'by' => $b->creator ? trim("{$b->creator->firstname} {$b->creator->lastname}") : null,
             'channel' => $b->channel,
