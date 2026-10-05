@@ -52,10 +52,10 @@ $breadcrumbs = [
                         <a href="#" class="btn btn-outline-primary d-none" id="openBudgetBtn"><i class="ri-wallet-3-line me-1"></i>Open budget</a>
                         <div class="btn-group d-none" id="recordGroup">
                             <button type="button" class="btn btn-primary" id="recordOutBtn"><i class="ri-add-line me-1"></i>Record money</button>
-                            <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Money in or out"></button>
+                            <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Income or expense"></button>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="javascript:void(0);" data-record="in"><i class="ri-arrow-down-circle-line text-success me-2"></i>Money in</a></li>
-                                <li><a class="dropdown-item" href="javascript:void(0);" data-record="out"><i class="ri-arrow-up-circle-line text-danger me-2"></i>Money out</a></li>
+                                <li><a class="dropdown-item" href="javascript:void(0);" data-record="in"><i class="ri-arrow-down-circle-line text-success me-2"></i>Income</a></li>
+                                <li><a class="dropdown-item" href="javascript:void(0);" data-record="out"><i class="ri-arrow-up-circle-line text-danger me-2"></i>Expenses</a></li>
                             </ul>
                         </div>
                     </div>
@@ -132,7 +132,7 @@ $breadcrumbs = [
                         <div class="card custom-card">
                             <div class="card-header">
                                 <div>
-                                    <div class="card-title">Money in by source</div>
+                                    <div class="card-title">Income by source</div>
                                     <span class="card-subtitle-text" id="sourceSub">Where the money received came from</span>
                                 </div>
                             </div>
@@ -159,7 +159,7 @@ $breadcrumbs = [
                             <div class="card-header justify-content-between flex-wrap gap-2">
                                 <div>
                                     <div class="card-title">Recent money</div>
-                                    <span class="card-subtitle-text">The latest money in and out</span>
+                                    <span class="card-subtitle-text">The latest income and expenses</span>
                                 </div>
                                 <a href="<?= $budgetCtx['baseUrl'] ?>/spending.php" class="btn btn-sm btn-outline-primary" id="seeAllLink">See all<i class="ri-arrow-right-line ms-1"></i></a>
                             </div>

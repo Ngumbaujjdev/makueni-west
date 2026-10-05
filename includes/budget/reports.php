@@ -19,7 +19,7 @@ $breadcrumbs = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title>Budget Reports - Makueni West Diocese</title>
-    <meta name="Description" content="Budget reports as PDF or Excel: summary, money in and out, and one budget's statement" />
+    <meta name="Description" content="Budget reports as PDF or Excel: summary, income and expenses, and one budget's statement" />
     <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico" type="image/x-icon" />
     <script src="<?= SITE_URL ?>/assets/js/main.js"></script>
     <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css" rel="stylesheet" />

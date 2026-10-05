@@ -22,7 +22,7 @@ const BUDGET_LEVELS = [
 /**
  * Check the page's permission and build its context.
  * @param string $level church | region | diocese
- * @param string $needs read | prepare (budgets), overview, spending, export (reports), below, contributions, settings
+ * @param string $needs read | prepare (budgets), overview, spending, export (reports), below, contributions, income, settings
  */
 function budgetPageContext(string $level, string $needs = 'read'): array
 {
@@ -34,6 +34,7 @@ function budgetPageContext(string $level, string $needs = 'read'): array
         'export' => 'budgets.budgets.export',
         'below' => 'budgets.below.read',
         'contributions' => 'budgets.contributions.read',
+        'income' => 'budgets.income.read',
         'settings' => 'settings.budgetsettings.read',
     ][$needs];
     requirePermission("{$level}.{$permission}");

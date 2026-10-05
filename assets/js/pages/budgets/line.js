@@ -48,7 +48,7 @@ const BudgetsLine = (function () {
     const place = d.budget.place?.name || "";
     document.title = `${l.name} - ${d.budget.period_label} budget - Makueni West Diocese`;
     document.getElementById("lineIcon").innerHTML = `<span class="avatar avatar-lg bg-${isIn ? "success" : "danger"} text-white"><i class="${B.lineIcon(l.name, l.side)}"></i></span>`;
-    document.getElementById("lineKicker").textContent = `${isIn ? "Money in" : "Money out"} line · ${place}`;
+    document.getElementById("lineKicker").textContent = `${isIn ? "Income" : "Expense"} line · ${place}`;
     document.getElementById("lineTitle").textContent = l.name;
     document.getElementById("lineSub").innerHTML = `<a href="${B.url("budget.php", { id: d.budget.id })}" class="fw-semibold">${B.esc(d.budget.period_label)} budget</a> ${B.statusPill(d.budget.status)}${l.is_unplanned ? ' <span class="soft-chip soft-warning">Unplanned line</span>' : ""}${l.description ? ` <span class="ms-1">${B.esc(l.description)}</span>` : ""}`;
     document.getElementById("backBtn").href = B.url("budget.php", { id: d.budget.id });
@@ -162,7 +162,7 @@ const BudgetsLine = (function () {
       months !== null ? ["Months with money", `${months} of 12`] : null,
       ["Recorded by", people.length ? B.esc(people.join(", ")) : "-"],
     ].filter(Boolean);
-    document.getElementById("factsSub").textContent = `${d.budget.period_label} · ${isIn ? "money in" : "money out"}`;
+    document.getElementById("factsSub").textContent = `${d.budget.period_label} · ${isIn ? "income" : "expenses"}`;
     document.getElementById("lineFacts").innerHTML = `
       <div class="d-flex align-items-end justify-content-between gap-2">
         <div><span class="composition-total">${Math.round(l.pct ?? (l.actual ? 100 : 0))}%</span> <span class="kpi-caption">${isIn ? "received" : "used"}</span></div>

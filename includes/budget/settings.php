@@ -19,7 +19,7 @@ $breadcrumbs = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title>Budget Settings - Makueni West Diocese</title>
-    <meta name="Description" content="The money in and money out lines budgets are built from, and the shares worked out from money in" />
+    <meta name="Description" content="The income and expense lines budgets are built from, and the shares worked out from income" />
     <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico" type="image/x-icon" />
     <script src="<?= SITE_URL ?>/assets/js/main.js"></script>
     <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
@@ -67,7 +67,7 @@ $breadcrumbs = [
                     </button>
                     <button class="nav-link section-tab" data-bs-toggle="tab" data-bs-target="#tab-deductions" data-tab="deductions" type="button" role="tab" aria-controls="tab-deductions" aria-selected="false">
                         <span class="section-tab-icon bg-purple"><i class="ri-percent-line"></i></span>
-                        <span class="section-tab-text"><strong>Deductions</strong><small data-tab-figure="deductions">Shares of money in</small></span>
+                        <span class="section-tab-text"><strong>Deductions</strong><small data-tab-figure="deductions">Shares of income</small></span>
                     </button>
                 </div>
 
@@ -82,7 +82,7 @@ $breadcrumbs = [
                                 <div class="card custom-card">
                                     <div class="card-header justify-content-between flex-wrap gap-2">
                                         <div>
-                                            <div class="card-title">Money in</div>
+                                            <div class="card-title">Income</div>
                                             <span class="card-subtitle-text">What comes in: tithes, offerings, gifts…</span>
                                         </div>
                                         <span class="soft-chip soft-success" id="inCount"></span>
@@ -94,7 +94,7 @@ $breadcrumbs = [
                                 <div class="card custom-card">
                                     <div class="card-header justify-content-between flex-wrap gap-2">
                                         <div>
-                                            <div class="card-title">Money out (spending)</div>
+                                            <div class="card-title">Expenses</div>
                                             <span class="card-subtitle-text">What goes out: salaries, rent, bills…</span>
                                         </div>
                                         <span class="soft-chip soft-danger" id="outCount"></span>
@@ -108,8 +108,8 @@ $breadcrumbs = [
                         <div class="budget-deduction-intro">
                             <span class="avatar avatar-md bg-purple text-white flex-shrink-0"><i class="ri-percent-line"></i></span>
                             <div class="flex-fill">
-                                <div class="fw-semibold">A deduction is a share sent up out of money in - worked out for you.</div>
-                                <div class="fs-13">For example <b>"Diocese share: 10% of Tithes received"</b>: when a church records KES 60,000 of tithes, KES 6,000 is due to the diocese. Sending it is money out recorded on the line it's paid through. Until money comes in, the budget shows an estimate from the plan.</div>
+                                <div class="fw-semibold">A deduction is a share sent up out of income - worked out for you.</div>
+                                <div class="fs-13">For example <b>"Diocese share: 10% of Tithes received"</b>: when a church records KES 60,000 of tithes, KES 6,000 is due to the diocese. Sending it is an expense recorded on the line it's paid through. Until money comes in, the budget shows an estimate from the plan.</div>
                             </div>
                             <button type="button" class="btn btn-primary flex-shrink-0" id="addDeductionBtn" hidden><i class="ri-add-line me-1"></i>Add a deduction</button>
                         </div>
@@ -137,7 +137,7 @@ $breadcrumbs = [
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="budget-field-label">Money in or money out?</div>
+                    <div class="budget-field-label">Income or expense?</div>
                     <div id="lineSideWrap" class="mb-1"></div>
                     <div class="fs-12 mb-3" id="lineSideHint"></div>
                     <label class="budget-field-label" for="lineName">Name</label>
@@ -198,7 +198,7 @@ $breadcrumbs = [
                                 <div class="budget-field-label mt-3">On which money received?</div>
                                 <div id="dedBasisWrap"></div>
                                 <div class="mt-2" id="dedLinesWrap" hidden>
-                                    <select class="form-select" id="dedLines" multiple aria-label="Money in lines"></select>
+                                    <select class="form-select" id="dedLines" multiple aria-label="Income lines"></select>
                                 </div>
                             </div>
 
@@ -207,10 +207,10 @@ $breadcrumbs = [
                                 <select class="form-select" id="dedApplies" aria-label="Who it applies to"></select>
                             </div>
 
-                            <div class="budget-field-label mt-3">Paid through which money out line?</div>
+                            <div class="budget-field-label mt-3">Paid through which expense line?</div>
                             <select class="form-select" id="dedLine" aria-label="Paid through"></select>
                             <input type="text" class="form-control mt-2" id="dedNewLine" maxlength="255" placeholder="Name of the new line, e.g. Diocese share" hidden>
-                            <div class="fs-12 mt-1">Record what was actually sent as money out on this line.</div>
+                            <div class="fs-12 mt-1">Record what was actually sent as an expense on this line.</div>
                         </div>
                         <div class="col-lg-5">
                             <div class="budget-field-label">Example</div>

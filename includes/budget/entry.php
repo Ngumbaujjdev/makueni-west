@@ -1,7 +1,7 @@
 <?php
-// One amount of money in or out - shared by every level; the wrapper sets $budgetCtx (includes/budget/context.php).
+// One amount of income or expense - shared by every level; the wrapper sets $budgetCtx (includes/budget/context.php).
 // Filled in by assets/js/pages/budgets/entry.js from GET /budget-entries/{id}.
-$pageTitle = 'Money in or out';
+$pageTitle = 'Income or expense';
 $pageIcon = 'ri-exchange-dollar-line';
 $breadcrumbs = [
     'Home' => $budgetCtx['homeUrl'],
@@ -17,7 +17,7 @@ $breadcrumbs = [
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>Money in or out - Makueni West Diocese</title>
+    <title>Income or expense - Makueni West Diocese</title>
     <meta name="Description" content="One amount received or spent: what for, when, how, and its effect on the line" />
     <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico" type="image/x-icon" />
     <script src="<?= SITE_URL ?>/assets/js/main.js"></script>

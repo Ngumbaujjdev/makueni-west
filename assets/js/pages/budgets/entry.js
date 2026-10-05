@@ -71,7 +71,7 @@ const BudgetsEntry = (function () {
       <div class="budget-entry-hero-main">
         <span class="avatar avatar-lg bg-${lineColor} text-white flex-shrink-0"><i class="${B.lineIcon(d.line.name, d.line.side)}"></i></span>
         <div style="min-width: 0;">
-          <div class="budget-entry-hero-kicker">${isIn ? "Money in" : "Money out"} · ${B.esc(d.line.name || "")}</div>
+          <div class="budget-entry-hero-kicker">${isIn ? "Income" : "Expense"} · ${B.esc(d.line.name || "")}</div>
           <h3 class="budget-entry-hero-title">${B.esc(e.description)}</h3>
           <div class="d-flex flex-wrap gap-1 mt-2">
             <span class="soft-chip soft-primary"><i class="ri-calendar-line me-1"></i>${day(e.entry_date)}</span>
@@ -108,7 +108,7 @@ const BudgetsEntry = (function () {
     document.getElementById("entryDetails").innerHTML = `<ul class="list-unstyled mb-0 budget-facts">${rows.map(([k, v]) => `<li><span>${k}</span><span class="fw-semibold text-end">${v}</span></li>`).join("")}</ul>`;
   }
 
-  /** Money in on a line a deduction counts: "10% of this (KES 4,000.00) is the Diocese share", under the details. */
+  /** Income on a line a deduction counts: "10% of this (KES 4,000.00) is the Diocese share", under the details. */
   async function renderShares(e) {
     const res = await BudgetsAPI.get(d.budget.id);
     const shares = (res.ok ? res.data.deductions || [] : []).filter((x) => x.rate_type === "percentage" && (x.basis !== "lines" || (x.basis_line_ids || []).includes(d.line.line_id)));

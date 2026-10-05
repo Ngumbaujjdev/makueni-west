@@ -6,8 +6,8 @@
  *   1 Month or year?  - a clear "A month | The whole year" choice, the year,
  *                       and why a period can't be picked when it can't;
  *                       "Copy amounts" from the last budget (Undo stays)
- *   2 Money in        - one amount box per line, "Last time" under each
- *   3 Money out       - the same
+ *   2 Income        - one amount box per line, "Last time" under each
+ *   3 Expenses       - the same
  *   4 Check and save  - every planned line against last time, notes, save
  * The whole budget is saved in one request.
  * ============================================================================
@@ -19,7 +19,7 @@ const BudgetsForm = (function () {
   const B = BudgetsUI;
   const params = new URLSearchParams(window.location.search);
   const EXTRA_AFTER = 8; // lines shown before "Show all lines", when nothing is filled in yet
-  const STEP_NAMES = ["Month or year?", "Money in", "Money out", "Check and save"];
+  const STEP_NAMES = ["Month or year?", "Income", "Expenses", "Check and save"];
   const LAST = STEP_NAMES.length;
 
   const state = {
@@ -32,7 +32,7 @@ const BudgetsForm = (function () {
     amounts: {}, // line id -> amount
     taken: { year: null, months: {} },
     statuses: { year: null, months: {} }, // status of each taken period, for the chip colours
-    deductions: [], // shares of money in that fill their own money out line
+    deductions: [], // shares of income that fill their own expense line
     ownYear: null, // the year the budget being changed had when loaded
     ownTaken: null, // that year's taken periods - without the budget itself
     copy: null,
@@ -449,7 +449,7 @@ const BudgetsForm = (function () {
     const el = document.getElementById(side === "in" ? "linesIn" : "linesOut");
     const lines = state.lines[side] || [];
     if (!lines.length) {
-      el.innerHTML = `<p class="fw-semibold mb-0">No ${side === "in" ? "money in" : "money out"} lines yet. Add lines in Budget Settings.</p>`;
+      el.innerHTML = `<p class="fw-semibold mb-0">No ${side === "in" ? "income" : "expenses"} lines yet. Add lines in Budget Settings.</p>`;
       return;
     }
     const filled = (l) => Number(state.amounts[l.id]) > 0 || !!ruleFor(l.id);
@@ -498,7 +498,7 @@ const BudgetsForm = (function () {
   const ruleFor = (lineId) => state.deductions.find((r) => r.line_id === lineId);
 
   /**
-   * Works every deduction out from the money in typed so far (the server
+   * Works every deduction out from the income typed so far (the server
    * works them out again on save) and fills its locked line.
    */
   function applyDeductions() {
@@ -543,7 +543,7 @@ const BudgetsForm = (function () {
       </div>`;
   }
 
-  /** A deduction's line: locked, worked out from money in. */
+  /** A deduction's line: locked, worked out from income. */
   function deductionTile(line, side, rule, extra) {
     const amount = Number(state.amounts[line.id]) || 0;
     return `
@@ -630,7 +630,7 @@ const BudgetsForm = (function () {
     document.getElementById("previewDeductions").innerHTML = state.deductions.length
       ? `<div class="budget-preview-deductions">${state.deductions
           .map((r) => `<div><span><i class="ri-percent-line me-1"></i>${B.esc(r.name)}</span><b>${B.money(Number(state.amounts[r.line_id]) || 0)}</b></div>`)
-          .join("")}<small>An estimate from the plan, kept in money out. What's really due follows the money you record.</small></div>`
+          .join("")}<small>An estimate from the plan, kept in expenses. What's really due follows the money you record.</small></div>`
       : "";
     renderPreviewList("in", inT);
     renderPreviewList("out", outT);
@@ -681,7 +681,7 @@ const BudgetsForm = (function () {
       return `
         <div class="budget-review">
           <div class="budget-review-head soft-${isIn ? "success" : "danger"}">
-            <span><i class="${isIn ? "ri-arrow-down-circle-line" : "ri-arrow-up-circle-line"} me-1"></i>${isIn ? "Money in" : "Money out (spending)"} · ${rows.length} ${rows.length === 1 ? "line" : "lines"}</span>
+            <span><i class="${isIn ? "ri-arrow-down-circle-line" : "ri-arrow-up-circle-line"} me-1"></i>${isIn ? "Income" : "Expenses"} · ${rows.length} ${rows.length === 1 ? "line" : "lines"}</span>
             <span class="d-flex align-items-center gap-2"><b>${B.money(total)}</b><button type="button" class="btn btn-sm btn-light" data-edit-step="${isIn ? 2 : 3}"><i class="ri-edit-line me-1"></i>Change</button></span>
           </div>
           ${
@@ -691,7 +691,7 @@ const BudgetsForm = (function () {
                     (l) => `<li><span class="budget-review-name"><span class="budget-review-icon bg-${colorOf(l, side)} ${B.tileText(colorOf(l, side))}"><i class="${B.lineIcon(l.name, side)}"></i></span>${B.esc(l.name)} ${change(l)}</span><b>${B.money(state.amounts[l.id])}</b></li>`,
                   )
                   .join("")}</ul>`
-              : `<div class="budget-review-empty">No money ${side} planned.</div>`
+              : `<div class="budget-review-empty">No ${side === "in" ? "income" : "expenses"} planned.</div>`
           }
         </div>`;
     };
@@ -704,8 +704,8 @@ const BudgetsForm = (function () {
       ${none ? '<div class="budget-period-note mb-3"><i class="ri-error-warning-line"></i><span>Nothing is planned yet. Go back and type an amount for at least one line.</span></div>' : ""}
       <div class="budget-review-sum">
         <div><small>Period</small><b>${B.esc(B.periodLabel(state.year, state.month))}</b></div>
-        <div><small>Money in</small><b class="text-success">${B.money(inT)}</b></div>
-        <div><small>Money out</small><b class="text-danger">${B.money(outT)}</b></div>
+        <div><small>Income</small><b class="text-success">${B.money(inT)}</b></div>
+        <div><small>Expenses</small><b class="text-danger">${B.money(outT)}</b></div>
         <div><small>Money left</small><b class="${inT - outT < 0 ? "text-danger" : "text-success"}">${B.money(inT - outT)}</b></div>
       </div>
       ${group("in")}

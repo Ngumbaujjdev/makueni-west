@@ -1,11 +1,13 @@
 <?php
-// Spending: money in and out - shared by every level; the wrapper sets $budgetCtx (includes/budget/context.php).
-$pageTitle = 'Money in and out';
+// Income & Expenses - shared by every level; the wrapper sets $budgetCtx (includes/budget/context.php),
+// and $spendingDir ('in' = the Income page, 'out' = the Expenses page, or unset for both).
+$spendingDir = $spendingDir ?? 'all';
+$pageTitle = ['in' => 'Income', 'out' => 'Expenses'][$spendingDir] ?? 'Income & Expenses';
 $pageIcon = 'ri-exchange-dollar-line';
 $breadcrumbs = [
     'Home' => $budgetCtx['homeUrl'],
     'Budgets' => $budgetCtx['baseUrl'] . '/budgets.php',
-    'Money in and out' => null,
+    $pageTitle => null,
 ];
 ?>
 <!DOCTYPE html>
@@ -16,7 +18,7 @@ $breadcrumbs = [
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>Money in and out - Makueni West Diocese</title>
+    <title><?= htmlspecialchars($pageTitle) ?> - Makueni West Diocese</title>
     <meta name="Description" content="Every amount received and spent, against the budget" />
     <link rel="icon" href="<?= SITE_URL ?>/assets/images/brand-logos/favicon/favicon.ico" type="image/x-icon" />
     <script src="<?= SITE_URL ?>/assets/js/main.js"></script>
@@ -30,7 +32,7 @@ $breadcrumbs = [
 <body>
     <script src="<?= SITE_URL ?>/assets/js/config/app.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
-    <script>window.BUDGET_CTX = <?= json_encode($budgetCtx) ?>;</script>
+    <script>window.BUDGET_CTX = <?= json_encode($budgetCtx) ?>; window.SPENDING_DIR = <?= json_encode($spendingDir) ?>;</script>
     <?php include __DIR__ . '/../start-switcher.php' ?>
     <?php include __DIR__ . '/../loader.php' ?>
 
@@ -46,15 +48,16 @@ $breadcrumbs = [
                 <div class="page-toolbar">
                     <div class="page-toolbar-sub" id="placeLine">&nbsp;</div>
                     <div class="page-toolbar-controls">
+                        <div id="dirSwitchWrap"></div>
                         <div id="yearSwitchWrap"></div>
                         <div class="budget-year-select"><select id="monthSelect" aria-label="Month"></select></div>
                         <button type="button" class="btn btn-outline-primary d-none" id="exportReportBtn" data-lock="1" data-module="budget" data-report-key="budget.spending"><i class="ri-download-2-line me-1"></i>Export</button>
                         <div class="btn-group d-none" id="recordGroup">
                             <button type="button" class="btn btn-primary" id="recordOutBtn"><i class="ri-add-line me-1"></i>Record money</button>
-                            <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Money in or out"></button>
+                            <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Income or expense"></button>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="javascript:void(0);" data-record="in"><i class="ri-arrow-down-circle-line text-success me-2"></i>Money in</a></li>
-                                <li><a class="dropdown-item" href="javascript:void(0);" data-record="out"><i class="ri-arrow-up-circle-line text-danger me-2"></i>Money out</a></li>
+                                <li><a class="dropdown-item" href="javascript:void(0);" data-record="in"><i class="ri-arrow-down-circle-line text-success me-2"></i>Income</a></li>
+                                <li><a class="dropdown-item" href="javascript:void(0);" data-record="out"><i class="ri-arrow-up-circle-line text-danger me-2"></i>Expenses</a></li>
                             </ul>
                         </div>
                     </div>
@@ -71,8 +74,8 @@ $breadcrumbs = [
                 <div class="card custom-card">
                     <div class="card-header justify-content-between flex-wrap gap-2">
                         <div>
-                            <div class="card-title" id="listTitle">Money in and out</div>
-                            <span class="card-subtitle-text">Every amount received and spent - tap one to change it</span>
+                            <div class="card-title" id="listTitle">Income & Expenses</div>
+                            <span class="card-subtitle-text" id="listSub">Every amount received and spent - tap one to see it</span>
                         </div>
                     </div>
                     <div class="card-body p-0">

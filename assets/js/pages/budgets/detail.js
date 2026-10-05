@@ -54,8 +54,8 @@ const BudgetsDetail = (function () {
     document.querySelector('[data-tab-figure="spending"]').textContent = `${rows.length} ${rows.length === 1 ? "entry" : "entries"}`;
     if (res.ok) {
       document.getElementById("spendingChips").innerHTML = `
-        <span class="soft-chip soft-success">In ${B.shortMoney(res.body.stats.in)}</span>
-        <span class="soft-chip soft-danger">Out ${B.shortMoney(res.body.stats.out)}</span>`;
+        <span class="soft-chip soft-success">Income ${B.shortMoney(res.body.stats.in)}</span>
+        <span class="soft-chip soft-danger">Expenses ${B.shortMoney(res.body.stats.out)}</span>`;
     }
     if (!rows.length) {
       el.innerHTML = `<div class="list-empty py-4"><span class="list-empty-icon bg-primary text-white"><i class="ri-exchange-dollar-line"></i></span>
@@ -78,7 +78,7 @@ const BudgetsDetail = (function () {
           <span class="fw-bold ${isIn ? "text-success" : "text-danger"}">${isIn ? "+" : "−"}${B.amount(e.amount)}</span>
         </li>`;
     };
-    // A whole-year budget: entries under their month, with the month's money in and out.
+    // A whole-year budget: entries under their month, with the month's income and expenses.
     let list;
     if (d?.budget && !d.budget.period_month) {
       const groups = [];
@@ -105,8 +105,8 @@ const BudgetsDetail = (function () {
     }
     el.innerHTML = `
       <div class="budget-items-strip soft-primary mx-n3 mt-n3 mb-2">
-        <div><small>Money in</small><b class="text-success">${B.money(res.body.stats.in)}</b></div>
-        <div><small>Money out</small><b class="text-danger">${B.money(res.body.stats.out)}</b></div>
+        <div><small>Income</small><b class="text-success">${B.money(res.body.stats.in)}</b></div>
+        <div><small>Expenses</small><b class="text-danger">${B.money(res.body.stats.out)}</b></div>
         <div><small>Difference</small><b class="${net < 0 ? "text-danger" : ""}">${B.money(net)}</b></div>
         <div><small>Last recorded</small><b>${last}</b></div>
       </div>
@@ -226,7 +226,7 @@ const BudgetsDetail = (function () {
     document.getElementById("sendDeductionBtn")?.addEventListener("click", () => BudgetsEntryModal.open({ budgetId: id, lineId: owedRow.line_id, direction: "out", onSaved: refresh }));
   }
 
-  /** A whole-year budget: money in and out per month, by the date each amount was recorded. */
+  /** A whole-year budget: income and expenses per month, by the date each amount was recorded. */
   function renderMonths() {
     const card = document.getElementById("monthsCard");
     const months = d.months;
@@ -237,8 +237,8 @@ const BudgetsDetail = (function () {
     const outT = months.reduce((t, m) => t + m.out, 0);
     const busy = months.filter((m) => m.count).length;
     document.getElementById("monthsChips").innerHTML = `
-      <span class="soft-chip soft-success">In ${B.shortMoney(inT)}</span>
-      <span class="soft-chip soft-danger">Out ${B.shortMoney(outT)}</span>
+      <span class="soft-chip soft-success">Income ${B.shortMoney(inT)}</span>
+      <span class="soft-chip soft-danger">Expenses ${B.shortMoney(outT)}</span>
       <span class="soft-chip soft-primary">${busy} of 12 months with money</span>`;
     monthsChart = UI.renderTrendChart("monthsChart", {
       categories: months.map((m) => m.label),
@@ -282,7 +282,7 @@ const BudgetsDetail = (function () {
     UI.renderStatCardsRow("statCardsRow", [
       {
         icon: "ri-arrow-down-circle-line",
-        label: "Money in (planned)",
+        label: "Income (planned)",
         value: B.money(b.in_planned),
         color: "success",
         delta: prev ? B.delta(b.in_planned, prev.in_planned, vs) : null,
@@ -290,7 +290,7 @@ const BudgetsDetail = (function () {
       },
       {
         icon: "ri-arrow-up-circle-line",
-        label: "Money out (planned)",
+        label: "Expenses (planned)",
         value: B.money(b.out_planned),
         color: "danger",
         delta: prev ? B.delta(b.out_planned, prev.out_planned, vs) : null,
@@ -302,14 +302,14 @@ const BudgetsDetail = (function () {
         value: B.money(left),
         color: left < 0 ? "danger" : "purple",
         delta: prev ? B.delta(left, prev.left_planned, vs) : null,
-        sub: left < 0 ? "Planning to spend more than comes in" : "Money in minus money out",
+        sub: left < 0 ? "Planning to spend more than comes in" : "Income minus expenses",
       },
       {
         icon: "ri-list-check-2",
         label: "Lines",
         value: d.lines.in.length + d.lines.out.length,
         color: "primary",
-        sub: `${d.lines.in.length} money in · ${d.lines.out.length} money out`,
+        sub: `${d.lines.in.length} income · ${d.lines.out.length} expenses`,
       },
     ]);
   }
@@ -318,23 +318,23 @@ const BudgetsDetail = (function () {
   function renderWhere() {
     const wrap = document.getElementById("whereSwitchWrap");
     if (!wrap.innerHTML) {
-      wrap.innerHTML = UI.renderSegmented("whereSwitch", [{ value: "out", label: "Out" }, { value: "in", label: "In" }], whereSide, { ariaLabel: "Money in or out" });
+      wrap.innerHTML = UI.renderSegmented("whereSwitch", [{ value: "out", label: "Expenses" }, { value: "in", label: "Income" }], whereSide, { ariaLabel: "Income or expense" });
       UI.wireSegmented("whereSwitch", (value) => {
         whereSide = value;
         renderWhere();
       });
     }
     const lines = [...(d.lines[whereSide] || [])].sort((a, b) => b.planned - a.planned);
-    document.getElementById("whereSub").textContent = whereSide === "out" ? "This budget's money out, by line" : "Where this budget's money in comes from";
+    document.getElementById("whereSub").textContent = whereSide === "out" ? "This budget's expenses, by line" : "Where this budget's income comes from";
     donut?.destroy?.();
     if (!lines.length) {
-      document.getElementById("whereDonut").innerHTML = `<p class="fw-semibold mb-0">No money ${whereSide} planned.</p>`;
+      document.getElementById("whereDonut").innerHTML = `<p class="fw-semibold mb-0">No ${whereSide === "in" ? "income" : "expenses"} planned.</p>`;
       return;
     }
     donut = B.moneyDonut("whereDonut", {
       rows: lines.map((l) => ({ name: l.name, value: l.planned })),
       colors: whereSide === "out" ? ["danger", "warning", "purple", "pink", "primary", "secondary"] : ["success", "primary", "purple", "warning", "pink", "secondary"],
-      centerLabel: whereSide === "out" ? "Money out" : "Money in",
+      centerLabel: whereSide === "out" ? "Expenses" : "Income",
     });
   }
 
@@ -363,7 +363,7 @@ const BudgetsDetail = (function () {
         <span class="soft-chip soft-primary">${periodText}</span>
       </div>
       <div class="count-bar my-2"><span class="bg-primary" style="width: ${now > end ? 100 : now < start ? 0 : pct}%"></span></div>
-      <div class="d-flex justify-content-between fs-12 fw-semibold mb-1 mt-3"><span class="text-success">Money in ${B.shortMoney(b.in_planned)}</span><span class="text-danger">Money out ${B.shortMoney(b.out_planned)}</span></div>
+      <div class="d-flex justify-content-between fs-12 fw-semibold mb-1 mt-3"><span class="text-success">Income ${B.shortMoney(b.in_planned)}</span><span class="text-danger">Expenses ${B.shortMoney(b.out_planned)}</span></div>
       <div class="count-bar composition-bar" aria-hidden="true"><span class="bg-success" style="width: ${both ? (b.in_planned / both) * 100 : 50}%"></span><span class="bg-danger" style="width: ${both ? (b.out_planned / both) * 100 : 50}%"></span></div>
       <ul class="list-unstyled mb-0 mt-3 budget-facts">
         ${facts.map(([k, v]) => `<li><span>${k}</span><span class="fw-semibold">${v}</span></li>`).join("")}

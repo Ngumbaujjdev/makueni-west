@@ -2,10 +2,10 @@
  * ============================================================================
  * PAGE - BUDGET SETTINGS (includes/budget/settings.php, every level)
  * ============================================================================
- * One simple page per place. Lines: the money in and money out lines its
+ * One simple page per place. Lines: the income and expense lines its
  * budgets are built from - the diocese's shared ones (locked, unless this
  * is the diocese) and the place's own. Add, rename, switch off, or delete a
- * line no budget has used. Deductions: shares of money in, worked out for
+ * line no budget has used. Deductions: shares of income, worked out for
  * you - the place's own, and those set above it (locked).
  * ============================================================================
  */
@@ -76,7 +76,7 @@ const BudgetsSettings = (function () {
     const off = lines.filter((l) => !l.is_active);
     document.querySelector('[data-tab-figure="lines"]').textContent = `${active.length} in use`;
     UI.renderStatCardsRow("statCardsRow", [
-      { icon: "ri-list-check-2", label: "Lines in use", value: active.length, color: "primary", sub: `${active.filter((l) => l.side === "in").length} money in · ${active.filter((l) => l.side === "out").length} money out` },
+      { icon: "ri-list-check-2", label: "Lines in use", value: active.length, color: "primary", sub: `${active.filter((l) => l.side === "in").length} income · ${active.filter((l) => l.side === "out").length} expenses` },
       { icon: "ri-user-star-line", label: isDiocese() ? "The diocese's own" : "Our own", value: own.length, color: "success", sub: own.length ? "Added by you, only you use them" : "Add a line for anything not in the list" },
       { icon: "ri-share-line", label: isDiocese() ? "Shared with others" : "Standard lines", value: shared.length, color: "purple", sub: isDiocese() ? "Churches and regions use them" : "The same for every church - kept up centrally" },
       { icon: "ri-toggle-line", label: "Switched off", value: off.length, color: "warning", sub: off.length ? "Not offered for new budgets" : "Every line is on" },
@@ -110,7 +110,7 @@ const BudgetsSettings = (function () {
       document.getElementById(s === "in" ? "inCount" : "outCount").textContent = `${all.filter((l) => l.is_active).length} lines`;
       const el = document.getElementById(s === "in" ? "linesIn" : "linesOut");
       if (!lines.length) {
-        el.innerHTML = `<div class="list-empty py-5"><span class="list-empty-icon bg-${s === "in" ? "success" : "danger"} text-white"><i class="ri-list-check-2"></i></span><div class="fw-semibold mt-2">${search ? "No line matches" : `No money ${s} lines yet`}</div></div>`;
+        el.innerHTML = `<div class="list-empty py-5"><span class="list-empty-icon bg-${s === "in" ? "success" : "danger"} text-white"><i class="ri-list-check-2"></i></span><div class="fw-semibold mt-2">${search ? "No line matches" : `No ${s === "in" ? "income" : "expense"} lines yet`}</div></div>`;
         return;
       }
       // The first few, then "Show all" - so a long list doesn't leave a gap beside a short one.
@@ -165,18 +165,18 @@ const BudgetsSettings = (function () {
     document.getElementById("lineSideWrap").innerHTML = UI.renderSegmented(
       "lineSide",
       [
-        { value: "in", label: '<i class="ri-arrow-down-circle-line me-1"></i>Money in' },
-        { value: "out", label: '<i class="ri-arrow-up-circle-line me-1"></i>Money out' },
+        { value: "in", label: '<i class="ri-arrow-down-circle-line me-1"></i>Income' },
+        { value: "out", label: '<i class="ri-arrow-up-circle-line me-1"></i>Expenses' },
       ],
       side,
-      { ariaLabel: "Money in or money out" },
+      { ariaLabel: "Income or expense" },
     );
     UI.wireSegmented("lineSide", (value) => {
       side = value;
       preview();
     });
     document.querySelectorAll("#lineSide .seg-btn").forEach((b) => (b.disabled = used));
-    document.getElementById("lineSideHint").textContent = used ? "It's already used in a budget, so it stays where it is." : "Money in: what you receive. Money out: what you spend.";
+    document.getElementById("lineSideHint").textContent = used ? "It's already used in a budget, so it stays where it is." : "Income: what you receive. Expenses: what you spend.";
     document.getElementById("lineName").value = line?.name || "";
     document.getElementById("lineName").classList.remove("is-invalid");
     document.getElementById("lineDescription").value = line?.description || "";
@@ -208,7 +208,7 @@ const BudgetsSettings = (function () {
         <span class="budget-tile-name"><span>${B.esc(name)}</span>${desc ? `<small>${B.esc(desc)}</small>` : ""}</span>
       </div>
       <div class="input-group"><span class="input-group-text">KES</span><input type="text" class="form-control text-end" placeholder="0.00" disabled></div>
-      <div class="num-tile-foot"><span class="num-tile-last">${side === "in" ? "Money in" : "Money out"}</span></div>`;
+      <div class="num-tile-foot"><span class="num-tile-last">${side === "in" ? "Income" : "Expense"}</span></div>`;
   }
 
   async function saveLine() {
@@ -349,7 +349,7 @@ const BudgetsSettings = (function () {
     document.getElementById("dedValue").value = x ? String(x.deduction_value) : "";
     document.getElementById("dedTypeWrap").innerHTML = UI.renderSegmented("dedType", [{ value: "percentage", label: "% of money received" }, { value: "fixed_amount", label: "Fixed each month" }], ded.type, { ariaLabel: "How it's worked out" });
     UI.wireSegmented("dedType", (v) => ((ded.type = v), example()));
-    document.getElementById("dedBasisWrap").innerHTML = UI.renderSegmented("dedBasis", [{ value: "all", label: "All money received" }, { value: "lines", label: "Only some lines" }], ded.basis, { ariaLabel: "On which money in" });
+    document.getElementById("dedBasisWrap").innerHTML = UI.renderSegmented("dedBasis", [{ value: "all", label: "All money received" }, { value: "lines", label: "Only some lines" }], ded.basis, { ariaLabel: "On which income" });
     UI.wireSegmented("dedBasis", (v) => ((ded.basis = v), example()));
     const lines = document.getElementById("dedLines");
     lines.innerHTML = d.lines.filter((l) => l.side === "in" && l.is_active).map((l) => `<option value="${l.id}" ${(x ? x.basis_line_ids?.includes(l.id) : isDiocese() && /^tithes?$/i.test(l.name.trim())) ? "selected" : ""}>${B.esc(l.name)}</option>`).join("");
@@ -365,7 +365,7 @@ const BudgetsSettings = (function () {
     dedModal.show();
   }
 
-  /** The money out lines this deduction can be paid through, for who it applies to - or a new line. */
+  /** The expense lines this deduction can be paid through, for who it applies to - or a new line. */
   function fillPaidThrough(selected) {
     const level = document.getElementById("dedApplies").value;
     const select = document.getElementById("dedLine");
@@ -397,7 +397,7 @@ const BudgetsSettings = (function () {
     document.getElementById("dedExample").innerHTML = isPct
       ? `<div class="budget-example-row"><span>${B.esc(on)} received (recorded)</span><b>KES 60,000.00</b></div>
          <div class="budget-example-row is-out"><span>${B.esc(name)} due (${value || 0}%)</span><b>${B.money((60000 * value) / 100)}</b></div>
-         <div class="fs-12 mt-2">Worked out on what is recorded, and sent as money out on <b>${B.esc(line)}</b>. On a budget it starts as an estimate from the plan.</div>`
+         <div class="fs-12 mt-2">Worked out on what is recorded, and sent as an expense on <b>${B.esc(line)}</b>. On a budget it starts as an estimate from the plan.</div>`
       : `<div class="budget-example-row"><span>A month budget</span><b>${B.money(value)}</b></div>
          <div class="budget-example-row is-out"><span>A whole-year budget</span><b>${B.money(value * 12)}</b></div>
          <div class="fs-12 mt-2">Filled in on <b>${B.esc(line)}</b>.</div>`;

@@ -70,7 +70,7 @@ $breadcrumbs = [
                             <div class="card-header justify-content-between flex-wrap gap-2">
                                 <div>
                                     <div class="card-title" id="pvaTitle">Spent against plan</div>
-                                    <span class="card-subtitle-text" id="pvaSub">The ten places with the most money out</span>
+                                    <span class="card-subtitle-text" id="pvaSub">The ten places with the most expenses</span>
                                 </div>
                                 <div class="d-flex flex-wrap gap-1" id="pvaChips"></div>
                             </div>
@@ -122,8 +122,8 @@ $breadcrumbs = [
                                         <th id="placeHead">Church</th>
                                         <th id="groupHead">Region</th>
                                         <th>Budget</th>
-                                        <th class="text-end">Money in</th>
-                                        <th class="text-end">Money out</th>
+                                        <th class="text-end">Income</th>
+                                        <th class="text-end">Expenses</th>
                                         <th class="text-end">Money left</th>
                                         <th class="text-end">Still owed</th>
                                         <th class="text-end">Action</th>

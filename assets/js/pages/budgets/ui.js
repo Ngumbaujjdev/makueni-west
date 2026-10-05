@@ -125,8 +125,8 @@ const BudgetsUI = (function () {
   ];
   const lineIcon = (name, side) => (LINE_ICONS.find(([re]) => re.test(name || "")) || [, side === "in" ? "ri-arrow-down-circle-line" : "ri-arrow-up-circle-line"])[1];
   /**
-   * Every line gets its own colour from the category palette - money in
-   * starts from green, money out from red - so a list of lines never reads
+   * Every line gets its own colour from the category palette - income
+   * starts from green, expenses from red - so a list of lines never reads
    * as one colour. The same line keeps the same colour on every page.
    */
   const LINE_COLORS = {
