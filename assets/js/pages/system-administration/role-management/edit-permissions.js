@@ -386,11 +386,19 @@ function renderPermissionMatrix(modules) {
 function renderPermissionCheckboxes(permissions, allActions) {
   let html = '';
 
-  // Create a map of permissions by action
+  // Create a map of permissions by action. Anything that has no column -
+  // manage, register, write, send, review... or a second permission with the
+  // same action on one page - goes in "More", so every permission can be
+  // seen and ticked (one with no column used to be dropped on every save).
   const permissionMap = {};
+  const more = [];
   if (permissions && Array.isArray(permissions)) {
     permissions.forEach(perm => {
-      permissionMap[perm.action] = perm.id;
+      if (allActions.includes(perm.action) && !permissionMap[perm.action]) {
+        permissionMap[perm.action] = perm.id;
+      } else {
+        more.push(perm);
+      }
     });
   }
 
@@ -413,6 +421,19 @@ function renderPermissionCheckboxes(permissions, allActions) {
       </td>
     `;
   });
+
+  // "More": each extra permission as a labelled switch - its last two name
+  // parts, e.g. church.events.events.manage -> "events · manage".
+  html += `<td>${more.map(perm => {
+    const label = String(perm.name || perm.action).split('.').slice(-2).join(' · ');
+    return `
+      <div class="form-check form-switch mb-1 text-nowrap">
+        <input class="form-check-input permission-checkbox" type="checkbox" id="perm-${perm.id}"
+               data-permission-id="${perm.id}" data-action="${perm.action}"
+               ${assignedPermissionIds.has(perm.id) ? 'checked' : ''}>
+        <label class="form-check-label fs-12" for="perm-${perm.id}" title="${perm.name || ''}">${label}</label>
+      </div>`;
+  }).join('')}</td>`;
 
   return html;
 }
@@ -456,9 +477,15 @@ async function savePermissions() {
       }
     });
 
+    // Every permission the screen showed, ticked or not: only these can be
+    // taken away - the role keeps anything the screen didn't show.
+    const shownPermissionIds = [...document.querySelectorAll('.permission-checkbox:not(:disabled)')]
+      .map(checkbox => parseInt(checkbox.dataset.permissionId))
+      .filter(id => id && !isNaN(id));
+
     console.log('📤 Saving permissions:', selectedPermissionIds);
 
-    const response = await APIHandler.updateRolePermissions(ROLE_ID, selectedPermissionIds);
+    const response = await APIHandler.updateRolePermissions(ROLE_ID, selectedPermissionIds, shownPermissionIds);
 
     console.log('📥 Save response:', response);
 
@@ -529,9 +556,15 @@ async function savePermissions() {
       }
     });
 
+    // Every permission the screen showed, ticked or not: only these can be
+    // taken away - the role keeps anything the screen didn't show.
+    const shownPermissionIds = [...document.querySelectorAll('.permission-checkbox:not(:disabled)')]
+      .map(checkbox => parseInt(checkbox.dataset.permissionId))
+      .filter(id => id && !isNaN(id));
+
     console.log('📤 Saving permissions:', selectedPermissionIds);
 
-    const response = await APIHandler.updateRolePermissions(ROLE_ID, selectedPermissionIds);
+    const response = await APIHandler.updateRolePermissions(ROLE_ID, selectedPermissionIds, shownPermissionIds);
 
     console.log('📥 Save response:', response);
 

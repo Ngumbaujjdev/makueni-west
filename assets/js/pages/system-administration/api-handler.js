@@ -400,12 +400,13 @@
    *   }
    * ]
    */
-  async function updateRolePermissions(roleId, permissions) {
+  async function updateRolePermissions(roleId, permissions, shown) {
     try {
       const response = await fetch(`${API_BASE}/roles/${roleId}/permissions`, {
         method: Constants.HTTP_METHODS.PUT,
         headers: getHeaders(),
-        body: JSON.stringify({ permissions }),
+        // shown: the permissions the screen showed - only these can be taken away.
+        body: JSON.stringify(shown ? { permissions, shown } : { permissions }),
       });
 
       return await handleResponse(response);

@@ -15,10 +15,11 @@ use Spatie\Permission\Models\Role;
  * The Monthly reports menu and permissions
  * (docs/specs/monthly-reports-spec.md).
  *
- * Each level's Overview group gets a "Monthly reports" module with one page,
- * /{level}/monthly-reports/, and {level}.reports.monthly.* (church and
- * region write their own) and {level}.reports.below.* (region and diocese
- * read the places below) linked to it. The empty placeholders are reused:
+ * Each level's Overview group gets a "Monthly reports" module: the list,
+ * /{level}/monthly-reports/, with {level}.reports.monthly.read / send and
+ * {level}.reports.below.* (region and diocese read the places below); and,
+ * where a level writes its own (church, region), "Write our report"
+ * (report.php, the report due next) with {level}.reports.monthly.write. The empty placeholders are reused:
  * the church's "Church Reports" and the region's "Regional Reporting".
  *
  * Idempotent - safe to re-run.
@@ -86,12 +87,23 @@ class MonthlyReportsAccessSeeder extends Seeder
                 ['title' => 'Monthly reports', 'description' => $level === 'diocese' ? 'The monthly reports of the regions and churches.' : 'Our monthly reports, and the places below.', 'is_active' => true],
             );
 
+            // The way in for those who write: the report due next (report.php
+            // with no month picks it). Only the levels that write their own.
+            $writePage = in_array('write', self::LEVEL_ABILITIES[$level], true)
+                ? Submodule::updateOrCreate(
+                    ['module_id' => $module->id, 'path' => "/{$level}/monthly-reports/report.php"],
+                    ['title' => 'Write our report', 'description' => 'The report due next: figures filled in, our words, then send it up.', 'is_active' => true],
+                )
+                : null;
+
             $permissions = [];
             foreach (self::LEVEL_ABILITIES[$level] as $ability) {
                 $name = "{$level}.".ReportsAccess::ABILITIES[$ability];
+                // Each permission sits on the page it opens: write on "Write our report".
+                $on = $ability === 'write' && $writePage ? $writePage : $page;
                 $permissions[$ability] = Permission::updateOrCreate(
                     ['name' => $name, 'guard_name' => 'web'],
-                    ['module_id' => $module->id, 'submodule_id' => $page->id, 'sub_submodule_id' => null, 'action' => substr($name, strrpos($name, '.') + 1), 'territory_scope' => $level],
+                    ['module_id' => $module->id, 'submodule_id' => $on->id, 'sub_submodule_id' => null, 'action' => substr($name, strrpos($name, '.') + 1), 'territory_scope' => $level],
                 );
             }
 
@@ -131,7 +143,7 @@ class MonthlyReportsAccessSeeder extends Seeder
             'is_active' => true,
         ])->save();
 
-        $unbuilt = Submodule::where('module_id', $module->id)->where('path', '!=', "/{$level}/monthly-reports/");
+        $unbuilt = Submodule::where('module_id', $module->id)->whereNotIn('path', ["/{$level}/monthly-reports/", "/{$level}/monthly-reports/report.php"]);
         SubSubmodule::whereIn('submodule_id', (clone $unbuilt)->pluck('id'))->update(['is_active' => false]);
         $unbuilt->update(['is_active' => false]);
 

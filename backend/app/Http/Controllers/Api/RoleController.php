@@ -580,6 +580,9 @@ class RoleController extends Controller
         $validator = Validator::make($request->all(), [
             'permissions' => 'required|array',
             'permissions.*' => 'required|integer|exists:permissions,id',
+            // The permissions the screen showed, ticked or not - only these can be taken away.
+            'shown' => 'sometimes|array',
+            'shown.*' => 'integer',
         ]);
 
         if ($validator->fails()) {
@@ -596,7 +599,7 @@ class RoleController extends Controller
             DB::beginTransaction();
 
             // Use the role's updateModulePermissions method
-            $role->updateModulePermissions($request->permissions);
+            $role->updateModulePermissions($request->permissions, $request->has('shown') ? $request->input('shown') : null);
 
             DB::commit();
 

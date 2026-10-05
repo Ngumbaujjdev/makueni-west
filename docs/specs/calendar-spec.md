@@ -84,6 +84,7 @@ All routes are under `auth:sanctum`, and the acting place comes from `X-Assignme
 - **CCI events:** global admins only (`hasGlobalAccess()`). There is no permission to grant, as decided.
 - Nobody edits an event from another place, up or down. `can_edit` is true only for your own place's events, and for CCI events when you're a global admin.
 - Menu: a **Calendar** module in each level's Programs group (`{level}-programs`) with one page `/{level}/calendar/`, created idempotently by `CalendarAccessSeeder`. It also switches off the dead "Diocese Calendar" module and its 0-byte pages.
+- **New date** (`/{level}/calendar/?add=1`, the calendar with its form open) is the way in for managers (2026-10-05). `{level}.calendar.events.manage` is linked to it; read stays on Calendar. The page's **New date** button opens the same form. Each permission is linked to the page it opens, so the menu shows the way in only to roles that can use it.
 
 ### C1 as built
 - `App\Services\Calendar\Calendar` works out the layers (`layersFor`: ancestors by type, `below` by walking `parent_territory_id`), the occurrences (`expand`: jumps close to the range, then steps; at most 600 per event) and the overview.

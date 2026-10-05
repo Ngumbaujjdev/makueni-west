@@ -244,6 +244,11 @@ class CalendarTest extends TestCase
         $this->assertTrue($secretary->fresh()->hasPermissionTo('church.calendar.events.manage'));
         $this->assertTrue($usher->fresh()->hasPermissionTo('church.calendar.events.read'));
         $this->assertFalse($usher->fresh()->hasPermissionTo('church.calendar.events.manage'));
+        // The way in: "New date" (the calendar with its form open), holding manage.
+        $new = Submodule::where('path', '/church/calendar/?add=1')->sole();
+        $this->assertSame('New date', $new->title);
+        $this->assertSame($new->id, Permission::where('name', 'church.calendar.events.manage')->value('submodule_id'));
+        $this->assertSame(Submodule::where('path', '/church/calendar/')->value('id'), Permission::where('name', 'church.calendar.events.read')->value('submodule_id'));
         $this->assertFalse((bool) $old->fresh()->is_active);
         $this->assertFalse((bool) $oldPage->fresh()->is_active);
     }

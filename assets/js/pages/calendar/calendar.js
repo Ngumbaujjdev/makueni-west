@@ -333,6 +333,13 @@ const CalendarPage = (function () {
     if (info.can.manage) {
       add.classList.remove("d-none");
       add.addEventListener("click", () => CalendarEventModal.form(null, { kinds: info.kinds, level: ctx.level, onSaved: changed }));
+      // The menu's "New date" (?add=1): the calendar with the form open, once.
+      const here = new URL(window.location.href);
+      if (here.searchParams.get("add") === "1") {
+        here.searchParams.delete("add");
+        history.replaceState(null, "", here.pathname + here.search + here.hash);
+        add.click();
+      }
     }
 
     // The CCI national calendar tab: the diocese, global admins only.

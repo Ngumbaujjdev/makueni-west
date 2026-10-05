@@ -14,9 +14,10 @@ use Spatie\Permission\Models\Role;
 /**
  * The Messages menu and permissions (docs/specs/messages-spec.md).
  *
- * Each level's Programs group gets a "Messages" module with one page,
- * /{level}/messages/, and {level}.messages.messages.read / send (the leaders)
- * and {level}.messages.inbox.read (every role at the level). The empty
+ * Each level's Programs group gets a "Messages" module: the Inbox,
+ * /{level}/messages/, with {level}.messages.messages.read (the leaders) and
+ * {level}.messages.inbox.read (every role at the level); and "Send a
+ * message" (new.php) with {level}.messages.messages.send. The empty
  * placeholders are reused: the diocese's "Diocese Communications Hub" and
  * the church's "Communication".
  *
@@ -55,12 +56,20 @@ class MessagesAccessSeeder extends Seeder
                 ['title' => 'Messages', 'description' => 'The Inbox, sending to our leaders and the places below, and saved messages.', 'is_active' => true],
             );
 
+            // The way in for those who send.
+            $sendPage = Submodule::updateOrCreate(
+                ['module_id' => $module->id, 'path' => "/{$level}/messages/new.php"],
+                ['title' => 'Send a message', 'description' => 'By SMS, email or in the app, to our leaders and the places below.', 'is_active' => true],
+            );
+
             $permissions = [];
             foreach (['read', 'send', 'inbox'] as $ability) {
                 $name = "{$level}.".MessagesAccess::ABILITIES[$ability];
+                // Each permission sits on the page it opens: send on "Send a message".
+                $on = $ability === 'send' ? $sendPage : $page;
                 $permissions[$ability] = Permission::updateOrCreate(
                     ['name' => $name, 'guard_name' => 'web'],
-                    ['module_id' => $module->id, 'submodule_id' => $page->id, 'sub_submodule_id' => null, 'action' => substr($name, strrpos($name, '.') + 1), 'territory_scope' => $level],
+                    ['module_id' => $module->id, 'submodule_id' => $on->id, 'sub_submodule_id' => null, 'action' => substr($name, strrpos($name, '.') + 1), 'territory_scope' => $level],
                 );
             }
 
@@ -104,7 +113,7 @@ class MessagesAccessSeeder extends Seeder
             'is_active' => true,
         ])->save();
 
-        $unbuilt = Submodule::where('module_id', $module->id)->where('path', '!=', "/{$level}/messages/");
+        $unbuilt = Submodule::where('module_id', $module->id)->whereNotIn('path', ["/{$level}/messages/", "/{$level}/messages/new.php"]);
         SubSubmodule::whereIn('submodule_id', (clone $unbuilt)->pluck('id'))->update(['is_active' => false]);
         $unbuilt->update(['is_active' => false]);
 

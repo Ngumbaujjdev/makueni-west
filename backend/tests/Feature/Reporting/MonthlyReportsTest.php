@@ -271,5 +271,14 @@ class MonthlyReportsTest extends TestCase
         $this->assertTrue($senior->fresh()->hasPermissionTo('church.reports.monthly.send'));
         $this->assertTrue($bishop->fresh()->hasPermissionTo('diocese.reports.below.review'));
         $this->assertFalse(Permission::where('name', 'diocese.reports.monthly.write')->exists());
+
+        // The way in for those who write their own: "Write our report", holding write. Not the diocese.
+        foreach (['church', 'region'] as $level) {
+            $write = Submodule::where('path', "/{$level}/monthly-reports/report.php")->sole();
+            $this->assertSame('Write our report', $write->title);
+            $this->assertTrue((bool) $write->is_active);
+            $this->assertSame($write->id, Permission::where('name', "{$level}.reports.monthly.write")->value('submodule_id'));
+        }
+        $this->assertFalse(Submodule::where('path', '/diocese/monthly-reports/report.php')->exists());
     }
 }

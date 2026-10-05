@@ -94,6 +94,7 @@ Per level: `{L}.messages.messages.read`, `.messages.send`, and `{L}.messages.inb
 - diocese: reuses "Diocese Communications Hub" (M16);
 - church: reuses "Communication" (M34), which the church mute seeder now leaves on;
 - region: a new module.
+- **Send a message** (`/{L}/messages/new.php`) is the way in for senders (2026-10-05). `{L}.messages.messages.send` is linked to it; read and inbox stay on Messages. Each permission is linked to the page it opens, so the menu shows the way in only to roles that can use it.
 
 The placeholders' unbuilt sub-pages are switched off.
 

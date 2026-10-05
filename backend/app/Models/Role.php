@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
-use Spatie\Permission\Models\Role as SpatieRole;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use OwenIt\Auditing\Contracts\Auditable;
+use Spatie\Permission\Models\Role as SpatieRole;
 
 class Role extends SpatieRole implements Auditable
 {
@@ -16,7 +16,7 @@ class Role extends SpatieRole implements Auditable
         'guard_name',
         'territory_level',
         'description',
-        'is_active'
+        'is_active',
     ];
 
     protected $casts = [
@@ -139,7 +139,7 @@ class Role extends SpatieRole implements Auditable
         return $this->audits()
             ->where(function ($query) {
                 $query->where('event', 'like', '%permission%')
-                      ->orWhere('event', 'updated');
+                    ->orWhere('event', 'updated');
             })
             ->with('user:id,firstname,lastname,username')
             ->latest()
@@ -170,8 +170,8 @@ class Role extends SpatieRole implements Auditable
         return $this->audits()
             ->where(function ($query) {
                 $query->where('event', 'like', 'role_%')
-                      ->orWhereJsonContains('new_values->is_active', true)
-                      ->orWhereJsonContains('new_values->is_active', false);
+                    ->orWhereJsonContains('new_values->is_active', true)
+                    ->orWhereJsonContains('new_values->is_active', false);
             })
             ->with('user:id,firstname,lastname,username')
             ->latest()
@@ -202,15 +202,15 @@ class Role extends SpatieRole implements Auditable
             ->latest()
             ->first();
 
-        if (!$lastAudit) {
+        if (! $lastAudit) {
             return null;
         }
 
-        if (!$lastAudit->user) {
+        if (! $lastAudit->user) {
             return 'System';
         }
 
-        return $lastAudit->user->full_name . ' on ' . $lastAudit->created_at->format('Y-m-d H:i:s');
+        return $lastAudit->user->full_name.' on '.$lastAudit->created_at->format('Y-m-d H:i:s');
     }
 
     /*
@@ -238,22 +238,31 @@ class Role extends SpatieRole implements Auditable
     /**
      * Update permissions for this role by syncing permission IDs
      * Uses Spatie's givePermissionTo method with permission names (like seeders)
-     * 
-     * @param array $permissionIds Array of permission IDs to assign to this role
-     * @return void
+     *
+     * When the screen says which permissions it showed ($shownIds), only those
+     * can be taken away - the role keeps everything else. The role screen once
+     * had no column for manage/register/write/send, so saving a role silently
+     * took those away (Senior Pastor lost "add an event", 2026-10-05).
+     *
+     * @param  array  $permissionIds  Array of permission IDs to assign to this role
+     * @param  array|null  $shownIds  The permission IDs the screen showed, ticked or not
      */
-    public function updateModulePermissions(array $permissionIds): void
+    public function updateModulePermissions(array $permissionIds, ?array $shownIds = null): void
     {
+        $kept = $shownIds === null
+            ? []
+            : $this->permissions()->whereNotIn('permissions.id', $shownIds)->pluck('permissions.id')->all();
+
         // Clear existing permissions first (like the seeders do)
         $this->permissions()->detach();
-        
+
         // Get permission names from IDs
-        $permissionNames = Permission::whereIn('id', $permissionIds)
+        $permissionNames = Permission::whereIn('id', array_unique([...$permissionIds, ...$kept]))
             ->pluck('name')
             ->toArray();
-        
+
         // Use Spatie's givePermissionTo with permission names
-        if (!empty($permissionNames)) {
+        if (! empty($permissionNames)) {
             $this->givePermissionTo($permissionNames);
         }
     }
@@ -289,7 +298,7 @@ class Role extends SpatieRole implements Auditable
      */
     public function getAvailablePermissions()
     {
-        if (!$this->territory_level) {
+        if (! $this->territory_level) {
             return Permission::with(['module', 'submodule', 'subSubmodule'])->get();
         }
 
@@ -322,6 +331,7 @@ class Role extends SpatieRole implements Auditable
 
         if ($levelIndex !== false) {
             $accessibleLevels = array_slice($levelHierarchy, 0, $levelIndex + 1);
+
             return $query->whereIn('territory_level', $accessibleLevels);
         }
 

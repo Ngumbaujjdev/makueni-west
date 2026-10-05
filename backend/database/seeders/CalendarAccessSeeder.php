@@ -14,10 +14,10 @@ use Spatie\Permission\Models\Role;
 /**
  * The Calendar's menu and permissions (docs/specs/calendar-spec.md).
  *
- * Each level's Programs group gets one "Calendar" module with one page,
- * /{level}/calendar/, and {level}.calendar.events.read / .manage linked to
- * it. Everyone at a level can read; the people in MANAGERS add their
- * place's events. The diocese also gets a "CCI national calendar" page for
+ * Each level's Programs group gets one "Calendar" module with the calendar,
+ * /{level}/calendar/ ({level}.calendar.events.read), and "New date", the
+ * calendar with its form open ({level}.calendar.events.manage). Everyone at
+ * a level can read; the people in MANAGERS add their place's events. The diocese also gets a "CCI national calendar" page for
  * global admins (no permission - global admins see every page).
  *
  * The old "Diocese Calendar" module (views, management, sync, meetings,
@@ -59,6 +59,11 @@ class CalendarAccessSeeder extends Seeder
                 ['module_id' => $module->id, 'path' => "/{$level}/calendar/"],
                 ['title' => 'Calendar', 'description' => 'Month, week and list views of every event you can see.', 'is_active' => true],
             );
+            // The way in for those who can add: the calendar with its form open.
+            $add = Submodule::updateOrCreate(
+                ['module_id' => $module->id, 'path' => "/{$level}/calendar/?add=1"],
+                ['title' => 'New date', 'description' => 'Put a service, meeting or other date on the calendar.', 'is_active' => true],
+            );
             if ($level === 'diocese') {
                 Submodule::updateOrCreate(
                     ['module_id' => $module->id, 'path' => '/diocese/calendar/?tab=cci'],
@@ -68,11 +73,14 @@ class CalendarAccessSeeder extends Seeder
 
             $granted = 0;
             foreach (['read', 'manage'] as $action) {
+                // Each permission sits on the page it opens: read on the
+                // calendar, manage on "New date".
+                $on = $action === 'manage' ? $add : $page;
                 $permission = Permission::firstOrCreate(
                     ['name' => CalendarAccess::permission($level, $action)],
-                    ['guard_name' => 'web', 'module_id' => $module->id, 'submodule_id' => $page->id, 'sub_submodule_id' => null, 'action' => $action, 'territory_scope' => $level],
+                    ['guard_name' => 'web', 'module_id' => $module->id, 'submodule_id' => $on->id, 'sub_submodule_id' => null, 'action' => $action, 'territory_scope' => $level],
                 );
-                $permission->forceFill(['module_id' => $module->id, 'submodule_id' => $page->id])->save();
+                $permission->forceFill(['module_id' => $module->id, 'submodule_id' => $on->id])->save();
                 $roles = $action === 'read'
                     ? Role::where('territory_level', $level)->get()
                     : Role::whereIn('name', self::MANAGERS[$level])->get();
@@ -83,7 +91,7 @@ class CalendarAccessSeeder extends Seeder
                     }
                 }
             }
-            $this->command?->info("   ✅ {$level}: Calendar page, {$granted} new grant(s)");
+            $this->command?->info("   ✅ {$level}: Calendar and New date pages, {$granted} new grant(s)");
         }
 
         $old = Module::where('name', self::RETIRED_MODULE)->get();

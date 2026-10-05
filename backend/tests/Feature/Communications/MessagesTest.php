@@ -220,5 +220,13 @@ class MessagesTest extends TestCase
         $this->assertTrue($deacon->fresh()->hasPermissionTo('church.messages.inbox.read'));
         $this->assertFalse($deacon->fresh()->hasPermissionTo('church.messages.messages.send'));
         $this->assertTrue($senior->fresh()->hasPermissionTo('church.messages.messages.send'));
+
+        // The way in for senders: "Send a message", holding send.
+        foreach (['church', 'region', 'diocese'] as $level) {
+            $send = Submodule::where('path', "/{$level}/messages/new.php")->sole();
+            $this->assertSame('Send a message', $send->title);
+            $this->assertTrue((bool) $send->is_active);
+            $this->assertSame($send->id, Permission::where('name', "{$level}.messages.messages.send")->value('submodule_id'));
+        }
     }
 }

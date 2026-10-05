@@ -138,6 +138,26 @@ class AdminEndpointsAuthorizationTest extends TestCase
         ]);
     }
 
+    public function test_saving_a_role_only_takes_away_what_the_screen_showed(): void
+    {
+        // The role screen had no column for manage/register, so every save
+        // took them away (Senior Pastor lost "add an event", 2026-10-05).
+        $perm = fn (string $name) => Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web'], ['action' => substr(strrchr($name, '.'), 1), 'territory_scope' => 'church']);
+        $read = $perm('church.events.events.read');
+        $manage = $perm('church.events.events.manage');
+        $hidden = $perm('church.events.events.register');
+        $this->pastorRole->givePermissionTo([$read, $manage, $hidden]);
+        Sanctum::actingAs($this->globalAdmin);
+
+        // Shown: read (ticked) and manage (unticked). Register wasn't shown - it stays.
+        $this->putJson("/api/roles/{$this->pastorRole->id}/permissions", ['permissions' => [$read->id], 'shown' => [$read->id, $manage->id]])->assertOk();
+        $role = $this->pastorRole->fresh();
+        $this->assertTrue($role->hasPermissionTo($read));
+        $this->assertFalse($role->hasPermissionTo($manage));
+        $this->assertTrue($role->hasPermissionTo($hidden));
+        $this->assertTrue($role->hasPermissionTo('church.dashboard.dashboardoverview.read'));
+    }
+
     /** @return array{0: User, 1: Role} */
     private function userWithRole(string $username, string $roleName, string $level, int $territoryId, array $permissions): array
     {
