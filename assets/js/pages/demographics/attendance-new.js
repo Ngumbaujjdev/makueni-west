@@ -107,9 +107,13 @@ const AttendanceNew = (function () {
         return `
         <a class="record-recent" href="${RECORD_URL}?id=${r.id}">
           <span class="budget-recent-date"><b>${d.getDate()}</b><small>${d.toLocaleDateString("en-GB", { month: "short" })}</small></span>
-          <span class="avatar avatar-sm avatar-rounded bg-${kind.color} text-white flex-shrink-0"><i class="${kind.icon}"></i></span>
-          <span class="flex-fill" style="min-width: 0;"><span class="d-block fw-semibold text-truncate">${esc(nameOf(r))}</span><span class="d-block fs-12">${kind.title} · ${A.formatDate(A.recordIso(r))}</span></span>
-          <span class="fw-bold text-nowrap">${A.recordTotal(r).toLocaleString()} <span class="fs-12 fw-normal">came</span></span>
+          <span class="avatar avatar-sm avatar-rounded bg-${kind.color} text-white flex-shrink-0 d-none d-sm-inline-flex"><i class="${kind.icon}"></i></span>
+          <span class="flex-fill" style="min-width: 0;">
+            <span class="d-block fw-semibold text-break">${esc(nameOf(r))}</span>
+            <span class="d-block fs-12">${kind.title} · ${A.formatDate(A.recordIso(r))}</span>
+            <span class="d-block d-sm-none fs-12 mt-1"><b class="fs-13">${A.recordTotal(r).toLocaleString()}</b> came</span>
+          </span>
+          <span class="fw-bold text-nowrap d-none d-sm-inline">${A.recordTotal(r).toLocaleString()} <span class="fs-12 fw-normal">came</span></span>
           <i class="ri-arrow-right-s-line"></i>
         </a>`;
       })
