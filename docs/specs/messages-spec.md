@@ -109,6 +109,12 @@ The placeholders' unbuilt sub-pages are switched off.
 ### L5b as built
 - **Pages:** `includes/messages/` (`context.php`, `page.php`, `body-{index,new,message}.php`) with wrappers `{church,region,diocese}/messages/{index,new,message}.php`; scripts in `assets/js/pages/messages/` (`api.js`, `ui.js`, `index.js`, `new.js`, `message.js`).
 - **Messages page:** section tabs **Inbox** (everyone), **Sent** and **Saved messages** (those who send). The Inbox reads in place, chat-style, with a reply box; `?open=` opens one (the bell links there).
+- **Messages page is the template's `chat.html`** (2026-10-05): its markup, classes, ids and `chat.js` behaviour, as the first thing on the page (no page header or figure cards, as in the template). The panels are sized to the screen less the sub-tab bar (`--secondary-nav-h`). Its slots hold ours:
+  - Recent / Groups / Calls → **Inbox / Sent / Saved**, and "ACTIVE / ALL CHATS" → **Unread / Earlier**.
+  - The list header's settings menu → show messages from everyone, the diocese, the region or our church.
+  - The header's phone and video buttons → this message's two actions (Reply and Send a new message; Everyone it went to; Use it and Edit). They show from small tablets up; on a phone they're in the ⋮ menu.
+  - The footer's second button → put a saved message into the reply.
+  - The details panel's three round buttons → the same actions plus Copy; "Shared Files" → **About this message**, and for Sent, **Who it went to** with View All.
 - **Send a message:**
   - who: role chips here; below: None / All / By subregion or region / Pick places, the roles there, and the places' own contacts; typed entries;
   - the message: the channel, a part counter, `{name}` / `{place}` / `{sender}`, and "Use a saved message";
