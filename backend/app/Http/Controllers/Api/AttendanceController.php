@@ -162,6 +162,7 @@ class AttendanceController extends Controller
             'service_date' => 'required|date',
             'gathering_category_id' => 'required|exists:gathering_categories,id',
             'gathering_type_id' => 'nullable|exists:gathering_types,id',
+            'activity_id' => 'nullable|integer',
             'event_name' => 'nullable|string|max:255',
             'adults_count' => 'nullable|integer|min:0',
             'youth_count' => 'nullable|integer|min:0',
@@ -230,6 +231,17 @@ class AttendanceController extends Controller
 
         if ($error = $this->sundayRuleError($category, $data['service_date'], (int) $data['territory_id'])) {
             return $error;
+        }
+
+        // Attendance at the church's own event (Events, docs/specs/events-initiatives-spec.md).
+        if (! empty($data['activity_id']) && ! \App\Models\Activity::whereKey($data['activity_id'])->where('kind', 'event')
+            ->where('territory_id', $data['territory_id'])->where('status', '!=', 'cancelled')->exists()) {
+            return response()->json([
+                'success' => false,
+                'status' => 422,
+                'message' => 'That event isn\'t one of this church\'s.',
+                'errors' => ['activity_id' => ['That event isn\'t one of this church\'s.']],
+            ], 422);
         }
 
         $fiscal = $this->fiscalIdsFor($data['service_date']);

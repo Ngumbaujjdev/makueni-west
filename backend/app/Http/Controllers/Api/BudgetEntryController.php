@@ -80,7 +80,15 @@ class BudgetEntryController extends Controller
         if ($budget instanceof JsonResponse) {
             return $budget;
         }
+        // Money for one of this place's own events (docs/specs/events-initiatives-spec.md).
+        $activityId = $request->integer('activity_id') ?: null;
+        if ($activityId && ! \App\Models\Activity::whereKey($activityId)->where('territory_id', $budget->territory_id)->exists()) {
+            return response()->json(['success' => false, 'status' => 422, 'message' => 'That event isn\'t one of this place\'s.', 'errors' => ['activity_id' => ['That event isn\'t one of this place\'s.']]], 422);
+        }
         $entry = $this->book->record($request->user(), $budget, $data);
+        if ($activityId) {
+            $entry->forceFill(['activity_id' => $activityId])->save();
+        }
 
         return response()->json([
             'success' => true,

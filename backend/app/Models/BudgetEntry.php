@@ -28,7 +28,7 @@ class BudgetEntry extends Model implements HasMedia
     public const METHODS = ['cash' => 'Cash', 'mpesa' => 'M-Pesa', 'bank' => 'Bank', 'cheque' => 'Cheque'];
 
     protected $fillable = [
-        'budget_id', 'budget_line_item_id', 'direction', 'amount', 'entry_date',
+        'budget_id', 'budget_line_item_id', 'activity_id', 'direction', 'amount', 'entry_date',
         'description', 'counterparty', 'method', 'reference', 'recorded_by', 'updated_by',
     ];
 

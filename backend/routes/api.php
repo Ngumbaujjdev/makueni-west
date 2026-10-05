@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Activities\ActivitiesController;
 use App\Http\Controllers\Api\AppearanceController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AttendanceReportController;
@@ -75,6 +76,22 @@ Route::get('/system-admin/contact', [UserController::class, 'getSystemAdminConta
 Route::get('settings/logo/{territory}', [SettingsProfileController::class, 'logo']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
+
+    // Events (and initiatives) of church, region and diocese (docs/specs/events-initiatives-spec.md)
+    Route::get('activities', [ActivitiesController::class, 'index']);
+    Route::get('activities/overview', [ActivitiesController::class, 'overview']);
+    Route::post('activities', [ActivitiesController::class, 'store']);
+    Route::get('activities/{id}', [ActivitiesController::class, 'show'])->whereNumber('id');
+    Route::put('activities/{id}', [ActivitiesController::class, 'update'])->whereNumber('id');
+    Route::post('activities/{id}/publish', [ActivitiesController::class, 'publish'])->whereNumber('id');
+    Route::post('activities/{id}/complete', [ActivitiesController::class, 'complete'])->whereNumber('id');
+    Route::post('activities/{id}/cancel', [ActivitiesController::class, 'cancel'])->whereNumber('id');
+    Route::get('activities/{id}/registrations', [ActivitiesController::class, 'registrations'])->whereNumber('id');
+    Route::post('activities/{id}/register', [ActivitiesController::class, 'register'])->whereNumber('id');
+    Route::get('activities/{id}/money', [ActivitiesController::class, 'money'])->whereNumber('id');
+    Route::get('activities/{id}/history', [ActivitiesController::class, 'history'])->whereNumber('id');
+    Route::put('registrations/{id}', [ActivitiesController::class, 'updateRegistration'])->whereNumber('id');
+    Route::post('registrations/{id}/withdraw', [ActivitiesController::class, 'withdraw'])->whereNumber('id');
 
     // In-app notifications - the header bell and the Notifications page (docs/specs/events-initiatives-spec.md)
     Route::get('notifications', [NotificationsController::class, 'index']);
