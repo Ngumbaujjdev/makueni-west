@@ -7,35 +7,43 @@ use App\Models\ModuleGroup;
 use App\Models\Permission;
 use App\Models\Submodule;
 use App\Models\SubSubmodule;
-use App\Support\EventsAccess;
+use App\Support\ActivityAccess;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 
 /**
- * The Events menu and permissions (docs/specs/events-initiatives-spec.md).
+ * The Events and Initiatives menus and permissions
+ * (docs/specs/events-initiatives-spec.md).
  *
- * Each level's Programs group gets an "Events" module with one page,
- * /{level}/events/, and {level}.events.events.read / manage / register
- * (plus .events.below.read for region and diocese) linked to it. The empty
- * placeholder modules are reused rather than duplicated: the diocese's
- * "Diocese Events Management" and the region's "Regional Programs" become
- * Events, and their unbuilt sub-pages are switched off.
+ * Each level's Programs group gets an "Events" and an "Initiatives" module,
+ * each with one page (/{level}/events/, /{level}/initiatives/) and
+ * {level}.{events|initiatives}.*.read / manage / register (plus .below.read
+ * for region and diocese) linked to it. The empty placeholder modules are
+ * reused rather than duplicated - the diocese's "Diocese Events Management"
+ * and "Diocese Initiatives Management" and the region's "Regional Programs" -
+ * and their unbuilt sub-pages are switched off.
  *
  * Idempotent - safe to re-run.
  */
 class ActivitiesAccessSeeder extends Seeder
 {
-    private const MODULE_NAME = 'Events';
-
-    private const MODULE_ICON = 'ri-calendar-check-line';
-
-    /** The old placeholder module each level reuses (matched by name). */
-    private const REUSE = [
-        'diocese' => 'Diocese Events Management',
-        'region' => 'Regional Programs',
+    /** kind => the module each level gets, and the old placeholder each level reuses (matched by name). */
+    private const MODULES = [
+        'event' => [
+            'name' => 'Events', 'path' => 'events', 'icon' => 'ri-calendar-check-line',
+            'description' => 'Events of this place, invitations from above, and who is coming.',
+            'page' => 'Our events, invitations from above, and who is coming.',
+            'reuse' => ['diocese' => 'Diocese Events Management', 'region' => 'Regional Programs'],
+        ],
+        'initiative' => [
+            'name' => 'Initiatives', 'path' => 'initiatives', 'icon' => 'ri-seedling-line',
+            'description' => 'Programmes that meet over time: sessions, attendance and the places taking part.',
+            'page' => 'Our initiatives, their sessions, and the places taking part.',
+            'reuse' => ['diocese' => 'Diocese Initiatives Management'],
+        ],
     ];
 
-    /** Role => abilities (EventsAccess::ABILITIES keys), per level. */
+    /** Role => abilities (ActivityAccess::ABILITIES keys), per level - the same for both kinds. */
     private const GRANTS = [
         'church' => [
             'Senior Pastor' => ['read', 'manage', 'register'],
@@ -71,7 +79,7 @@ class ActivitiesAccessSeeder extends Seeder
 
     public function run(): void
     {
-        $this->command?->info('🎉 EVENTS - menu and permissions per level');
+        $this->command?->info('🎉 EVENTS AND INITIATIVES - menus and permissions per level');
         $this->command?->info(str_repeat('=', 70));
 
         foreach (self::GRANTS as $level => $grants) {
@@ -81,60 +89,62 @@ class ActivitiesAccessSeeder extends Seeder
 
                 continue;
             }
-            $module = $this->module($level, $group);
-            $page = Submodule::updateOrCreate(
-                ['module_id' => $module->id, 'path' => "/{$level}/events/"],
-                ['title' => 'Events', 'description' => 'Our events, invitations from above, and who is coming.', 'is_active' => true],
-            );
-
-            $abilities = $level === 'church' ? ['read', 'manage', 'register'] : ['read', 'manage', 'register', 'below'];
-            $permissions = [];
-            foreach ($abilities as $ability) {
-                $name = "{$level}.".EventsAccess::ABILITIES[$ability];
-                $permissions[$ability] = Permission::updateOrCreate(
-                    ['name' => $name, 'guard_name' => 'web'],
-                    ['module_id' => $module->id, 'submodule_id' => $page->id, 'sub_submodule_id' => null, 'action' => substr($name, strrpos($name, '.') + 1), 'territory_scope' => $level],
+            foreach (self::MODULES as $kind => $spec) {
+                $module = $this->module($level, $group, $spec);
+                $page = Submodule::updateOrCreate(
+                    ['module_id' => $module->id, 'path' => "/{$level}/{$spec['path']}/"],
+                    ['title' => $spec['name'], 'description' => $spec['page'], 'is_active' => true],
                 );
-            }
 
-            $granted = 0;
-            foreach ($grants as $roleName => $roleAbilities) {
-                $role = Role::where('name', $roleName)->first();
-                if (! $role) {
-                    continue;
+                $abilities = $level === 'church' ? ['read', 'manage', 'register'] : ['read', 'manage', 'register', 'below'];
+                $permissions = [];
+                foreach ($abilities as $ability) {
+                    $name = "{$level}.".ActivityAccess::permission($kind, $ability);
+                    $permissions[$ability] = Permission::updateOrCreate(
+                        ['name' => $name, 'guard_name' => 'web'],
+                        ['module_id' => $module->id, 'submodule_id' => $page->id, 'sub_submodule_id' => null, 'action' => substr($name, strrpos($name, '.') + 1), 'territory_scope' => $level],
+                    );
                 }
-                foreach ($roleAbilities as $ability) {
-                    if (isset($permissions[$ability]) && ! $role->hasPermissionTo($permissions[$ability])) {
-                        $role->givePermissionTo($permissions[$ability]);
-                        $granted++;
+
+                $granted = 0;
+                foreach ($grants as $roleName => $roleAbilities) {
+                    $role = Role::where('name', $roleName)->first();
+                    if (! $role) {
+                        continue;
+                    }
+                    foreach ($roleAbilities as $ability) {
+                        if (isset($permissions[$ability]) && ! $role->hasPermissionTo($permissions[$ability])) {
+                            $role->givePermissionTo($permissions[$ability]);
+                            $granted++;
+                        }
                     }
                 }
+                $this->command?->info("   ✅ {$level}: {$spec['name']} page, {$granted} new grant(s)");
             }
-            $this->command?->info("   ✅ {$level}: Events page, {$granted} new grant(s)");
         }
 
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
-    /** The level's Events module: the old placeholder renamed (its unbuilt pages switched off), or a new one. */
-    private function module(string $level, ModuleGroup $group): Module
+    /** The level's module for a kind: the old placeholder renamed (its unbuilt pages switched off), or a new one. */
+    private function module(string $level, ModuleGroup $group, array $spec): Module
     {
-        $module = Module::where('module_group_id', $group->id)->where('name', self::MODULE_NAME)->first();
-        $old = isset(self::REUSE[$level]) ? Module::where('name', self::REUSE[$level])->first() : null;
+        $module = Module::where('module_group_id', $group->id)->where('name', $spec['name'])->first();
+        $old = isset($spec['reuse'][$level]) ? Module::where('name', $spec['reuse'][$level])->first() : null;
         if (! $module && $old) {
             $module = $old;
         }
         $module ??= new Module(['module_group_id' => $group->id, 'number' => 0]);
         $module->forceFill([
-            'name' => self::MODULE_NAME,
+            'name' => $spec['name'],
             'module_group_id' => $group->id,
-            'icon' => self::MODULE_ICON,
-            'description' => 'Events of this place, invitations from above, and who is coming.',
+            'icon' => $spec['icon'],
+            'description' => $spec['description'],
             'is_active' => true,
         ])->save();
 
-        // The placeholder's unbuilt pages (planning, execution, conferences...) go off.
-        $unbuilt = Submodule::where('module_id', $module->id)->where('path', '!=', "/{$level}/events/");
+        // The placeholder's unbuilt pages (planning, execution, analytics...) go off.
+        $unbuilt = Submodule::where('module_id', $module->id)->where('path', '!=', "/{$level}/{$spec['path']}/");
         SubSubmodule::whereIn('submodule_id', (clone $unbuilt)->pluck('id'))->update(['is_active' => false]);
         $unbuilt->update(['is_active' => false]);
 

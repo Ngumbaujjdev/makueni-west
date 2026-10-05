@@ -18,7 +18,7 @@ class ActivityRegistration extends Model implements Auditable
 
     protected $fillable = [
         'activity_id', 'territory_id', 'youth', 'adults', 'children', 'leaders', 'names', 'fee_due', 'fee_paid',
-        'came_youth', 'came_adults', 'came_children', 'came_leaders', 'rating', 'comment', 'status', 'registered_by', 'updated_by',
+        'came_youth', 'came_adults', 'came_children', 'came_leaders', 'completed', 'rating', 'comment', 'status', 'registered_by', 'updated_by',
     ];
 
     protected $casts = ['fee_due' => 'decimal:2', 'fee_paid' => 'decimal:2'];

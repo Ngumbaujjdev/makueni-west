@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * EVENTS - API (church, region and diocese events pages)
+ * EVENTS AND INITIATIVES - API (church, region and diocese pages)
  * ============================================================================
  * One fetch helper for Events (docs/specs/events-initiatives-spec.md). It
  * always sends the role the user is acting in (X-Assignment-Id), and every
@@ -11,6 +11,7 @@ const EventsAPI = (function () {
   "use strict";
 
   const BASE = AppConfig.API_BASE_URL;
+  const KIND = window.EVENTS_CTX?.kind || "event";
   const territoryId = new URLSearchParams(window.location.search).get("territory_id");
 
   function headers() {
@@ -45,10 +46,10 @@ const EventsAPI = (function () {
   }
 
   return {
-    list: (params) => request("GET", "/activities", { params: { kind: "event", ...params } }),
-    overview: (year) => request("GET", "/activities/overview", { params: { kind: "event", year } }),
+    list: (params) => request("GET", "/activities", { params: { kind: KIND, ...params } }),
+    overview: (year) => request("GET", "/activities/overview", { params: { kind: KIND, year } }),
     get: (id) => request("GET", `/activities/${id}`),
-    create: (body) => request("POST", "/activities", { body: { kind: "event", ...body } }),
+    create: (body) => request("POST", "/activities", { body: { kind: KIND, ...body } }),
     update: (id, body) => request("PUT", `/activities/${id}`, { body }),
     publish: (id) => request("POST", `/activities/${id}/publish`),
     complete: (id, reportBack) => request("POST", `/activities/${id}/complete`, { body: { report_back: reportBack } }),
@@ -59,5 +60,9 @@ const EventsAPI = (function () {
     withdraw: (id) => request("POST", `/registrations/${id}/withdraw`),
     money: (id) => request("GET", `/activities/${id}/money`),
     history: (id) => request("GET", `/activities/${id}/history`),
+    sessions: (id) => request("GET", `/activities/${id}/sessions`),
+    addSession: (id, body) => request("POST", `/activities/${id}/sessions`, { body }),
+    updateSession: (id, body) => request("PUT", `/sessions/${id}`, { body }),
+    removeSession: (id) => request("DELETE", `/sessions/${id}`),
   };
 })();

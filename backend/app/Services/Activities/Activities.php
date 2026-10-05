@@ -9,6 +9,7 @@ use App\Models\Territory;
 use App\Models\User;
 use App\Models\UserTerritoryAssignment;
 use App\Notifications\PlaceNotification;
+use App\Support\ActivityAccess;
 use App\Support\PlaceAccess;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -115,7 +116,7 @@ final class Activities
     {
         $owner = $activity->territory;
         $by = $activity->register_by ? ' · Register by '.$activity->register_by->format('j M') : '';
-        $users = $this->leadersWith($this->reach($activity), 'events.events.register');
+        $users = $this->leadersWith($this->reach($activity), ActivityAccess::permission($activity->kind, 'register'));
         foreach ($users as $user) {
             $user->notify(new PlaceNotification(
                 'invitation',
@@ -133,7 +134,7 @@ final class Activities
     public function notifyRegistered(ActivityRegistration $registration, bool $changed): void
     {
         $activity = $registration->activity;
-        foreach ($this->leadersWith([(int) $activity->territory_id], 'events.events.manage') as $user) {
+        foreach ($this->leadersWith([(int) $activity->territory_id], ActivityAccess::permission($activity->kind, 'manage')) as $user) {
             $user->notify(new PlaceNotification(
                 'registration',
                 $activity->title,
@@ -148,7 +149,7 @@ final class Activities
     public function notifyCancelled(Activity $activity): void
     {
         $placeIds = $activity->registrations()->where('status', 'registered')->pluck('territory_id')->all();
-        foreach ($this->leadersWith($placeIds, 'events.events.register') as $user) {
+        foreach ($this->leadersWith($placeIds, ActivityAccess::permission($activity->kind, 'register')) as $user) {
             $user->notify(new PlaceNotification('invitation', "Cancelled: {$activity->title}", "{$activity->territory->name} cancelled it.", $this->url($activity, $user), $activity->territory));
         }
     }
@@ -213,8 +214,8 @@ final class Activities
     public function overview(Territory $place, string $kind, int $year): array
     {
         $now = CarbonImmutable::now();
-        $own = Activity::with('registrations')->where('kind', $kind)->where('territory_id', $place->id)->whereYear('starts_at', $year)->get();
-        $invited = $this->invitations($place, $kind)->whereYear('starts_at', $year)->get();
+        $own = Activity::with('registrations')->where('kind', $kind)->where('territory_id', $place->id)->inYear($year, $kind)->get();
+        $invited = $this->invitations($place, $kind)->inYear($year, $kind)->get();
         $registeredIds = ActivityRegistration::where('territory_id', $place->id)->where('status', 'registered')->pluck('activity_id')->all();
         $money = BudgetEntry::whereIn('activity_id', $own->pluck('id')->all() ?: [0])
             ->whereHas('budget', fn ($q) => $q->where('territory_id', $place->id));
@@ -222,6 +223,10 @@ final class Activities
         $byMonth = array_fill(0, 12, 0);
         foreach ($own as $a) {
             $byMonth[$a->starts_at->month - 1]++;
+        }
+
+        if ($kind === 'initiative') {
+            return $this->initiativeFigures($place, $own, $invited, $registeredIds, $money, $year);
         }
 
         return [
@@ -237,6 +242,47 @@ final class Activities
                 'invited' => $invited->count(),
                 'invited_new' => $invited->filter(fn ($a) => $a->registrationOpen() && ! in_array($a->id, $registeredIds, true))->count(),
                 'below' => $place->territory_type?->value === 'church' ? 0 : $this->below($place, $kind)->whereYear('starts_at', $year)->count(),
+            ],
+        ];
+    }
+
+    /** The Initiatives page's figures: active, places taking part, sessions held, attendance rate. */
+    private function initiativeFigures(Territory $place, Collection $own, Collection $invited, array $registeredIds, Builder $money, int $year): array
+    {
+        $now = CarbonImmutable::now();
+        $own->load('sessions');
+        $active = fn ($a) => $a->status === 'published' && $a->ends_at->gte($now);
+        $byMonth = array_fill(0, 12, 0);
+        $attended = 0;
+        $expectedTotal = 0;
+        $heldTotal = 0;
+        foreach ($own as $a) {
+            // Who each session is for: its intended size, else the people the places below signed up.
+            $perSession = (int) $a->capacity ?: (int) $a->registrations->where('status', 'registered')->sum(fn ($r) => $r->expected());
+            foreach ($a->sessions->where('status', 'held') as $s) {
+                if ((int) $s->held_on->year === $year) {
+                    $byMonth[$s->held_on->month - 1]++;
+                }
+                $heldTotal++;
+                $attended += (int) $s->attendance();
+                $expectedTotal += $perSession;
+            }
+        }
+
+        return [
+            'year' => $year,
+            'active' => $own->filter($active)->count() + $invited->filter($active)->count(),
+            'taking_part' => $own->flatMap(fn ($a) => $a->registrations->where('status', 'registered')->pluck('territory_id'))->unique()->count(),
+            'sessions_held' => $heldTotal,
+            'attendance_rate' => $expectedTotal > 0 ? (int) round($attended / $expectedTotal * 100) : null,
+            'average_attendance' => $heldTotal ? (int) round($attended / $heldTotal) : null,
+            'raised' => round((float) (clone $money)->where('direction', 'in')->sum('amount'), 2),
+            'by_month' => $byMonth,
+            'counts' => [
+                'own' => $own->count(),
+                'invited' => $invited->count(),
+                'invited_new' => $invited->filter(fn ($a) => $a->registrationOpen() && ! in_array($a->id, $registeredIds, true))->count(),
+                'below' => $place->territory_type?->value === 'church' ? 0 : $this->below($place, 'initiative')->inYear($year, 'initiative')->count(),
             ],
         ];
     }

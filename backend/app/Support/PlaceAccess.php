@@ -10,7 +10,7 @@ use App\Models\User;
  * (docs/specs/events-initiatives-spec.md): the same acting-role rules as
  * Budgets - the X-Assignment-Id header picks the role, you write to your
  * own place and view the places below, never upwards or sideways. Each
- * module keeps its ability map in its own XxxAccess (e.g. EventsAccess).
+ * module keeps its ability map in its own XxxAccess (e.g. ActivityAccess).
  *
  * The acting-role plumbing is BudgetAccess's (assignment, has, isBelow);
  * BudgetAccess itself is left as it is.
