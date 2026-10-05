@@ -36643,3 +36643,75 @@ a.cal-side-item:hover {
 #tab-signins table.dataTable {
   width: 100% !important;
 }
+
+/* My Profile: fact boxes tinted in their icon's colour. */
+.profile-tint-primary { background: rgba(var(--primary-rgb), 0.07); border-color: rgba(var(--primary-rgb), 0.28); }
+.profile-tint-success { background: rgba(var(--success-rgb), 0.07); border-color: rgba(var(--success-rgb), 0.28); }
+.profile-tint-warning { background: rgba(var(--warning-rgb), 0.07); border-color: rgba(var(--warning-rgb), 0.28); }
+.profile-tint-danger { background: rgba(var(--danger-rgb), 0.07); border-color: rgba(var(--danger-rgb), 0.28); }
+.profile-tint-info { background: rgba(var(--info-rgb), 0.07); border-color: rgba(var(--info-rgb), 0.28); }
+.profile-tint-purple { background: rgba(var(--purple-rgb), 0.07); border-color: rgba(var(--purple-rgb), 0.28); }
+.profile-tint-pink { background: rgba(var(--pink-rgb), 0.07); border-color: rgba(var(--pink-rgb), 0.28); }
+/* Edit my details: a preview card that follows the typing, and what will change. */
+.profile-preview {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px dashed rgba(var(--primary-rgb), 0.45);
+  border-radius: 0.75rem;
+  background: rgba(var(--primary-rgb), 0.07);
+}
+.profile-preview-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgb(var(--primary-rgb));
+}
+.profile-changes {
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: rgba(var(--warning-rgb), 0.08);
+  border: 1px solid rgba(var(--warning-rgb), 0.3);
+}
+.profile-change {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0;
+}
+/* The profile windows' inputs: a soft tint, coloured hint text and focus ring
+   (teal for your details, red for the password). */
+#editProfileModal .form-control,
+#passwordModal .form-control {
+  background-color: rgba(var(--primary-rgb), 0.05);
+  border-color: rgba(var(--primary-rgb), 0.3);
+}
+#editProfileModal .form-control::placeholder {
+  color: rgba(var(--primary-rgb), 0.75);
+}
+#editProfileModal .form-control:focus {
+  border-color: rgb(var(--primary-rgb));
+  box-shadow: 0 0 0 0.2rem rgba(var(--primary-rgb), 0.15);
+}
+#passwordModal .form-control {
+  background-color: rgba(var(--danger-rgb), 0.04);
+  border-color: rgba(var(--danger-rgb), 0.28);
+}
+#passwordModal .form-control::placeholder {
+  color: rgba(var(--danger-rgb), 0.7);
+}
+#passwordModal .form-control:focus {
+  border-color: rgb(var(--danger-rgb));
+  box-shadow: 0 0 0 0.2rem rgba(var(--danger-rgb), 0.15);
+}
+#passwordModal .input-group .btn {
+  background-color: rgba(var(--danger-rgb), 0.06);
+  border-color: rgba(var(--danger-rgb), 0.28) !important;
+}
+#editProfileModal .form-control.is-invalid,
+#passwordModal .form-control.is-invalid {
+  border-color: rgb(var(--danger-rgb));
+}

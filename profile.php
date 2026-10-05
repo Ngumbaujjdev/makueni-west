@@ -295,15 +295,25 @@ $ph = fn (string $w = 'col-6', string $extra = '') => '<span class="placeholder 
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="profile-preview mb-3" aria-live="polite">
+                        <span class="avatar avatar-lg avatar-rounded bg-primary text-white flex-shrink-0" id="previewAvatar">?</span>
+                        <div class="flex-fill" style="min-width: 0;">
+                            <div class="profile-preview-label">How you'll appear</div>
+                            <div class="fw-semibold fs-15 text-break" id="previewName">&nbsp;</div>
+                            <div class="fs-13 text-break" id="previewPosition">&nbsp;</div>
+                            <div class="fs-12 text-break mt-1" id="previewContact">&nbsp;</div>
+                        </div>
+                    </div>
+                    <div class="profile-changes mb-3" id="previewChanges" hidden></div>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="budget-field-label" for="editFirstname">First name</label>
-                            <input type="text" class="form-control" id="editFirstname" name="firstname" maxlength="255" autocomplete="given-name" required>
+                            <input type="text" class="form-control" id="editFirstname" name="firstname" maxlength="255" autocomplete="given-name" placeholder="e.g. Benson" required>
                             <div class="invalid-feedback" data-error="firstname"></div>
                         </div>
                         <div class="col-md-6">
                             <label class="budget-field-label" for="editLastname">Last name</label>
-                            <input type="text" class="form-control" id="editLastname" name="lastname" maxlength="255" autocomplete="family-name" required>
+                            <input type="text" class="form-control" id="editLastname" name="lastname" maxlength="255" autocomplete="family-name" placeholder="e.g. Manoo" required>
                             <div class="invalid-feedback" data-error="lastname"></div>
                         </div>
                         <div class="col-md-6">
@@ -319,7 +329,7 @@ $ph = fn (string $w = 'col-6', string $extra = '') => '<span class="placeholder 
                         </div>
                         <div class="col-md-6">
                             <label class="budget-field-label" for="editUsername">Username</label>
-                            <input type="text" class="form-control" id="editUsername" name="username" maxlength="255" autocomplete="username">
+                            <input type="text" class="form-control" id="editUsername" name="username" maxlength="255" autocomplete="username" placeholder="e.g. benson.manoo">
                             <div class="invalid-feedback" data-error="username"></div>
                         </div>
                         <div class="col-md-6">
@@ -351,10 +361,10 @@ $ph = fn (string $w = 'col-6', string $extra = '') => '<span class="placeholder 
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <?php foreach ([['currentPassword', 'current_password', 'Current password', 'current-password'], ['newPassword', 'new_password', 'New password', 'new-password'], ['confirmPassword', 'new_password_confirmation', 'Type the new password again', 'new-password']] as [$id, $name, $label, $auto]): ?>
+                    <?php foreach ([['currentPassword', 'current_password', 'Current password', 'current-password', 'The password you use now'], ['newPassword', 'new_password', 'New password', 'new-password', 'At least 8 characters, with a letter and a number'], ['confirmPassword', 'new_password_confirmation', 'Type the new password again', 'new-password', 'The same new password']] as [$id, $name, $label, $auto, $hint]): ?>
                         <label class="budget-field-label" for="<?= $id ?>"><?= $label ?></label>
                         <div class="input-group has-validation mb-3">
-                            <input type="password" class="form-control" id="<?= $id ?>" name="<?= $name ?>" autocomplete="<?= $auto ?>" required>
+                            <input type="password" class="form-control" id="<?= $id ?>" name="<?= $name ?>" autocomplete="<?= $auto ?>" placeholder="<?= $hint ?>" required>
                             <button type="button" class="btn btn-light border" data-toggle-password="<?= $id ?>" aria-label="Show password"><i class="ri-eye-line"></i></button>
                             <div class="invalid-feedback" data-error="<?= $name ?>"></div>
                         </div>
