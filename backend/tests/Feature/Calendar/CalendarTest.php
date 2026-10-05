@@ -134,6 +134,7 @@ class CalendarTest extends TestCase
         $this->assertSame(['2026-03-04', '2026-03-11', '2026-03-18', '2026-03-25'], $all->where('title', 'Youth night')->pluck('start')->values()->all());
         $retreat = $all->firstWhere('title', 'Retreat');
         $this->assertSame(['2026-04-10', '2026-04-13'], [$retreat['start'], $retreat['end']], 'three days, every year (end is exclusive)');
+        $this->assertSame(['starts_on' => '2025-04-10', 'ends_on' => '2025-04-12', 'start_time' => null, 'end_time' => null, 'repeat_until' => null], $retreat['base'], 'the edit form starts from the event, not the occurrence');
         $this->assertSame(['2026-01-31', '2026-02-28', '2026-03-31', '2026-04-30'], $all->where('title', 'Month end')->pluck('start')->values()->all());
     }
 
@@ -245,5 +246,14 @@ class CalendarTest extends TestCase
         $this->assertFalse($usher->fresh()->hasPermissionTo('church.calendar.events.manage'));
         $this->assertFalse((bool) $old->fresh()->is_active);
         $this->assertFalse((bool) $oldPage->fresh()->is_active);
+    }
+
+    public function test_events_are_audited(): void
+    {
+        config(['audit.console' => true]); // auditing is off for console runs - switch it on, as in a web request
+        Sanctum::actingAs($this->pastor);
+        $id = $this->postJson('/api/calendar/events', ['title' => 'Audited', 'kind' => 'other', 'starts_on' => '2026-09-20'])->assertCreated()->json('data.id');
+
+        $this->assertDatabaseHas('audits', ['auditable_type' => 'calendar_event', 'auditable_id' => $id, 'event' => 'created']);
     }
 }

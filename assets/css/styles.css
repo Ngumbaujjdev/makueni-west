@@ -35914,3 +35914,134 @@ tr.is-clickable {
   border-radius: 0.65rem;
   background: var(--custom-white);
 }
+
+/* Calendar (docs/specs/calendar-spec.md) - one per church, region and diocese, the CCI calendar on top */
+.calendar-filters {
+  border-bottom: 1px solid var(--default-border);
+  background: rgba(var(--primary-rgb), 0.03);
+}
+.cal-layer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.8rem;
+  border: 1px solid var(--default-border);
+  border-radius: 999px;
+  background: var(--custom-white);
+  color: var(--default-text-color);
+  font-size: 0.82rem;
+  font-weight: 600;
+  opacity: 0.75;
+}
+.cal-layer.active {
+  opacity: 1;
+  border-color: currentColor;
+}
+.cal-layer.active[data-colour="danger"] { color: rgb(var(--danger-rgb)); background: rgba(var(--danger-rgb), 0.08); }
+.cal-layer.active[data-colour="primary"] { color: rgb(var(--primary-rgb)); background: rgba(var(--primary-rgb), 0.08); }
+.cal-layer.active[data-colour="purple"] { color: rgb(var(--purple-rgb)); background: rgba(var(--purple-rgb), 0.08); }
+.cal-layer.active[data-colour="success"] { color: rgb(var(--success-rgb)); background: rgba(var(--success-rgb), 0.08); }
+.cal-layer.active[data-colour="secondary"] { color: var(--default-text-color); background: rgba(var(--secondary-rgb), 0.18); border-color: rgb(var(--secondary-rgb)); }
+.cal-layer-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+}
+.cal-kind-filter {
+  min-width: 12rem;
+}
+.cal-board .fc-toolbar-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+.cal-ev {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  padding: 0.05rem 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.cal-ev-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cal-ev-badge {
+  flex-shrink: 0;
+  padding: 0 0.3rem;
+  border-radius: 0.3rem;
+  background: #fff;
+  color: rgb(var(--danger-rgb));
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.fc-list-event .cal-ev { color: var(--default-text-color); }
+.fc-list-event .cal-ev-badge { background: rgb(var(--danger-rgb)); color: #fff; }
+.cal-ev-time {
+  flex-shrink: 0;
+  font-weight: 700;
+}
+.cal-panel {
+  padding: 1rem 1.1rem 1.1rem;
+  border: 1px solid rgba(var(--primary-rgb), 0.14);
+  border-radius: 0.85rem;
+  background: rgba(var(--primary-rgb), 0.04);
+}
+.cal-panel + .cal-panel {
+  margin-top: 0.9rem;
+}
+.cal-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.8rem;
+}
+.cal-panel .form-control,
+.cal-panel .form-select {
+  background-color: var(--custom-white);
+}
+.cal-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: 0.6rem 1.25rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(var(--primary-rgb), 0.14);
+  border-radius: 0.75rem;
+  background: rgba(var(--primary-rgb), 0.04);
+}
+.cal-facts > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.cal-facts span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.cal-description {
+  white-space: pre-line;
+}
+.cci-check-table {
+  max-height: 22rem;
+  overflow-y: auto;
+  border: 1px solid var(--default-border);
+  border-radius: 0.6rem;
+}
+.cci-row-bad td {
+  background: rgba(var(--danger-rgb), 0.05);
+}
+@media (max-width: 767.98px) {
+  .cal-kind-filter {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+  .cal-board .fc-toolbar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+}

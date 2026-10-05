@@ -181,6 +181,11 @@ final class Calendar
             'repeats' => $e->repeats,
             'shared_below' => $e->shared_below,
             'can_edit' => $canEdit,
+            // The event itself (not this occurrence) - what the edit form starts from.
+            'base' => $canEdit ? [
+                'starts_on' => $e->starts_on->toDateString(), 'ends_on' => $e->ends_on->toDateString(),
+                'start_time' => $time($e->start_time), 'end_time' => $time($e->end_time), 'repeat_until' => $e->repeat_until?->toDateString(),
+            ] : null,
         ];
     }
 

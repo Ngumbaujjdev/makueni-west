@@ -90,6 +90,7 @@ class AppServiceProvider extends ServiceProvider
 
             // Settings hub - system-level setting changes are audited on "setting" 0
             'setting' => 'App\Models\Setting',
+            'calendar_event' => 'App\Models\CalendarEvent',
         ]);
 
         // Saved system settings (email server, ...) take over from .env -

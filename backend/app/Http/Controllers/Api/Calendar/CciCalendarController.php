@@ -8,6 +8,7 @@ use App\Services\Calendar\Calendar;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
@@ -119,10 +120,13 @@ class CciCalendarController extends Controller
         $valid = array_values(array_filter($rows, fn ($r) => ! $r['errors'] && ! $r['duplicate']));
         $created = 0;
         if ($request->boolean('commit')) {
-            foreach ($valid as $r) {
-                CalendarEvent::create($r['clean'] + ['territory_id' => $national->id, 'source' => 'import', 'created_by' => $request->user()->id, 'updated_by' => $request->user()->id]);
-                $created++;
-            }
+            // All the ready rows, or none - never half a calendar.
+            DB::transaction(function () use ($valid, $national, $request, &$created) {
+                foreach ($valid as $r) {
+                    CalendarEvent::create($r['clean'] + ['territory_id' => $national->id, 'source' => 'import', 'created_by' => $request->user()->id, 'updated_by' => $request->user()->id]);
+                    $created++;
+                }
+            });
         }
 
         return $this->ok([
