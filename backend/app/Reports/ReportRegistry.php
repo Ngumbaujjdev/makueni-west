@@ -60,6 +60,7 @@ final class ReportRegistry
         BudgetContributionsReport::class,
         \App\Reports\Activities\ActivitySummaryReport::class,
         \App\Reports\Activities\ActivityYearReport::class,
+        \App\Reports\Activities\InitiativeYearReport::class,
     ];
 
     /** @return Report[] */

@@ -25,7 +25,7 @@ final class ActivityYearReport extends ActivityReport
 
     public function description(): string
     {
-        return 'Every event of the year: when, what, status, places taking part, expected and came, and money in.';
+        return 'Every event of the year: when, what, status, places taking part, expected and came, and income.';
     }
 
     public function subject(): string
@@ -67,7 +67,7 @@ final class ActivityYearReport extends ActivityReport
             meta: ['Year' => (string) $year, 'Prepared by' => $context->preparedBy(), 'Prepared' => now()->format('j M Y, H:i')],
             sections: [new ReportSection('Events', [
                 ReportColumn::text('Date'), ReportColumn::text('Event', true), ReportColumn::text('Kind'), ReportColumn::text('Status'),
-                ReportColumn::number('Places', 'sum'), ReportColumn::number('Expected', 'sum'), ReportColumn::number('Came', 'sum'), ReportColumn::money('Money in'),
+                ReportColumn::number('Places', 'sum'), ReportColumn::number('Expected', 'sum'), ReportColumn::number('Came', 'sum'), ReportColumn::money('Income'),
             ], $rows, $rows ? null : "No events in {$year}.")],
             insights: [],
         );

@@ -92,6 +92,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('activities/{id}/history', [ActivitiesController::class, 'history'])->whereNumber('id');
     Route::put('registrations/{id}', [ActivitiesController::class, 'updateRegistration'])->whereNumber('id');
     Route::post('registrations/{id}/withdraw', [ActivitiesController::class, 'withdraw'])->whereNumber('id');
+    Route::get('activities/{id}/sessions', [ActivitiesController::class, 'sessions'])->whereNumber('id');
+    Route::post('activities/{id}/sessions', [ActivitiesController::class, 'addSession'])->whereNumber('id');
+    Route::put('sessions/{id}', [ActivitiesController::class, 'updateSession'])->whereNumber('id');
+    Route::delete('sessions/{id}', [ActivitiesController::class, 'removeSession'])->whereNumber('id');
 
     // In-app notifications - the header bell and the Notifications page (docs/specs/events-initiatives-spec.md)
     Route::get('notifications', [NotificationsController::class, 'index']);
