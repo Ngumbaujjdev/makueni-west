@@ -2,7 +2,7 @@
 
 One **Settings** page for each level: church, region and diocese. Each place fills in its own profile, service times, team, finance details and communication there, and the module settings (Budgets, Attendance, Demographics) live under it. The diocese's global admins also get the system settings: email and SMS, health, security, documents, access control, the audit log and maintenance.
 
-**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (PR #165); S2 done (PR #166); S3 done (PR #168); S4a done (PR #170, Email, SMS, System health); S4b done (PR #173, Security, Documents & PDF, Maintenance, Audit log, Access control); S5 done (PR #174, Payment details for regions and the diocese). **S6 (planned 2026-10-05; S6a and S6b done):** adding people safely, Communication for churches and regions, a message log with preview, and sending sign-in details. Still deferred: church payment details and a currency setting.
+**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (PR #165); S2 done (PR #166); S3 done (PR #168); S4a done (PR #170, Email, SMS, System health); S4b done (PR #173, Security, Documents & PDF, Maintenance, Audit log, Access control); S5 done (PR #174, Payment details for regions and the diocese). **S6 (planned 2026-10-05; S6a, S6b and S6c done):** adding people safely, Communication for churches and regions, a message log with preview, and sending sign-in details. Still deferred: church payment details and a currency setting.
 - **S0:** lock down the access-control APIs.
 - **S1:** the hub, Overview, Profile and Service times.
 - **S2:** Leadership & team.
@@ -270,6 +270,16 @@ Asked for on 2026-10-05:
   - KPI cards (sent this month with a sparkline and delta, failed, emails vs SMS, last sent);
   - the shared filter bar and DataTable;
   - a preview window: emails in a sandboxed iframe with From, To, Reply-to and Subject above; SMS as a phone bubble with the sender ID and SMS count; delivery details and the error.
+
+**S6c as built:**
+- `App\Http\Controllers\Api\Settings\MessagesController` lists the latest 500 messages. Only the first 600 characters of each are read, for the list's first line, and the list carries no text. The page filters and pages them in place.
+- **Scope:** a church sees its own (`territory_id`); a region its own plus everything below it; the diocese all, including system rows (`territory_id` null).
+- **Resend:** failed messages only, with their text still kept, and never `sign_in_details` or `account`. An SMS is sent again as it was, with no second signature (`PlaceMessenger::sms(..., signed: false)`).
+- **The Messages card** (`sections/messages.js`, mounted last by the Communication section, and also at the diocese, where the section is otherwise just the lock):
+  - KPI cards: sent this month (sparkline and delta), failed, emails · SMS, last sent;
+  - the shared filter bar: type, status, place above church, and dates;
+  - a preview window: the facts, the error if it failed, the email in a `sandbox` iframe, the SMS as a phone bubble with characters and SMS count, and Send again.
+- `messages:prune-bodies` runs daily.
 
 ### S6d: sending sign-in details
 - Add someone and Reset access get "Send their sign-in details by: SMS / Email". Both are ticked when the person has that contact.
