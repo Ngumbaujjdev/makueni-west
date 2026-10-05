@@ -8,7 +8,7 @@ Part of the **Church life** plan (2026-10-05): Events, Initiatives, Calendar add
 
 Both use one model, so the pages are shared.
 
-**Status:** planned 2026-10-05; L1a (the foundation) done.
+**Status:** planned 2026-10-05; L1a (the foundation) and L1b (the Events backend) done.
 - **L1a:** the shared foundation: place access, in-app notifications, and the header bell.
 - **L1b:** the Events backend.
 - **L1c:** the Events pages.
@@ -149,6 +149,23 @@ Menu (`ActivitiesAccessSeeder`, DatabaseSeeder phase 31):
   - diocese `/diocese/events/`
 - It reuses the placeholder modules: diocese "Diocese Events Management" (M14) and region "Regional Programs" (M22). Each is renamed **Events**, re-pointed, and its unbuilt sub-pages are switched off.
 - A church Events module is created in `church-programs`.
+
+### L1b as built
+- **Code:**
+  - `App\Services\Activities\Activities` holds `invitations()`, `below()`, `relation()`, `reach()`, `leadersWith()`, the `notify*` methods, `totals()`, `money()` and `overview()`;
+  - `ActivitiesController`;
+  - `EventsAccess` (the ability map over `PlaceAccess`);
+  - `ActivitiesAccessSeeder` (phase 31).
+- **A place it doesn't reach gets 404, not 403**, so it can't tell the event exists.
+- **Registering** is `updateOrCreate` on (activity, place): a second registration changes the first. `fee_due` follows the counts and the event's fee; changing the fee updates every registration.
+- **Notifications:**
+  - publishing tells the leaders holding `events.events.register` at the places it reaches;
+  - a registration or a change of numbers tells the organiser's managers;
+  - cancelling a published event tells the places that registered.
+- **Ties:**
+  - `POST /attendance` accepts `activity_id`, which must be the church's own (not cancelled) event;
+  - `POST /budget-entries` accepts `activity_id`, which must be an event of the budget's place;
+  - `/reports` accepts `activity_id` for `activity.summary`: the organiser's own event, or one of a place below.
 
 ## Pages (L1c)
 - **Events** (`/{L}/events/`):
