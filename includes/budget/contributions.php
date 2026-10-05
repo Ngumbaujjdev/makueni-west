@@ -59,6 +59,20 @@ $breadcrumbs = [
 
                 <div class="row" id="statCardsRow"></div>
 
+                <div class="card custom-card" id="glanceCard" hidden>
+                    <div class="card-header justify-content-between flex-wrap gap-2">
+                        <div>
+                            <div class="card-title" id="glanceTitle">The year at a glance</div>
+                            <span class="card-subtitle-text" id="glanceSub">Due on what was received, and what was sent</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="lateNote"></div>
+                        <div id="groupsGrid"></div>
+                        <div id="glanceChart"></div>
+                    </div>
+                </div>
+
                 <div class="card custom-card" id="ownCard">
                     <div class="card-header justify-content-between flex-wrap gap-2">
                         <div>

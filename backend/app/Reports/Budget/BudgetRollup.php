@@ -254,7 +254,7 @@ final class BudgetRollup
      *   none     - nothing due yet (nothing received on the lines it counts)
      * Due, sent and owed come from Deductions::status(), the one source.
      */
-    public function contributionsOf(string $type, int $id, int $year): array
+    public function contributionsOf(string $type, int $id, int $year, bool $wholeYear = false): array
     {
         $today = CarbonImmutable::today();
         $budgets = Budget::where('territory_type', $type)->where('territory_id', $id)->where('fiscal_year', $year)
@@ -287,7 +287,43 @@ final class BudgetRollup
             }
         }
 
-        return $rows;
+        return $wholeYear ? $this->everyMonth($type, $id, $year, $rows) : $rows;
+    }
+
+    /**
+     * The year month by month, so it never looks cut off: each month's share
+     * rows, or one row saying there's no budget ("no_budget") or no share on
+     * it ("none"). A whole-year budget stays its own single row.
+     */
+    private function everyMonth(string $type, int $id, int $year, array $rows): array
+    {
+        if (collect($rows)->contains('month', null)) {
+            return $rows;
+        }
+        $budgets = Budget::where('territory_type', $type)->where('territory_id', $id)->where('fiscal_year', $year)->get()->keyBy('period_month');
+        if ($budgets->has(null) || $budgets->has('')) {
+            return $rows;
+        }
+        $out = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $ofMonth = array_values(array_filter($rows, fn ($r) => (int) $r['month'] === $m));
+            if ($ofMonth) {
+                array_push($out, ...$ofMonth);
+
+                continue;
+            }
+            $b = $budgets->get($m);
+            $start = CarbonImmutable::create($year, $m, 1);
+            $out[] = [
+                'budget_id' => $b?->id, 'budget_status' => $b?->status, 'label' => Budget::periodLabelFor($year, $m), 'month' => $m,
+                'end' => $start->endOfMonth()->toDateString(),
+                'deduction_id' => null, 'name' => null, 'rule' => null, 'line_id' => null, 'line' => null, 'to' => null, 'to_id' => null,
+                'received' => 0.0, 'due' => 0.0, 'sent' => 0.0, 'owed' => 0.0,
+                'status' => $b ? 'none' : 'no_budget',
+            ];
+        }
+
+        return $out;
     }
 
     /** One place's contribution totals for a year: received, due, sent, still to send, late periods, and an overall status. */
