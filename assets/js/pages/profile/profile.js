@@ -301,7 +301,7 @@
     box.innerHTML = rows
       .map(
         (r) => `
-        <div class="profile-fact">
+        <div class="profile-fact profile-tint-${r.color}">
           <span class="avatar avatar-sm avatar-rounded bg-${r.color} text-white flex-shrink-0"><i class="${r.icon}"></i></span>
           <div class="flex-fill" style="min-width: 0;">
             <div class="profile-fact-label">${r.label}</div>
@@ -371,7 +371,7 @@
         .map(
           ([key, label, icon, color]) => `
         <div class="col-md-6">
-          <div class="profile-detail">
+          <div class="profile-detail profile-tint-${color}">
             <span class="avatar avatar-sm avatar-rounded bg-${color} text-white flex-shrink-0"><i class="${icon}"></i></span>
             <div class="flex-fill" style="min-width: 0;">
               <div class="profile-fact-label">${label}</div>
@@ -384,14 +384,14 @@
         .join("") +
       `
         <div class="col-md-6">
-          <div class="profile-detail">
+          <div class="profile-detail profile-tint-success">
             <span class="avatar avatar-sm avatar-rounded bg-success text-white flex-shrink-0"><i class="ri-shield-check-line"></i></span>
             <div class="flex-fill"><div class="profile-fact-label">Account</div><div class="profile-fact-value">${UI.pill(titleCase(me.status), me.status === "active" ? "success" : "danger")}</div></div>
           </div>
         </div>
         <div class="col-md-6">
-          <div class="profile-detail">
-            <span class="avatar avatar-sm avatar-rounded bg-primary text-white flex-shrink-0"><i class="ri-briefcase-4-line"></i></span>
+          <div class="profile-detail profile-tint-info">
+            <span class="avatar avatar-sm avatar-rounded bg-info text-white flex-shrink-0"><i class="ri-briefcase-4-line"></i></span>
             <div class="flex-fill"><div class="profile-fact-label">Roles</div><div class="profile-fact-value">${(me.active_assignments || []).length} active · <button type="button" class="btn btn-link p-0 fw-semibold" data-go-tab="roles">See them</button></div></div>
           </div>
         </div>`;
@@ -734,7 +734,7 @@
           .map(
             ([icon, color, label, value]) => `
           <div class="col-sm-6">
-            <div class="profile-detail h-100">
+            <div class="profile-detail profile-tint-${color} h-100">
               <span class="avatar avatar-sm avatar-rounded bg-${color} text-white flex-shrink-0"><i class="${icon}"></i></span>
               <div class="flex-fill" style="min-width: 0;"><div class="profile-fact-label">${label}</div><div class="profile-fact-value text-break">${value}</div></div>
             </div>
@@ -900,7 +900,33 @@
     return EDITABLE.filter((k) => form.elements[k].value.trim() !== (me[k] || ""));
   }
 
+  /** The preview card and the "what will change" list follow every keystroke. */
+  function updatePreview() {
+    const form = document.getElementById("editProfileForm");
+    const v = (k) => form.elements[k].value.trim();
+    const name = [v("firstname"), v("lastname")].filter(Boolean).join(" ");
+    document.getElementById("previewAvatar").textContent = initials(name) || "?";
+    document.getElementById("previewName").textContent = name || "Your name";
+    document.getElementById("previewPosition").textContent = v("position") || "No position set";
+    document.getElementById("previewContact").innerHTML =
+      [v("phone") ? `<i class="ri-phone-line me-1"></i>${esc(v("phone"))}` : "", v("email") ? `<i class="ri-mail-line me-1"></i>${esc(v("email"))}` : ""].filter(Boolean).join('<span class="mx-2">·</span>') ||
+      "No phone or email yet";
+    const changes = editChanges();
+    const box = document.getElementById("previewChanges");
+    box.hidden = !changes.length;
+    box.innerHTML = changes.length
+      ? `<div class="profile-preview-label mb-1">What will change</div>${changes
+          .map(
+            (k) => `<div class="profile-change"><span class="fw-semibold">${esc(titleCase(FIELDS[k]))}</span>
+              <span class="soft-chip soft-danger text-break">${esc(me[k] || "nothing")}</span><i class="ri-arrow-right-line"></i>
+              <span class="soft-chip soft-success text-break">${esc(v(k) || "nothing")}</span></div>`,
+          )
+          .join("")}`
+      : "";
+  }
+
   function updateEditSummary() {
+    updatePreview();
     const changes = editChanges();
     document.getElementById("editProfileSummary").textContent = changes.length ? `Changing your ${changes.map((k) => FIELDS[k]).join(", ")}` : "Nothing changed yet";
     document.getElementById("editProfileSave").disabled = !changes.length;
