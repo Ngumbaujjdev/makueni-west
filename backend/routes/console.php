@@ -39,3 +39,7 @@ Schedule::command('messages:prune-bodies')->daily();
 // scheduler (php artisan schedule:work, or cron) is running.
 Schedule::call(fn () => \Illuminate\Support\Facades\Cache::forever(\App\Support\Settings\Health::HEARTBEAT, now()->toIso8601String()))
     ->everyMinute()->name('settings-heartbeat');
+
+// Monthly reports: a reminder 3 days before the due day, on it, and 3 days
+// after - in the app and by SMS. docs/specs/monthly-reports-spec.md.
+Schedule::command('reports:remind')->dailyAt('08:00')->timezone('Africa/Nairobi');

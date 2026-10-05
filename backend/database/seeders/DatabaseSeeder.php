@@ -238,6 +238,13 @@ class DatabaseSeeder extends Seeder
             // (docs/specs/events-initiatives-spec.md)
             // ==========================================
             ActivitiesAccessSeeder::class,
+
+            // ==========================================
+            // PHASE 32: Monthly reports - churches and regions send one a
+            // month, those above see and comment; {level}.reports.*
+            // (docs/specs/monthly-reports-spec.md)
+            // ==========================================
+            MonthlyReportsAccessSeeder::class,
         ]);
     }
 }

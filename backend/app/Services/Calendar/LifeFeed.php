@@ -6,12 +6,15 @@ use App\Http\Controllers\Api\Settings\ServiceTimesController;
 use App\Models\Activity;
 use App\Models\ActivitySession;
 use App\Models\Budget;
+use App\Models\MonthlyReport;
 use App\Models\Territory;
 use App\Models\User;
 use App\Reports\Budget\BudgetRollup;
 use App\Services\Activities\Activities;
+use App\Services\Reports\MonthlyReports;
 use App\Support\ActivityAccess;
 use App\Support\PlaceAccess;
+use App\Support\ReportsAccess;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
@@ -53,7 +56,7 @@ final class LifeFeed
             $out = [...$out, ...$this->services($place, $from, $to)];
         }
         if (in_array('ours', $layers, true) && in_array('due', $sources, true)) {
-            $out = [...$out, ...$this->due($place, $from, $to, $user)];
+            $out = [...$out, ...$this->due($place, $from, $to, $user), ...$this->reportsDue($place, $from, $to, $user)];
         }
 
         return $out;
@@ -235,6 +238,51 @@ final class LifeFeed
                     allDay: true,
                 );
             }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Our monthly report's due day (L4), until it is sent. Only last month's
+     * and later - older months are on the Monthly reports page, not flagged
+     * on every calendar view.
+     */
+    private function reportsDue(Territory $place, CarbonImmutable $from, CarbonImmutable $to, ?User $user): array
+    {
+        $level = PlaceAccess::level($place);
+        if (! in_array($level, ReportsAccess::REPORTING_LEVELS, true) || ! ReportsAccess::can($user, $place, 'read')) {
+            return [];
+        }
+        $reports = app(MonthlyReports::class);
+        $today = CarbonImmutable::now(self::TZ)->startOfDay();
+        $out = [];
+        for ($m = $from->startOfMonth()->subMonthsNoOverflow(2); $m->lte($to); $m = $m->addMonthNoOverflow()) {
+            $due = $reports->dueOn($place, $m->year, $m->month);
+            if ($due->lt($from) || $due->gt($to) || $due->lt($today->subDays(40))) {
+                continue;
+            }
+            $report = MonthlyReport::where('territory_id', $place->id)->where('year', $m->year)->where('month', $m->month)->first();
+            if ($report && in_array($report->status, ['sent', 'seen'], true)) {
+                continue;
+            }
+            $late = $today->gt($due);
+            $out[] = $this->item(
+                key: "report-{$m->format('Y-m')}",
+                title: "{$m->format('F')}'s report due",
+                kind: 'due',
+                start: $due->toDateString(),
+                end: $due->addDay()->toDateString(),
+                layer: 'ours',
+                owner: $place,
+                source: 'due',
+                url: "/{$level}/monthly-reports/report?year={$m->year}&month={$m->month}",
+                status: $late ? 'late' : 'due',
+                location: null,
+                description: $report ? 'A draft is started'.($late ? ' · late' : '') : 'Not started yet'.($late ? ' · late' : ''),
+                allDay: true,
+                tone: $late ? 'danger' : null,
+            );
         }
 
         return $out;

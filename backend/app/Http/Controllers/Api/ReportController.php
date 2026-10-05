@@ -193,6 +193,9 @@ class ReportController extends Controller
             'line_id' => 'nullable|integer',
             // Event summary: the event it's about.
             'activity_id' => 'nullable|integer',
+            // Monthly report: the report; reports sent: the year (with month).
+            'report_id' => 'nullable|integer',
+            'year' => 'nullable|integer|between:2000,2100',
         ]);
         if ($validator->fails()) {
             return $this->fail(422, $validator->errors()->first(), $validator->errors()->toArray());
@@ -241,7 +244,22 @@ class ReportController extends Controller
             }
         }
 
-        $params = array_filter($request->only(['fiscal_year_id', 'years', 'demographic_id', 'metric', 'month', 'gathering_type_id', 'from', 'to', 'budget_id', 'line_id', 'activity_id']), fn ($v) => $v !== null && $v !== '');
+        if (in_array('monthly_report', $report->inputs(), true)) {
+            $monthly = \App\Models\MonthlyReport::find($request->integer('report_id'));
+            $relation = $monthly ? \App\Support\ReportsAccess::relation($territory, $monthly) : null;
+            // Your own report, or a sent one of a place below.
+            if (! $monthly || ! $relation || ($relation === 'below' && $monthly->status === 'draft')) {
+                return $this->fail(422, 'Choose the report to export.', ['report_id' => ['Unknown report for this place.']]);
+            }
+        }
+
+        $params = array_filter($request->only(['fiscal_year_id', 'years', 'demographic_id', 'metric', 'month', 'gathering_type_id', 'from', 'to', 'budget_id', 'line_id', 'activity_id', 'report_id', 'year']), fn ($v) => $v !== null && $v !== '');
+        if (! in_array('monthly_report', $report->inputs(), true)) {
+            unset($params['report_id']);
+        }
+        if (! in_array('report_month', $report->inputs(), true)) {
+            unset($params['year']);
+        }
         if (! in_array('activity', $report->inputs(), true)) {
             unset($params['activity_id']);
         }

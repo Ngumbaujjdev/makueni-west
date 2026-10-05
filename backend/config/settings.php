@@ -279,6 +279,15 @@ return [
             'absorbs' => ['church' => '/church/settings/attendance-settings/gathering-types.php'],
             'sentence' => 'The services, ministry meetings and special events your attendance is recorded against.',
         ],
+        'reports' => [
+            'label' => 'Monthly reports',
+            'icon' => 'ri-file-chart-line',
+            'colour' => 'pink',
+            'group' => 'ministry',
+            'levels' => ['diocese'],
+            'kind' => 'form',
+            'sentence' => 'When each church and region sends its monthly report.',
+        ],
         'demographics' => [
             'label' => 'Recording cadence',
             'icon' => 'ri-line-chart-line',
@@ -357,6 +366,9 @@ return [
         'documents.org_subtitle' => ['section' => 'documents', 'card' => 'Top of every page', 'label' => 'Line under the name', 'rules' => ['nullable', 'string', 'max:80'], 'default' => 'Christian Church International', 'levels' => ['diocese']],
         'documents.footer_note' => ['section' => 'documents', 'card' => 'Bottom of every page', 'label' => 'Footer note', 'rules' => ['nullable', 'string', 'max:120'], 'default' => 'Computer-generated from the diocese system - no signature needed.', 'levels' => ['diocese'], 'span' => 12, 'help' => 'Shown under the verification code and who generated it.'],
         'documents.keep_days' => ['section' => 'documents', 'card' => 'Report files', 'label' => 'Keep report files for', 'type' => 'select', 'options' => ['1' => '1 day', '7' => '7 days', '30' => '30 days', '90' => '90 days'], 'rules' => ['required'], 'default' => '7', 'levels' => ['diocese'], 'help' => 'After this the file is removed, but a printed copy can still be verified.', 'used_by' => 'Reports (download link)'],
+
+        // Monthly reports (L4) - read by MonthlyReports::dueOn() and the reminders.
+        'reports.monthly_due_day' => ['section' => 'reports', 'card' => 'When reports are due', 'label' => 'Due on this day of the next month', 'type' => 'number', 'rules' => ['required', 'integer', 'between:1,28'], 'default' => 5, 'levels' => ['diocese'], 'help' => 'e.g. 5 means April\'s report is due on 5 May. Reminders go 3 days before, on the day, and 3 days after.', 'used_by' => 'Monthly reports, the calendar and the reminders'],
 
         // Maintenance (S4b) - the notice banner on every page (GET /settings/notice).
         'maintenance.notice' => ['section' => 'maintenance', 'card' => 'Notice for everyone', 'label' => 'Message', 'type' => 'textarea', 'rules' => ['nullable', 'string', 'max:300'], 'default' => null, 'levels' => ['diocese'], 'span' => 12, 'help' => 'e.g. "The system will be down for updates on Saturday from 6 to 8 am." Leave empty for no notice.', 'used_by' => 'A banner at the top of every page'],
