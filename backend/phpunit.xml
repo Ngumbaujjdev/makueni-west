@@ -17,6 +17,7 @@
             <exclude>tests/Feature/Activities</exclude>
             <exclude>tests/Feature/Calendar</exclude>
             <exclude>tests/Feature/Reporting</exclude>
+            <exclude>tests/Feature/Communications</exclude>
         </testsuite>
         <testsuite name="Diocese">
             <directory>tests/Feature/Diocese</directory>
@@ -35,6 +36,9 @@
         </testsuite>
         <testsuite name="Reporting">
             <directory>tests/Feature/Reporting</directory>
+        </testsuite>
+        <testsuite name="Communications">
+            <directory>tests/Feature/Communications</directory>
         </testsuite>
         <testsuite name="Settings">
             <directory>tests/Feature/Settings</directory>

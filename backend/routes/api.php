@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\DemographicsReportController;
 use App\Http\Controllers\Api\FiscalYearController;
 use App\Http\Controllers\Api\GatheringCategoryController;
 use App\Http\Controllers\Api\GatheringTypeController;
+use App\Http\Controllers\Api\Messages\MessagesController;
 use App\Http\Controllers\Api\ModuleController;
 use App\Http\Controllers\Api\ModuleGroupController;
 use App\Http\Controllers\Api\NotificationsController;
@@ -79,6 +80,22 @@ Route::get('settings/logo/{territory}', [SettingsProfileController::class, 'logo
 Route::middleware(['auth:sanctum'])->group(function () {
 
     // Events (and initiatives) of church, region and diocese (docs/specs/events-initiatives-spec.md)
+    // Messages (docs/specs/messages-spec.md)
+    Route::get('messages/options', [MessagesController::class, 'options']);
+    Route::post('messages/preview', [MessagesController::class, 'preview']);
+    Route::post('messages', [MessagesController::class, 'store'])->middleware('throttle:20,1');
+    Route::get('messages/sent', [MessagesController::class, 'sent']);
+    Route::get('messages/inbox', [MessagesController::class, 'inbox']);
+    Route::post('messages/inbox/{recipient}/read', [MessagesController::class, 'read'])->whereNumber('recipient');
+    Route::post('messages/inbox/{recipient}/reply', [MessagesController::class, 'reply'])->whereNumber('recipient')->middleware('throttle:30,1');
+    Route::get('messages/templates', [MessagesController::class, 'templates']);
+    Route::post('messages/templates', [MessagesController::class, 'saveTemplate']);
+    Route::put('messages/templates/{id}', [MessagesController::class, 'saveTemplate'])->whereNumber('id');
+    Route::delete('messages/templates/{id}', [MessagesController::class, 'deleteTemplate'])->whereNumber('id');
+    Route::get('messages/{id}', [MessagesController::class, 'show'])->whereNumber('id');
+    Route::post('messages/{id}/cancel', [MessagesController::class, 'cancel'])->whereNumber('id');
+    Route::post('messages/{id}/retry', [MessagesController::class, 'retry'])->whereNumber('id');
+
     // Monthly reports (docs/specs/monthly-reports-spec.md)
     Route::get('monthly-reports', [MonthlyReportsController::class, 'index']);
     Route::get('monthly-reports/below', [MonthlyReportsController::class, 'below']);

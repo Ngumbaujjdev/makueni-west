@@ -76,7 +76,7 @@ php artisan test --testsuite=Demographics # scoped to one domain
 
 Larastan (static analysis) is installed but has no config yet — see `backend/CLAUDE.md` → "Testing & Code Quality" and `docs/ROADMAP.md`. Full detail on what's installed vs. configured lives in `backend/CLAUDE.md`, not duplicated here.
 
-Suite names already declared in `backend/phpunit.xml`: `Unit`, `Feature`, `Diocese`, `Financial`, `Demographics`, `Settings`, `Calendar`, `Activities`, `Reporting`. Use the matching suite for any new domain's tests — don't invent a new suite name without adding it to `phpunit.xml` first.
+Suite names already declared in `backend/phpunit.xml`: `Unit`, `Feature`, `Diocese`, `Financial`, `Demographics`, `Settings`, `Calendar`, `Activities`, `Reporting`, `Communications`. Use the matching suite for any new domain's tests — don't invent a new suite name without adding it to `phpunit.xml` first.
 
 ## Spec-Driven Development
 
