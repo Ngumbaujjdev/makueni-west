@@ -2,7 +2,7 @@
 
 One **Settings** page for each level: church, region and diocese. Each place fills in its own profile, service times, team, finance details and communication there, and the module settings (Budgets, Attendance, Demographics) live under it. The diocese's global admins also get the system settings: email and SMS, health, security, documents, access control, the audit log and maintenance.
 
-**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (PR #165); S2 done (PR #166); S3 done (PR #168); S4a done (PR #170, Email, SMS, System health); S4b done (PR #173, Security, Documents & PDF, Maintenance, Audit log, Access control); S5 done (PR #174, Payment details for regions and the diocese). **S6 (planned 2026-10-05):** adding people safely, Communication for churches and regions, a message log with preview, and sending sign-in details. Still deferred: church payment details and a currency setting.
+**Status:** planned 2026-10-02, being built in phases. S0 done (PR #161); S1 done (PR #165); S2 done (PR #166); S3 done (PR #168); S4a done (PR #170, Email, SMS, System health); S4b done (PR #173, Security, Documents & PDF, Maintenance, Audit log, Access control); S5 done (PR #174, Payment details for regions and the diocese). **S6 (planned 2026-10-05; S6a done):** adding people safely, Communication for churches and regions, a message log with preview, and sending sign-in details. Still deferred: church payment details and a currency setting.
 - **S0:** lock down the access-control APIs.
 - **S1:** the hub, Overview, Profile and Service times.
 - **S2:** Leadership & team.
