@@ -8,7 +8,7 @@ Part of the **Church life** plan (2026-10-05): Events, Initiatives, Calendar add
 
 Both use one model, so the pages are shared.
 
-**Status:** planned 2026-10-05; L1a (the foundation) and L1b (the Events backend) done.
+**Status:** planned 2026-10-05; L1a (the foundation), L1b (the Events backend) and L1c (the Events pages) done.
 - **L1a:** the shared foundation: place access, in-app notifications, and the header bell.
 - **L1b:** the Events backend.
 - **L1c:** the Events pages.
@@ -191,25 +191,36 @@ Menu (`ActivitiesAccessSeeder`, DatabaseSeeder phase 31):
     - **History**.
   - **For an invited place:** a **Register** card with number steppers, names and the fee worked out. Afterwards, "How many came" and a rating.
 
+### L1c as built
+- **Files:** shared bodies in `includes/events/` (`context.php`, `page.php`, `body-{list,form,event}.php`) with thin wrappers `{church,region,diocese}/events/{index,new,event}.php`; scripts in `assets/js/pages/events/` (`api.js`, `ui.js`, `list.js`, `form.js`, `event.js`); styles in the Events block at the end of `styles.css`.
+- **List:** KPI cards carry a plain sub-line rather than a delta (the overview has no last-year figures yet). The hero is events by month in one colour; with none it shows an empty state instead of a blank chart. The list splits into "Coming up" and "Already happened"; search, status and kind filter in place and stay in the URL with the year and tab.
+- **Form:** the Budget form's stepper (`.intake-*`) with a "How places will see it" preview. Dates are typed as local time and sent as a UTC instant (the API stores UTC). Registration and fee only show when the event reaches other places.
+- **Event page:**
+  - Attendance is a **Record attendance** button (church, once it has started) that opens the Attendance window tagged with the event, not a tab.
+  - **Record money** opens the Budgets window tagged with the event, on the organiser's budget in use **on the event's day, else today's** (`money.budget_in_use`). With neither, the Money tab says to start a budget.
+  - An invited place sees Details plus a Register card (first on a phone), then "How many came" with a 1-5 rating once it has started. The places above see Details and Who's coming.
+  - The organiser records a fee paid per place from Who's coming.
+- **Export** passes `activity_id` through `report-center.js` (`data-activity-id`).
+
 ## Acceptance Criteria
 
 ### L1a: foundation
-- [ ] `PlaceAccess` gives the same answers as `BudgetAccess` for the acting place, own, below and global admin.
-- [ ] Notifications: a user lists only their own; unread count; mark one read; mark all read; another user's notification gets 404.
-- [ ] The bell shows the unread count and the latest items. The Notifications page filters by kind and read state.
+- [x] `PlaceAccess` gives the same answers as `BudgetAccess` for the acting place, own, below and global admin.
+- [x] Notifications: a user lists only their own; unread count; mark one read; mark all read; another user's notification gets 404.
+- [x] The bell shows the unread count and the latest items. The Notifications page filters by kind and read state.
 
 ### L1b: Events backend
-- [ ] A church pastor creates and publishes an event. A Treasurer (read only) can't create one (403).
-- [ ] A diocese event `open_to = below` is an invitation to every region and church. `selected` with region A reaches A's churches, not B's.
-- [ ] A church event `open_to = region` reaches the other churches of its region only.
-- [ ] Publishing notifies the leaders with `events.events.register` at the invited places (database notification with the event's URL).
-- [ ] An invited church registers counts. `fee_due` is worked out. A second registration updates the first. After `register_by`, registering is refused. A church that isn't invited gets 403.
-- [ ] The organiser sees registrations grouped by region with totals, and records `fee_paid`. A registering church can't set `fee_paid`.
-- [ ] Nobody edits another place's event. A church can't see a region's draft.
-- [ ] Attendance recorded from the event page carries `activity_id`. Budget entries tagged with the event are summed on its Money tab.
-- [ ] `activity.summary` and `activity.year` build for each scope.
-- [ ] `ActivitiesAccessSeeder` is idempotent: pages and grants as listed, and the old placeholder sub-pages switched off.
+- [x] A church pastor creates and publishes an event. A Treasurer (read only) can't create one (403).
+- [x] A diocese event `open_to = below` is an invitation to every region and church. `selected` with region A reaches A's churches, not B's.
+- [x] A church event `open_to = region` reaches the other churches of its region only.
+- [x] Publishing notifies the leaders with `events.events.register` at the invited places (database notification with the event's URL).
+- [x] An invited church registers counts. `fee_due` is worked out. A second registration updates the first. After `register_by`, registering is refused. A church that isn't invited gets 403.
+- [x] The organiser sees registrations grouped by region with totals, and records `fee_paid`. A registering church can't set `fee_paid`.
+- [x] Nobody edits another place's event. A church can't see a region's draft.
+- [x] Attendance recorded from the event page carries `activity_id`. Budget entries tagged with the event are summed on its Money tab.
+- [x] `activity.summary` and `activity.year` build for each scope.
+- [x] `ActivitiesAccessSeeder` is idempotent: pages and grants as listed, and the old placeholder sub-pages switched off.
 
 ### L1c: Events pages
-- [ ] Each level's Events page shows the tabs, KPI cards, hero and list. The stepper creates and publishes an event. An invited church registers from the event page. The organiser sees it under Who's coming.
-- [ ] No console errors. Light and dark. 390 px works.
+- [x] Each level's Events page shows the tabs, KPI cards, hero and list. The stepper creates and publishes an event. An invited church registers from the event page. The organiser sees it under Who's coming.
+- [x] No console errors. Light and dark. 390 px works.
