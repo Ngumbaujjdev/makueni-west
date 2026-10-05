@@ -8,7 +8,7 @@ Part of the **Church life** plan (2026-10-05): Events, Initiatives, Calendar add
 
 Both use one model, so the pages are shared.
 
-**Status:** planned 2026-10-05.
+**Status:** planned 2026-10-05; L1a (the foundation) done.
 - **L1a:** the shared foundation: place access, in-app notifications, and the header bell.
 - **L1b:** the Events backend.
 - **L1c:** the Events pages.
