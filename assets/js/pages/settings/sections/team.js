@@ -123,8 +123,9 @@
     return document.getElementById("teamModal");
   }
 
-  function open({ icon, colour, title, sub, body, foot }) {
+  function open({ icon, colour, title, sub, body, foot, size = "" }) {
     const el = modal();
+    el.querySelector(".modal-dialog").classList.toggle("modal-lg", size === "lg");
     const ic = el.querySelector("#teamModalIcon");
     ic.className = `app-modal-icon bg-${colour}`;
     ic.innerHTML = `<i class="${icon}"></i>`;
@@ -182,30 +183,180 @@
     );
   }
 
+  /** "0712 345 678", "712345678", "254712345678" -> "+254712345678"; null when it isn't a Kenyan mobile. */
+  function kenyaMobile(value) {
+    let d = String(value || "").replace(/\D+/g, "");
+    if (d.startsWith("254")) d = d.slice(3);
+    if (d.startsWith("0")) d = d.slice(1);
+    return /^[17]\d{8}$/.test(d) ? `+254${d}` : null;
+  }
+  const prettyPhone = (p) => (p ? `${p.slice(0, 4)} ${p.slice(4, 7)} ${p.slice(7, 10)} ${p.slice(10)}` : "");
+
+  function panel(icon, colour, title, sub, body) {
+    return `
+      <section class="team-add-panel">
+        <div class="team-add-panel-head">
+          <span class="avatar avatar-sm bg-${colour} ${textOn(colour)} flex-shrink-0"><i class="${icon}"></i></span>
+          <div><div class="fw-semibold">${title}</div><div class="fs-12">${sub}</div></div>
+        </div>
+        ${body}
+      </section>`;
+  }
+
   function openAdd() {
+    const place = SettingsRail.data?.place?.name || "this place";
+    const blurbOf = (id) => data.grantable.find((r) => String(r.id) === String(id))?.blurb || "";
+    const startRole = data.grantable[data.grantable.length > 2 ? 2 : 0]?.id;
     const el = open({
       icon: "ri-user-add-line",
       colour: "pink",
+      size: "lg",
       title: "Add someone to the team",
-      sub: `With a role below yours at ${SettingsRail.data?.place?.name || "this place"}`,
+      sub: `With a role below yours at ${place}`,
       body: `
-        <div class="row g-3">
-          <div class="col-sm-6"><label class="form-label" for="tmFirst">First name</label><input class="form-control" id="tmFirst" name="firstname" maxlength="255"><div class="invalid-feedback" data-error-for="firstname"></div></div>
-          <div class="col-sm-6"><label class="form-label" for="tmLast">Last name</label><input class="form-control" id="tmLast" name="lastname" maxlength="255"><div class="invalid-feedback" data-error-for="lastname"></div></div>
-          <div class="col-sm-6"><label class="form-label" for="tmPhone">Phone</label><input class="form-control" id="tmPhone" name="phone" type="tel" maxlength="30" placeholder="0712 345 678"><div class="invalid-feedback" data-error-for="phone"></div></div>
-          <div class="col-sm-6"><label class="form-label" for="tmEmail">Email <span class="fw-normal">(optional)</span></label><input class="form-control" id="tmEmail" name="email" type="email" maxlength="255"><div class="invalid-feedback" data-error-for="email"></div></div>
-          <div class="col-12"><label class="form-label" for="tmRole">Role</label><select class="form-select" id="tmRole" name="role_id">${roleOptions(data.grantable[data.grantable.length > 2 ? 2 : 0]?.id)}</select><div class="invalid-feedback d-block" data-error-for="role_id"></div></div>
-        </div>
-        <div class="soft-primary rounded p-2 mt-3 fs-13"><i class="ri-information-line me-1"></i>If they already have an account (same phone or email), they're just given the role here.</div>`,
-      foot: '<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="tmSave"><i class="ri-user-add-line me-1"></i>Add to the team</button>',
+        ${panel("ri-user-line", "primary", "Who they are", "Their name as it should show on the team", `
+          <div class="row g-3">
+            <div class="col-sm-6"><label class="form-label" for="tmFirst">First name</label><input class="form-control" id="tmFirst" name="firstname" maxlength="255" placeholder="e.g. Jane" autocomplete="off"><div class="invalid-feedback" data-error-for="firstname"></div></div>
+            <div class="col-sm-6"><label class="form-label" for="tmLast">Last name</label><input class="form-control" id="tmLast" name="lastname" maxlength="255" placeholder="e.g. Mwende" autocomplete="off"><div class="invalid-feedback" data-error-for="lastname"></div></div>
+          </div>`)}
+        ${panel("ri-contacts-book-2-line", "purple", "How to reach them", "A Kenyan mobile, an email, or both - no two people can share either", `
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label class="form-label" for="tmPhone">Mobile number</label>
+              <div class="input-group has-validation">
+                <span class="input-group-text fw-semibold">+254</span>
+                <input class="form-control" id="tmPhone" name="phone" type="tel" inputmode="tel" maxlength="16" placeholder="712 345 678" autocomplete="off">
+                <div class="invalid-feedback" data-error-for="phone"></div>
+              </div>
+              <div class="form-text" id="tmPhoneHint">Safaricom, Airtel or Telkom - 07… or 01…</div>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label" for="tmEmail">Email <span class="fw-normal">(optional)</span></label>
+              <div class="input-group has-validation">
+                <span class="input-group-text"><i class="ri-mail-line"></i></span>
+                <input class="form-control" id="tmEmail" name="email" type="email" maxlength="255" placeholder="name@example.com" autocomplete="off">
+                <div class="invalid-feedback" data-error-for="email"></div>
+              </div>
+              <div class="form-text">For sign-in details and password resets.</div>
+            </div>
+          </div>
+          <div id="tmMatch" class="mt-3" aria-live="polite"></div>`)}
+        ${panel("ri-shield-user-line", "pink", "Their role", `Roles below yours at ${esc(place)}`, `
+          <select class="form-select" id="tmRole" name="role_id">${roleOptions(startRole)}</select>
+          <div class="invalid-feedback d-block" data-error-for="role_id"></div>
+          <div class="soft-chip soft-pink mt-2 text-wrap" id="tmRoleBlurb"></div>`)}`,
+      foot: '<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="tmSave" disabled><i class="ri-user-add-line me-1"></i>Add to the team</button>',
     });
-    UI.enhanceSelect(el.querySelector("#tmRole"), { dropdownParent: window.jQuery ? window.jQuery(el) : undefined });
-    setTimeout(() => el.querySelector("#tmFirst")?.focus(), 300);
-    el.querySelector("#tmSave").addEventListener("click", async (e) => {
+    const $ = (sel) => el.querySelector(sel);
+    const roleSel = $("#tmRole");
+    UI.enhanceSelect(roleSel, { dropdownParent: window.jQuery ? window.jQuery(el) : undefined });
+    const showBlurb = () => {
+      const b = blurbOf(roleSel.value);
+      $("#tmRoleBlurb").hidden = !b;
+      $("#tmRoleBlurb").innerHTML = b ? `<i class="ri-information-line me-1"></i>${esc(b)}` : "";
+    };
+    showBlurb();
+    if (window.jQuery) window.jQuery(roleSel).on("change", showBlurb);
+    roleSel.addEventListener("change", showBlurb);
+    setTimeout(() => $("#tmFirst")?.focus(), 300);
+
+    // Live check (S6a): a Kenyan mobile, and whether this phone / email is already someone's.
+    let check = null;
+    let pending = false;
+    let timer = null;
+    let seq = 0;
+
+    function setFieldError(name, msg) {
+      const input = $(`[name="${name}"]`);
+      input.classList.toggle("is-invalid", !!msg);
+      $(`[data-error-for="${name}"]`).textContent = msg || "";
+    }
+
+    function refresh() {
+      const first = $("#tmFirst").value.trim();
+      const last = $("#tmLast").value.trim();
+      const phone = $("#tmPhone").value.trim();
+      const email = $("#tmEmail").value.trim();
+      const phoneOk = !phone || !!kenyaMobile(phone);
+      const emailOk = !email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      const named = (first && last) || !!check?.match;
+      $("#tmSave").disabled = pending || !named || !(phone || email) || !phoneOk || !emailOk || !!check?.conflict;
+    }
+
+    function drawMatch() {
+      const box = $("#tmMatch");
+      if (!check || (!check.match && !check.conflict)) {
+        box.innerHTML = "";
+        return;
+      }
+      const m = check.match;
+      // Someone who exists keeps their own name - fill the boxes so it's clear who's being added.
+      if (m && !check.conflict && !$("#tmFirst").value.trim() && !$("#tmLast").value.trim()) {
+        const [first, ...rest] = m.name.split(/\s+/);
+        $("#tmFirst").value = first || "";
+        $("#tmLast").value = rest.join(" ");
+      }
+      const who = m
+        ? `<div class="d-flex align-items-start gap-2">
+            <span class="avatar avatar-sm avatar-rounded bg-primary text-white flex-shrink-0">${esc(m.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase())}</span>
+            <div class="flex-fill">
+              <div class="fw-semibold">${esc(m.name)}</div>
+              <div class="fs-12">${m.roles.length ? m.roles.map((r) => `${esc(r.role)} · ${esc(r.place)}`).join("<br>") : "No role anywhere yet"}</div>
+              <div class="fs-12 mt-1">${[m.phone_masked, m.email_masked].filter(Boolean).map(esc).join(" · ")}</div>
+            </div>
+          </div>`
+        : "";
+      box.innerHTML = check.conflict
+        ? `<div class="alert alert-danger mb-0 d-flex gap-2 align-items-start"><i class="ri-error-warning-line fs-18 flex-shrink-0"></i><div><div class="fw-semibold mb-1">${esc(check.conflict)}</div>${who}</div></div>`
+        : `<div class="alert alert-primary mb-0"><div class="fw-semibold mb-2"><i class="ri-user-follow-line me-1"></i>Already in the system - they'll be given this role here, with no new account or sign-in details.</div>${who}</div>`;
+    }
+
+    async function runCheck() {
+      const phoneRaw = $("#tmPhone").value.trim();
+      const email = $("#tmEmail").value.trim();
+      const phone = kenyaMobile(phoneRaw);
+      setFieldError("phone", phoneRaw && !phone ? "Use a Kenyan mobile number, e.g. 0712 345 678." : "");
+      $("#tmPhoneHint").innerHTML = phone ? `<i class="ri-check-line text-success me-1"></i>Saved as ${esc(prettyPhone(phone))}` : "Safaricom, Airtel or Telkom - 07… or 01…";
+      setFieldError("email", email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? "That email address doesn't look right." : "");
+      if (!phone && !(email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+        check = null;
+        pending = false;
+        $("#tmMatch").classList.remove("opacity-50");
+        drawMatch();
+        return refresh();
+      }
+      const mine = ++seq;
+      const res = await SettingsAPI.teamCheck(phone || "", email);
+      if (mine !== seq) return;
+      pending = false;
+      $("#tmMatch").classList.remove("opacity-50");
+      check = res.ok ? res.data : null;
+      drawMatch();
+      refresh();
+    }
+
+    const schedule = () => {
+      pending = true;
+      $("#tmMatch").classList.add("opacity-50");
+      refresh();
+      clearTimeout(timer);
+      timer = setTimeout(runCheck, 450);
+    };
+    $("#tmPhone").addEventListener("input", schedule);
+    // The +254 is already in front of the box: show "712 345 678", not "0712345678".
+    $("#tmPhone").addEventListener("blur", () => {
+      const p = kenyaMobile($("#tmPhone").value);
+      if (p) $("#tmPhone").value = `${p.slice(4, 7)} ${p.slice(7, 10)} ${p.slice(10)}`;
+    });
+    $("#tmEmail").addEventListener("input", schedule);
+    $("#tmFirst").addEventListener("input", refresh);
+    $("#tmLast").addEventListener("input", refresh);
+
+    $("#tmSave").addEventListener("click", async (e) => {
       const btn = e.currentTarget;
       UI.setButtonLoading(btn, "Adding…");
-      const val = (n) => el.querySelector(`[name="${n}"]`).value.trim() || null;
-      const res = await SettingsAPI.addPerson({ firstname: val("firstname"), lastname: val("lastname"), phone: val("phone"), email: val("email"), role_id: Number(el.querySelector("#tmRole").value) });
+      const val = (n) => $(`[name="${n}"]`).value.trim() || null;
+      const res = await SettingsAPI.addPerson({ firstname: val("firstname"), lastname: val("lastname"), phone: kenyaMobile(val("phone")), email: val("email"), role_id: Number(roleSel.value) });
       UI.restoreButton(btn);
       if (!res.ok) return showErrors(el, res);
       data = res.data.team;
@@ -213,10 +364,10 @@
       UI.flashRow(res.data.person.assignment_id);
       SettingsRail.setAttention("team", false);
       if (res.data.credentials) {
-        el.querySelector("#teamModalTitle").textContent = `${res.data.person.user.name} is on the team`;
-        el.querySelector("#teamModalSub").textContent = res.data.person.role.name;
-        el.querySelector("#teamModalBody").innerHTML = credentialsHtml(res.data.person.user.name, res.data.credentials);
-        el.querySelector("#teamModalFoot").innerHTML = '<button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>';
+        $("#teamModalTitle").textContent = `${res.data.person.user.name} is on the team`;
+        $("#teamModalSub").textContent = res.data.person.role.name;
+        $("#teamModalBody").innerHTML = credentialsHtml(res.data.person.user.name, res.data.credentials);
+        $("#teamModalFoot").innerHTML = '<button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>';
         wireCopy(el);
       } else {
         bootstrap.Modal.getInstance(el)?.hide();

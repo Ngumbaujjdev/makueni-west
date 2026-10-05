@@ -7,6 +7,7 @@ use App\Models\Territory;
 use App\Models\User;
 use App\Models\UserTerritoryAssignment;
 use App\Services\Settings\Settings;
+use App\Support\Settings\PersonMatch;
 use App\Support\Settings\SettingsRegistry;
 use App\Support\SettingsAccess;
 use Illuminate\Http\JsonResponse;
@@ -40,6 +41,27 @@ class TeamController extends SettingsController
         return $this->ok($this->payload($request, $place));
     }
 
+    /**
+     * GET /settings/team/check?phone=&email= - as the Add someone window is
+     * filled in: is the phone a Kenyan mobile, does someone already have this
+     * phone or email (masked), and would adding them clash.
+     */
+    public function check(Request $request): JsonResponse
+    {
+        $place = $this->place($request);
+        if ($place instanceof JsonResponse) {
+            return $place;
+        }
+        if ($deny = $this->deny($request, $place, self::SECTION, 'manage')) {
+            return $deny;
+        }
+        $request->validate(['phone' => ['nullable', 'string', 'max:30'], 'email' => ['nullable', 'string', 'max:255']]);
+        $result = PersonMatch::check($request->query('phone'), $request->query('email'), $place);
+        unset($result['user']);
+
+        return $this->ok($result);
+    }
+
     /** POST /settings/team - {firstname, lastname, email?, phone?, role_id} */
     public function store(Request $request, AddPersonToPlace $add, Settings $settings): JsonResponse
     {
@@ -55,18 +77,22 @@ class TeamController extends SettingsController
             'firstname' => ['required', 'string', 'max:255'],
             'lastname' => ['required', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255', 'required_without:phone'],
-            'phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+()\s-]{9,30}$/', 'required_without:email'],
+            'phone' => ['nullable', 'string', 'max:30', 'required_without:email'],
             'role_id' => ['required', 'integer', Rule::in($grantable->pluck('id')->all())],
         ], [
             'role_id.in' => "You can only give roles below your own at {$place->name}.",
             'email.required_without' => 'Give an email address or a phone number.',
             'phone.required_without' => 'Give a phone number or an email address.',
-            'phone.regex' => 'Use digits, spaces and + ( ) - only, e.g. 0712 345 678.',
         ]);
 
-        $existing = AddPersonToPlace::findExisting($data['email'] ?? null, $data['phone'] ?? null);
-        if ($existing && ($already = $this->activeHere($existing->id, $place))) {
-            return $this->unprocessable('email', "{$existing->firstname} {$existing->lastname} is already on the team here as {$already->role?->name}.");
+        // The same checks the window runs as you type (S6a): a Kenyan mobile,
+        // and no phone/email that belongs to someone else or to someone already here.
+        $check = PersonMatch::check($data['phone'] ?? null, $data['email'] ?? null, $place);
+        if ($check['phone']['error']) {
+            return $this->unprocessable('phone', $check['phone']['error']);
+        }
+        if ($check['conflict']) {
+            return $this->unprocessable($check['phone']['given'] ? 'phone' : 'email', $check['conflict']);
         }
 
         $role = $grantable->firstWhere('id', (int) $data['role_id']);
@@ -213,7 +239,9 @@ class TeamController extends SettingsController
 
         return [
             'people' => $people->map(fn ($a) => $this->person($a, $request, $place))->all(),
-            'grantable' => $canManage ? SettingsAccess::grantable($request->user(), $place)->map(fn ($r) => ['id' => $r->id, 'name' => $r->name])->values()->all() : [],
+            'grantable' => $canManage ? SettingsAccess::grantable($request->user(), $place)->map(fn ($r) => [
+                'id' => $r->id, 'name' => $r->name, 'blurb' => $r->description ?: config("settings.role_blurbs.{$r->name}"),
+            ])->values()->all() : [],
             'counts' => [
                 'people' => $people->pluck('user_id')->unique()->count(),
                 'managers' => $this->managerCount($place),
@@ -277,11 +305,6 @@ class TeamController extends SettingsController
         $i = array_search($role, SettingsAccess::TEAM_ROLES[SettingsAccess::level($place)] ?? [], true);
 
         return $i === false ? 999 : $i;
-    }
-
-    private function activeHere(int $userId, Territory $place): ?UserTerritoryAssignment
-    {
-        return UserTerritoryAssignment::with('role')->where('user_id', $userId)->where('territory_id', $place->id)->where('is_active', true)->first();
     }
 
     /** Take the Spatie role off once no active assignment uses it. */

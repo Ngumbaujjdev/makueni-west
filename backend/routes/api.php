@@ -85,6 +85,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('service-times', [SettingsServiceTimesController::class, 'show']);
         Route::put('service-times', [SettingsServiceTimesController::class, 'update']);
         Route::get('team', [SettingsTeamController::class, 'index']);
+        Route::get('team/check', [SettingsTeamController::class, 'check'])->middleware('throttle:30,1');
         Route::post('team', [SettingsTeamController::class, 'store']);
         Route::put('team/{assignment}', [SettingsTeamController::class, 'update'])->whereNumber('assignment');
         Route::delete('team/{assignment}', [SettingsTeamController::class, 'destroy'])->whereNumber('assignment');

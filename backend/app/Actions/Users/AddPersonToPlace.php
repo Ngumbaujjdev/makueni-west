@@ -7,6 +7,7 @@ use App\Models\Territory;
 use App\Models\User;
 use App\Models\UserTerritoryAssignment;
 use App\Support\PasswordPolicy;
+use App\Support\Phone;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -43,7 +44,7 @@ final class AddPersonToPlace
                     'firstname' => trim($person['firstname']),
                     'lastname' => trim($person['lastname']),
                     'email' => ($person['email'] ?? null) ?: null,
-                    'phone' => ($person['phone'] ?? null) ?: null,
+                    'phone' => Phone::kenyaMobile($person['phone'] ?? null),
                     'employee_code' => $code,
                     'username' => $code,
                     'password' => Hash::make($password),
@@ -82,22 +83,15 @@ final class AddPersonToPlace
         if ($email && ($user = User::where('email', trim($email))->first())) {
             return $user;
         }
-        $digits = self::phoneKey($phone);
-        if (! $digits) {
-            return null;
-        }
+        $key = Phone::key($phone);
 
-        return User::whereNotNull('phone')->get(['id', 'phone'])
-            ->first(fn (User $u) => self::phoneKey($u->phone) === $digits)
-            ?->fresh();
+        return $key ? User::where('phone_key', $key)->first() : null;
     }
 
     /** The last 9 digits of a Kenyan number, so "+254 712 345 678" and "0712345678" match. */
     public static function phoneKey(?string $phone): ?string
     {
-        $digits = preg_replace('/\D+/', '', (string) $phone);
-
-        return strlen($digits) >= 9 ? substr($digits, -9) : null;
+        return Phone::key($phone);
     }
 
     /** A random 10-character password with letters and digits, avoiding look-alikes (0/O, 1/l/I). */

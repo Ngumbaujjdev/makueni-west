@@ -219,4 +219,70 @@ class SettingsTeamTest extends TestCase
         $id = UserTerritoryAssignment::where('user_id', $other->id)->value('id');
         $this->deleteJson("/api/settings/team/{$id}")->assertNotFound();
     }
+
+    // S6a: adding people safely ------------------------------------------------
+
+    public function test_phones_are_saved_one_way_and_numbers_that_are_not_kenyan_mobiles_are_refused(): void
+    {
+        Sanctum::actingAs($this->pastor);
+        $add = fn (string $phone, string $last) => $this->postJson('/api/settings/team', ['firstname' => 'Jane', 'lastname' => $last, 'phone' => $phone, 'role_id' => $this->roles['Elder']->id]);
+
+        $add('0712 345 678', 'One')->assertCreated();
+        $this->assertSame('+254712345678', User::where('lastname', 'One')->value('phone'));
+        $add('254 113 456 789', 'Two')->assertCreated();
+        $this->assertSame('+254113456789', User::where('lastname', 'Two')->value('phone'));
+        $add('0201234567', 'Three')->assertStatus(422)->assertJsonPath('errors.phone.0', 'Use a Kenyan mobile number, e.g. 0712 345 678.');
+    }
+
+    public function test_the_check_shows_who_has_a_number_masked_and_blocks_clashes(): void
+    {
+        $other = $this->member('other', 'Associate Pastor', '+254 711 111 111', $this->otherChurch);
+        Sanctum::actingAs($this->pastor);
+
+        $d = $this->getJson('/api/settings/team/check?phone=0711111111')->assertOk()->json('data');
+        $this->assertSame('+254711111111', $d['phone']['normalized']);
+        $this->assertSame('Test Other', $d['match']['name']);
+        $this->assertSame([['role' => 'Associate Pastor', 'place' => 'Other Church']], $d['match']['roles']);
+        $this->assertSame('+254 7•• ••• 111', $d['match']['phone_masked']);
+        $this->assertSame('t•••@example.test', $d['match']['email_masked']);
+        $this->assertFalse($d['match']['on_this_team']);
+        $this->assertNull($d['conflict'], 'someone from another church can be given a role here');
+        $this->assertStringNotContainsString('test.other@example.test', json_encode($d));
+
+        $this->assertStringContainsString('already on the team here', $this->getJson('/api/settings/team/check?phone=0700000003')->json('data.conflict'));
+
+        $mixed = $this->getJson('/api/settings/team/check?phone=0711111111&email=test.secretary@example.test')->json('data.conflict');
+        $this->assertSame('This phone number belongs to Test Other and this email to Test Secretary - they can\'t both be the same person.', $mixed);
+        $this->postJson('/api/settings/team', ['firstname' => 'X', 'lastname' => 'Y', 'phone' => '0711111111', 'email' => 'test.secretary@example.test', 'role_id' => $this->roles['Elder']->id])
+            ->assertStatus(422)->assertJsonPath('errors.phone.0', $mixed);
+
+        $this->postJson('/api/settings/team', ['firstname' => 'X', 'lastname' => 'Y', 'phone' => '0799999999', 'email' => 'test.other@example.test', 'role_id' => $this->roles['Elder']->id])
+            ->assertStatus(422)->assertJsonPath('errors.phone.0', 'This email belongs to Test Other, whose phone ends in 111. Use their number, or a different email.');
+        $this->assertSame(1, UserTerritoryAssignment::where('user_id', $other->id)->count());
+    }
+
+    public function test_the_check_is_for_people_who_can_manage_the_team(): void
+    {
+        Sanctum::actingAs($this->secretary);
+        $this->getJson('/api/settings/team/check?phone=0711111111')->assertForbidden();
+    }
+
+    public function test_no_two_people_share_a_phone_however_it_is_written(): void
+    {
+        $this->assertSame('700000001', $this->pastor->fresh()->phone_key);
+        $rule = fn (?int $ignore) => \Illuminate\Support\Facades\Validator::make(['phone' => '0700 000 001'], ['phone' => [new \App\Rules\UniquePhone($ignore)]]);
+        $this->assertTrue($rule(null)->fails());
+        $this->assertSame('This phone number is already used by Test Pastor.', $rule(null)->errors()->first('phone'));
+        $this->assertFalse($rule($this->pastor->id)->fails(), 'keeping your own number is fine');
+
+        $this->expectException(\Illuminate\Database\QueryException::class);
+        User::create(['firstname' => 'Dup', 'lastname' => 'Licate', 'username' => 'dup', 'email' => 'dup@example.test', 'phone' => '0700000001', 'password' => bcrypt('x')]);
+    }
+
+    public function test_each_role_on_offer_says_what_it_is(): void
+    {
+        Sanctum::actingAs($this->pastor);
+        $elder = collect($this->getJson('/api/settings/team')->json('data.grantable'))->firstWhere('name', 'Elder');
+        $this->assertSame('A church elder, supporting the pastors.', $elder['blurb']);
+    }
 }

@@ -35786,3 +35786,28 @@ tr.is-clickable {
   padding-top: 1.25rem;
   border-top: 1px solid var(--default-border);
 }
+
+/* Settings > Leadership & team: the Add someone window's three panels (S6a) */
+.team-add-panel {
+  padding: 1rem 1.1rem 1.1rem;
+  border: 1px solid rgba(var(--primary-rgb), 0.14);
+  border-radius: 0.85rem;
+  background: rgba(var(--primary-rgb), 0.04);
+}
+.team-add-panel + .team-add-panel {
+  margin-top: 0.9rem;
+}
+.team-add-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+.team-add-panel .form-control,
+.team-add-panel .form-select,
+.team-add-panel .input-group-text {
+  background-color: var(--custom-white);
+}
+.team-add-panel .alert {
+  font-size: 0.85rem;
+}
