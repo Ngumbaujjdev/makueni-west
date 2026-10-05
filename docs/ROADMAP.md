@@ -67,6 +67,15 @@ Deferred implementation work, in priority order. Nothing in this file has been b
 
 The budgets overhaul replaced them (`docs/specs/budgets-spec.md`): Overview, Budgets, Spending, Reports and the read-only places-below pages for every level. The empty `diocese/budget-management/*` stubs were removed in the cleanup.
 
+## 7. Church life — done (2026-10-05)
+Five modules for church, region and diocese, built on one foundation (`PlaceAccess`, in-app notifications and the header bell):
+- **Events** and **Initiatives** (`events-initiatives-spec.md`): invitations come down, places register counts; initiatives have sessions and attendance.
+- **Calendar additions** (`calendar-spec.md`, C3): events, sessions, services and due dates on the calendar, and a `.ics` download.
+- **Monthly reports** (`monthly-reports-spec.md`): figures filled in from the other modules, sent up, seen and commented; reminders by app and SMS.
+- **Messages** (`messages-spec.md`): send down by SMS, email or in the app through the Settings sender; the Inbox and replies.
+
+**Still open:** the "Region Summary" demographics page (`region/regional-reporting/statistics.php`) is empty; live calendar sync, SMS delivery receipts and quiet hours are not built; the dashboards come last.
+
 ## Deferred, not forgotten
 
 - **Mobile PWA** (`docs/design/demographics-mobile-app-design.md`) — a real, detailed design for a native-feeling mobile app covering Demographics (and, later, Financial/Tithe) across all four roles. Confirmed as a real future build, explicitly **not started now** — kept as a design reference so the Demographics backend (item 1) is built compatible with it (field names, workflow) without committing to building the PWA itself yet.
