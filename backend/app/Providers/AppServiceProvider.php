@@ -95,6 +95,7 @@ class AppServiceProvider extends ServiceProvider
             'activity_registration' => 'App\Models\ActivityRegistration',
             'activity_session' => 'App\Models\ActivitySession',
             'monthly_report' => 'App\Models\MonthlyReport',
+            'message_batch' => 'App\Models\MessageBatch',
         ]);
 
         // Saved system settings (email server, ...) take over from .env -

@@ -253,6 +253,13 @@ class DatabaseSeeder extends Seeder
             // grants put back where a role lost them.
             // ==========================================
             AttendanceRecordMenuSeeder::class,
+
+            // ==========================================
+            // PHASE 34: Messages - send down by SMS, email or in the app,
+            // the Inbox and replies; {level}.messages.*
+            // (docs/specs/messages-spec.md)
+            // ==========================================
+            MessagesAccessSeeder::class,
         ]);
     }
 }
