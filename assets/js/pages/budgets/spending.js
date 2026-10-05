@@ -28,7 +28,8 @@ const BudgetsSpending = (function () {
 
   function init() {
     B.showFlash();
-    period = B.periodControls({ defaultMonth: true, onChange: (p) => ((period = p), load()) });
+    // The whole year first; a month is one pick away (?month= in a link still opens it).
+    period = B.periodControls({ defaultMonth: false, onChange: (p) => ((period = p), load()) });
     document.getElementById("dirSwitchWrap").innerHTML = UI.renderSegmented(
       "dirSwitch",
       [
@@ -69,6 +70,18 @@ const BudgetsSpending = (function () {
     entries = list.data || [];
     canRecord = !!list.body.can_record;
     budget = dash.ok ? dash.data.budget : null;
+    // Looking at a whole year of month budgets: record on this month's budget if it's in use,
+    // else the whole-year budget, else the latest month budget in use that year.
+    if (period.month === null && budget?.status !== "active" && list.body.can_record) {
+      const year = await BudgetsAPI.list({ year: period.year });
+      const inUse = (year.ok ? year.data : []).filter((b) => b.status === "active");
+      const now = new Date();
+      budget =
+        inUse.find((b) => b.period_month === now.getMonth() + 1 && b.fiscal_year === now.getFullYear()) ||
+        inUse.find((b) => b.period_month === null) ||
+        inUse.sort((a, b) => (b.period_month || 0) - (a.period_month || 0))[0] ||
+        budget;
+    }
     B.syncExport({ key: "budget.spending", territoryId: list.body.place?.id, year: period.year, month: period.month });
     lastBody = list.body;
     lastDash = dash.ok ? dash.data : null;
@@ -84,6 +97,7 @@ const BudgetsSpending = (function () {
   function renderHeader(body, dash) {
     const name = body.place?.name || "";
     const title = { in: "Income", out: "Expenses", all: "Income & Expenses" }[dir];
+    document.getElementById("recordOutBtn").title = budget ? `Records on the ${budget.period_label} budget` : "";
     document.getElementById("placeLine").textContent = `${title} · ${name} · ${label()}`;
     document.getElementById("listTitle").textContent = `${title}, ${label()}`;
     document.getElementById("listSub").textContent = { in: "Every amount received - tap one to see it", out: "Every amount paid out, taken off its budget line - tap one to see it", all: "Every amount received and spent - tap one to see it" }[dir];
@@ -104,7 +118,7 @@ const BudgetsSpending = (function () {
           ? `The ${B.esc(budget.period_label)} budget is still a draft - <a href="${B.url("budget.php", { id: budget.id })}" class="fw-semibold">start using it</a> to record money.`
           : budget?.status === "closed"
             ? `The ${B.esc(budget.period_label)} budget is closed - reopen it to record money.`
-            : "Pick a month to record money against its budget.";
+            : `None of ${label()}'s budgets is in use yet - start using one to record money.`;
       hint.innerHTML = `<div class="alert alert-warning d-flex align-items-center gap-3"><span class="avatar avatar-sm bg-warning text-dark flex-shrink-0"><i class="ri-information-line"></i></span><div>${why}</div></div>`;
     }
   }

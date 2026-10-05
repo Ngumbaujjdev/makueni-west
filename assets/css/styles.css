@@ -34925,6 +34925,11 @@ a.budget-month-tile:hover {
   cursor: pointer;
 }
 
+/* Contributions: a month with no budget (or no share) - a light tint, text stays full colour */
+.budget-row-quiet > td {
+  background: rgba(var(--primary-rgb), 0.03);
+}
+
 /* The places below */
 .budget-below-noticed {
   margin-top: 1rem;

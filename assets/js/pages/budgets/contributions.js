@@ -25,8 +25,13 @@ const BudgetsContributions = (function () {
     pending: { label: "Still to send", color: "warning", icon: "ri-time-line" },
     late: { label: "Late", color: "danger", icon: "ri-error-warning-line" },
     none: { label: "Nothing due", color: "primary", icon: "" },
+    no_budget: { label: "No budget", color: "secondary", icon: "" },
   };
-  const statusPill = (s) => (s === "none" ? '<span class="soft-chip soft-primary">Nothing due</span>' : UI.pill(STATUS[s].label, STATUS[s].color, STATUS[s].icon));
+  const statusPill = (s) =>
+    s === "none" ? '<span class="soft-chip soft-primary">Nothing due</span>' : s === "no_budget" ? '<span class="soft-chip soft-secondary">No budget</span>' : UI.pill(STATUS[s].label, STATUS[s].color, STATUS[s].icon);
+  /** "Tithes" from "10% of Tithes received". */
+  const countedOn = (rule) => ((rule || "").match(/% of (.+) received$/) || [])[1] || "money";
+  let chart = null;
 
   function init() {
     const now = new Date().getFullYear();
@@ -55,6 +60,7 @@ const BudgetsContributions = (function () {
     renderHeader();
     renderStats();
     renderOwn();
+    renderGlance();
     renderPayTo();
     renderBelow();
   }
@@ -87,11 +93,98 @@ const BudgetsContributions = (function () {
     }
     const t = d.totals;
     UI.renderStatCardsRow("statCardsRow", [
-      { icon: "ri-arrow-down-circle-line", label: "Received", value: B.shortMoney(t.received), color: "success", sub: "On the lines the share counts" },
-      { icon: "ri-hand-coin-line", label: "Due", value: B.shortMoney(t.due), color: "primary", sub: d.rows[0] ? B.esc(d.rows[0].rule) : "No share worked out yet" },
+      { icon: "ri-arrow-down-circle-line", label: `${countedOn(shareRule())} received`.replace(/^all money/, "Money"), value: B.shortMoney(t.received), color: "success", sub: "The income the share is worked out on" },
+      { icon: "ri-hand-coin-line", label: "Due", value: B.shortMoney(t.due), color: "primary", sub: shareRule() ? B.esc(shareRule()) : "No share worked out yet" },
       { icon: "ri-send-plane-line", label: "Sent", value: B.shortMoney(t.sent), color: "purple", sub: t.due > 0 ? `${Math.round((t.sent / t.due) * 100)}% of what is due` : "Nothing due yet" },
       { icon: t.late ? "ri-error-warning-line" : "ri-time-line", label: "Still to send", value: B.shortMoney(t.owed), color: t.late ? "danger" : "warning", sub: t.late ? `${t.late} ${t.late === 1 ? "month is" : "months are"} late` : t.owed > 0 ? "Nothing late" : t.due > 0 ? "All sent" : "Nothing due yet" },
     ]);
+  }
+
+  const shareRule = () => (d.rows || []).find((r) => r.rule)?.rule || null;
+
+  /**
+   * The year at a glance: for a church, due and sent month by month and its
+   * late months; above, a tile per region (tap to filter) with due and sent
+   * per region, and the churches that are late.
+   */
+  function renderGlance() {
+    const card = document.getElementById("glanceCard");
+    chart?.destroy?.();
+    chart = null;
+    const late = document.getElementById("lateNote");
+    const grid = document.getElementById("groupsGrid");
+    late.innerHTML = grid.innerHTML = "";
+    if (d.below) {
+      const groups = d.groups || [];
+      card.hidden = !d.below.length;
+      if (card.hidden) return;
+      document.getElementById("glanceTitle").textContent = d.place?.type === "diocese" ? "Regions at a glance" : "At a glance";
+      document.getElementById("glanceSub").textContent = "Due and sent per region - tap one to see only its churches";
+      const lateChurches = d.below.filter((p) => p.late > 0);
+      if (lateChurches.length) {
+        late.innerHTML = `<div class="alert alert-danger d-flex align-items-start gap-2"><i class="ri-error-warning-line fs-18"></i><span><b>${lateChurches.length} ${lateChurches.length === 1 ? "church has" : "churches have"} a month late:</b> ${lateChurches.slice(0, 6).map((p) => B.esc(p.name)).join(", ")}${lateChurches.length > 6 ? ` and ${lateChurches.length - 6} more` : ""}.</span></div>`;
+      }
+      if (groups.length > 1) {
+        grid.innerHTML = `<div class="budget-month-grid mb-3">${groups
+          .map(
+            (g) => `
+            <a href="#belowTable" class="budget-month-tile ${g.late ? "is-draft" : g.owed > 0 ? "is-draft" : g.due > 0 ? "is-active" : "is-empty"}" data-group="${B.esc(g.name)}">
+              <div class="fw-semibold">${B.esc(g.name)}</div>
+              <div>${g.late ? UI.pill(`${g.late} late`, "danger", "ri-error-warning-line") : g.owed > 0 ? UI.pill("Still to send", "warning", "ri-time-line") : g.due > 0 ? UI.pill("All sent", "success", "ri-checkbox-circle-line") : '<span class="soft-chip soft-primary">Nothing due</span>'}</div>
+              <div class="budget-month-figure text-success">${B.shortMoney(g.sent)} <small class="fw-semibold fs-12">sent of ${B.shortMoney(g.due)}</small></div>
+              <div class="budget-month-sub">${g.churches} ${g.churches === 1 ? "church" : "churches"}${g.owed > 0 ? ` · ${B.shortMoney(g.owed)} to send` : ""}</div>
+            </a>`,
+          )
+          .join("")}</div>`;
+        grid.querySelectorAll("[data-group]").forEach((a) =>
+          a.addEventListener("click", (e) => {
+            e.preventDefault();
+            const select = document.getElementById("groupFilter");
+            if (!select) return;
+            select.value = a.dataset.group;
+            UI.syncSelect(select);
+            select.dispatchEvent(new Event("change"));
+            document.getElementById("belowTable").scrollIntoView({ behavior: "smooth", block: "start" });
+          }),
+        );
+      }
+      if (!groups.some((g) => g.due > 0 || g.sent > 0)) return;
+      document.getElementById("glanceChart").innerHTML = '<div id="contribChart"></div>';
+      chart = barChart(groups.map((g) => g.name), groups.map((g) => g.due), groups.map((g) => g.sent));
+      return;
+    }
+    const months = (d.rows || []).filter((r) => r.month !== null);
+    // Only once there is something to draw - an empty chart says nothing.
+    card.hidden = months.length < 2 || !months.some((r) => r.due > 0 || r.sent > 0);
+    if (card.hidden) return;
+    document.getElementById("glanceTitle").textContent = `${year} at a glance`;
+    document.getElementById("glanceSub").textContent = `Due on ${countedOn(shareRule())} received, and what was sent`;
+    const lateMonths = months.filter((r) => r.status === "late");
+    if (lateMonths.length) {
+      late.innerHTML = `<div class="alert alert-danger d-flex align-items-start gap-2"><i class="ri-error-warning-line fs-18"></i><span><b>${lateMonths.length} ${lateMonths.length === 1 ? "month is" : "months are"} late:</b> ${lateMonths.map((r) => B.esc(r.label.replace(/ \d{4}$/, ""))).join(", ")} - ${B.money(lateMonths.reduce((t, r) => t + r.owed, 0))} still to send.</span></div>`;
+    }
+    const byMonth = {};
+    months.forEach((r) => {
+      byMonth[r.month] ??= { due: 0, sent: 0 };
+      byMonth[r.month].due += r.due;
+      byMonth[r.month].sent += r.sent;
+    });
+    const keys = Object.keys(byMonth).map(Number).sort((a, b) => a - b);
+    document.getElementById("glanceChart").innerHTML = '<div id="contribChart"></div>';
+    chart = barChart(keys.map((m) => B.MONTHS[m - 1].slice(0, 3)), keys.map((m) => byMonth[m].due), keys.map((m) => byMonth[m].sent));
+  }
+
+  function barChart(categories, due, sent) {
+    return UI.renderTrendChart("contribChart", {
+      categories,
+      series: [
+        { name: "Due", data: due },
+        { name: "Sent", data: sent },
+      ],
+      type: "bar",
+      colors: [UI.cssColor("primary"), UI.cssColor("success")],
+      yFormat: (v, full) => (full ? B.money(v) : B.short(v)),
+    });
   }
 
   function renderOwn() {
@@ -110,7 +203,7 @@ const BudgetsContributions = (function () {
       body.innerHTML = `<div class="list-empty py-5"><span class="list-empty-icon bg-primary text-white"><i class="ri-hand-coin-line"></i></span><div class="fw-semibold mt-2">No share worked out for ${year}</div><div class="fs-12">It shows here once a budget for ${year} is in use and money is recorded.</div></div>`;
       return;
     }
-    const many = new Set(rows.map((r) => r.deduction_id)).size > 1;
+    const many = new Set(rows.filter((r) => r.deduction_id).map((r) => r.deduction_id)).size > 1;
     body.innerHTML = `
       <div class="table-responsive">
         <table class="table mb-0 align-middle">
@@ -119,6 +212,17 @@ const BudgetsContributions = (function () {
             .map((r) => {
               const canSend = d.can_record && r.owed > 0 && r.budget_status === "active";
               const pct = r.due > 0 ? Math.min(100, (r.sent / r.due) * 100) : 0;
+              if (!r.deduction_id) {
+                // A month with no budget, or no share on its budget: shown so the year reads whole.
+                return `
+                <tr class="budget-row-quiet">
+                  <td>${r.budget_id ? `<a href="${B.url("budget.php", { id: r.budget_id })}" class="fw-semibold text-reset">${B.esc(r.label)}</a>` : `<span class="fw-semibold">${B.esc(r.label)}</span>`}</td>
+                  ${many ? "<td>-</td>" : ""}
+                  <td class="text-end">-</td><td class="text-end">-</td><td class="text-end">-</td><td class="text-end">-</td>
+                  <td>${statusPill(r.status)}</td>
+                  <td class="text-end">${r.status === "no_budget" && B.CTX.can?.prepare && !d.view_only ? `<a href="${B.url("form.php", { year, month: r.month })}" class="btn btn-sm btn-primary-light"><i class="ri-add-line me-1"></i>Plan it</a>` : ""}</td>
+                </tr>`;
+              }
               return `
                 <tr>
                   <td><a href="${B.url("budget.php", { id: r.budget_id, tab: "deductions" })}" class="fw-semibold text-reset">${B.esc(r.label)}</a></td>
