@@ -260,6 +260,14 @@ class DatabaseSeeder extends Seeder
             // (docs/specs/messages-spec.md)
             // ==========================================
             MessagesAccessSeeder::class,
+
+            // ==========================================
+            // PHASE 35: People & care - Members (the church's private
+            // register), Visitors, Pastoral care, Ministries and Facilities,
+            // plus the region's and diocese's totals pages; each switched on
+            // with its phase (docs/specs/people-and-care-spec.md)
+            // ==========================================
+            PeopleCareAccessSeeder::class,
         ]);
     }
 }

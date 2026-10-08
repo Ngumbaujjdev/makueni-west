@@ -68,6 +68,7 @@ return [
         'money' => 'Money',
         'messages' => 'Messages',
         'ministry' => 'Ministry',
+        'people' => 'People & care', // docs/specs/people-and-care-spec.md - sections arrive with each phase
         'system' => 'System',
     ],
 
