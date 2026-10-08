@@ -69,7 +69,7 @@ class Chats
             'phone' => $a->user->phone,
             'email' => $a->user->email,
             'role' => $a->role?->name,
-            'place' => $a->territory?->name,
+            'place' => $a->territory?->name, 'place_id' => $a->territory?->id,
             'level' => $a->territory?->territory_type?->value,
         ])
             ->filter(fn ($c) => $term === '' || str_contains(mb_strtolower("{$c['name']} {$c['place']} {$c['role']}"), $term))
@@ -90,7 +90,7 @@ class Chats
         return [
             'id' => $user->id, 'name' => $user->full_name ?: $user->username, 'photo_url' => $user->photo_url,
             'phone' => $user->phone, 'email' => $user->email,
-            'role' => $a?->role?->name, 'place' => $a?->territory?->name, 'level' => $a?->territory?->territory_type?->value,
+            'role' => $a?->role?->name, 'place' => $a?->territory?->name, 'place_id' => $a?->territory?->id, 'level' => $a?->territory?->territory_type?->value,
         ];
     }
 

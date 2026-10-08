@@ -105,6 +105,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Events (and initiatives) of church, region and diocese (docs/specs/events-initiatives-spec.md)
     // Chat - contacts, one-to-one chats and groups (docs/specs/messages-spec.md, L6)
     Route::prefix('chat')->group(function () {
+        Route::get('realtime', [ChatController::class, 'realtime']);
         Route::get('contacts', [ChatController::class, 'contacts']);
         Route::get('chats', [ChatController::class, 'index']);
         Route::get('chats/{id}', [ChatController::class, 'show'])->whereNumber('id');
