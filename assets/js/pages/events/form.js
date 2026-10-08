@@ -364,7 +364,9 @@
   async function init() {
     const [o, e] = await Promise.all([EventsAPI.overview(new Date().getFullYear()), editId ? EventsAPI.get(editId) : Promise.resolve(null)]);
     if (!o.ok) {
-      Toast.error(o.message);
+      // Not a blank form: say what went wrong, with Try again.
+      $("eventFormCard").innerHTML = `<div class="card-body">${E.empty("ri-error-warning-line", "Couldn't open the form", E.esc(o.message), '<button type="button" class="btn btn-primary" id="formRetry"><i class="ri-refresh-line me-1"></i>Try again</button>')}</div>`;
+      $("formRetry").addEventListener("click", () => window.location.reload());
       return;
     }
     ov = o.data;

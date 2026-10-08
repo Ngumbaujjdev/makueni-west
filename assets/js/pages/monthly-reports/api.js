@@ -34,15 +34,24 @@ const ReportsAPI = (function () {
     return `${BASE}${path}${qs ? `?${qs}` : ""}`;
   }
 
+  const TIMEOUT_MS = 20000;
+
   async function request(method, path, { params, body, form } = {}) {
+    // Never wait forever: a call that hangs becomes an error the page can show (with Try again).
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
     try {
-      const res = await fetch(url(path, params), { method, headers: headers(!form), body: form || (body === undefined ? undefined : JSON.stringify(body)) });
-      const json = await res.json().catch(() => ({}));
+      const res = await fetch(url(path, params), { method, headers: headers(!form), body: form || (body === undefined ? undefined : JSON.stringify(body)), signal: ctrl.signal });
+      const json = await res.json().catch(() => null);
+      if (json === null) return { ok: false, status: res.status, message: "The server sent an unexpected reply. Please try again.", errors: null, data: null };
       const ok = res.ok && json.success !== false;
       const firstError = json.errors ? Object.values(json.errors).flat()[0] : null;
       return { ok, status: res.status, message: ok ? json.message : firstError || json.message || "Something went wrong. Please try again.", errors: json.errors || null, data: json.data };
     } catch (e) {
-      return { ok: false, status: 0, message: "Can't reach the server. Check your connection and try again.", errors: null, data: null };
+      const message = e.name === "AbortError" ? "The server took too long to answer. Please try again." : "Can't reach the server. Check your connection and try again.";
+      return { ok: false, status: 0, message, errors: null, data: null };
+    } finally {
+      clearTimeout(timer);
     }
   }
 

@@ -4,9 +4,9 @@
     <div class="page-toolbar-controls">
         <div id="yearSwitchWrap"></div>
         <button type="button" class="btn btn-outline-primary" id="exportReportBtn" data-module="<?= $eventsCtx['kind'] === 'initiative' ? 'initiatives' : 'events' ?>" data-report-key="<?= $eventsCtx['kind'] === 'initiative' ? 'initiative.year' : 'activity.year' ?>"><i class="ri-download-2-line me-1"></i>Export</button>
-        <?php if ($eventsCtx['can']['manage']): ?>
-        <a class="btn btn-primary" href="<?= $eventsCtx['baseUrl'] ?>/new"><i class="ri-add-line me-1"></i>New <?= $noun['one'] ?></a>
-        <?php endif ?>
+        <!-- Shown from the session at once, then kept right by the API's live answer (list.js) -
+             so a role that just gained "add" sees it without signing in again. -->
+        <a class="btn btn-primary<?= $eventsCtx['can']['manage'] ? '' : ' d-none' ?>" id="newEventBtn" href="<?= $eventsCtx['baseUrl'] ?>/new"><i class="ri-add-line me-1"></i>New <?= $noun['one'] ?></a>
     </div>
 </div>
 

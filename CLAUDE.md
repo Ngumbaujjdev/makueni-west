@@ -25,7 +25,7 @@ Target setup (see `docs/ROADMAP.md` — port change not yet applied):
 # Backend (Laravel API)
 cd backend && cp .env.example .env && php artisan key:generate
 php artisan migrate --seed
-php artisan serve --port=8004
+PHP_CLI_SERVER_WORKERS=4 php artisan serve --port=8004   # 4 workers: a page's API calls run side by side, not one after another
 php artisan queue:work --queue=reports,default   # PDF/Excel reports are built in the background (docs/specs/reports-spec.md)
 
 # Frontend
@@ -33,6 +33,18 @@ php artisan queue:work --queue=reports,default   # PDF/Excel reports are built i
 ```
 
 Once a root `package.json` exists (see `docs/ROADMAP.md`), `npm run dev` boots both together via `concurrently`.
+
+**Keep the dev API fast — PHP needs OPcache on.** Without it, every API request recompiles Laravel. That's 0.4s for an empty request and 1–2.5s for a real one, and pages sit on skeletons. With OPcache on, calls take 0.06–0.12s. Homebrew's PHP ships with it off. Check with `php -r 'var_dump(function_exists("opcache_get_status"));'`, and if it says `false`, add a `conf.d/*.ini` file next to `php.ini` containing:
+
+```ini
+zend_extension=<path to opcache.so in the php Cellar>
+opcache.enable=1
+opcache.enable_cli=1
+opcache.validate_timestamps=1
+opcache.revalidate_freq=0
+```
+
+`revalidate_freq=0` re-checks files on every request, so edits show straight away. Restart `php artisan serve` afterwards. Set up on this machine 2026-10-08 (`~/homebrew/etc/php/8.3/conf.d/ext-opcache-dev.ini`).
 
 ## Git Workflow
 

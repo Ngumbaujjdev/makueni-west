@@ -14,6 +14,8 @@
     'use strict';
 
     document.addEventListener('DOMContentLoaded', renderSecondaryNav);
+    // A background refresh brought a changed menu (auth-helpers.js refreshModules).
+    window.addEventListener('mwd:modules-updated', renderSecondaryNav);
 
     function getCachedModules() {
         try {

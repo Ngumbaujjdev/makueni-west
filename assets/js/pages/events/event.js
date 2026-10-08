@@ -840,20 +840,29 @@
 
   async function reload(resetCaches = true) {
     const res = await EventsAPI.get(id);
+    const failedPage = (title, message, retry) => {
+      $("eventPage").innerHTML = `<div class="card custom-card"><div class="card-body"><div class="ev-empty"><span class="avatar avatar-lg avatar-rounded bg-danger text-white mb-2"><i class="ri-close-circle-line fs-20"></i></span><h6 class="mb-1">${title}</h6><p class="mb-3">${E.esc(message)}</p><div class="d-flex flex-wrap justify-content-center gap-2">${retry ? '<button type="button" class="btn btn-primary" id="pageRetry"><i class="ri-refresh-line me-1"></i>Try again</button>' : ""}<a class="btn ${retry ? "btn-light" : "btn-primary"}" href="${CTX.baseUrl}/">Back to ${N.many}</a></div></div></div></div>`;
+      $("pageRetry")?.addEventListener("click", () => window.location.reload());
+    };
     if (!res.ok) {
-      $("eventPage").innerHTML = `<div class="card custom-card"><div class="card-body"><div class="ev-empty"><span class="avatar avatar-lg avatar-rounded bg-danger text-white mb-2"><i class="ri-close-circle-line fs-20"></i></span><h6 class="mb-1">${res.status === 404 ? `This ${N.one} isn't one you can see` : `Couldn't open the ${N.one}`}</h6><p class="mb-3">${E.esc(res.message)}</p><a class="btn btn-primary" href="${CTX.baseUrl}/">Back to ${N.many}</a></div></div></div>`;
-      return;
+      // Not found or not allowed: no point trying again. Anything else (slow, offline): Try again.
+      return failedPage(res.status === 404 ? `This ${N.one} isn't one you can see` : `Couldn't open the ${N.one}`, res.message, ![403, 404].includes(res.status));
     }
     state.ev = res.data;
     if (resetCaches) {
       state.regs = state.money = state.history = state.sessions = null;
     }
     document.title = `${state.ev.title} - Makueni West Diocese`;
-    renderHero();
-    renderStats();
-    renderInvitedStats();
-    renderSide();
-    await renderTabs();
+    try {
+      renderHero();
+      renderStats();
+      renderInvitedStats();
+      renderSide();
+      await renderTabs();
+    } catch (e) {
+      console.error(e);
+      failedPage(`Couldn't show the ${N.one}`, "Something on this page went wrong.", true);
+    }
   }
 
   document.addEventListener("click", (e) => {
