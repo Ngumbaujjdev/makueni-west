@@ -89,6 +89,7 @@ function settingsPageScripts(bool $withMap = true): void
         'assets/js/pages/settings/sections/service-times.js',
         'assets/js/pages/settings/sections/team.js',
         'assets/js/pages/settings/sections/health.js',
+        'assets/js/utils/message-frames.js',
         'assets/js/pages/settings/sections/templates.js',
         'assets/js/pages/settings/sections/campaigns.js',
         'assets/js/pages/settings/sections/communication.js',

@@ -160,6 +160,23 @@ The placeholders' unbuilt sub-pages are switched off.
 - **The branded email** keeps single line breaks inside a paragraph (`nl2br`), so "God bless,⏎{sender}" lands on two lines.
 - **The demo seeder** adds 4 shared diocese templates: Monthly report reminder, Event invitation, Welcome to the church and Prayer request.
 
+### Send a message, livelier (2026-10-08)
+- **Pills in two colours:**
+  - **Teal:** saved messages, pale with the chosen one solid.
+  - **Purple:** people and places, pale with the picked ones solid, and a count bubble.
+  - **Placeholder chips:** teal `{token}` chips; the event ones are purple.
+- **About an event.** "Pick an event" lists our upcoming published events and those shared with us (`MessagesAPI.events()`: `/activities` own + invited, this year and next).
+  - **Picking one** fills `[event]`, `[date]`, `[time]` and `[venue]` in the subject and message. An empty message gets a ready invitation.
+  - **Event chips** for the name, date, time and venue appear in the placeholder bar.
+  - **From an event page:** "Invite by message" passes `?event=`.
+  - **No backend change:** the event is written into the text.
+- **Schedule** opens its own window:
+  - **Quick picks:** in an hour, this evening, tomorrow morning, Saturday morning, Sunday after service.
+  - **With an event picked:** a week before, the day before and the morning of.
+  - **Or a set day and time.** A live sentence says when it sends and to how many. The same 5 minutes to 90 days as the server, and anything outside that is refused with the reason.
+  - **The When card** shows the scheduled time, with Change and Send now instead.
+- **How it reads** uses the shared phone and mail-app frames (`assets/js/utils/message-frames.js`): the real sender ID and the SMS signature, and for email the server's own rendering, with an SMS / Email toggle for both.
+
 ### L5c, round 2 (2026-10-08): a real email, a real phone, our logo, templates in a table
 - **The email** (`emails/place-message.blade.php`) uses esoma-server's master layout in our brand:
   - **Header:** a white row with the lockup, which copies esoma-client's "logo | Academy": the CCI mark, a thin divider, then the place's name over a small line ("CHURCH · MAKUENI WEST DIOCESE"; at the diocese, "CHRISTIAN CHURCH INTERNATIONAL").
