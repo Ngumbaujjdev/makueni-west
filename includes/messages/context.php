@@ -2,7 +2,8 @@
 /**
  * Messages pages are shared by every level (docs/specs/messages-spec.md):
  * the bodies live in includes/messages/*.php and each level has thin wrappers -
- * {church,region,diocese}/messages/{index,new,message}.php. What the API allows is
+ * {church,region,diocese}/messages/{index,new,message,campaigns,templates,log}.php
+ * (the Communication group, 2026-10-08). What the API allows is
  * decided server-side (App\Support\MessagesAccess); this only checks the page may open
  * and tells the scripts where they are and what they may offer.
  */
@@ -12,11 +13,20 @@ require_once __DIR__ . '/../permission-check.php';
 
 /**
  * @param string $level church | region | diocese
- * @param string $page index | new | message
+ * @param string $page index | new | message | campaigns | templates | log
  */
 function messagesPageContext(string $level, string $page): array
 {
-    requirePermission("{$level}.messages.inbox.read");
+    // Each page opens with its own permission (MessagesAccessSeeder); the old Sent and Saved tabs are pages now.
+    if ($page === 'index' && in_array($_GET['tab'] ?? '', ['sent', 'saved'], true)) {
+        header('Location: ' . SITE_URL . "/{$level}/messages/" . (($_GET['tab'] === 'sent') ? 'campaigns.php' : 'templates.php'));
+        exit;
+    }
+    requirePermission("{$level}." . ([
+        'campaigns' => 'messages.campaigns.read',
+        'templates' => 'messages.templates.manage',
+        'log' => 'messages.log.read',
+    ][$page] ?? 'messages.inbox.read'));
     $role = getCurrentRole() ?? [];
     $can = fn (string $permission) => hasGlobalAccess() || hasPermission("{$level}.{$permission}");
 
@@ -58,7 +68,12 @@ function messagesPageScripts(string $page): void
     foreach (['assets/libs/select2/select2.min.js', 'assets/data-tables/1.12.1/js/jquery.dataTables.min.js', 'assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js', 'assets/data-tables/responsive/2.3.0/js/dataTables.responsive.min.js'] as $src) {
         echo '<script src="' . SITE_URL . "/{$src}\"></script>\n";
     }
-    foreach (['assets/js/pages/demographics/ui-helpers.js', 'assets/js/utils/message-frames.js', 'assets/js/pages/messages/api.js', 'assets/js/pages/messages/ui.js', "assets/js/pages/messages/{$page}.js"] as $src) {
+    // Templates and the log are Settings > Communication's own code, given a Messages setting (comms-env.js).
+    $shared = [
+        'templates' => ['assets/js/pages/messages/comms-env.js', 'assets/js/pages/settings/sections/templates.js'],
+        'log' => ['assets/js/pages/messages/comms-env.js', 'assets/js/pages/settings/sections/templates.js', 'assets/js/pages/settings/sections/messages.js'],
+    ][$page] ?? [];
+    foreach (['assets/js/pages/demographics/ui-helpers.js', 'assets/js/utils/message-frames.js', 'assets/js/pages/messages/api.js', 'assets/js/pages/messages/ui.js', ...$shared, "assets/js/pages/messages/{$page}.js"] as $src) {
         echo '<script src="' . $v($src) . '"></script>' . "\n";
     }
 }
