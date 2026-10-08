@@ -17,6 +17,7 @@ function calendarPageContext(string $level): array
     requirePermission("{$level}.calendar.events.read");
     $role = getCurrentRole() ?? [];
     $tab = ($_GET['tab'] ?? '') === 'cci' && $level === 'diocese' ? 'cci' : 'calendar';
+    $can = fn (string $permission) => hasGlobalAccess() || hasPermission("{$level}.{$permission}");
 
     return [
         'level' => $level,
@@ -24,6 +25,11 @@ function calendarPageContext(string $level): array
         'homeUrl' => SITE_URL . "/{$level}/dashboard",
         'siteUrl' => SITE_URL, // Church life items (C3) link to their own pages
         'place' => ['id' => (int) ($role['territory_id'] ?? 0), 'name' => $role['territory']['name'] ?? $role['territory_name'] ?? ''],
+        // New date's other choices: an event or an initiative opens its own form, when this role may add one.
+        'newLinks' => [
+            'event' => $can('events.events.manage') ? SITE_URL . "/{$level}/events/new.php" : null,
+            'initiative' => $can('initiatives.initiatives.manage') ? SITE_URL . "/{$level}/initiatives/new.php" : null,
+        ],
     ];
 }
 

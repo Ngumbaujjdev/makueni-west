@@ -168,6 +168,27 @@ The calendar also shows what the other modules already know, so nothing is typed
 - The side column asks for 90 days back to 30 ahead: late due dates first, then the next 30 days; Coming up is the next 7 days without due dates.
 - Tests: `tests/Feature/Calendar/CalendarLifeTest.php` (4).
 
+### The clean month (2026-10-08, page only - no API change)
+This replaces the page layout described in C2 and C3 above. The API is unchanged.
+- **Removed:** the KPI cards, the chip rows above the grid, and the Coming up / Due soon column.
+- **A left column** sits beside the grid:
+  - a **small month** with a dot per kind of date (moving it moves the grid);
+  - the **chosen day** (click a day, "+N more" or the small month), with its dates, or "Nothing on this day" and **Next: …**. Its **+** opens New date on that day;
+  - **Show**: the five sources as a checklist with counts, and the kind of calendar date;
+  - **Whose dates**: the layers as switches;
+  - **Needs attention**: due dates, late first. It's hidden when nothing is due.
+- **The grid:**
+  - timed dates are a dot, the time and the title on white; all-day ones are solid bars;
+  - the chosen day is outlined;
+  - "N dates this month/week" sits in the toolbar.
+  - Clicking a day now chooses it rather than opening the form.
+- **URL:** `day=` joins `view`, `date`, `layers`, `sources` and `kind`. On a phone, List is the default view.
+- **The view windows** (`details()` / `preview()`) open with a solid header in the entry's colour, then the facts as rows with icon tiles and a view-only or "where it's kept" note.
+- **The all-day date fix:** `whenText()` now finds the last day with local dates. `toISOString()` had moved it a day early in Nairobi, so one-day events read "Sat 24 Oct - Fri 23 Oct".
+- **New date** (a new date only, not edits or the CCI form):
+  - Choices first: **Calendar date**, **Event** or **Initiative**. The last two open their own forms and show only when the role may add one (`newLinks` in the page context).
+  - The date comes from the chosen day.
+
 ## Acceptance Criteria
 
 ### C1: data, API, CCI management

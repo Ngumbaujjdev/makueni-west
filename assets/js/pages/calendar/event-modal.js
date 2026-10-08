@@ -4,8 +4,11 @@
  * ============================================================================
  * CalendarMeta: what each layer (CCI, Diocese, Region, Ours, Below) and kind
  * looks like. CalendarEventModal.details(occurrence) shows one event -
- * "CCI calendar event" when it is one - with Edit / Delete when the place
- * may change it; CalendarEventModal.form(event, opts) adds or edits one.
+ * "CCI calendar" when it is one - with Edit / Delete when the place may
+ * change it; preview() shows an event, session, service or due date with one
+ * button to its page; form(event, opts) adds or edits one. The two view
+ * windows (2026-10-08) open with a solid header in the entry's colour and
+ * list their facts as rows with icon tiles.
  * ============================================================================
  */
 const CalendarMeta = (function () {
@@ -35,11 +38,11 @@ const CalendarMeta = (function () {
   };
   /** What the calendar can show besides its own events (docs/specs/calendar-spec.md, C3). */
   const SOURCES = {
-    calendar: { label: "Calendar", icon: "ri-calendar-event-line", colour: "primary" },
-    events: { label: "Events", icon: "ri-calendar-check-line", colour: "purple" },
-    sessions: { label: "Initiative sessions", icon: "ri-seedling-line", colour: "success" },
-    services: { label: "Services", icon: "ri-book-open-line", colour: "pink" },
-    due: { label: "Due dates", icon: "ri-alarm-warning-line", colour: "secondary" },
+    calendar: { label: "Calendar", one: "Calendar date", icon: "ri-calendar-event-line", colour: "primary" },
+    events: { label: "Events", one: "Event", icon: "ri-calendar-check-line", colour: "purple" },
+    sessions: { label: "Initiative sessions", one: "Initiative session", icon: "ri-seedling-line", colour: "success" },
+    services: { label: "Services", one: "Service", icon: "ri-book-open-line", colour: "pink" },
+    due: { label: "Due dates", one: "Due date", icon: "ri-alarm-warning-line", colour: "secondary" },
   };
   const REPEATS = { none: "Doesn't repeat", weekly: "Every week", monthly: "Every month", yearly: "Every year" };
 
@@ -51,7 +54,7 @@ const CalendarEventModal = (function () {
 
   const UI = DemographicsUI;
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-  const textOn = (c) => (c === "secondary" || c === "warning" ? "text-dark" : "text-white");
+  const textOn = (c) => (c === "secondary" || c === "warning" || c === "pink" ? "text-dark" : "text-white");
 
   function shell() {
     let el = document.getElementById("calModal");
@@ -59,13 +62,9 @@ const CalendarEventModal = (function () {
     document.body.insertAdjacentHTML(
       "beforeend",
       `<div class="modal fade app-modal" id="calModal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="calModalTitle">
-        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down" id="calModalDialog">
           <div class="modal-content">
-            <div class="modal-header">
-              <span class="app-modal-icon bg-primary" id="calModalIcon"><i class="ri-calendar-event-line"></i></span>
-              <div class="flex-fill" style="min-width:0"><h5 class="modal-title" id="calModalTitle">Event</h5><div class="app-modal-subtitle" id="calModalSub">&nbsp;</div></div>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
+            <div class="modal-header" id="calModalHead"></div>
             <div class="modal-body" id="calModalBody"></div>
             <div class="modal-footer" id="calModalFoot"></div>
           </div>
@@ -75,60 +74,87 @@ const CalendarEventModal = (function () {
     return document.getElementById("calModal");
   }
 
-  function open({ icon, colour, title, sub, body, foot }) {
+  /**
+   * banner: the view windows - a solid header in the entry's colour with a
+   * pill, the title and when. Without it: the form's usual icon + title.
+   */
+  function open({ icon, colour, title, sub, body, foot, banner = null }) {
     const el = shell();
-    const ic = el.querySelector("#calModalIcon");
-    ic.className = `app-modal-icon bg-${colour} ${textOn(colour)}`;
-    ic.innerHTML = `<i class="${icon}"></i>`;
-    el.querySelector("#calModalTitle").textContent = title;
-    el.querySelector("#calModalSub").innerHTML = sub;
+    const head = el.querySelector("#calModalHead");
+    el.querySelector("#calModalDialog").classList.toggle("cal-ev-dialog", !!banner);
+    el.querySelector("#calModalDialog").classList.toggle("modal-lg", !banner);
+    if (banner) {
+      head.className = `modal-header cal-ev-head bg-${colour} ${textOn(colour)}`;
+      head.innerHTML = `
+        <div class="cal-ev-head-top">
+          <span class="cal-ev-pill" style="--c: var(--${colour}-rgb)"><i class="${icon}"></i>${banner.pill}</span>
+          <button type="button" class="cal-ev-close" data-bs-dismiss="modal" aria-label="Close"><i class="ri-close-line"></i></button>
+        </div>
+        <h5 class="modal-title" id="calModalTitle">${esc(title)}</h5>
+        <div class="cal-ev-when">${esc(banner.when)}</div>`;
+    } else {
+      head.className = "modal-header";
+      head.innerHTML = `
+        <span class="app-modal-icon bg-${colour} ${textOn(colour)}"><i class="${icon}"></i></span>
+        <div class="flex-fill" style="min-width:0"><h5 class="modal-title" id="calModalTitle">${esc(title)}</h5><div class="app-modal-subtitle">${sub}</div></div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>`;
+    }
     el.querySelector("#calModalBody").innerHTML = body;
     el.querySelector("#calModalFoot").innerHTML = foot;
     bootstrap.Modal.getOrCreateInstance(el).show();
     return el;
   }
 
+  const pad = (n) => String(n).padStart(2, "0");
+  /** A Date as YYYY-MM-DD in local time (toISOString would shift it to UTC - a day early in Nairobi). */
+  const isoLocal = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const fmtDate = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
   const dayBefore = (iso) => {
     const d = new Date(`${iso}T00:00:00`);
     d.setDate(d.getDate() - 1);
-    return d.toISOString().slice(0, 10);
+    return isoLocal(d);
   };
 
   /** "Mon 14 Aug 2026 - Thu 17 Aug 2026" / "Fri 20 Mar 2026, 09:00 - 15:00" */
   function whenText(o) {
     if (o.all_day) {
-      const last = dayBefore(o.end);
-      return last === o.start ? fmtDate(o.start) : `${fmtDate(o.start)} - ${fmtDate(last)}`;
+      // The API's all-day end is the day after (FullCalendar's exclusive end).
+      const last = o.end ? dayBefore(o.end.slice(0, 10)) : o.start;
+      return last <= o.start ? fmtDate(o.start) : `${fmtDate(o.start)} - ${fmtDate(last)}`;
     }
     const [sd, st] = o.start.split("T");
-    const [ed, et] = o.end.split("T");
+    const [ed, et] = (o.end || o.start).split("T");
     return sd === ed ? `${fmtDate(sd)}, ${st}${et && et !== st ? ` - ${et}` : ""}` : `${fmtDate(sd)} ${st} - ${fmtDate(ed)} ${et}`;
   }
+
+  /** The facts as rows with an icon tile each, tinted in the entry's colour. */
+  function rows(list, colour) {
+    return `<div class="cal-rows" data-colour="${colour}" style="--c: var(--${colour}-rgb)">${list
+      .map(([icon, k, v]) => `<div class="cal-row"><span class="cal-row-icon"><i class="${icon}"></i></span><div><span>${esc(k)}</span><b>${esc(v)}</b></div></div>`)
+      .join("")}</div>`;
+  }
+  const note = (colour, icon, text) => `<div class="cal-note" data-colour="${colour}" style="--c: var(--${colour}-rgb)"><i class="${icon}"></i><span>${text}</span></div>`;
 
   /** One event, view only - with Edit / Delete when this place may change it. */
   function details(o, { kinds, onEdit, onDelete }) {
     const layer = CalendarMeta.LAYERS[o.layer] || CalendarMeta.LAYERS.below;
     const kindLabel = kinds[o.kind] || o.kind;
     const facts = [
-      ["When", whenText(o)],
-      ["Kind", kindLabel],
-      ...(o.repeats !== "none" ? [["Repeats", CalendarMeta.REPEATS[o.repeats]]] : []),
-      ...(o.location ? [["Where", o.location]] : []),
-      ["From", o.owner?.name || layer.label],
+      ["ri-time-line", "When", whenText(o)],
+      ["ri-price-tag-3-line", "Kind", kindLabel],
+      ...(o.location ? [["ri-map-pin-line", "Where", o.location]] : []),
+      ["ri-building-line", "Kept by", o.owner?.name || layer.label],
+      ...(o.repeats && o.repeats !== "none" ? [["ri-repeat-line", "Repeats", CalendarMeta.REPEATS[o.repeats]]] : []),
     ];
     const el = open({
-      icon: CalendarMeta.KIND_ICONS[o.kind] || "ri-calendar-line",
+      icon: o.layer === "cci" ? layer.icon : CalendarMeta.KIND_ICONS[o.kind] || "ri-calendar-line",
       colour: layer.colour,
       title: o.title,
-      sub:
-        o.layer === "cci"
-          ? `<span class="badge bg-danger"><i class="ri-government-line me-1"></i>CCI calendar event</span> · ${esc(o.owner?.name || "Christian Church International")}`
-          : `<span class="badge bg-${layer.colour} ${textOn(layer.colour)}">${layer.label}</span> · ${esc(o.owner?.name || "")}`,
+      banner: { pill: esc(layer.label), when: whenText(o) },
       body: `
-        <div class="cal-facts">${facts.map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("")}</div>
+        ${rows(facts, layer.colour)}
         ${o.description ? `<p class="mt-3 mb-0 cal-description">${esc(o.description)}</p>` : ""}
-        ${!o.can_edit ? `<div class="alert alert-primary d-flex gap-2 align-items-center mt-3 mb-0"><i class="ri-eye-line"></i><span>View only - ${o.layer === "cci" ? "the CCI calendar is kept by the national office." : `only ${esc(o.owner?.name || "the place that added it")} can change it.`}</span></div>` : ""}`,
+        ${!o.can_edit ? note(layer.colour, "ri-eye-line", `View only - ${o.layer === "cci" ? "the CCI calendar is kept by the national office." : `only ${esc(o.owner?.name || "the place that added it")} can change it.`}`) : ""}`,
       foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Close</button>${
         o.can_edit ? '<button type="button" class="btn btn-danger" id="calDelete"><i class="ri-delete-bin-6-line me-1"></i>Delete</button><button type="button" class="btn btn-primary" id="calEdit"><i class="ri-edit-line me-1"></i>Edit</button>' : ""
       }`,
@@ -162,6 +188,14 @@ const CalendarEventModal = (function () {
     return { label: "Open", icon: "ri-arrow-right-line" };
   }
 
+  /** What the note under a church-life item says about where it's kept. */
+  function keptNote(o) {
+    if (o.source === "services") return "Service times are set in Settings › Service times.";
+    if (o.source === "sessions") return "Attendance for this session is taken on the initiative page.";
+    if (o.source === "due") return "Due dates come from Monthly reports and Budgets.";
+    return "";
+  }
+
   /**
    * Events, initiative sessions, services and due dates: a preview first,
    * then one button to the page where it's handled (they used to jump
@@ -171,20 +205,22 @@ const CalendarEventModal = (function () {
     const src = CalendarMeta.SOURCES[o.source] || CalendarMeta.SOURCES.calendar;
     const action = actionFor(o);
     const facts = [
-      ["When", whenText(o)],
-      ["What", o.source === "due" ? "Due date" : src.label.replace(/s$/, "")],
-      ...(o.location ? [["Where", o.location]] : []),
-      ...(o.owner?.name ? [["From", o.owner.name]] : []),
-      ...(o.status === "late" ? [["Status", "Late"]] : o.status === "draft" ? [["Status", "Draft"]] : []),
+      ["ri-time-line", "When", whenText(o)],
+      ["ri-price-tag-3-line", "What", src.one],
+      ...(o.location ? [["ri-map-pin-line", "Where", o.location]] : []),
+      ...(o.owner?.name ? [["ri-building-line", "Kept by", o.owner.name]] : []),
+      ...(o.status === "late" ? [["ri-alarm-warning-line", "Status", "Late"]] : o.status === "draft" ? [["ri-draft-line", "Status", "Draft"]] : []),
     ];
+    const kept = keptNote(o);
     open({
       icon: CalendarMeta.KIND_ICONS[o.kind] || src.icon,
       colour,
       title: o.title,
-      sub: `<span class="badge bg-${colour} ${textOn(colour)}">${esc(src.label)}</span>${o.status === "late" ? ' <span class="badge bg-danger">Late</span>' : ""}`,
+      banner: { pill: `${esc(src.one)}${o.status === "late" ? " · Late" : ""}`, when: whenText(o) },
       body: `
-        <div class="cal-facts">${facts.map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("")}</div>
-        ${o.description ? `<p class="mt-3 mb-0 cal-description">${esc(o.description)}</p>` : ""}`,
+        ${rows(facts, colour)}
+        ${o.description ? `<p class="mt-3 mb-0 cal-description">${esc(o.description)}</p>` : ""}
+        ${kept ? note(colour, "ri-information-line", esc(kept)) : ""}`,
       foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Close</button>${
         o.url ? `<a class="btn btn-primary" href="${esc(siteUrl + o.url)}"><i class="${action.icon} me-1"></i>${esc(action.label)}</a>` : ""
       }`,
@@ -201,27 +237,56 @@ const CalendarEventModal = (function () {
       </section>`;
   }
 
+  /** New date: a calendar date here, or an event / initiative on their own forms. */
+  function choices(links) {
+    const opt = (value, icon, title, sub, checked) => `
+      <label class="ec-choice">
+        <input type="radio" name="calWhat" value="${value}"${checked ? " checked" : ""}>
+        <span class="ec-choice-icon"><i class="${icon}"></i></span>
+        <span><strong class="d-block">${title}</strong><small>${sub}</small></span>
+        <span class="ec-choice-tick"><i class="ri-check-line"></i></span>
+      </label>`;
+    return `
+      <div class="ec-choices cal-what mb-3" role="radiogroup" aria-label="What are you adding?">
+        ${opt("date", "ri-calendar-event-line", "Calendar date", "Made right here", true)}
+        ${links.event ? opt("event", "ri-calendar-check-line", "Event", "With registrations") : ""}
+        ${links.initiative ? opt("initiative", "ri-seedling-line", "Initiative", "A run of sessions") : ""}
+      </div>
+      <div class="cal-what-other mb-3" id="calWhatOther" hidden>
+        <strong class="d-block mb-1" id="calWhatTitle"></strong>
+        <span id="calWhatBody"></span>
+      </div>`;
+  }
+  const OTHER = {
+    event: { title: "Events have their own form", body: "Name, poster, capacity and registration all live on the event form. It shows on this calendar once it's saved.", go: "Continue to the event form" },
+    initiative: { title: "Initiatives have their own form", body: "Plan every session at once - for example 20 Wednesdays at 18:00. Each one shows on this calendar.", go: "Continue to the initiative form" },
+  };
+
   /**
    * Add (event = null) or edit an event.
-   * opts: {kinds, level, cci (a CCI calendar event), date (preset day), onSaved}
+   * opts: {kinds, level, cci (a CCI calendar event), date (preset day),
+   *        links ({event, initiative} - the New date choices), onSaved}
    */
-  function form(event, { kinds, level, cci = false, date = null, onSaved }) {
+  function form(event, { kinds, level, cci = false, date = null, links = null, onSaved }) {
     const e = event || {};
-    const start = e.starts_on || date || new Date().toISOString().slice(0, 10);
+    const start = e.starts_on || date || isoLocal(new Date());
     const allDay = e.all_day ?? true;
     const repeats = e.repeats || "none";
     // The diocese and the CCI calendar always share; a church or region chooses.
     const askShare = !cci && level !== "diocese";
     const shared = e.shared_below ?? level !== "church";
+    const withChoices = !event && !cci && links && (links.event || links.initiative);
     const el = open({
       icon: cci ? "ri-government-line" : "ri-calendar-event-line",
       colour: cci ? "danger" : "primary",
-      title: event ? `Edit "${e.title}"` : cci ? "Add to the CCI calendar" : "Add an event",
-      sub: cci ? "Every church, region and the diocese will see it, marked as a CCI calendar event" : "On your calendar - and, if you choose, the places below",
+      title: event ? `Edit "${e.title}"` : cci ? "Add to the CCI calendar" : "New date",
+      sub: cci ? "Every church, region and the diocese will see it, marked as a CCI calendar event" : event ? "On your calendar - and, if you choose, the places below" : `On ${esc(fmtDate(start))}, for ${level === "church" ? "our church" : level === "region" ? "our region" : "the diocese"}`,
       body: `
+        ${withChoices ? choices(links) : ""}
+        <div id="evFields">
         ${panel("ri-file-text-line", "primary", "What", `
           <div class="row g-3">
-            <div class="col-md-8"><label class="form-label" for="evTitle">Title</label><input class="form-control" id="evTitle" name="title" maxlength="160" placeholder="${cci ? "e.g. National Prayer and Fasting Week" : "e.g. Harvest Thanksgiving"}" value="${esc(e.title || "")}"><div class="invalid-feedback" data-error-for="title"></div></div>
+            <div class="col-md-8"><label class="form-label" for="evTitle">Title</label><input class="form-control" id="evTitle" name="title" maxlength="160" placeholder="${cci ? "e.g. National Prayer and Fasting Week" : "e.g. Church Council meeting"}" value="${esc(e.title || "")}"><div class="invalid-feedback" data-error-for="title"></div></div>
             <div class="col-md-4"><label class="form-label" for="evKind">Kind</label><select class="form-select" id="evKind" name="kind">${Object.entries(kinds)
               .map(([k, l]) => `<option value="${k}" data-icon="${CalendarMeta.KIND_ICONS[k]}" data-color="primary"${(e.kind || "other") === k ? " selected" : ""}>${esc(l)}</option>`)
               .join("")}</select></div>
@@ -248,8 +313,9 @@ const CalendarEventModal = (function () {
             <div class="form-check"><input class="form-check-input" type="radio" name="evShare" id="evShareYes" value="1"${shared ? " checked" : ""}><label class="form-check-label" for="evShareYes">Us and ${level === "region" ? "our churches" : "the places below"}</label></div>
           </div>`)
             : ""
-        }`,
-      foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn ${cci ? "btn-danger" : "btn-primary"}" id="evSave"><i class="ri-check-line me-1"></i>${event ? "Save changes" : cci ? "Add to the CCI calendar" : "Add event"}</button>`,
+        }
+        </div>`,
+      foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><a class="btn btn-primary d-none" id="evContinue" href="#"><i class="ri-arrow-right-line me-1"></i><span>Continue</span></a><button type="button" class="btn ${cci ? "btn-danger" : "btn-primary"}" id="evSave"><i class="ri-check-line me-1"></i>${event ? "Save changes" : cci ? "Add to the CCI calendar" : "Save date"}</button>`,
     });
     const $ = (s) => el.querySelector(s);
     UI.enhanceSelect($("#evKind"), { dropdownParent: window.jQuery ? window.jQuery(el) : undefined });
@@ -260,6 +326,23 @@ const CalendarEventModal = (function () {
       $(".ev-until").hidden = r === "none";
       $("#evUntilNote").textContent = r === "yearly" ? "(optional)" : "";
     });
+    // The choices: a calendar date stays here; an event or initiative goes to its own form.
+    el.querySelectorAll('input[name="calWhat"]').forEach((r) =>
+      r.addEventListener("change", () => {
+        const what = el.querySelector('input[name="calWhat"]:checked').value;
+        const other = OTHER[what];
+        $("#evFields").hidden = !!other;
+        $("#calWhatOther").hidden = !other;
+        $("#evSave").classList.toggle("d-none", !!other);
+        $("#evContinue").classList.toggle("d-none", !other);
+        if (other) {
+          $("#calWhatTitle").textContent = other.title;
+          $("#calWhatBody").textContent = other.body;
+          $("#evContinue span").textContent = other.go;
+          $("#evContinue").href = links[what];
+        }
+      }),
+    );
     setTimeout(() => $("#evTitle").focus(), 300);
 
     $("#evSave").addEventListener("click", async (ev) => {
@@ -305,7 +388,7 @@ const CalendarEventModal = (function () {
     return { id: o.event_id, title: o.title, kind: o.kind, description: o.description, location: o.location, repeats: o.repeats, all_day: o.all_day, shared_below: o.shared_below, ...(o.base || {}) };
   }
 
-  return { details, preview, form, eventFromOccurrence, whenText, esc };
+  return { details, preview, form, eventFromOccurrence, whenText, esc, isoLocal };
 })();
 
 window.CalendarMeta = CalendarMeta;
