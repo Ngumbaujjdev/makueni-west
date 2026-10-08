@@ -65,6 +65,15 @@ const DateField = (function () {
         // Inside a window the calendar stays in the window, so Bootstrap's focus trap lets it be used.
         static: !!input.closest(".modal"),
         onChange: () => paint(),
+        // In a window that scrolls, bring the whole calendar into view - near the bottom it would open out of sight.
+        // The calendar floats, so it doesn't make the window taller - the field keeps room for it while it's open.
+        onOpen: (_, __, inst) => {
+          if (!inst.config.static) return;
+          wrap.style.marginBottom = `${inst.calendarContainer.offsetHeight + 12}px`;
+          // After flatpickr's opening slide (it starts 20px higher), or the scroll stops short.
+          setTimeout(() => inst.calendarContainer.scrollIntoView({ block: "nearest", behavior: "smooth" }), 320);
+        },
+        onClose: () => (wrap.style.marginBottom = ""),
       });
       const label = input.getAttribute("aria-label") || (input.id && document.querySelector(`label[for="${input.id}"]`)?.textContent.trim());
       if (label) fp.altInput.setAttribute("aria-label", label);
