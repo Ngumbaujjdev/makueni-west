@@ -50,6 +50,7 @@ if (strlen($sidebarInitials) < 2) {
 }
 $userFullName = trim($userName . ' ' . $userLastName);
 $userEmail = $currentUser['email'] ?? '';
+$sidebarPhoto = is_string($currentUser['photo_url'] ?? null) ? $currentUser['photo_url'] : '';
 ?>
 
 <!-- Font Awesome CDN -->
@@ -106,9 +107,7 @@ $userEmail = $currentUser['email'] ?? '';
          nav rows. -->
     <div class="sidebar-profile-footer dropup">
         <button type="button" class="sidebar-profile-toggle" data-bs-toggle="dropdown" data-bs-offset="0,8" aria-expanded="false" aria-label="Account menu">
-            <span class="avatar avatar-sm rounded-circle bg-primary text-white fw-semibold flex-shrink-0">
-                <?= htmlspecialchars($sidebarInitials) ?>
-            </span>
+            <span class="avatar avatar-sm rounded-circle bg-primary text-white fw-semibold flex-shrink-0" data-user-avatar data-initials="<?= htmlspecialchars($sidebarInitials) ?>"><?php if ($sidebarPhoto !== ''): ?><img src="<?= htmlspecialchars($sidebarPhoto) ?>" alt=""><?php else: ?><?= htmlspecialchars($sidebarInitials) ?><?php endif; ?></span>
             <span class="sidebar-profile-text">
                 <span class="sidebar-profile-name"><?= htmlspecialchars($userFullName) ?></span>
                 <span class="sidebar-profile-role"><?= htmlspecialchars($userRole) ?></span>
@@ -155,7 +154,7 @@ $userEmail = $currentUser['email'] ?? '';
                 <h5 class="fw-semibold mb-1" id="logoutModalTitle">Log out?</h5>
                 <p class="text-body mb-3">You'll need your code or password to sign back in.</p>
                 <div class="soft-primary rounded d-flex align-items-center gap-2 p-2 mb-4 text-start">
-                    <span class="avatar avatar-sm avatar-rounded bg-primary text-white flex-shrink-0"><?= htmlspecialchars($sidebarInitials) ?></span>
+                    <span class="avatar avatar-sm avatar-rounded bg-primary text-white flex-shrink-0" data-user-avatar data-initials="<?= htmlspecialchars($sidebarInitials) ?>"><?php if ($sidebarPhoto !== ''): ?><img src="<?= htmlspecialchars($sidebarPhoto) ?>" alt=""><?php else: ?><?= htmlspecialchars($sidebarInitials) ?><?php endif; ?></span>
                     <div class="flex-fill text-truncate">
                         <div class="fw-semibold text-dark text-truncate"><?= htmlspecialchars($userFullName) ?></div>
                         <?php if ($userEmail !== ''): ?>

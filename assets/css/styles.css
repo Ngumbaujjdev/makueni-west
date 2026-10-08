@@ -38427,3 +38427,21 @@ button.cal-side-item:focus-visible {
   .cm-sheet-main { padding: 1rem; }
   .cm-sheet-toggle { display: inline-flex; }
 }
+
+/* ==========================================================================
+   Profile photo (My Profile, header, sidebar - 2026-10-08)
+   A person's own photo fills the avatar; the camera button opens "Your photo".
+   ========================================================================== */
+[data-user-avatar] img, .avatar.has-photo img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
+.avatar.has-photo, [data-user-avatar]:has(img) { background: #fff !important; overflow: hidden; }
+.profile-photo-wrap { position: relative; display: inline-block; flex-shrink: 0; align-self: flex-start; }
+.profile-photo-wrap .avatar { box-shadow: 0 0 0 3px rgba(255, 255, 255, .55); }
+.profile-photo-btn { position: absolute; right: -2px; bottom: -2px; width: 1.9rem; height: 1.9rem; border-radius: 50%; border: 2px solid #fff; background: var(--primary-color); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: .95rem; padding: 0; box-shadow: 0 2px 6px rgba(13, 13, 13, .2); transition: transform .15s ease; }
+.profile-photo-btn:hover:not(:disabled), .profile-photo-btn:focus-visible { transform: scale(1.08); }
+.profile-photo-btn:disabled { opacity: 0; }
+.profile-photo-stage { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 1.25rem 1rem; border-radius: .9rem; background: rgba(var(--primary-rgb), .06); color: var(--v2-heading); }
+.profile-photo-preview { width: 9rem; height: 9rem; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 2.6rem; font-weight: 600; overflow: hidden; box-shadow: 0 0 0 5px #fff, 0 6px 18px rgba(13, 13, 13, .12); }
+.profile-photo-preview.has-photo { background: #fff !important; }
+.profile-photo-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.profile-photo-hint { display: flex; gap: .6rem; align-items: flex-start; padding: .75rem .9rem; border-radius: .7rem; background: rgba(var(--purple-rgb), .08); font-size: .84rem; line-height: 1.5; color: var(--v2-heading); }
+.profile-photo-hint-icon { width: 1.6rem; height: 1.6rem; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: rgb(var(--purple-rgb)); color: #fff; font-size: .85rem; }

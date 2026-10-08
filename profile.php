@@ -58,8 +58,9 @@ $ph = fn (string $w = 'col-6', string $extra = '') => '<span class="placeholder 
                         <div class="card custom-card overflow-hidden">
                             <div class="card-body p-0">
                                 <div class="d-sm-flex align-items-top p-4 main-profile-cover placeholder-glow" id="profileCover">
-                                    <div>
-                                        <span class="avatar avatar-xxl avatar-rounded me-3 bg-primary" id="profileHeaderAvatar"><span class="placeholder col-12 h-100 rounded-circle"></span></span>
+                                    <div class="profile-photo-wrap me-3">
+                                        <span class="avatar avatar-xxl avatar-rounded bg-primary" id="profileHeaderAvatar"><span class="placeholder col-12 h-100 rounded-circle"></span></span>
+                                        <button type="button" class="profile-photo-btn" data-photo-open title="Change photo" aria-label="Change your photo" disabled><i class="ri-camera-line"></i></button>
                                     </div>
                                     <div class="flex-fill main-profile-info">
                                         <div class="d-flex align-items-start justify-content-between gap-2">
@@ -343,6 +344,44 @@ $ph = fn (string $w = 'col-6', string $extra = '') => '<span class="placeholder 
                     <div class="me-auto fs-12" id="editProfileSummary">Nothing changed yet</div>
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary" id="editProfileSave" disabled><i class="ri-check-line me-1"></i>Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Your photo -->
+    <div class="modal fade app-modal" id="photoModal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="photoModalTitle">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
+            <form class="modal-content" id="photoForm" novalidate>
+                <div class="modal-header">
+                    <span class="app-modal-icon bg-primary"><i class="ri-camera-line"></i></span>
+                    <div class="flex-fill" style="min-width: 0;">
+                        <h5 class="modal-title" id="photoModalTitle">Your photo</h5>
+                        <div class="app-modal-subtitle">Shown beside your name across the system</div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="profile-photo-stage">
+                        <span class="profile-photo-preview bg-primary text-white" id="photoPreview">?</span>
+                        <div class="fw-semibold fs-15 mt-3 text-break" id="photoName">&nbsp;</div>
+                        <div class="fs-13" id="photoState">&nbsp;</div>
+                        <div class="d-flex flex-wrap gap-2 justify-content-center mt-3">
+                            <button type="button" class="btn btn-primary" id="photoPick"><i class="ri-image-add-line me-1"></i>Choose a photo</button>
+                            <button type="button" class="btn btn-outline-danger" id="photoRemove" hidden><i class="ri-delete-bin-line me-1"></i>Remove photo</button>
+                        </div>
+                        <input type="file" id="photoInput" name="photo" accept="image/png,image/jpeg,image/webp" hidden>
+                        <div class="text-danger fs-13 fw-semibold mt-2" id="photoError" role="alert" hidden></div>
+                    </div>
+                    <div class="profile-photo-hint mt-3">
+                        <span class="profile-photo-hint-icon"><i class="ri-lightbulb-line"></i></span>
+                        <span>A clear photo of your face works best. We crop it to a square from the middle. PNG, JPG or WebP, up to 5 MB.</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div class="me-auto fs-12" id="photoSummary">Choose a photo to save</div>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="photoSave" disabled><i class="ri-check-line me-1"></i>Save photo</button>
                 </div>
             </form>
         </div>
