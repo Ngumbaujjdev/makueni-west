@@ -94,6 +94,8 @@ Route::get('places/{territory}/photos/{photo}/{size?}', [SettingsGalleryControll
 Route::get('places/{territory}/gallery', [SettingsGalleryController::class, 'gallery'])->whereNumber('territory');
 // A person's photo is public the same way - it shows beside their name (My Profile).
 Route::get('users/{user}/photo', [ProfilePhotoController::class, 'show'])->whereNumber('user');
+// An equipment photo (P5 round 2), through the signed link EquipmentPhoto::present gives the item's page.
+Route::get('equipment-photos/{photo}/{size?}', [EquipmentController::class, 'photo'])->whereNumber('photo')->whereIn('size', ['thumb'])->middleware('signed')->name('equipment.photo');
 
 Route::middleware(['auth:sanctum'])->group(function () {
 
@@ -207,12 +209,25 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('equipment', [EquipmentController::class, 'index']);
     Route::post('equipment', [EquipmentController::class, 'store']);
     Route::post('equipment/bulk', [EquipmentController::class, 'bulk']);
+    Route::get('equipment/expenses', [EquipmentController::class, 'expenses']);
+    Route::get('facilities/assets', [FacilitiesController::class, 'assets']);
+    Route::post('equipment/{id}/photos', [EquipmentController::class, 'addPhotos'])->whereNumber('id')->middleware('throttle:30,1');
+    Route::post('equipment/{id}/photos/order', [EquipmentController::class, 'orderPhotos'])->whereNumber('id');
+    Route::delete('equipment/{id}/photos/{photo}', [EquipmentController::class, 'removePhoto'])->whereNumber(['id', 'photo']);
+    Route::post('equipment/{id}/receipts', [EquipmentController::class, 'addReceipt'])->whereNumber('id');
+    Route::get('equipment/{id}/receipts/{media}', [EquipmentController::class, 'showReceipt'])->whereNumber(['id', 'media']);
+    Route::delete('equipment/{id}/receipts/{media}', [EquipmentController::class, 'removeReceipt'])->whereNumber(['id', 'media']);
+    Route::post('equipment/{id}/expense', [EquipmentController::class, 'linkExpense'])->whereNumber('id');
+    Route::delete('equipment/{id}/expense', [EquipmentController::class, 'unlinkExpense'])->whereNumber('id');
     Route::get('equipment/{id}', [EquipmentController::class, 'show'])->whereNumber('id');
     Route::put('equipment/{id}', [EquipmentController::class, 'update'])->whereNumber('id');
     Route::delete('equipment/{id}', [EquipmentController::class, 'destroy'])->whereNumber('id');
     Route::post('equipment/{id}/loans', [EquipmentController::class, 'lend'])->whereNumber('id');
     Route::get('loans', [EquipmentController::class, 'loans']);
     Route::post('loans/{id}/return', [EquipmentController::class, 'giveBack'])->whereNumber('id');
+    Route::post('loans/{id}/approve', [EquipmentController::class, 'approve'])->whereNumber('id');
+    Route::post('loans/{id}/decline', [EquipmentController::class, 'decline'])->whereNumber('id');
+    Route::delete('loans/{id}', [EquipmentController::class, 'cancel'])->whereNumber('id');
     Route::get('repairs', [RepairsController::class, 'index']);
     Route::post('repairs', [RepairsController::class, 'store']);
     Route::put('repairs/{id}', [RepairsController::class, 'update'])->whereNumber('id');

@@ -50,6 +50,11 @@ class PeopleDemoRemoveSeeder extends Seeder
         $items = DB::table('equipment')->where('serial', 'like', PeopleDemoSeeder::DEMO_SERIAL.'%')->pluck('id')->all();
         DB::table('maintenance_jobs')->where(fn ($q) => $q->whereIn('equipment_id', $items ?: [0])->orWhereIn('room_id', $rooms ?: [0]))->delete();
         DB::table('equipment_loans')->whereIn('equipment_id', $items ?: [0])->delete();
+        // Their photos and receipts (round 2) - the files too.
+        foreach (DB::table('equipment_photos')->whereIn('equipment_id', $items ?: [0])->get() as $p) {
+            app(\App\Services\Images\ImageEngine::class)->delete($p->path, $p->thumb_path);
+        }
+        \Spatie\MediaLibrary\MediaCollections\Models\Media::where('model_type', 'equipment')->whereIn('model_id', $items ?: [0])->get()->each->delete();
         DB::table('equipment')->whereIn('id', $items ?: [0])->delete();
         DB::table('room_bookings')->whereIn('room_id', $rooms ?: [0])->delete();
         DB::table('rooms')->whereIn('id', $rooms ?: [0])->delete();

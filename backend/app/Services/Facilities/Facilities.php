@@ -226,7 +226,7 @@ final class Facilities
     /** Loaned out now, by equipment id (sum of quantities not back yet). */
     public function onLoan(array $ids): Collection
     {
-        return EquipmentLoan::whereIn('equipment_id', $ids ?: [0])->whereNull('returned_on')->selectRaw('equipment_id, sum(quantity) as n')->groupBy('equipment_id')->pluck('n', 'equipment_id');
+        return EquipmentLoan::whereIn('equipment_id', $ids ?: [0])->where('status', 'out')->selectRaw('equipment_id, sum(quantity) as n')->groupBy('equipment_id')->pluck('n', 'equipment_id');
     }
 
     public function equipmentRow(Equipment $e, int $out = 0, int $openRepairs = 0): array
@@ -239,6 +239,9 @@ final class Facilities
             'quantity' => (int) $e->quantity, 'on_loan' => $out, 'available' => max(0, (int) $e->quantity - $out),
             'condition' => $e->condition, 'condition_label' => Equipment::CONDITIONS[$e->condition][0] ?? 'Good',
             'bought_on' => $e->bought_on?->toDateString(), 'value' => $e->value !== null ? (float) $e->value : null,
+            'total' => $e->value !== null ? round((float) $e->value * (int) $e->quantity, 2) : null,
+            'asset_no' => $e->asset_no, 'supplier' => $e->supplier, 'in_budgets' => (bool) $e->budget_entry_id,
+            'photo' => $e->relationLoaded('photos') && $e->photos->isNotEmpty() ? $e->photos->first()->present() : null,
             'serial' => $e->serial, 'notes' => $e->notes, 'open_repairs' => $openRepairs,
         ];
     }
@@ -251,7 +254,9 @@ final class Facilities
             'id' => $l->id, 'equipment_id' => $l->equipment_id, 'equipment' => $l->equipment?->name,
             'to_name' => $l->person?->name ?? $l->to_name, 'to_person_id' => $l->to_person_id, 'quantity' => (int) $l->quantity,
             'out_on' => $l->out_on->toDateString(), 'due_on' => $l->due_on?->toDateString(), 'returned_on' => $l->returned_on?->toDateString(),
-            'overdue' => ! $l->returned_on && $l->due_on && $l->due_on->toDateString() < $today, 'note' => $l->note,
+            'overdue' => $l->status === 'out' && $l->due_on && $l->due_on->toDateString() < $today, 'note' => $l->note,
+            'status' => $l->status, 'status_label' => EquipmentLoan::STATUSES[$l->status][0] ?? $l->status,
+            'asked_by' => $l->requested_by, 'decline_reason' => $l->decline_reason,
         ];
     }
 
@@ -335,7 +340,9 @@ final class Facilities
         $perWeek = $weeks->map(fn ($w) => $all->filter(fn ($o) => $o['start']->gte($w) && $o['start']->lt($w->addWeek()))->count())->all();
         $agenda = $this->occurrences($church, $today, $today->addDays(7));
         $equipment = Equipment::where('territory_id', $church->id)->get(['id', 'quantity', 'condition', 'name', 'category']);
-        $loans = EquipmentLoan::with('equipment', 'person')->whereIn('equipment_id', $equipment->pluck('id')->all() ?: [0])->whereNull('returned_on')->get();
+        $loans = EquipmentLoan::with('equipment', 'person')->whereIn('equipment_id', $equipment->pluck('id')->all() ?: [0])->whereIn('status', ['out', 'requested'])->get();
+        $asks = $loans->where('status', 'requested');
+        $loans = $loans->where('status', 'out');
         $repairs = MaintenanceJob::with(['equipment', 'room', 'reporter', 'assignee'])->where('territory_id', $church->id)->where('status', '!=', 'done')->orderByRaw("priority = 'urgent' desc")->orderBy('created_at')->get();
         $overdue = $loans->filter(fn ($l) => $l->due_on && $l->due_on->toDateString() < $today->toDateString());
 
@@ -361,7 +368,57 @@ final class Facilities
                 'repairs' => $repairs->where('priority', 'urgent')->take(5)->map(fn ($j) => $this->repairRow($j))->values()->all(),
                 'broken' => $equipment->where('condition', 'broken')->take(5)->map(fn ($e) => ['id' => $e->id, 'name' => $e->name, 'category' => $e->category])->values()->all(),
                 'overdue' => $overdue->take(5)->map(fn ($l) => $this->loanRow($l))->values()->all(),
+                'asks' => $asks->sortBy('out_on')->take(5)->map(fn ($l) => $this->loanRow($l))->values()->all(),
             ],
+            'asks' => $asks->count(),
+        ];
+    }
+
+    // ------------------------------------------------------------------ what we own
+
+    /**
+     * What the church owns, as assets: the totals, the worth by kind, by room
+     * and by the year it was bought, how much is recorded in Budgets, and the
+     * items still missing a price, a receipt or a photo.
+     */
+    public function assets(Territory $church): array
+    {
+        $items = Equipment::with(['room', 'photos', 'budgetEntry'])->withCount(['media as receipts_count' => fn ($q) => $q->where('collection_name', 'receipts')])
+            ->where('territory_id', $church->id)->orderBy('name')->get();
+        $total = fn ($e) => $e->value !== null ? (float) $e->value * (int) $e->quantity : 0.0;
+        $worth = $items->sum($total);
+        $group = function (Collection $by, callable $label) use ($total) {
+            return $by->map(fn ($list, $k) => ['key' => (string) $k, 'label' => $label($k, $list), 'items' => (int) $list->sum('quantity'), 'kinds' => $list->count(), 'worth' => round($list->sum($total), 2)])
+                ->sortByDesc('worth')->values()->all();
+        };
+        $needs = $items->map(function ($e) {
+            $missing = array_values(array_filter([
+                $e->value === null ? 'price' : null,
+                ! $e->receipts_count ? 'receipt' : null,
+                $e->photos->isEmpty() ? 'photo' : null,
+            ]));
+
+            return $missing ? ['id' => $e->id, 'name' => $e->name, 'asset_no' => $e->asset_no, 'category' => $e->category, 'missing' => $missing] : null;
+        })->filter()->values();
+        $years = $items->filter(fn ($e) => $e->bought_on && $e->value !== null)->groupBy(fn ($e) => $e->bought_on->year)->sortKeys();
+        $repairs = MaintenanceJob::where('territory_id', $church->id)->whereNotNull('cost')->get(['cost', 'done_on', 'created_at']);
+
+        return [
+            'worth' => round($worth, 2),
+            'items' => (int) $items->sum('quantity'),
+            'kinds' => $items->count(),
+            'priced' => $items->whereNotNull('value')->count(),
+            'in_budgets' => $items->whereNotNull('budget_entry_id')->count(),
+            'in_budgets_worth' => round($items->whereNotNull('budget_entry_id')->sum($total), 2),
+            'with_receipt' => $items->filter(fn ($e) => $e->receipts_count > 0)->count(),
+            'with_photo' => $items->filter(fn ($e) => $e->photos->isNotEmpty())->count(),
+            'repairs_spent' => round((float) $repairs->sum('cost'), 2),
+            'by_kind' => $group($items->groupBy('category'), fn ($k) => Equipment::CATEGORIES[$k][0] ?? 'Other'),
+            'by_room' => $group($items->groupBy(fn ($e) => $e->room?->name ?? 'No room'), fn ($k) => $k),
+            'by_year' => $years->map(fn ($list, $y) => ['year' => (int) $y, 'spent' => round($list->sum($total), 2), 'kinds' => $list->count()])->values()->all(),
+            'top' => $items->sortByDesc($total)->take(6)->map(fn ($e) => $this->equipmentRow($e))->values()->all(),
+            'needs' => $needs->all(),
+            'categories' => collect(Equipment::CATEGORIES)->map(fn ($c, $k) => ['key' => $k, 'label' => $c[0], 'icon' => $c[1], 'color' => $c[2]])->values()->all(),
         ];
     }
 }
