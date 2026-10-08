@@ -39243,3 +39243,49 @@ button.cal-side-item:focus-visible {
 .mi-pick-row.is-picked { background: rgba(var(--primary-rgb), .08); }
 .mi-pick-row strong { font-size: .85rem; color: var(--v2-heading); }
 .mi-pick-row small { font-size: .74rem; color: var(--default-text-color); }
+
+/* Chat's profile panel (2026-10-08): a pale cover, the face in a white ring,
+   a status line, role and place chips, action tiles, an About list with
+   coloured tiles, photos or a pale empty tile; a group's members. */
+.mi-chat .chat-user-details { padding: 0; }
+.mi-chat .chat-user-details .mi-chat-close { position: absolute; top: .6rem; right: .6rem; z-index: 2; }
+.mi-prof-cover { height: 5.5rem; border-radius: .9rem .9rem 0 0; background: rgba(var(--primary-rgb), .12); }
+.mi-prof.is-group .mi-prof-cover { background: rgba(var(--purple-rgb), .12); }
+.mi-prof-head { margin-top: -3.1rem; padding: 0 1.25rem; text-align: center; }
+.mi-prof-ring { display: inline-block; padding: 4px; border-radius: 50%; background: var(--custom-white); box-shadow: 0 .35rem 1rem rgba(13, 13, 13, .08); }
+.mi-prof-ring .mi-chat-photo-btn { bottom: .25rem; }
+.mi-prof-name { margin: .65rem 0 .2rem; font-size: 1.05rem; font-weight: 700; color: var(--v2-heading); }
+.mi-prof-status { display: inline-flex; align-items: center; gap: .35rem; font-size: .78rem; font-weight: 600; color: var(--default-text-color); }
+.mi-prof-status span { width: .5rem; height: .5rem; border-radius: 50%; background: var(--text-muted); }
+.mi-prof-status.is-online { color: rgb(var(--success-rgb)); }
+.mi-prof-status.is-online span { background: rgb(var(--success-rgb)); box-shadow: 0 0 0 3px rgba(var(--success-rgb), .2); }
+.mi-prof-actions { display: flex; justify-content: center; gap: .5rem; padding: 1.1rem 1.25rem; }
+.mi-prof-action { display: flex; flex: 1 1 0; flex-direction: column; align-items: center; gap: .35rem; max-width: 6.5rem; padding: .65rem .4rem; border: 0; border-radius: .8rem; background: rgba(var(--primary-rgb), .08); font-size: .76rem; font-weight: 600; color: var(--v2-heading); text-decoration: none; transition: transform .15s, background .15s; }
+.mi-prof-action span { display: grid; place-items: center; width: 2.1rem; height: 2.1rem; border-radius: 50%; background: rgba(var(--primary-rgb), .16); font-size: 1rem; color: var(--primary-color); }
+.mi-prof-action:hover { transform: translateY(-1px); color: var(--v2-heading); }
+.mi-prof-action.is-solid { background: var(--primary-color); color: #fff; }
+.mi-prof-action.is-solid span { background: rgba(255, 255, 255, .22); color: #fff; }
+.mi-prof-action.is-solid:hover { color: #fff; }
+.mi-prof-action.is-purple { background: rgba(var(--purple-rgb), .08); }
+.mi-prof-action.is-purple span { background: rgba(var(--purple-rgb), .16); color: rgb(var(--purple-rgb)); }
+.mi-prof-action.is-danger { background: rgba(var(--danger-rgb), .07); }
+.mi-prof-action.is-danger span { background: rgba(var(--danger-rgb), .14); color: rgb(var(--danger-rgb)); }
+.mi-prof-section { padding: .2rem 1.25rem 1.1rem; }
+.mi-prof-title { margin-bottom: .6rem; font-size: .76rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--v2-heading); }
+.mi-prof-about { display: flex; flex-direction: column; gap: .4rem; }
+.mi-prof-about-row { display: flex; align-items: center; gap: .65rem; padding: .55rem .6rem; border-radius: .7rem; background: rgba(var(--q), .06); }
+.mi-prof-tile { display: grid; flex: 0 0 2.1rem; place-items: center; width: 2.1rem; height: 2.1rem; border-radius: .6rem; background: rgba(var(--q, var(--purple-rgb)), .15); font-size: 1rem; color: rgb(var(--q, var(--purple-rgb))); }
+.mi-prof-tile.is-solid { background: rgb(var(--q)); color: #fff; }
+.mi-prof-about-label { display: block; font-size: .66rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--default-text-color); }
+.mi-prof-about-value { display: block; font-size: .85rem; font-weight: 600; color: var(--v2-heading); text-decoration: none; overflow-wrap: anywhere; }
+a.mi-prof-about-value:hover { color: var(--primary-color); }
+.mi-prof-photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; }
+.mi-prof-photos img { display: block; width: 100%; aspect-ratio: 1; border-radius: .6rem; object-fit: cover; }
+.mi-prof-empty { display: flex; align-items: center; gap: .6rem; padding: .75rem; border-radius: .75rem; background: rgba(var(--purple-rgb), .06); font-size: .8rem; color: var(--v2-heading); }
+.mi-prof-members li { display: flex; align-items: center; gap: .6rem; padding: .45rem .4rem; border-radius: .6rem; }
+.mi-prof-members li:hover { background: rgba(var(--primary-rgb), .05); }
+.mi-prof-member-name { font-size: .85rem; font-weight: 600; color: var(--v2-heading); }
+.mi-prof-member-sub { overflow: hidden; font-size: .74rem; color: var(--default-text-color); white-space: nowrap; text-overflow: ellipsis; }
+.mi-prof-remove { opacity: 0; transition: opacity .15s; }
+.mi-prof-members li:hover .mi-prof-remove, .mi-prof-remove:focus-visible { opacity: 1; }
+@media (hover: none) { .mi-prof-remove { opacity: 1; } }
