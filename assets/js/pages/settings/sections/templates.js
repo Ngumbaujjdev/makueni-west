@@ -398,23 +398,38 @@
     const el = modal("cmTplPreview", "modal-xl");
     const ch = CH[t.channel] || CH.sms;
     const ours = t.source === "ours";
-    head(el, { icon: ch.icon, c: ch.c, title: t.name, sub: `${ch.label} · ${ours ? (t.copied_from ? `our copy of ${esc(t.copied_from.owner || "the diocese")}'s` : "ours") : `from ${esc(t.owner?.name || "the diocese")}`}` });
+    head(el, { icon: ch.icon, c: "primary", title: t.name, sub: `${ch.label} · ${ours ? (t.copied_from ? `our copy of ${esc(t.copied_from.owner || "the diocese")}'s` : "ours") : `from ${esc(t.owner?.name || "the diocese")}`}` });
     const unknown = unknownTokens(t.subject || "", t.body);
-    el.querySelector('[data-m="body"]').innerHTML = `
-      <div class="row g-4">
-        <div class="col-lg-5">
-          <div class="cm-read">
-            ${t.subject ? `<div class="cm-read-label">Subject</div><div class="cm-read-subject">${esc(t.subject)}</div>` : ""}
-            <div class="cm-read-label">The message, as written</div>
-            <div class="cm-read-body">${esc(t.body).replace(/\{[a-z_]+\}/gi, (m) => `<mark class="cm-token">${m}</mark>`)}</div>
+    // The details panel (2026-10-08): the summary, calm rows, the message as written, and the hint at its foot.
+    const from = ours ? (t.copied_from ? `Our copy of ${t.copied_from.owner || "the diocese"}'s` : "Ours") : t.owner?.name || "The diocese";
+    const used = TOKENS.filter(([k]) => `${t.subject || ""} ${t.body}`.includes(k)).map(([, l]) => l);
+    const rows = [
+      [ch.icon, "Channel", ch.label],
+      ["ri-building-4-line", "From", from],
+      ...(t.subject ? [["ri-text", "Subject", t.subject]] : []),
+      ["ri-braces-line", "Placeholders", used.length ? used.join(", ") : "None - everyone gets the same text"],
+    ];
+    const body = el.querySelector('[data-m="body"]');
+    body.classList.add("is-sheet");
+    body.innerHTML = `
+      <div class="cm-sheet">
+        <aside class="cm-sheet-side">
+          <div class="cm-sheet-sum">
+            <span class="cm-sheet-icon"><i class="${ch.icon}"></i></span>
+            <div class="min-w-0 flex-fill"><strong>${esc(ch.label)} template</strong><small>${esc(from)}</small></div>
+            <button type="button" class="btn btn-sm btn-light border cm-sheet-toggle" data-bs-toggle="collapse" data-bs-target="#tplSheetMore" aria-expanded="false">Details</button>
           </div>
-          <div class="cm-read-tokens">
-            ${TOKENS.filter(([k]) => `${t.subject || ""} ${t.body}`.includes(k)).map(([k, l], i) => `<span class="soft-chip soft-${["primary", "purple", "pink"][i]}"><code>${k}</code> ${l}</span>`).join("") || '<span class="soft-chip soft-secondary">No placeholders - everyone gets the same text</span>'}
+          <div class="collapse cm-sheet-more" id="tplSheetMore">
+            <dl class="cm-details">${rows.map(([i, k, v]) => `<div class="cm-detail"><i class="${i}"></i><div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div></div>`).join("")}</dl>
+            <div class="cm-sheet-label">The message, as written</div>
+            <div class="cm-sheet-text">${esc(t.body).replace(/\{[a-z_]+\}/gi, (m) => `<span class="cm-token">${m}</span>`)}</div>
           </div>
-          ${unknown.length ? `<div class="cm-note is-warning mt-3 mb-0"><i class="ri-error-warning-line"></i><span>${unknown.map(esc).join(", ")} won't be filled in - they go out exactly as written.</span></div>` : ""}
-          ${!ours && !t.our_copy_id ? `<div class="cm-note is-primary mt-3 mb-0"><i class="ri-information-line"></i><span>Make your own copy to send it - ${esc(placeName())} goes in wherever it says <code>{sender}</code>, and you can change anything.</span></div>` : ""}
-        </div>
-        <div class="col-lg-7"><div id="cmTplPv"></div></div>
+          <div class="cm-sheet-foot">
+            ${unknown.length ? `<div class="cm-sheet-error"><i class="ri-error-warning-line"></i><span><b>Won't be filled in</b>${unknown.map(esc).join(", ")} - they go out exactly as written.</span></div>` : ""}
+            ${!ours && !t.our_copy_id ? `<p class="cm-sheet-hint">Make your own copy to send it - ${esc(placeName())} goes in wherever it says {sender}, and you can change anything.</p>` : ""}
+          </div>
+        </aside>
+        <section class="cm-sheet-main"><div id="cmTplPv"></div></section>
       </div>`;
     const pv = CommsPreview(el.querySelector("#cmTplPv"), { view: t.channel === "email" || t.channel === "both" ? "email" : "phone", test: true });
     pv.set({ subject: t.subject || "", body: t.body });

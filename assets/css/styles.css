@@ -38034,11 +38034,6 @@ button.cal-side-item:focus-visible {
 
 /* The preview window and the writer */
 .cm-modal .modal-body { padding: 1.5rem; }
-/* A sent message's facts (the Log's window): calm label / value rows, no rules */
-.cm-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem 1.25rem; margin: 0; padding: 1.1rem 1.2rem; border: 1px solid var(--default-border); border-radius: .85rem; background: var(--custom-white); }
-.cm-facts > div { min-width: 0; }
-.cm-facts dt { font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--default-text-color); }
-.cm-facts dd { margin: .15rem 0 0; font-size: .92rem; font-weight: 600; color: var(--v2-heading); overflow-wrap: anywhere; }
 .cm-modal .modal-footer { gap: .5rem; padding: 1rem 1.5rem; }
 .cm-read { padding: 1.1rem 1.2rem; border: 1px solid var(--default-border); border-radius: .85rem; background: var(--custom-white); }
 .cm-read-label, .cm-label-sm { font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--default-text-color); }
@@ -38370,4 +38365,45 @@ button.cal-side-item:focus-visible {
   .vs-board-loading { grid-template-columns: minmax(0, 1fr); }
   .vs-funnel-row { grid-template-columns: minmax(0, 1fr) 4rem; }
   .vs-funnel-track { grid-column: 1 / -1; grid-row: 2; }
+}
+
+/* ==========================================================================
+   Preview sheet (2026-10-08) - the Message log's and Templates' preview
+   windows as two panes: a calm details panel (pale grey, filling the height:
+   a summary, quiet label/value rows, the action at its foot) beside the
+   preview. Greys and the brand teal only; no rules, no stripes.
+   ========================================================================== */
+.cm-modal .modal-body.is-sheet { padding: 0; }
+.cm-sheet { display: grid; grid-template-columns: minmax(18rem, 1fr) minmax(0, 2fr); min-height: 100%; }
+.cm-sheet-side { display: flex; flex-direction: column; gap: 1.25rem; padding: 1.5rem; background: var(--gray-1, #f6f8fa); }
+.cm-sheet-main { min-width: 0; padding: 1.5rem; background: var(--custom-white); }
+.cm-sheet-main .cm-pv-stage { padding: .25rem 0 0; border: 0; background: transparent; }
+.cm-sheet-sum { display: flex; align-items: center; gap: .85rem; }
+.cm-sheet-icon { display: inline-flex; flex: 0 0 2.75rem; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border-radius: .75rem; background: var(--custom-white); color: var(--v2-heading); font-size: 1.25rem; box-shadow: 0 1px 2px rgba(15, 23, 42, .06); }
+.cm-sheet-sum strong { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; font-size: .95rem; color: var(--v2-heading); }
+.cm-sheet-sum small { display: block; margin-top: .15rem; font-size: .8rem; color: var(--default-text-color); overflow-wrap: anywhere; }
+.cm-sheet-toggle { display: none; }
+.cm-details { display: flex; flex-direction: column; gap: 1rem; margin: 0; }
+.cm-detail { display: flex; align-items: flex-start; gap: .75rem; }
+.cm-detail > i { flex: 0 0 1.25rem; margin-top: .1rem; font-size: 1.05rem; color: var(--default-text-color); text-align: center; }
+.cm-detail dt { font-size: .68rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--default-text-color); }
+.cm-detail dd { margin: .1rem 0 0; font-size: .9rem; font-weight: 600; color: var(--v2-heading); overflow-wrap: anywhere; }
+.cm-sheet-label { margin: 1.5rem 0 .5rem; font-size: .68rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--default-text-color); }
+.cm-sheet-text { padding: 1rem 1.1rem; border-radius: .75rem; background: var(--custom-white); box-shadow: 0 1px 2px rgba(15, 23, 42, .06); font-size: .88rem; line-height: 1.6; color: var(--v2-heading); white-space: pre-wrap; overflow-wrap: anywhere; }
+.cm-sheet-text .cm-token { padding: 0; background: none; color: var(--primary-color); font-weight: 700; }
+.cm-sheet-foot { display: flex; flex-direction: column; gap: .75rem; margin-top: auto; }
+.cm-sheet-foot:empty { display: none; }
+.cm-sheet-error { display: flex; gap: .6rem; padding: .8rem .9rem; border-radius: .7rem; background: rgba(var(--danger-rgb), .07); font-size: .84rem; color: var(--v2-heading); }
+.cm-sheet-error i { color: rgb(var(--danger-rgb)); font-size: 1.05rem; }
+.cm-sheet-error b { display: block; }
+.cm-sheet-hint { margin: 0; font-size: .82rem; line-height: 1.5; color: var(--default-text-color); }
+@media (min-width: 992px) {
+  .cm-sheet-more.collapse:not(.show) { display: block; }
+}
+@media (max-width: 991.98px) {
+  .cm-sheet { grid-template-columns: minmax(0, 1fr); }
+  .cm-sheet-side { gap: .9rem; padding: 1rem; }
+  .cm-sheet-main { padding: 1rem; }
+  .cm-sheet-toggle { display: inline-flex; }
+  .cm-sheet-more.show { padding-top: .25rem; }
 }
