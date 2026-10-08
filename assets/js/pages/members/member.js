@@ -17,7 +17,7 @@
   const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(window.location.search);
   const id = Number(params.get("id"));
-  const state = { p: null, tab: params.get("tab") === "history" ? "history" : "overview", history: null, churches: null };
+  const state = { p: null, tab: ["history", "care"].includes(params.get("tab")) ? params.get("tab") : "overview", history: null, churches: null };
 
   const JOURNEY = {
     visited: { icon: "ri-user-heart-line", color: "info" },
@@ -144,6 +144,10 @@
     const q = new URLSearchParams(window.location.search);
     state.tab === "overview" ? q.delete("tab") : q.set("tab", state.tab);
     history.replaceState(null, "", `${window.location.pathname}?${q}`);
+    if (state.tab === "care") {
+      $("mbSide").innerHTML = "";
+      return CareUI.personPanel($("mbMain"), { id: state.p.id, name: state.p.name, initials: state.p.initials }, { careUrl: CTX.careUrl, canManage: CTX.can.care_manage && !state.p.anonymised, userId: CTX.userId });
+    }
     state.tab === "history" ? renderHistory() : renderOverview();
   }
 

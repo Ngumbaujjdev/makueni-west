@@ -34,10 +34,13 @@ function visitorsPageContext(string $level, string $page): array
         'membersUrl' => SITE_URL . '/church/members',
         'homeUrl' => SITE_URL . "/{$level}/dashboard",
         'siteUrl' => SITE_URL,
+        'careUrl' => SITE_URL . '/church/pastoral-care',
         'messagesUrl' => SITE_URL . "/{$level}/messages/new",
         'userId' => (int) ($user['id'] ?? 0),
         'place' => ['id' => (int) ($role['territory_id'] ?? 0), 'name' => $role['territory']['name'] ?? $role['territory_name'] ?? ''],
         'can' => [
+            'care' => $level === 'church' && $can('pastoral.care.read'),
+            'care_manage' => $level === 'church' && $can('pastoral.care.manage'),
             'manage' => $level === 'church' && $can('visitors.visitors.manage'),
             'insights' => $level === 'church' && $can('visitors.insights.read'),
             'message' => $level === 'church' && $can('messages.messages.send'),
@@ -78,7 +81,7 @@ function visitorsPageScripts(string $page): void
         echo '<script src="' . SITE_URL . "/{$src}\"></script>\n";
     }
     // Members' look (avatars, dates, empty states) is shared; the Visitors API and look sit on top.
-    foreach (['assets/js/pages/demographics/api-handler.js', 'assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/members/api.js', 'assets/js/pages/members/ui.js', 'assets/js/pages/members/list-kit.js', 'assets/js/pages/visitors/api.js', 'assets/js/pages/visitors/ui.js', "assets/js/pages/visitors/{$page}.js"] as $src) {
+    foreach (['assets/js/pages/demographics/api-handler.js', 'assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/members/api.js', 'assets/js/pages/members/ui.js', 'assets/js/pages/members/list-kit.js', ...($page === 'visitor' ? ['assets/js/pages/care/api.js', 'assets/js/pages/care/ui.js'] : []), 'assets/js/pages/visitors/api.js', 'assets/js/pages/visitors/ui.js', "assets/js/pages/visitors/{$page}.js"] as $src) {
         echo '<script src="' . $v($src) . '"></script>' . "\n";
     }
 }

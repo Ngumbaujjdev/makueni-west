@@ -38534,3 +38534,26 @@ button.cal-side-item:focus-visible {
   .pp-bulkbar { left: 1rem; right: 1rem; max-width: none; transform: none; animation: none; }
   .pp-stat-spark { flex-basis: 5rem; }
 }
+
+/* ==========================================================================
+   Pastoral care (2026-10-09, docs/specs/people-and-care-spec.md P3) - it
+   reuses the People kit (cards, pills, ticks, the bulk bar) and the
+   follow-up tiles; these are its own pieces: a note or the lock that
+   stands in for a confidential one, hospital cards, prayer cards and the
+   testimony. Red only for what is late or past the hospital visit days.
+   ========================================================================== */
+.cr-note { margin: .35rem 0 .25rem; font-size: .88rem; line-height: 1.55; color: var(--default-text-color); white-space: pre-line; overflow-wrap: anywhere; }
+.cr-note.is-locked { display: inline-flex; align-items: center; gap: .35rem; padding: .25rem .6rem; border-radius: .5rem; background: rgba(var(--purple-rgb), .08); font-size: .8rem; font-weight: 600; color: rgb(var(--purple-rgb)); }
+.cr-who-fixed { display: flex; align-items: center; gap: .6rem; padding: .6rem .75rem; border: 1px solid var(--default-border); border-radius: .7rem; font-size: .92rem; color: var(--v2-heading); }
+.cr-hosp, .cr-prayer { height: calc(100% - 1.5rem); transition: border-color .15s, box-shadow .15s; }
+.cr-hosp:hover, .cr-prayer:hover { border-color: rgba(var(--primary-rgb), .35); box-shadow: 0 6px 16px rgba(15, 23, 42, .06); }
+.cr-hosp.is-late { border-color: rgba(var(--danger-rgb), .45); }
+.cr-hosp-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; padding-top: .85rem; border-top: 1px dashed var(--default-border); }
+.cr-hosp-facts span { display: block; font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--default-text-color); }
+.cr-hosp-facts strong { display: block; font-size: .9rem; color: var(--v2-heading); }
+.cr-hosp-facts small { display: block; font-size: .75rem; color: var(--default-text-color); }
+.cr-hosp-facts .text-danger strong, .cr-hosp-facts .text-danger small { color: rgb(var(--danger-rgb)); }
+.cr-prayer-text { margin: .25rem 0 0; font-size: .92rem; line-height: 1.6; color: var(--v2-heading); overflow-wrap: anywhere; }
+.cr-prayer.is-answered { border-color: rgba(var(--success-rgb), .35); }
+.cr-testimony { display: flex; gap: .6rem; margin-top: .85rem; padding-top: .85rem; border-top: 1px dashed var(--default-border); font-size: .88rem; color: var(--v2-heading); }
+.cr-testimony > i { font-size: 1.1rem; color: rgb(var(--success-rgb)); }

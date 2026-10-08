@@ -13,6 +13,12 @@
         <span class="section-tab-icon bg-primary"><i class="ri-user-heart-line"></i></span>
         <span class="section-tab-text"><strong>Overview</strong><small>Their details and journey</small></span>
     </button>
+    <?php if ($membersCtx['can']['care']): ?>
+    <button class="nav-link section-tab" data-tab="care" type="button" role="tab">
+        <span class="section-tab-icon bg-danger"><i class="ri-heart-pulse-line"></i></span>
+        <span class="section-tab-text"><strong>Care</strong><small>Visits, prayer and pastoral care</small></span>
+    </button>
+    <?php endif ?>
     <button class="nav-link section-tab" data-tab="history" type="button" role="tab">
         <span class="section-tab-icon bg-purple"><i class="ri-history-line"></i></span>
         <span class="section-tab-text"><strong>History</strong><small>Every change, and who made it</small></span>
