@@ -68,7 +68,7 @@ const CareUI = (function () {
     document.body.insertAdjacentHTML(
       "beforeend",
       `<div class="modal fade app-modal${danger ? " is-danger" : ""}" id="${id}" tabindex="-1" aria-labelledby="${id}Title">
-        <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down ${size}"><div class="modal-content">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down ${size}"><div class="modal-content">
           <div class="modal-header"><span class="app-modal-icon"><i class="${icon}"></i></span><div class="flex-fill min-w-0"><h5 class="modal-title" id="${id}Title">${esc(title)}</h5>${subtitle ? `<div class="app-modal-subtitle">${esc(subtitle)}</div>` : ""}</div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
           <div class="modal-body">${body}</div>
           <div class="modal-footer">${foot}</div>
@@ -119,7 +119,8 @@ const CareUI = (function () {
       title: "Record care",
       subtitle: person ? person.name : "A visit, a call, counselling, prayer...",
       icon: "ri-heart-pulse-line",
-      size: "modal-lg",
+      // Wide - about three-quarters of a laptop screen - so the kinds sit four to a row.
+      size: "modal-xl",
       body: PeopleKit.parts([
         {
           icon: "ri-user-3-line",
