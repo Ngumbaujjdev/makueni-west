@@ -33,12 +33,13 @@ The modules replace the empty placeholder pages under `church/{member-management
   - Every named endpoint answers only for the acting role's **own church** (`PlaceAccess::place()` with `PlaceAccess::isOwn`). A region or diocese role, or a global admin naming a church, gets 403 there.
   - Each module has a separate `.../totals` endpoint for region and diocese. It returns counts only, and no `name`, `phone`, `email`, `note` or `address` key appears anywhere in its JSON.
   - **Exception:** global admins (`hasGlobalAccess()`) may read a church's named data only with `?territory_id=` **and** the `{level}.members.members.read` permission, for support. Every such read is audited.
-- **Encrypted at rest** (Laravel `encrypted` cast): `national_id`, `address`, `notes`, care `note`, care contact `note`, `next_of_kin_phone`.
+- **Collect little (2026-10-09).** A person is a name, phone, area and gender, and - for members - Sunday school or main church. Nothing else personal is asked for or kept (see "Slimmed down" below).
+- **Encrypted at rest** (Laravel `encrypted` cast): visitor follow-up `note`, care `note`, care contact `note`.
 - **Phone numbers** are stored normalised (`App\Support\Phone::kenyaMobile`), so the church can text and find duplicates. They are not encrypted.
 - **Confidential care.**
   - A care record marked `confidential`, and every `counselling` record, shows its note only to its author and anyone holding `church.pastoral.care.confidential` (Senior Pastor by default).
   - Everyone else gets `note: null` and `confidential: true`.
-- **Consent.** A visitor's `consent_contact` must be true before any SMS button sends to them; the API refuses with 422 otherwise.
+- **Consent.** Giving a phone is a yes to being texted (`consent_contact` true). "Don't text them" turns it off, and then the API refuses an SMS with 422. Demo numbers (+254 700 000 xxx) are never texted.
 - **Export** needs `church.members.members.export`. It is audited (`people.export`) and is never available above the church.
 - **Leaving the register:**
   - *Archive* hides a person from lists. It is reversible.
@@ -48,6 +49,28 @@ The modules replace the empty placeholder pages under `church/{member-management
     - It needs `members.manage`.
 - **Retention.** `people.retention_visitor_months` (Settings → Visitors, default 0 = never). A daily `people:retention` command anonymises visitors with no visit in that many months.
 - **Auditing.** Every model is `Auditable`. Each detail page has a History tab drawn from the audits; secrets and encrypted fields show as "changed", never the value.
+
+## Slimmed down (2026-10-09)
+
+After P1 and P2 the user asked for less: churches record a **visitor's name, phone and area**, and a **member's name, phone, area, gender and Sunday school or main church** - that is all. Less personal data also means less to protect.
+- **Dropped from `people`** (migration `2026_10_09_140000_slim_people_fields`): `date_of_birth`, `address`, `national_id`, `marital_status`, `occupation`, `other_names`, `email`, `photo_path`, `next_of_kin_name`, `next_of_kin_phone`, `notes`, `how_heard`, `wants_visit`. Also dropped: `visitor_visits.prayer_request` and `wants_visit` (prayer requests come with Pastoral care, P3).
+- **Added:** `people.area` (plain text, filterable) and `people.congregation` (`sunday_school | main_church`), which replaces the age bands.
+- **Kept, "added later" from Edit:** joined (and how), saved, baptised, previous church.
+- **Gone with them:** photos (upload and stream routes), the age pyramid and birthdays, Settings → Members (`require_dob`, `require_national_id`, `birthday_template`; the menu page is switched off), and "how did you hear" (`visitors.how_heard`).
+- **Instead:**
+  - Insights show Sunday school and main church by gender, and areas (members) or "Where they come from" (visitors);
+  - the Demographics hint offers Sunday school boys and girls.
+- **Forms:**
+  - Add member is one card;
+  - Sunday entry rows are name, phone and area;
+  - "Became a member" asks gender and Sunday school or main church.
+- **Lists:** the tinted filter strip (`list-filterbar-wrap`) used by Budgets and Demographics, with a search (name, phone or area), two dropdowns and an Open button.
+  - Members: Sunday school or main church, and status.
+  - Visitors: stage, and follow-up.
+- **Demo data:** `php artisan db:seed --class=PeopleDemoSeeder` (not in DatabaseSeeder, never in production).
+  - It adds about 40 members and 15 visitors at CCI Sultan Hamud, and fewer at eight other churches in its region.
+  - Every demo person has a +254 700 000 xxx number (`Phone::isDemo`), which is never texted.
+  - `PeopleDemoRemoveSeeder` takes them away again.
 
 ---
 

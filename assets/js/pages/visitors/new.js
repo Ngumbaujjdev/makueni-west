@@ -3,11 +3,10 @@
  * VISITORS - record visitors (new.php), quick Sunday entry
  * ============================================================================
  * The date, the gathering and who follows them up; then a row per person -
- * name, phone, how they heard, first time, OK to contact, wants a visit and
- * a prayer request. Enter adds the next row. A phone we already know shows
- * "Returning - 3rd visit" (or "Already a member"), and saving adds a visit
- * to that person instead of a new one. The welcome SMS goes only to
- * first-timers who said yes to being contacted.
+ * just name, phone and area (2026-10-09). Enter adds the next row. A phone
+ * we already know shows "Returning - 3rd visit" (or "Already a member"), and
+ * saving adds a visit to that person instead of a new one. The welcome SMS
+ * goes to first-timers with a phone.
  * ============================================================================
  */
 (function () {
@@ -20,35 +19,26 @@
   const $ = (id) => document.getElementById(id);
   const state = { options: null, rows: [], seq: 0, checks: new Map() };
 
-  const blank = () => ({ key: ++state.seq, name: "", phone: "", how_heard: "", first_time: true, consent: false, wants_visit: false, prayer: "", praying: false, known: null });
+  const blank = () => ({ key: ++state.seq, name: "", phone: "", area: "", known: null });
   const filled = () => state.rows.filter((r) => r.name.trim() || r.phone.trim());
   const digits = (s) => String(s || "").replace(/\D+/g, "");
   const phoneKey = (s) => (digits(s).length >= 9 ? digits(s).slice(-9) : "");
 
   // -------------------------------------------------------------- rows
   function rowHtml(r, i) {
-    const heard = state.options.how_heard;
     return `<div class="vs-entry" data-key="${r.key}">
       <div class="vs-entry-num">${i + 1}</div>
       <div class="vs-entry-body">
         <div class="row g-2">
           <div class="col-md-5"><label class="form-label visually-hidden" for="n${r.key}">Name</label><input class="form-control" id="n${r.key}" data-f="name" placeholder="Full name" maxlength="160" value="${M.esc(r.name)}"></div>
           <div class="col-md-3 col-sm-6"><label class="form-label visually-hidden" for="p${r.key}">Phone</label><input class="form-control" id="p${r.key}" data-f="phone" inputmode="tel" placeholder="Phone (0712...)" maxlength="30" value="${M.esc(r.phone)}"></div>
-          <div class="col-md-4 col-sm-6"><label class="form-label visually-hidden" for="h${r.key}">How they heard</label><select class="form-select" id="h${r.key}" data-f="how_heard"><option value="">How they heard</option>${heard.map((h) => `<option${h === r.how_heard ? " selected" : ""}>${M.esc(h)}</option>`).join("")}</select></div>
+          <div class="col-md-4 col-sm-6"><label class="form-label visually-hidden" for="a${r.key}">Area</label><input class="form-control" id="a${r.key}" data-f="area" list="vsAreas" placeholder="Area, e.g. Kasikeu" maxlength="80" value="${M.esc(r.area)}"></div>
         </div>
-        <div class="vs-entry-flags">
-          ${flag(r, "first_time", "First time here")}
-          ${flag(r, "consent", "OK to contact them")}
-          ${flag(r, "wants_visit", "Wants a visit")}
-          ${flag(r, "praying", "Prayer request")}
-        </div>
-        <div class="vs-entry-prayer" ${r.praying ? "" : "hidden"}><textarea class="form-control" data-f="prayer" rows="2" maxlength="2000" placeholder="What can we pray about? Only your church's leaders see this.">${M.esc(r.prayer)}</textarea></div>
         <div class="vs-entry-known" data-known></div>
       </div>
       <button type="button" class="btn btn-icon btn-sm btn-light vs-entry-remove" data-remove aria-label="Remove this person"><i class="ri-close-line"></i></button>
     </div>`;
   }
-  const flag = (r, f, label) => `<label class="vs-flag"><input type="checkbox" data-f="${f}"${r[f] ? " checked" : ""}><span>${label}</span></label>`;
 
   function renderRows(focusKey = null) {
     $("vsRows").innerHTML = state.rows.map(rowHtml).join("");
@@ -96,11 +86,6 @@
     checkTimer = setTimeout(async () => {
       if (!state.checks.has(key)) state.checks.set(key, VisitorsAPI.check(r.phone).then((res) => (res.ok ? res.data : null)));
       r.known = await state.checks.get(key);
-      if (r.known && r.first_time) {
-        r.first_time = false;
-        const box = document.querySelector(`.vs-entry[data-key="${r.key}"] [data-f="first_time"]`);
-        if (box) box.checked = false;
-      }
       paintKnown(r);
       tally();
     }, 300);
@@ -122,7 +107,7 @@
       else if (r.known) back++;
       else {
         fresh++;
-        if (r.consent && key) welcome++;
+        if (key && !key.startsWith("700000")) welcome++;
       }
     });
     $("vsTally").innerHTML = [
@@ -135,8 +120,8 @@
     const o = state.options;
     if (o.welcome_template) {
       $("vsWelcome").hidden = false;
-      $("vsWelcomeWho").textContent = welcome ? `${welcome} new ${welcome === 1 ? "visitor said" : "visitors said"} yes to being contacted and ${welcome === 1 ? "has" : "have"} a phone.` : "Only new visitors who said yes to being contacted get it.";
-      const first = rows.find((r) => !r.known && r.consent)?.name.trim().split(" ")[0] || "Mary";
+      $("vsWelcomeWho").textContent = welcome ? `${welcome} new ${welcome === 1 ? "visitor has" : "visitors have"} a phone and will get it.` : "New visitors with a phone get it.";
+      const first = rows.find((r) => !r.known && r.phone.trim())?.name.trim().split(" ")[0] || "Mary";
       $("vsWelcomeText").textContent = o.welcome_template.replace(/\{first_name\}/g, first).replace(/\{church\}/g, o.church_name || "");
     }
     $("vsSave").innerHTML = `<i class="ri-check-line me-1"></i>Save ${rows.length ? `${rows.length} ${rows.length === 1 ? "visitor" : "visitors"}` : "visitors"}`;
@@ -164,7 +149,7 @@
       gathering_type_id: $("vsGathering").value || null,
       assigned_to: $("vsAssign").value || null,
       welcome_sms: !$("vsWelcome").hidden && $("vsWelcomeSw").checked,
-      rows: rows.map((r) => ({ name: r.name.trim(), phone: r.phone.trim() || null, how_heard: r.how_heard || null, first_time: r.first_time, consent_contact: r.consent, wants_visit: r.wants_visit, prayer_request: r.praying && r.prayer.trim() ? r.prayer.trim() : null })),
+      rows: rows.map((r) => ({ name: r.name.trim(), phone: r.phone.trim() || null, area: r.area.trim() || null })),
     });
     UI.restoreButton(btn);
     if (!res.ok) {
@@ -172,7 +157,7 @@
       if (bad) {
         const [, i, field] = bad.split(".");
         const r = rows[Number(i)];
-        const el = r && $(`${{ name: "n", phone: "p", how_heard: "h" }[field] || "n"}${r.key}`);
+        const el = r && $(`${{ name: "n", phone: "p", area: "a" }[field] || "n"}${r.key}`);
         el?.classList.add("is-invalid");
         el?.focus();
       }
@@ -214,27 +199,13 @@
     rowsEl.addEventListener("input", (e) => {
       const r = rowOf(e.target);
       const f = e.target.dataset.f;
-      if (!r || !f || e.target.type === "checkbox") return;
+      if (!r || !f) return;
       r[f] = e.target.value;
       if (f === "phone") checkPhone(r);
-      if (f === "name" || f === "prayer") tally();
-    });
-    rowsEl.addEventListener("change", (e) => {
-      const r = rowOf(e.target);
-      const f = e.target.dataset.f;
-      if (!r || !f) return;
-      if (e.target.type === "checkbox") {
-        r[f] = e.target.checked;
-        if (f === "praying") {
-          const box = e.target.closest(".vs-entry").querySelector(".vs-entry-prayer");
-          box.hidden = !r.praying;
-          if (r.praying) box.querySelector("textarea").focus();
-        }
-      } else r[f] = e.target.value;
-      tally();
+      if (f === "name") tally();
     });
     rowsEl.addEventListener("keydown", (e) => {
-      if (e.key !== "Enter" || e.target.tagName === "TEXTAREA") return;
+      if (e.key !== "Enter") return;
       e.preventDefault();
       const r = rowOf(e.target);
       const last = state.rows[state.rows.length - 1];
@@ -263,6 +234,7 @@
     $("vsOn").max = V.todayIso();
     $("vsGathering").insertAdjacentHTML("beforeend", o.gathering_types.map((g) => `<option value="${g.id}">${M.esc(g.name)}</option>`).join(""));
     $("vsAssign").insertAdjacentHTML("beforeend", o.leaders.map((l) => `<option value="${l.id}" data-color="${UI.colorFor(l.name)}"${l.id === CTX.userId ? " selected" : ""}>${M.esc(l.name)}${l.id === CTX.userId ? " (me)" : ""}</option>`).join(""));
+    $("vsAreas").innerHTML = (o.areas || []).map((a) => `<option value="${M.esc(a)}">`).join("");
     UI.enhanceSelect($("vsGathering"), { search: o.gathering_types.length > 8 });
     UI.enhanceSelect($("vsAssign"));
     $("vsWelcomeSw").checked = !!o.welcome_sms;

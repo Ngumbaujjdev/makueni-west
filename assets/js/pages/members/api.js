@@ -5,7 +5,7 @@
  * One fetch helper for Members (docs/specs/people-and-care-spec.md, P1). It
  * always sends the role the user is acting in (X-Assignment-Id), and every
  * call resolves to { ok, status, message, errors, data, raw } - it never
- * throws. Photos come through the API (they need the sign-in), as blob URLs.
+ * throws.
  * ============================================================================
  */
 const MembersAPI = (function () {
@@ -56,23 +56,6 @@ const MembersAPI = (function () {
     }
   }
 
-  const photoCache = new Map();
-
-  /** A member's photo as a blob URL (or null) - fetched once per page. */
-  async function photoUrl(id) {
-    if (photoCache.has(id)) return photoCache.get(id);
-    const p = (async () => {
-      try {
-        const res = await fetch(url(`/people/${id}/photo`), { headers: headers(false) });
-        return res.ok ? URL.createObjectURL(await res.blob()) : null;
-      } catch (e) {
-        return null;
-      }
-    })();
-    photoCache.set(id, p);
-    return p;
-  }
-
   return {
     overview: () => request("GET", "/people/overview"),
     list: (params) => request("GET", "/people", { params }),
@@ -84,17 +67,6 @@ const MembersAPI = (function () {
     archive: (id) => request("POST", `/people/${id}/archive`),
     restore: (id) => request("POST", `/people/${id}/restore`),
     anonymise: (id) => request("POST", `/people/${id}/anonymise`, { body: { confirm: "REMOVE" } }),
-    uploadPhoto: (id, file) => {
-      const form = new FormData();
-      form.append("photo", file);
-      photoCache.delete(id);
-      return request("POST", `/people/${id}/photo`, { form });
-    },
-    removePhoto: (id) => {
-      photoCache.delete(id);
-      return request("DELETE", `/people/${id}/photo`);
-    },
-    photoUrl,
     transfers: (params) => request("GET", "/people/transfers", { params }),
     transferOut: (id, body) => request("POST", `/people/${id}/transfer-out`, { body }),
     transferIn: (body) => request("POST", "/people/transfer-in", { body }),

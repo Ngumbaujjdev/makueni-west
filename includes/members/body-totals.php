@@ -8,11 +8,11 @@
     <div class="card-header justify-content-between flex-wrap gap-2">
         <div><div class="card-title">Each church</div><span class="card-subtitle-text">From the churches' own registers - counts only</span></div>
     </div>
-    <div class="card-body pb-0"><div id="totalFilters"></div></div>
-    <div class="card-body" id="totalTableWrap">
+    <div class="card-body p-0" id="totalTableWrap">
+        <div id="totalFilters" class="list-filterbar-wrap"></div>
         <div class="table-responsive">
             <table class="table text-nowrap table-hover mb-0" id="totalTable">
-                <thead><tr><th>Church</th><th>Register</th><th>Active members</th><th>New this month</th><th>Baptised</th><th>Moved in</th><th>Moved out</th></tr></thead>
+                <thead><tr><th>Church</th><th>Register</th><th>Active members</th><th>Sunday school</th><th>New this month</th><th>Baptised</th><th>Moved in</th><th>Moved out</th></tr></thead>
                 <tbody id="totalRows"></tbody>
             </table>
         </div>

@@ -57,10 +57,12 @@ class SettingsHubSeeder extends Seeder
      * Old menu rows that opened empty pages, replaced by hub sections (S4b):
      * General Configuration -> Profile/Email/SMS, Notifications -> Email/SMS,
      * Security Settings -> Security, System Maintenance -> Maintenance.
+     * Settings > Members went when the member form was slimmed down
+     * (2026-10-09) - it had nothing left to set.
      * Switched off, not deleted, so their permissions keep their history.
      */
     private const RETIRED = [
-        'submodules' => ['/diocese/settings/general', '/diocese/settings/compliance', '/diocese/settings/notifications', '/diocese/settings/support'],
+        'submodules' => ['/diocese/settings/general', '/diocese/settings/compliance', '/diocese/settings/notifications', '/diocese/settings/support', '/church/settings/?section=members'],
         'sub_submodules' => ['/diocese/settings/general/info', '/diocese/settings/general/communication', '/diocese/settings/general/financial', '/diocese/settings/admin/security', '/diocese/settings/admin/maintenance'],
     ];
 

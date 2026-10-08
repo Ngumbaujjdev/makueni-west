@@ -229,18 +229,6 @@ return [
             'sentence' => 'How your emails and SMS go out - through the diocese, or your own account - and what they look like.',
         ],
 
-        // People & care P1 - the church's private member register
-        // (docs/specs/people-and-care-spec.md). Read by PeopleController.
-        'members' => [
-            'label' => 'Members',
-            'icon' => 'ri-contacts-book-2-line',
-            'colour' => 'success',
-            'group' => 'people',
-            'levels' => ['church'],
-            'kind' => 'form',
-            'sentence' => 'What the member form asks for, and the birthday message.',
-        ],
-
         // People & care P2 - visitors and their follow-up. Read by VisitorsController.
         'visitors' => [
             'label' => 'Visitors',
@@ -249,7 +237,7 @@ return [
             'group' => 'people',
             'levels' => ['church'],
             'kind' => 'form',
-            'sentence' => 'How visitors heard of us, how soon to follow up, the welcome SMS, and how long their details are kept.',
+            'sentence' => 'How soon to follow up, the welcome SMS, and how long visitors\' details are kept.',
         ],
 
         // S5 - how to pay a region or the diocese. Read by Contributions ("How to
@@ -351,14 +339,10 @@ return [
 
         // ---- Members (People & care P1) - read by PeopleController (the form's
         // required fields) and the Insights page's "Send birthday SMS".
-        'members.require_dob' => ['section' => 'members', 'card' => 'The member form', 'label' => 'Date of birth is required', 'type' => 'switch', 'default' => false, 'levels' => ['church', 'diocese'], 'lockable' => true, 'help' => 'Ages feed the age bands and birthdays.', 'used_by' => 'Add member'],
-        'members.require_national_id' => ['section' => 'members', 'card' => 'The member form', 'label' => 'National ID is required', 'type' => 'switch', 'default' => false, 'levels' => ['church', 'diocese'], 'lockable' => true, 'help' => 'Stored encrypted; only your church sees it.', 'used_by' => 'Add member'],
-        'members.birthday_template' => ['section' => 'members', 'card' => 'Birthdays', 'label' => 'Birthday message', 'type' => 'textarea', 'rules' => ['nullable', 'string', 'max:300'], 'default' => 'Happy birthday {first_name}! We thank God for you. From your family at {church}.', 'levels' => ['church'], 'span' => 12, 'help' => '{first_name} and {church} are filled in for each person.', 'used_by' => 'Members > Insights > Send birthday SMS'],
-        'visitors.how_heard' => ['section' => 'visitors', 'card' => 'Recording visitors', 'label' => '"How did you hear about us?" choices', 'type' => 'textarea', 'rules' => ['nullable', 'string', 'max:1000'], 'default' => "Invited by a friend\nWalked in\nAn event\nRadio or online\nOther", 'levels' => ['church'], 'span' => 12, 'help' => 'One per line. Insights counts each.', 'used_by' => 'Visitors > Record visitors'],
         'visitors.followup_days' => ['section' => 'visitors', 'card' => 'Follow-up', 'label' => 'Follow up within (days)', 'type' => 'number', 'rules' => ['required', 'integer', 'between:1,30'], 'default' => 3, 'levels' => ['church'], 'help' => 'After a visit, someone is due to call or visit within this many days.', 'used_by' => 'Visitors > My follow-ups, the calendar'],
-        'visitors.welcome_sms' => ['section' => 'visitors', 'card' => 'Welcome SMS', 'label' => 'Send the welcome SMS by default', 'type' => 'switch', 'default' => false, 'levels' => ['church'], 'help' => 'Only ever to first-timers who said yes to being contacted. It can be switched off each Sunday.', 'used_by' => 'Visitors > Record visitors'],
+        'visitors.welcome_sms' => ['section' => 'visitors', 'card' => 'Welcome SMS', 'label' => 'Send the welcome SMS by default', 'type' => 'switch', 'default' => false, 'levels' => ['church'], 'help' => 'Only to first-timers with a phone who haven\'t asked not to be texted. It can be switched off each Sunday.', 'used_by' => 'Visitors > Record visitors'],
         'visitors.welcome_template' => ['section' => 'visitors', 'card' => 'Welcome SMS', 'label' => 'Welcome message', 'type' => 'textarea', 'rules' => ['nullable', 'string', 'max:300'], 'default' => 'Thank you for worshipping with us at {church}, {first_name}! You are welcome back any time.', 'levels' => ['church'], 'span' => 12, 'help' => '{first_name} and {church} are filled in for each person.', 'used_by' => 'Visitors > Record visitors'],
-        'people.retention_visitor_months' => ['section' => 'visitors', 'card' => 'Keeping visitors\' details', 'label' => 'Remove a visitor\'s details after', 'type' => 'select', 'options' => ['0' => 'Never', '6' => '6 months without a visit', '12' => '12 months without a visit', '24' => '2 years without a visit'], 'rules' => ['required'], 'default' => '0', 'levels' => ['church', 'diocese'], 'lockable' => true, 'help' => 'Names and phone numbers are cleared; the counts stay. Members are never touched.', 'used_by' => 'A nightly clean-up'],
+        'people.retention_visitor_months' => ['section' => 'visitors', 'card' => 'Keeping visitors\' details', 'label' => 'Remove a visitor\'s details after', 'type' => 'select', 'options' => ['0' => 'Never', '6' => '6 months without a visit', '12' => '12 months without a visit', '24' => '2 years without a visit'], 'rules' => ['required'], 'default' => '0', 'levels' => ['church', 'diocese'], 'lockable' => true, 'help' => 'Names, phone numbers and areas are cleared; the counts stay. Members are never touched.', 'used_by' => 'A nightly clean-up'],
 
         // Communication (S6b). comms.mode flows down and can be locked; everything
         // else is the place's own ('inherits' => false) - a church never sends

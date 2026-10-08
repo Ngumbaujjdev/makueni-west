@@ -8,20 +8,15 @@ use OwenIt\Auditing\Contracts\Auditable;
 
 /**
  * A visitor at one of our gatherings (docs/specs/people-and-care-spec.md,
- * P2). The prayer request is encrypted, and never written into the audits.
+ * P2): who, when and at which gathering - nothing more.
  */
 class VisitorVisit extends Model implements Auditable
 {
     use \OwenIt\Auditing\Auditable;
 
-    protected $fillable = ['person_id', 'territory_id', 'gathering_type_id', 'on', 'first_time', 'wants_visit', 'prayer_request', 'created_by'];
+    protected $fillable = ['person_id', 'territory_id', 'gathering_type_id', 'on', 'first_time', 'created_by'];
 
-    protected $casts = ['on' => 'date', 'first_time' => 'boolean', 'wants_visit' => 'boolean', 'prayer_request' => 'encrypted'];
-
-    public function transformAudit(array $data): array
-    {
-        return Person::maskSecrets($data, ['prayer_request']);
-    }
+    protected $casts = ['on' => 'date', 'first_time' => 'boolean'];
 
     public function person(): BelongsTo
     {

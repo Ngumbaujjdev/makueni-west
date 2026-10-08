@@ -18,8 +18,8 @@
     </div>
     <div class="col-xl-4">
         <div class="card custom-card">
-            <div class="card-header"><div><div class="card-title">How they heard of us</div><span class="card-subtitle-text">This year's first-timers</span></div></div>
-            <div class="card-body"><div id="heardDonut" class="skel-chart" style="min-height:240px"></div></div>
+            <div class="card-header"><div><div class="card-title">Where they come from</div><span class="card-subtitle-text">This year's first-timers, by area</span></div></div>
+            <div class="card-body" id="areaList"><span class="skel skel-line"></span><span class="skel skel-line mt-2" style="width:70%"></span></div>
         </div>
         <div class="card custom-card">
             <div class="card-header"><div><div class="card-title">Follow-up</div><span class="card-subtitle-text">What was done this year, and how it went</span></div></div>

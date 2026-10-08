@@ -24,4 +24,3 @@
     <div class="col-xl-4" id="mbSide"></div>
 </div>
 
-<input type="file" id="photoInput" accept="image/png,image/jpeg,image/webp" hidden>

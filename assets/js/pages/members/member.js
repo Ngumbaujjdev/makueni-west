@@ -2,10 +2,10 @@
  * ============================================================================
  * MEMBERS - one member's page (member.php?id=)
  * ============================================================================
- * The hero (photo or initials, status, age, member since, and what you can
- * do), then Overview - their spiritual journey and details - and History.
- * Windows: change photo, transfer out, and remove personal details. The tab
- * is kept in the URL (?tab=).
+ * The hero (initials, status, Sunday school or main church, member since,
+ * and what you can do), then Overview - their journey and the few details we
+ * keep - and History. Windows: transfer out, and remove personal details.
+ * The tab is kept in the URL (?tab=).
  * ============================================================================
  */
 (function () {
@@ -20,6 +20,7 @@
   const state = { p: null, tab: params.get("tab") === "history" ? "history" : "overview", history: null, churches: null };
 
   const JOURNEY = {
+    visited: { icon: "ri-user-heart-line", color: "info" },
     saved: { icon: "ri-heart-line", color: "pink" },
     baptised: { icon: "ri-drop-line", color: "purple" },
     joined: { icon: "ri-home-heart-line", color: "success" },
@@ -39,18 +40,17 @@
     const can = p.can.manage && !p.anonymised;
     const c = M.colorFor(p.id);
     const chips = [
-      p.age !== null ? `<span class="soft-chip soft-primary"><i class="ri-cake-2-line"></i>${p.age} · ${M.BANDS[p.age_band]}</span>` : "",
+      M.groupChip(p.congregation),
+      p.area ? `<span class="soft-chip soft-primary"><i class="ri-map-pin-line"></i>${M.esc(p.area)}</span>` : "",
       p.joined_on ? `<span class="soft-chip soft-success"><i class="ri-calendar-check-line"></i>Member since ${M.day(p.joined_on)}</span>` : "",
       p.how_joined ? `<span class="soft-chip soft-purple">${M.HOW_JOINED[p.how_joined]}</span>` : "",
     ].join("");
-    const meta = [p.phone ? `<span><i class="ri-phone-line"></i>${M.esc(p.phone)}</span>` : "", p.email ? `<span><i class="ri-mail-line"></i>${M.esc(p.email)}</span>` : ""].join("");
+    const meta = [p.phone ? `<span><i class="ri-phone-line"></i>${M.esc(p.phone)}</span>` : "", p.gender ? `<span><i class="ri-user-3-line"></i>${p.gender === "male" ? "Male" : "Female"}</span>` : ""].join("");
     const more = can
       ? `<div class="dropdown">
           <button class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="ri-more-2-line me-1"></i>More</button>
           <ul class="dropdown-menu dropdown-menu-end">
             ${p.status !== "transferred_out" ? '<li><button class="dropdown-item" data-act="transfer"><i class="ri-logout-box-r-line me-2"></i>Transfer out</button></li>' : ""}
-            <li><button class="dropdown-item" data-act="photo"><i class="ri-camera-line me-2"></i>${p.has_photo ? "Change photo" : "Add a photo"}</button></li>
-            ${p.has_photo ? '<li><button class="dropdown-item" data-act="removePhoto"><i class="ri-image-line me-2"></i>Remove photo</button></li>' : ""}
             <li><button class="dropdown-item" data-act="${p.archived ? "restore" : "archive"}"><i class="${p.archived ? "ri-inbox-unarchive-line" : "ri-archive-line"} me-2"></i>${p.archived ? "Bring back from the archive" : "Archive"}</button></li>
             <li><hr class="dropdown-divider"></li>
             <li><button class="dropdown-item text-danger" data-act="anonymise"><i class="ri-user-unfollow-line me-2"></i>Remove personal details</button></li>
@@ -60,17 +60,15 @@
     $("mbHero").innerHTML = `
       <div class="card-body">
         <div class="ev-hero-row">
-          <button type="button" class="mb-hero-photo${can ? "" : " is-static"}" ${can ? 'data-act="photo" aria-label="Change photo"' : "disabled"}>
-            <span class="avatar avatar-xxl avatar-rounded bg-${c} ${M.textOn(c)}" data-person-photo="${p.has_photo ? p.id : ""}">${M.esc(p.initials)}</span>
-            ${can ? '<span class="mb-hero-photo-cam"><i class="ri-camera-line"></i></span>' : ""}
-          </button>
+          <span class="mb-hero-photo is-static"><span class="avatar avatar-xxl avatar-rounded bg-${c} ${M.textOn(c)}">${M.esc(p.initials)}</span></span>
           <div class="flex-fill" style="min-width:0">
             <div class="d-flex flex-wrap align-items-center gap-2 mb-1"><h2 class="ev-hero-title mb-0">${M.esc(p.name)}</h2>${M.statusPill(p.status)}</div>
             <div class="d-flex flex-wrap gap-1 mb-1">${chips}</div>
-            <div class="ev-card-meta">${meta || '<span class="mb-sub">No phone or email yet</span>'}</div>
+            <div class="ev-card-meta">${meta || '<span class="mb-sub">No phone yet</span>'}</div>
           </div>
           <div class="ev-hero-actions">
             ${can ? `<a class="btn btn-primary" href="${CTX.baseUrl}/new?id=${p.id}"><i class="ri-edit-line me-1"></i>Edit</a>` : ""}
+            ${p.came_as_visitor ? `<a class="btn btn-outline-primary" href="${CTX.siteUrl}/church/visitors/visitor?id=${p.id}"><i class="ri-user-heart-line me-1"></i>As a visitor</a>` : ""}
             ${p.phone && !p.anonymised ? `<a class="btn btn-outline-primary" href="${CTX.messagesUrl}?channel=sms&typed=${encodeURIComponent(p.phone)}"><i class="ri-chat-3-line me-1"></i>Send SMS</a>` : ""}
             ${more}
           </div>
@@ -90,19 +88,13 @@
             return `<li class="${k.color === "warning" ? "is-dark" : ""}" style="--q: var(--${k.color}-rgb)"><span class="ev-timeline-dot"></span><div class="flex-fill"><span class="ev-timeline-when">${M.day(j.on)}</span><span class="ev-timeline-what fw-semibold">${M.esc(j.label)}</span></div></li>`;
           })
           .join("")}</ol>`
-      : `<p class="mb-0 fw-semibold">No dates yet. Add when they were saved, baptised and joined, and their journey shows here.</p>`;
-    const nid = p.national_id ? `<span id="nidValue">•••• ${M.esc(p.national_id.slice(-3))}</span> <button type="button" class="btn btn-link btn-sm p-0 ms-1" id="nidShow">Show</button>` : notGiven;
+      : `<p class="mb-0 fw-semibold">No dates yet. Add when they joined, were saved and baptised (Edit → Church life), and their journey shows here.</p>`;
     const details = [
       row("ri-phone-line", "primary", "Phone", p.phone ? M.esc(p.phone) : notGiven),
-      row("ri-mail-line", "primary", "Email", p.email ? M.esc(p.email) : notGiven),
-      row("ri-map-pin-line", "pink", "Lives at", p.address ? M.esc(p.address) : notGiven),
-      row("ri-cake-2-line", "success", "Date of birth", p.date_of_birth ? `${M.day(p.date_of_birth)} · ${p.age} years` : notGiven),
-      row("ri-heart-2-line", "purple", "Marital status", p.marital_status ? M.MARITAL[p.marital_status] : notGiven),
-      row("ri-briefcase-line", "secondary", "Occupation", p.occupation ? M.esc(p.occupation) : notGiven),
-      row("ri-shield-user-line", "secondary", "National ID", nid),
-      row("ri-parent-line", "pink", "Next of kin", p.next_of_kin_name || p.next_of_kin_phone ? M.esc([p.next_of_kin_name, p.next_of_kin_phone].filter(Boolean).join(" · ")) : notGiven),
-      p.previous_church ? row("ri-community-line", "primary", "Previous church", M.esc(p.previous_church)) : "",
-      row("ri-sticky-note-line", "warning", "Notes", p.notes ? M.esc(p.notes) : notGiven),
+      row("ri-map-pin-line", "primary", "Area", p.area ? M.esc(p.area) : notGiven),
+      row("ri-user-3-line", "primary", "Gender", p.gender ? (p.gender === "male" ? "Male" : "Female") : notGiven),
+      row("ri-community-line", "primary", "Part of", p.congregation ? M.CONGREGATIONS[p.congregation].label : notGiven),
+      p.previous_church ? row("ri-arrow-left-right-line", "primary", "Previous church", M.esc(p.previous_church)) : "",
     ].join("");
     $("mbMain").innerHTML = `
       <div class="card custom-card">
@@ -113,10 +105,6 @@
         <div class="card-header justify-content-between"><div class="card-title">Details</div>${M.privateChip()}</div>
         <div class="card-body"><ul class="mr-rows">${details}</ul></div>
       </div>`;
-    $("nidShow")?.addEventListener("click", (e) => {
-      $("nidValue").textContent = p.national_id;
-      e.target.remove();
-    });
 
     const transfers = p.journey.filter((j) => j.kind.startsWith("transfer_"));
     $("mbSide").innerHTML = `
@@ -125,7 +113,7 @@
         <div class="card-body">
           <div class="mb-glance">
             <div><span>Member since</span><strong>${p.joined_on ? M.day(p.joined_on) : "-"}</strong></div>
-            <div><span>Age</span><strong>${p.age ?? "-"}</strong></div>
+            <div><span>Part of</span><strong>${p.congregation ? M.CONGREGATIONS[p.congregation].label : "-"}</strong></div>
             <div><span>Saved</span><strong>${p.saved_on ? M.day(p.saved_on) : "-"}</strong></div>
             <div><span>Baptised</span><strong>${p.baptised_on ? M.day(p.baptised_on) : "Not yet"}</strong></div>
           </div>
@@ -229,7 +217,7 @@
       "Remove personal details",
       "ri-user-unfollow-line",
       "danger",
-      `<p class="fw-semibold">This clears their name, phone, email, address, ID, notes, photo and next of kin. They still count in the totals, and their history stays. <strong>It can't be undone.</strong></p>
+      `<p class="fw-semibold">This clears their name, phone and area. They still count in the totals, and their history stays. <strong>It can't be undone.</strong></p>
        <label class="form-label" for="anConfirm">Type <strong>REMOVE</strong> to confirm</label><input class="form-control" id="anConfirm" autocomplete="off">`,
       `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Keep them</button><button type="button" class="btn btn-danger" id="anGo" disabled><i class="ri-user-unfollow-line me-1"></i>Remove their details</button>`,
     );
@@ -245,10 +233,9 @@
   }
 
   async function act(name) {
-    if (name === "photo") return $("photoInput").click();
     if (name === "transfer") return transferOut();
     if (name === "anonymise") return anonymise();
-    const call = { archive: MembersAPI.archive, restore: MembersAPI.restore, removePhoto: MembersAPI.removePhoto }[name];
+    const call = { archive: MembersAPI.archive, restore: MembersAPI.restore }[name];
     if (!call) return;
     const res = await call(id);
     if (!res.ok) return Toast.error(res.message);
@@ -279,15 +266,6 @@
     $("mbHero").addEventListener("click", (e) => {
       const b = e.target.closest("[data-act]");
       if (b) act(b.dataset.act);
-    });
-    $("photoInput").addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      e.target.value = "";
-      if (!file) return;
-      if (file.size > 2 * 1024 * 1024) return Toast.error("The photo must be 2 MB or smaller.");
-      const res = await MembersAPI.uploadPhoto(id, file);
-      if (!res.ok) return Toast.error(res.message);
-      refresh(res.data, res.message);
     });
   }
 

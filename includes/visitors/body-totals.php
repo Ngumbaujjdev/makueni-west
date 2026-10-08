@@ -8,8 +8,8 @@
     <div class="card-header justify-content-between flex-wrap gap-2">
         <div><div class="card-title">Each church</div><span class="card-subtitle-text">From the churches' own visitor records - counts only</span></div>
     </div>
-    <div class="card-body pb-0"><div id="totalFilters"></div></div>
-    <div class="card-body" id="totalTableWrap">
+    <div class="card-body p-0" id="totalTableWrap">
+        <div id="totalFilters" class="list-filterbar-wrap"></div>
         <div class="table-responsive">
             <table class="table text-nowrap table-hover mb-0" id="totalTable">
                 <thead><tr><th>Church</th><th>Recording</th><th>Visitors this month</th><th>First-timers this month</th><th>First-timers this year</th><th>Became members</th><th>Stayed</th></tr></thead>

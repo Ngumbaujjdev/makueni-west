@@ -1,6 +1,6 @@
 <!-- Record visitors - quick Sunday entry (docs/specs/people-and-care-spec.md, P2); filled in by assets/js/pages/visitors/new.js. -->
 <div class="page-toolbar">
-    <div class="page-toolbar-sub d-flex flex-wrap align-items-center gap-2"><span>Everyone who visited, in one go - a phone we know adds a visit, not a new person</span><span class="soft-chip soft-success"><i class="ri-lock-2-line"></i>Private to our church</span></div>
+    <div class="page-toolbar-sub d-flex flex-wrap align-items-center gap-2"><span>Everyone who visited, in one go - just a name, phone and area. A phone we know adds a visit, not a new person</span><span class="soft-chip soft-success"><i class="ri-lock-2-line"></i>Private to our church</span></div>
 </div>
 
 <form class="row g-4 vs-form" id="vsEntry" novalidate autocomplete="off">
@@ -22,6 +22,7 @@
                 <button type="button" class="btn btn-sm btn-outline-primary" id="vsAddRow"><i class="ri-add-line me-1"></i>Add a person</button>
             </div>
             <div class="card-body" id="vsRows"><span class="skel skel-line"></span><span class="skel skel-line mt-2" style="width:70%"></span></div>
+            <datalist id="vsAreas"></datalist>
         </div>
     </div>
 

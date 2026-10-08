@@ -53,7 +53,7 @@ class VisitorsController extends Controller
         return $this->ok($this->visitors->overview($church, $request->user()) + ['can' => $this->can($request->user(), $church)]);
     }
 
-    /** GET /visitors?stage[]=&how_heard=&assigned=&month=&q=&due=&archived= */
+    /** GET /visitors?stage[]=&area=&assigned=&month=&q=&due=&archived= */
     public function index(Request $request): JsonResponse
     {
         $church = $this->church($request);
@@ -62,7 +62,7 @@ class VisitorsController extends Controller
         }
         $f = $request->validate([
             'stage' => ['nullable', 'array'], 'stage.*' => [Rule::in(array_keys(Person::STAGES))],
-            'how_heard' => ['nullable', 'string', 'max:60'],
+            'area' => ['nullable', 'string', 'max:80'],
             'assigned' => ['nullable', 'string', 'max:20'],
             'month' => ['nullable', 'date_format:Y-m'],
             'q' => ['nullable', 'string', 'max:80'],
@@ -97,8 +97,9 @@ class VisitorsController extends Controller
     /**
      * POST /visitors/batch - Sunday's visitors in one go. A phone we know adds
      * a visit to that person instead of a new one; a member's phone is noted,
-     * not counted as a visitor. With welcome_sms, first-timers who said yes
-     * to contact get the welcome message.
+     * not counted as a visitor. Each row is a name, a phone and an area -
+     * nothing more. With welcome_sms, first-timers with a phone get the
+     * welcome message (a phone given is a yes to being contacted).
      */
     public function batch(Request $request, PlaceMessenger $messenger): JsonResponse
     {
@@ -106,7 +107,6 @@ class VisitorsController extends Controller
         if ($church instanceof JsonResponse) {
             return $church;
         }
-        $howHeard = $this->visitors->howHeard($church);
         $today = $this->visitors->today()->toDateString();
         $d = $request->validate([
             'on' => ['required', 'date', "before_or_equal:{$today}"],
@@ -116,12 +116,7 @@ class VisitorsController extends Controller
             'rows' => ['required', 'array', 'min:1', 'max:60'],
             'rows.*.name' => ['required', 'string', 'max:160'],
             'rows.*.phone' => ['nullable', 'string', 'max:30'],
-            'rows.*.gender' => ['nullable', Rule::in(['male', 'female'])],
-            'rows.*.first_time' => ['nullable', 'boolean'],
-            'rows.*.how_heard' => ['nullable', 'string', Rule::in($howHeard)],
-            'rows.*.wants_visit' => ['nullable', 'boolean'],
-            'rows.*.prayer_request' => ['nullable', 'string', 'max:2000'],
-            'rows.*.consent_contact' => ['nullable', 'boolean'],
+            'rows.*.area' => ['nullable', 'string', 'max:80'],
         ], [
             'on.before_or_equal' => "The date can't be in the future.",
             'rows.required' => 'Add at least one visitor.',
@@ -148,7 +143,8 @@ class VisitorsController extends Controller
 
                     continue;
                 }
-                $visit = ['territory_id' => $church->id, 'gathering_type_id' => $d['gathering_type_id'] ?? null, 'on' => $d['on'], 'wants_visit' => (bool) ($row['wants_visit'] ?? false), 'prayer_request' => $row['prayer_request'] ?? null, 'created_by' => $user->id];
+                $visit = ['territory_id' => $church->id, 'gathering_type_id' => $d['gathering_type_id'] ?? null, 'on' => $d['on'], 'created_by' => $user->id];
+                $area = ($a = trim((string) ($row['area'] ?? ''))) === '' ? null : mb_convert_case($a, MB_CASE_TITLE);
                 if ($known) {
                     if (! VisitorVisit::where('person_id', $known->id)->whereDate('on', $d['on'])->exists()) {
                         VisitorVisit::create($visit + ['person_id' => $known->id, 'first_time' => false]);
@@ -157,9 +153,7 @@ class VisitorsController extends Controller
                     $last = $known->last_visit_on?->toDateString();
                     $known->fill([
                         'last_visit_on' => ! $last || $d['on'] > $last ? $d['on'] : $last,
-                        'consent_contact' => $known->consent_contact || ! empty($row['consent_contact']),
-                        'wants_visit' => $known->wants_visit || ! empty($row['wants_visit']),
-                        'how_heard' => $known->how_heard ?: ($row['how_heard'] ?? null),
+                        'area' => $known->area ?: $area,
                         'updated_by' => $user->id,
                     ]);
                     $this->visitors->advance($known);
@@ -170,14 +164,14 @@ class VisitorsController extends Controller
                 }
                 [$first, $last] = $this->splitName($row['name']);
                 $person = Person::create([
-                    'territory_id' => $church->id, 'first_name' => $first, 'last_name' => $last, 'gender' => $row['gender'] ?? null, 'phone' => $phone,
+                    'territory_id' => $church->id, 'first_name' => $first, 'last_name' => $last, 'phone' => $phone, 'area' => $area,
                     'status' => 'visitor', 'stage' => 'new', 'first_visit_on' => $d['on'], 'last_visit_on' => $d['on'], 'visit_count' => 1,
-                    'how_heard' => $row['how_heard'] ?? null, 'consent_contact' => (bool) ($row['consent_contact'] ?? false), 'wants_visit' => (bool) ($row['wants_visit'] ?? false),
+                    'consent_contact' => (bool) $phone,
                     'assigned_to' => $d['assigned_to'] ?? null, 'created_by' => $user->id, 'updated_by' => $user->id,
                 ]);
-                VisitorVisit::create($visit + ['person_id' => $person->id, 'first_time' => (bool) ($row['first_time'] ?? true)]);
+                VisitorVisit::create($visit + ['person_id' => $person->id, 'first_time' => true]);
                 $results[] = ['row' => $i, 'id' => $person->id, 'name' => $person->name, 'result' => 'new', 'visits' => 1];
-                if ($person->consent_contact && $person->phone) {
+                if ($person->consent_contact && $person->phone && ! Phone::isDemo($person->phone)) {
                     $welcome[] = $person;
                 }
             }
@@ -229,14 +223,13 @@ class VisitorsController extends Controller
         $d = $request->validate([
             'first_name' => ['sometimes', 'required', 'string', 'max:80'],
             'last_name' => ['sometimes', 'nullable', 'string', 'max:80'],
-            'gender' => ['sometimes', 'nullable', Rule::in(['male', 'female'])],
             'phone' => ['sometimes', 'nullable', 'string', 'max:30'],
-            'email' => ['sometimes', 'nullable', 'email', 'max:160'],
-            'how_heard' => ['sometimes', 'nullable', 'string', 'max:60'],
+            'area' => ['sometimes', 'nullable', 'string', 'max:80'],
             'consent_contact' => ['sometimes', 'boolean'],
-            'wants_visit' => ['sometimes', 'boolean'],
-            'notes' => ['sometimes', 'nullable', 'string', 'max:5000'],
         ]);
+        if (array_key_exists('area', $d)) {
+            $d['area'] = ($a = trim((string) $d['area'])) === '' ? null : mb_convert_case($a, MB_CASE_TITLE);
+        }
         if (! empty($d['phone'])) {
             $d['phone'] = Phone::kenyaMobile($d['phone']) ?: throw ValidationException::withMessages(['phone' => "That phone number doesn't look right - use a Kenyan mobile, e.g. 0712 345 678."]);
             $other = $this->known($church, Phone::key($d['phone']));
@@ -286,7 +279,7 @@ class VisitorsController extends Controller
         return $this->ok($this->detail($request, $church, $person->fresh()), $name ? "{$name->firstname} follows them up now." : 'Nobody is assigned now.');
     }
 
-    /** POST /visitors/{id}/visits {on, gathering_type_id?, wants_visit?, prayer_request?} - they came again. */
+    /** POST /visitors/{id}/visits {on, gathering_type_id?} - they came again. */
     public function visit(Request $request, int $id): JsonResponse
     {
         [$church, $person, $error] = $this->person($request, $id, 'manage');
@@ -296,19 +289,16 @@ class VisitorsController extends Controller
         $d = $request->validate([
             'on' => ['required', 'date', 'before_or_equal:'.$this->visitors->today()->toDateString()],
             'gathering_type_id' => ['nullable', 'integer', Rule::exists('gathering_types', 'id')->where('territory_id', $church->id)],
-            'wants_visit' => ['nullable', 'boolean'],
-            'prayer_request' => ['nullable', 'string', 'max:2000'],
         ]);
         if (VisitorVisit::where('person_id', $person->id)->whereDate('on', $d['on'])->exists()) {
             return $this->unprocessable('on', 'Their visit that day is already recorded.');
         }
-        VisitorVisit::create($d + ['person_id' => $person->id, 'territory_id' => $church->id, 'first_time' => false, 'wants_visit' => (bool) ($d['wants_visit'] ?? false), 'created_by' => $request->user()->id]);
+        VisitorVisit::create($d + ['person_id' => $person->id, 'territory_id' => $church->id, 'first_time' => false, 'created_by' => $request->user()->id]);
         $last = $person->last_visit_on?->toDateString();
         $person->fill([
             'visit_count' => $person->visit_count + 1,
             'first_visit_on' => $person->first_visit_on ?? $d['on'],
             'last_visit_on' => ! $last || $d['on'] > $last ? $d['on'] : $last,
-            'wants_visit' => $person->wants_visit || ! empty($d['wants_visit']),
             'updated_by' => $request->user()->id,
         ]);
         $this->visitors->advance($person);
@@ -349,7 +339,10 @@ class VisitorsController extends Controller
         }
         $d = $request->validate(['text' => ['required', 'string', 'max:640']], ['text.required' => 'Write the message.']);
         if (! $person->consent_contact) {
-            return $this->unprocessable('text', "{$person->first_name} didn't say yes to being contacted, so the system won't text them.");
+            return $this->unprocessable('text', "{$person->first_name} asked not to be texted.");
+        }
+        if (Phone::isDemo($person->phone)) {
+            return $this->unprocessable('text', 'This is a demo number, so it is never texted.');
         }
         if (! $person->phone) {
             return $this->unprocessable('text', "There's no phone number for {$person->first_name}.");
@@ -379,8 +372,11 @@ class VisitorsController extends Controller
         $d = $request->validate([
             'joined_on' => ['nullable', 'date', 'before_or_equal:'.$this->visitors->today()->toDateString()],
             'how_joined' => ['nullable', Rule::in(array_keys(Person::HOW_JOINED))],
+            'gender' => ['nullable', Rule::in(['male', 'female'])],
+            'congregation' => ['nullable', Rule::in(array_keys(Person::CONGREGATIONS))],
         ]);
         $person->forceFill([
+            'gender' => $d['gender'] ?? $person->gender, 'congregation' => $d['congregation'] ?? $person->congregation ?? 'main_church',
             'status' => 'member', 'stage' => 'member', 'became_member_on' => $this->visitors->today()->toDateString(),
             'joined_on' => $d['joined_on'] ?? $this->visitors->today()->toDateString(), 'how_joined' => $d['how_joined'] ?? 'conversion',
             'updated_by' => $request->user()->id,
@@ -462,17 +458,17 @@ class VisitorsController extends Controller
         $can = $this->can($request->user(), $church);
 
         return $row + [
-            'first_name' => $p->first_name, 'last_name' => $p->last_name, 'email' => $p->email, 'notes' => $p->notes,
+            'first_name' => $p->first_name, 'last_name' => $p->last_name, 'congregation' => $p->congregation,
             'anonymised' => (bool) $p->anonymised_at, 'created_at' => $p->created_at?->toIso8601String(),
             'visit_list' => $visits->map(fn (VisitorVisit $v) => [
                 'id' => $v->id, 'on' => $v->on->toDateString(), 'first_time' => $v->first_time, 'gathering' => $v->gatheringType?->name,
-                'wants_visit' => $v->wants_visit, 'prayer_request' => $v->prayer_request,
             ])->values(),
             'followups' => $followups->map(fn (VisitorFollowup $f) => [
                 'id' => $f->id, 'type' => $f->type, 'outcome' => $f->outcome, 'note' => $f->note, 'done_on' => $f->done_on->toDateString(),
                 'next_on' => $f->next_on?->toDateString(), 'by' => $f->doer ? trim("{$f->doer->firstname} {$f->doer->lastname}") : null,
             ])->values(),
-            'can' => $can + ['sms' => $can['manage'] && $p->consent_contact && (bool) $p->phone && ! $p->anonymised_at],
+            'can' => $can + ['sms' => $can['manage'] && $p->consent_contact && (bool) $p->phone && ! Phone::isDemo($p->phone) && ! $p->anonymised_at],
+            'demo' => Phone::isDemo($p->phone),
         ];
     }
 

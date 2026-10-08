@@ -34,25 +34,27 @@
         </div>
         <div id="viewSwitchWrap"></div>
     </div>
-    <div class="card-body pb-0"><div id="visitorFilters"></div></div>
-    <div class="card-body" id="vsBoardWrap"><div id="vsBoard"></div></div>
-    <div class="card-body" id="vsTableWrap" hidden>
-        <div class="table-responsive">
-            <table class="table text-nowrap table-hover mb-0" id="visitorTable">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Stage</th>
-                        <th>Visits</th>
-                        <th>First visit</th>
-                        <th>Last visit</th>
-                        <th>Heard through</th>
-                        <th>Follow-up</th>
-                        <th>Follows up</th>
-                    </tr>
-                </thead>
-                <tbody id="visitorRows"></tbody>
-            </table>
+    <div class="card-body p-0">
+        <div id="visitorFilters" class="list-filterbar-wrap"></div>
+        <div class="vs-board-wrap" id="vsBoardWrap"><div id="vsBoard"></div></div>
+        <div id="vsTableWrap" hidden>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="visitorTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Stage</th>
+                            <th>Area</th>
+                            <th class="d-none d-md-table-cell">Visits</th>
+                            <th class="d-none d-lg-table-cell">Last visit</th>
+                            <th>Follow-up</th>
+                            <th class="d-none d-lg-table-cell">Follows up</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="visitorRows"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

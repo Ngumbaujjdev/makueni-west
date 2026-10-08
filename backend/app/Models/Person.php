@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,8 +12,9 @@ use OwenIt\Auditing\Contracts\Auditable;
 /**
  * Someone in a church's private register (docs/specs/people-and-care-spec.md):
  * a member, or a visitor (P2). Only the church's own leaders ever see
- * them - the region and diocese get counts. ID, address, notes and next of
- * kin's phone are encrypted, and never written into the audit trail.
+ * them - the region and diocese get counts. Churches keep only a name,
+ * phone, area and gender, and for members Sunday school or main church -
+ * nothing more (slimmed down 2026-10-09).
  */
 class Person extends Model implements Auditable
 {
@@ -26,7 +26,8 @@ class Person extends Model implements Auditable
 
     public const HOW_JOINED = ['conversion' => 'Conversion', 'transfer' => 'Transfer', 'baptism' => 'Baptism', 'birth' => 'Born into the church', 'other' => 'Other'];
 
-    public const MARITAL = ['single' => 'Single', 'married' => 'Married', 'widowed' => 'Widowed', 'divorced' => 'Divorced', 'other' => 'Other'];
+    /** Which part of the church a member belongs to - instead of an age. */
+    public const CONGREGATIONS = ['sunday_school' => 'Sunday school', 'main_church' => 'Main church'];
 
     /** A visitor's follow-up stage (P2); "member" once they joined. */
     public const STAGES = ['new' => 'New', 'contacted' => 'Contacted', 'returning' => 'Returning', 'regular' => 'Regular', 'member' => 'Became a member'];
@@ -34,21 +35,13 @@ class Person extends Model implements Auditable
     /** Visits that make a visitor "regular". */
     public const REGULAR_AFTER = 4;
 
-    /** The Demographics age bands (docs/specs/demographics-module-spec.md). */
-    public const AGE_BANDS = ['children' => [0, 12, 'Children'], 'youth' => [13, 35, 'Youth'], 'adults' => [36, 59, 'Adults'], 'seniors' => [60, 200, 'Seniors']];
-
-    /** Encrypted at rest; shown in history only as "changed". */
-    public const SECRET = ['address', 'national_id', 'notes', 'next_of_kin_phone'];
-
     protected $fillable = [
-        'territory_id', 'first_name', 'last_name', 'other_names', 'gender', 'date_of_birth', 'phone', 'email', 'address', 'national_id',
-        'marital_status', 'occupation', 'photo_path', 'status', 'joined_on', 'how_joined', 'previous_church', 'saved_on', 'baptised_on',
-        'next_of_kin_name', 'next_of_kin_phone', 'notes', 'archived_at', 'anonymised_at', 'created_by', 'updated_by',
-        'first_visit_on', 'last_visit_on', 'visit_count', 'how_heard', 'consent_contact', 'wants_visit', 'stage', 'assigned_to', 'became_member_on',
+        'territory_id', 'first_name', 'last_name', 'gender', 'phone', 'area', 'congregation', 'status', 'joined_on', 'how_joined', 'previous_church',
+        'saved_on', 'baptised_on', 'archived_at', 'anonymised_at', 'created_by', 'updated_by',
+        'first_visit_on', 'last_visit_on', 'visit_count', 'consent_contact', 'stage', 'assigned_to', 'became_member_on',
     ];
 
     protected $casts = [
-        'date_of_birth' => 'date',
         'joined_on' => 'date',
         'saved_on' => 'date',
         'baptised_on' => 'date',
@@ -59,20 +52,9 @@ class Person extends Model implements Auditable
         'became_member_on' => 'date',
         'visit_count' => 'integer',
         'consent_contact' => 'boolean',
-        'wants_visit' => 'boolean',
-        'address' => 'encrypted',
-        'national_id' => 'encrypted',
-        'notes' => 'encrypted',
-        'next_of_kin_phone' => 'encrypted',
     ];
 
-    protected $auditExclude = ['photo_path', 'updated_by'];
-
-    /** The audit trail never holds the encrypted values - only that they changed. */
-    public function transformAudit(array $data): array
-    {
-        return self::maskSecrets($data, self::SECRET);
-    }
+    protected $auditExclude = ['updated_by'];
 
     /** An audit's private fields as "(private)" - for the people models' transformAudit. */
     public static function maskSecrets(array $data, array $fields): array
@@ -90,22 +72,16 @@ class Person extends Model implements Auditable
 
     /**
      * Remove their personal details (docs/specs/people-and-care-spec.md,
-     * "Leaving the register"): names, contacts, ID, notes, photo, next of
-     * kin, prayer requests and follow-up notes. The row, its dates and its
-     * counts stay. Can't be undone.
+     * "Leaving the register"): name, phone, area, previous church and
+     * follow-up notes. The row, its dates and its counts stay. Can't be
+     * undone.
      */
     public function anonymise(?int $by = null): void
     {
-        if ($this->photo_path) {
-            \Illuminate\Support\Facades\Storage::disk('local')->delete($this->photo_path);
-        }
         $this->forceFill([
-            'first_name' => 'Removed', 'last_name' => 'person', 'other_names' => null, 'date_of_birth' => null, 'phone' => null, 'email' => null,
-            'address' => null, 'national_id' => null, 'occupation' => null, 'photo_path' => null, 'previous_church' => null,
-            'next_of_kin_name' => null, 'next_of_kin_phone' => null, 'notes' => null, 'consent_contact' => false, 'assigned_to' => null,
-            'anonymised_at' => now(), 'updated_by' => $by,
+            'first_name' => 'Removed', 'last_name' => 'person', 'phone' => null, 'area' => null, 'previous_church' => null,
+            'consent_contact' => false, 'assigned_to' => null, 'anonymised_at' => now(), 'updated_by' => $by,
         ])->save();
-        $this->visits()->whereNotNull('prayer_request')->get()->each(fn (VisitorVisit $v) => $v->forceFill(['prayer_request' => null])->save());
         $this->followups()->whereNotNull('note')->get()->each(fn (VisitorFollowup $f) => $f->forceFill(['note' => null])->save());
     }
 
@@ -153,24 +129,5 @@ class Person extends Model implements Auditable
     public function getInitialsAttribute(): string
     {
         return mb_strtoupper(mb_substr($this->first_name, 0, 1).mb_substr($this->last_name, 0, 1));
-    }
-
-    public function ageOn(?CarbonImmutable $day = null): ?int
-    {
-        return $this->date_of_birth ? (int) $this->date_of_birth->diffInYears($day ?? CarbonImmutable::now(), true) : null;
-    }
-
-    public static function bandFor(?int $age): ?string
-    {
-        if ($age === null) {
-            return null;
-        }
-        foreach (self::AGE_BANDS as $key => [$from, $to]) {
-            if ($age >= $from && $age <= $to) {
-                return $key;
-            }
-        }
-
-        return null;
     }
 }

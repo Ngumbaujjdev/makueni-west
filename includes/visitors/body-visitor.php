@@ -19,7 +19,7 @@
     </button>
     <button class="nav-link section-tab" data-tab="details" type="button" role="tab">
         <span class="section-tab-icon bg-pink"><i class="ri-user-3-line"></i></span>
-        <span class="section-tab-text"><strong>Details</strong><small>Contact and how they heard</small></span>
+        <span class="section-tab-text"><strong>Details</strong><small>Name, phone and area</small></span>
     </button>
     <button class="nav-link section-tab" data-tab="history" type="button" role="tab">
         <span class="section-tab-icon bg-purple"><i class="ri-history-line"></i></span>

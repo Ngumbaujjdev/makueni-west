@@ -83,10 +83,10 @@ const VisitorsUI = (function () {
   }
 
   /**
-   * "Became a member": the same person moves into the register. Then the
-   * member form, to add what a member has that a visitor doesn't (date of
-   * birth, address...). onDone(person) runs once they're a member; onCancel
-   * when the window closes without it.
+   * "Became a member": the same person moves into the register - their name,
+   * phone and area come with them; the window asks only gender and Sunday
+   * school or main church. onDone(person) runs once they're a member;
+   * onCancel when the window closes without it.
    */
   function becomeMember(person, membersUrl, { onDone = () => {}, onCancel = () => {} } = {}) {
     let done = false;
@@ -98,6 +98,8 @@ const VisitorsUI = (function () {
       color: "purple",
       body: `<p class="fw-semibold">${M.esc(first)} moves into the member register - the same record, with their visits and follow-ups kept.</p>
         <div class="row g-3">
+          <div class="col-md-6"><label class="form-label mb-2">Gender</label><div class="mb-choice-row" role="radiogroup" aria-label="Gender"><label class="mb-choice"><input type="radio" name="bmGender" value="female"><i class="ri-women-line"></i>Female</label><label class="mb-choice"><input type="radio" name="bmGender" value="male"><i class="ri-men-line"></i>Male</label></div></div>
+          <div class="col-md-6"><label class="form-label mb-2">Part of</label><div class="mb-choice-row" role="radiogroup" aria-label="Sunday school or main church"><label class="mb-choice"><input type="radio" name="bmPart" value="main_church" checked><i class="ri-community-line"></i>Main church</label><label class="mb-choice"><input type="radio" name="bmPart" value="sunday_school"><i class="ri-book-open-line"></i>Sunday school</label></div></div>
           <div class="col-md-6"><label class="form-label" for="bmOn">Member from</label><input type="date" class="form-control" id="bmOn" value="${todayIso()}" max="${todayIso()}"></div>
           <div class="col-md-6"><label class="form-label" for="bmHow">How they joined</label><select class="form-select" id="bmHow">${Object.entries(M.HOW_JOINED).map(([k, v]) => `<option value="${k}"${k === "conversion" ? " selected" : ""}>${v}</option>`).join("")}</select></div>
         </div>`,
@@ -108,13 +110,14 @@ const VisitorsUI = (function () {
     document.getElementById("bmGo").addEventListener("click", async (e) => {
       const btn = e.currentTarget;
       DemographicsUI.setButtonLoading(btn, "Saving...");
-      const res = await VisitorsAPI.becomeMember(person.id, { joined_on: document.getElementById("bmOn").value || null, how_joined: document.getElementById("bmHow").value });
+      const pick = (n) => document.querySelector(`input[name="${n}"]:checked`)?.value || null;
+      const res = await VisitorsAPI.becomeMember(person.id, { joined_on: document.getElementById("bmOn").value || null, how_joined: document.getElementById("bmHow").value, gender: pick("bmGender"), congregation: pick("bmPart") });
       DemographicsUI.restoreButton(btn);
       if (!res.ok) return Toast.error(res.message);
       done = true;
       onDone(res.data);
-      el.querySelector(".modal-body").innerHTML = `<div class="text-center py-2"><span class="avatar avatar-lg avatar-rounded bg-success text-white mb-2"><i class="ri-check-line fs-22"></i></span><h6 class="mb-1">${M.esc(person.name)} is a member now</h6><p class="mb-0">Add their date of birth, address and next of kin on the member form - or do it later from Members.</p></div>`;
-      el.querySelector(".modal-footer").innerHTML = `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Later</button><a class="btn btn-primary" href="${membersUrl}/new?id=${person.id}"><i class="ri-edit-line me-1"></i>Complete their details</a>`;
+      el.querySelector(".modal-body").innerHTML = `<div class="text-center py-2"><span class="avatar avatar-lg avatar-rounded bg-success text-white mb-2"><i class="ri-check-line fs-22"></i></span><h6 class="mb-1">${M.esc(person.name)} is a member now</h6><p class="mb-0">They're in Members with their phone and area. Baptism and other dates can be added there later.</p></div>`;
+      el.querySelector(".modal-footer").innerHTML = `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Close</button><a class="btn btn-primary" href="${membersUrl}/member?id=${person.id}"><i class="ri-contacts-book-2-line me-1"></i>Open in Members</a>`;
     });
     return el;
   }
