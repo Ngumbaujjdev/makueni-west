@@ -150,20 +150,20 @@ const SettingsMessages = (function () {
     const email = m.channel === "email";
     const t = when(m.at);
     const icon = el.querySelector("#msgModalIcon");
-    icon.className = `app-modal-icon bg-${email ? "primary" : "pink"}`;
+    icon.className = "app-modal-icon bg-primary"; // one calm colour; the details panel carries the rest
     icon.innerHTML = `<i class="${email ? "ri-mail-line" : "ri-message-3-line"}"></i>`;
     el.querySelector("#msgModalTitle").textContent = email ? m.subject || "Email" : `SMS to ${m.to}`;
     el.querySelector("#msgModalSub").innerHTML = `${esc(t.day)} at ${esc(t.time)} · ${statusPill(m.status)}`;
 
+    // The details panel (2026-10-08): calm rows - a grey icon, the label, the value.
     const facts = [
-      ["From", m.from || (email ? "" : "The provider's default sender")],
-      ["To", m.to],
-      ...(email ? [["Reply-to", m.reply_to || "-"], ["Subject", m.subject || "-"]] : []),
-      ["Sent through", VIA[m.via]?.[0] || m.via],
-      ["For", m.place.name],
-      ...(m.by ? [["Sent by", m.by]] : []),
-      ...(KINDS[m.kind] ? [["Kind", KINDS[m.kind]]] : []),
-      ...(m.provider_ref ? [["Reference", m.provider_ref]] : []),
+      ["ri-send-plane-line", "From", m.from || (email ? "" : "The provider's default sender")],
+      ["ri-user-line", "To", m.to],
+      ...(email ? [["ri-reply-line", "Replies go to", m.reply_to || "The From address"], ["ri-text", "Subject", m.subject || "-"]] : []),
+      ["ri-route-line", "Sent through", VIA[m.via]?.[0] || m.via],
+      ["ri-home-heart-line", "For", m.place.name],
+      ...(m.by ? [["ri-user-star-line", "Sent by", m.by]] : []),
+      ...(KINDS[m.kind] ? [["ri-price-tag-3-line", "Kind", KINDS[m.kind]]] : []),
     ];
     // The message as it landed: SMS on a phone, email in a mail app (the same frames as Templates).
     const P = window.CommsPreview;
@@ -194,14 +194,38 @@ const SettingsMessages = (function () {
     } else {
       content = `<iframe class="msg-frame" sandbox title="Email preview" srcdoc="${esc(m.body)}"></iframe>`;
     }
-    el.querySelector("#msgModalBody").innerHTML = `
-      <div class="row g-4">
-        <div class="col-lg-5">
-          <dl class="cm-facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
-          ${m.error ? `<div class="alert alert-danger d-flex gap-2 mt-3 mb-0"><i class="ri-error-warning-line fs-18"></i><span><b>Why it failed:</b> ${esc(m.error)}</span></div>` : ""}
-        </div>
-        <div class="col-lg-7">${content}</div>
+    const body = el.querySelector("#msgModalBody");
+    body.classList.add("is-sheet");
+    body.innerHTML = `
+      <div class="cm-sheet">
+        <aside class="cm-sheet-side">
+          <div class="cm-sheet-sum">
+            <span class="cm-sheet-icon"><i class="${email ? "ri-mail-line" : "ri-message-3-line"}"></i></span>
+            <div class="min-w-0 flex-fill"><strong>${statusPill(m.status)} <span>${esc(t.day)}, ${esc(t.time)}</span></strong><small>${m.provider_ref ? `Reference ${esc(m.provider_ref)}` : email ? "Email" : "SMS"}</small></div>
+            <button type="button" class="btn btn-sm btn-light border cm-sheet-toggle" data-bs-toggle="collapse" data-bs-target="#msgSheetMore" aria-expanded="false">Details</button>
+          </div>
+          <div class="collapse cm-sheet-more" id="msgSheetMore">
+            <dl class="cm-details">${facts.map(([i, k, v]) => `<div class="cm-detail"><i class="${i}"></i><div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div></div>`).join("")}</dl>
+          </div>
+          <div class="cm-sheet-foot">
+            ${m.error ? `<div class="cm-sheet-error"><i class="ri-error-warning-line"></i><span><b>Why it failed</b>${esc(m.error)}</span></div>` : ""}
+            <div class="d-flex flex-wrap gap-2">
+              ${m.body ? '<button type="button" class="btn btn-light border" id="msgCopy"><i class="ri-file-copy-line me-1"></i>Copy text</button>' : ""}
+              ${m.can_resend ? '<button type="button" class="btn btn-primary" id="msgResend"><i class="ri-restart-line me-1"></i>Send again</button>' : ""}
+            </div>
+          </div>
+        </aside>
+        <section class="cm-sheet-main">${content}</section>
       </div>`;
+    el.querySelector("#msgCopy")?.addEventListener("click", async () => {
+      const text = m.body_type === "html" ? new DOMParser().parseFromString(m.body, "text/html").body.innerText.replace(/\n{3,}/g, "\n\n").trim() : m.body;
+      try {
+        await navigator.clipboard.writeText(text);
+        Toast.success("Copied.");
+      } catch (e) {
+        Toast.error("Couldn't copy - select the text instead.");
+      }
+    });
     const frame = el.querySelector('[data-pv="frame"]');
     if (frame) {
       // Fit to the email once it has loaded - and again as the window settles.
@@ -217,7 +241,6 @@ const SettingsMessages = (function () {
       );
     }
     if (m.can_resend) {
-      el.querySelector("#msgModalFoot").insertAdjacentHTML("beforeend", '<button type="button" class="btn btn-primary" id="msgResend"><i class="ri-restart-line me-1"></i>Send again</button>');
       el.querySelector("#msgResend").addEventListener("click", async (e) => {
         const btn = e.currentTarget;
         UI.setButtonLoading(btn, "Sending…");
