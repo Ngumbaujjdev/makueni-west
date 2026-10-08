@@ -19,7 +19,7 @@
   const day = (iso) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
   const time = (iso) => (iso ? new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "");
   const level = () => SettingsRail.data?.level || "church";
-  const base = () => (window.AppConfig?.FRONTEND_BASE_URL || "") + `/${level()}/messages`;
+  const base = () => (typeof AppConfig !== "undefined" ? AppConfig.FRONTEND_BASE_URL : "") + `/${level()}/messages`;
 
   function figure(icon, c, value, label, soft) {
     return `<div class="col-6 col-xl-3"><div class="cm-figure"><span class="ev-tile${soft ? " is-soft" : ""}" style="--q: var(--${c}-rgb)"><i class="${icon}"></i></span><div><b>${value}</b><span>${label}</span></div></div></div>`;

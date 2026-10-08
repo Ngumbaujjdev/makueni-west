@@ -8,6 +8,7 @@ use App\Models\Territory;
 use App\Models\User;
 use App\Notifications\PlaceNotification;
 use App\Services\Messaging\PlaceMessenger;
+use App\Support\Messaging\EmailBrand;
 use Illuminate\Support\Str;
 
 /**
@@ -99,6 +100,7 @@ final class Broadcaster
                     'heading' => $subject,
                     'lines' => array_values(array_filter(array_map('trim', preg_split('/\n\s*\n/', $text) ?: [$text]))),
                     'placeName' => $place->name,
+                    'brand' => EmailBrand::for($place),
                 ])->render();
                 $res = $this->messenger->email($place, $r->email, $subject, $html, 'broadcast', [], $by);
                 $changes['email_status'] = $res['ok'] ? ($res['status'] === 'logged' ? 'logged' : 'sent') : 'failed';

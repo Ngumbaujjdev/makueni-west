@@ -5,6 +5,7 @@ namespace App\Actions\Users;
 use App\Models\Territory;
 use App\Models\User;
 use App\Services\Messaging\PlaceMessenger;
+use App\Support\Messaging\EmailBrand;
 use App\Support\Phone;
 
 /**
@@ -44,6 +45,8 @@ final class SendSignInDetails
         if (in_array('email', $channels, true)) {
             $html = view('emails.place-message', [
                 'placeName' => $name,
+                'brand' => EmailBrand::for($place),
+                'badge' => 'Your account',
                 'heading' => $reset ? 'Your new sign-in details' : 'Welcome to the team',
                 'lines' => array_filter([
                     "Hi {$user->firstname},",
