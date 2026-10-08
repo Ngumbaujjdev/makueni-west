@@ -1,0 +1,234 @@
+<?php
+
+namespace App\Services\People;
+
+use App\Models\ChurchDemographic;
+use App\Models\Person;
+use App\Models\PersonTransfer;
+use App\Models\Territory;
+use App\Support\Phone;
+use App\Support\PlaceAccess;
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
+
+/**
+ * The member register's figures (docs/specs/people-and-care-spec.md, P1):
+ * the list and its filters, the Overview's cards, Insights, and the counts
+ * the region and diocese see. All dates are Nairobi days.
+ */
+final class People
+{
+    public const TZ = 'Africa/Nairobi';
+
+    public function today(): CarbonImmutable
+    {
+        return CarbonImmutable::now(self::TZ)->startOfDay();
+    }
+
+    /** The list, filtered: status[], gender, age_band, baptised, joined_year, q (name or phone), archived. */
+    public function query(Territory $church, array $f): Builder
+    {
+        $q = Person::query()->where('territory_id', $church->id)->whereNull('anonymised_at');
+        empty($f['archived']) ? $q->whereNull('archived_at') : $q->whereNotNull('archived_at');
+        $statuses = array_values(array_filter((array) ($f['status'] ?? [])));
+        $statuses ? $q->whereIn('status', $statuses) : $q->where('status', '!=', 'visitor');
+        if (! empty($f['gender'])) {
+            $q->where('gender', $f['gender']);
+        }
+        if (! empty($f['age_band']) && isset(Person::AGE_BANDS[$f['age_band']])) {
+            [$from, $to] = Person::AGE_BANDS[$f['age_band']];
+            $today = $this->today();
+            $q->whereNotNull('date_of_birth')
+                ->whereDate('date_of_birth', '<=', $today->subYears($from)->toDateString())
+                ->whereDate('date_of_birth', '>', $today->subYears($to + 1)->toDateString());
+        }
+        if (isset($f['baptised']) && $f['baptised'] !== '') {
+            filter_var($f['baptised'], FILTER_VALIDATE_BOOLEAN) ? $q->whereNotNull('baptised_on') : $q->whereNull('baptised_on');
+        }
+        if (! empty($f['joined_year'])) {
+            $q->whereYear('joined_on', (int) $f['joined_year']);
+        }
+        if (($term = trim((string) ($f['q'] ?? ''))) !== '') {
+            $key = Phone::key($term);
+            $q->where(function ($w) use ($term, $key) {
+                $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $term).'%';
+                $w->where('first_name', 'like', $like)->orWhere('last_name', 'like', $like)->orWhere('other_names', 'like', $like)
+                    ->orWhereRaw("CONCAT(first_name, ' ', last_name) like ?", [$like]);
+                if ($key && ctype_digit(preg_replace('/\D+/', '', $term))) {
+                    $w->orWhere('phone', 'like', '%'.$key);
+                }
+            });
+        }
+
+        return $q;
+    }
+
+    /** One row of the list. */
+    public function row(Person $p): array
+    {
+        $age = $p->ageOn($this->today());
+
+        return [
+            'id' => $p->id,
+            'name' => $p->name,
+            'initials' => $p->initials,
+            'phone' => $p->phone,
+            'gender' => $p->gender,
+            'age' => $age,
+            'age_band' => Person::bandFor($age),
+            'status' => $p->status,
+            'joined_on' => $p->joined_on?->toDateString(),
+            'baptised' => (bool) $p->baptised_on,
+            'has_photo' => (bool) $p->photo_path,
+            'archived' => (bool) $p->archived_at,
+            'ministries' => [],
+        ];
+    }
+
+    /** Possible duplicates: the same phone, or the same first and last name. */
+    public function duplicates(Territory $church, ?string $phone, ?string $first, ?string $last, ?int $except = null): Collection
+    {
+        $key = Phone::key($phone);
+        if (! $key && (! $first || ! $last)) {
+            return collect();
+        }
+
+        return Person::where('territory_id', $church->id)->whereNull('anonymised_at')
+            ->when($except, fn ($q) => $q->where('id', '!=', $except))
+            ->where(function ($w) use ($key, $first, $last) {
+                if ($key) {
+                    $w->orWhere('phone', 'like', '%'.$key);
+                }
+                if ($first && $last) {
+                    $w->orWhere(fn ($n) => $n->where('first_name', $first)->where('last_name', $last));
+                }
+            })
+            ->limit(5)->get()
+            ->map(fn (Person $p) => ['id' => $p->id, 'name' => $p->name, 'phone' => $p->phone, 'status' => $p->status]);
+    }
+
+    /** The Overview cards and a year of joins and leavings. */
+    public function overview(Territory $church): array
+    {
+        $today = $this->today();
+        $members = Person::where('territory_id', $church->id)->listed()->members();
+        $active = (clone $members)->count();
+        $baptised = (clone $members)->whereNotNull('baptised_on')->count();
+        $joinedIn = fn (CarbonImmutable $m) => Person::where('territory_id', $church->id)->whereNull('anonymised_at')->where('status', '!=', 'visitor')
+            ->whereBetween('joined_on', [$m->startOfMonth()->toDateString(), $m->endOfMonth()->toDateString()])->count();
+        $leftIn = fn (CarbonImmutable $from, CarbonImmutable $to) => PersonTransfer::where('territory_id', $church->id)->where('direction', 'out')
+            ->whereBetween('on', [$from->toDateString(), $to->toDateString()])->count()
+            + Person::where('territory_id', $church->id)->whereIn('status', ['inactive', 'deceased'])
+                ->whereBetween('updated_at', [$from->startOfDay()->utc(), $to->endOfDay()->utc()])->count();
+
+        $months = collect(range(11, 0))->map(fn ($i) => $today->startOfMonth()->subMonthsNoOverflow($i));
+
+        return [
+            'active' => $active,
+            'new_this_month' => $joinedIn($today),
+            'new_last_month' => $joinedIn($today->subMonthNoOverflow()),
+            'baptised' => $baptised,
+            'baptised_share' => $active ? round($baptised / $active * 100) : 0,
+            'leaving_this_year' => $leftIn($today->startOfYear(), $today),
+            'birthdays_this_month' => (clone $members)->whereNotNull('date_of_birth')->whereMonth('date_of_birth', $today->month)->count(),
+            'archived' => Person::where('territory_id', $church->id)->whereNotNull('archived_at')->whereNull('anonymised_at')->count(),
+            'months' => $months->map(fn ($m) => $m->format('M'))->all(),
+            'joins' => $months->map(fn ($m) => $joinedIn($m))->all(),
+            'leaves' => $months->map(fn ($m) => $leftIn($m->startOfMonth(), $m->endOfMonth()))->all(),
+            'active_series' => $this->activeSeries($church, $months),
+        ];
+    }
+
+    /** Members on the books at the end of each month (by joined date; those who left are not counted back). */
+    private function activeSeries(Territory $church, Collection $months): array
+    {
+        $dates = Person::where('territory_id', $church->id)->listed()->members()->pluck('joined_on');
+
+        return $months->map(fn (CarbonImmutable $m) => $dates->filter(fn ($d) => ! $d || $d->toDateString() <= $m->endOfMonth()->toDateString())->count())->all();
+    }
+
+    /** Insights: the age and gender pyramid, birthdays this month, and the register beside the last Demographics count. */
+    public function insights(Territory $church): array
+    {
+        $today = $this->today();
+        $members = Person::where('territory_id', $church->id)->listed()->members()->get();
+        $pyramid = collect(Person::AGE_BANDS)->map(fn ($band, $key) => [
+            'key' => $key, 'label' => $band[2],
+            'male' => $members->filter(fn ($p) => $p->gender === 'male' && Person::bandFor($p->ageOn($today)) === $key)->count(),
+            'female' => $members->filter(fn ($p) => $p->gender === 'female' && Person::bandFor($p->ageOn($today)) === $key)->count(),
+        ])->values()->all();
+        $birthdays = $members->filter(fn ($p) => $p->date_of_birth && $p->date_of_birth->month === $today->month)
+            ->sortBy(fn ($p) => $p->date_of_birth->day)
+            ->map(fn ($p) => ['id' => $p->id, 'name' => $p->name, 'initials' => $p->initials, 'day' => $p->date_of_birth->day, 'turns' => $today->year - $p->date_of_birth->year, 'phone' => $p->phone])
+            ->values()->all();
+        $last = ChurchDemographic::where('territory_id', $church->id)->orderByDesc('id')->first();
+
+        return [
+            'pyramid' => $pyramid,
+            'no_birth_date' => $members->whereNull('date_of_birth')->count(),
+            'gender' => ['male' => $members->where('gender', 'male')->count(), 'female' => $members->where('gender', 'female')->count(), 'unknown' => $members->whereNull('gender')->count()],
+            'birthdays' => $birthdays,
+            'register' => $this->registerCounts($church),
+            'demographics' => $last ? [
+                'total' => (int) $last->total_members, 'male' => (int) $last->male_count, 'female' => (int) $last->female_count,
+                'youth' => (int) $last->youth_count, 'recorded_at' => $last->created_at?->toDateString(),
+            ] : null,
+        ];
+    }
+
+    /** The register's counts in Demographics' words - shown beside its form as a hint, never filled in. */
+    public function registerCounts(Territory $church): array
+    {
+        $today = $this->today();
+        $members = Person::where('territory_id', $church->id)->listed()->members()->get();
+
+        return [
+            'total' => $members->count(),
+            'male' => $members->where('gender', 'male')->count(),
+            'female' => $members->where('gender', 'female')->count(),
+            'youth' => $members->filter(fn ($p) => Person::bandFor($p->ageOn($today)) === 'youth')->count(),
+            'seniors' => $members->filter(fn ($p) => Person::bandFor($p->ageOn($today)) === 'seniors')->count(),
+            'new_this_month' => $members->filter(fn ($p) => $p->joined_on && $p->joined_on->format('Y-m') === $today->format('Y-m'))->count(),
+            'baptised_this_month' => $members->filter(fn ($p) => $p->baptised_on && $p->baptised_on->format('Y-m') === $today->format('Y-m'))->count(),
+        ];
+    }
+
+    /** For the region and diocese: each church below, counts only - never a name. */
+    public function totals(Territory $place): array
+    {
+        $today = $this->today();
+        $churches = Territory::whereIn('id', PlaceAccess::descendantIds($place) ?: [0])->where('territory_type', 'church')->orderBy('name')->get(['id', 'name', 'parent_territory_id']);
+        $ids = $churches->pluck('id')->all() ?: [0];
+        $count = fn (Builder $q) => $q->selectRaw('territory_id, count(*) as n')->groupBy('territory_id')->pluck('n', 'territory_id');
+        $base = fn () => Person::query()->whereIn('territory_id', $ids)->whereNull('anonymised_at');
+        $active = $count($base()->whereNull('archived_at')->where('status', 'member'));
+        $any = $count($base());
+        $new = $count($base()->where('status', '!=', 'visitor')->whereBetween('joined_on', [$today->startOfMonth()->toDateString(), $today->toDateString()]));
+        $baptised = $count($base()->whereNull('archived_at')->where('status', 'member')->whereNotNull('baptised_on'));
+        $transfers = fn (string $dir) => $count(PersonTransfer::query()->whereIn('territory_id', $ids)->where('direction', $dir)->whereYear('on', $today->year));
+        $in = $transfers('in');
+        $out = $transfers('out');
+
+        $rows = $churches->map(fn ($c) => [
+            'church' => ['id' => $c->id, 'name' => $c->name],
+            'keeps_register' => (int) ($any[$c->id] ?? 0) > 0,
+            'active' => (int) ($active[$c->id] ?? 0),
+            'new_this_month' => (int) ($new[$c->id] ?? 0),
+            'baptised' => (int) ($baptised[$c->id] ?? 0),
+            'transfers_in' => (int) ($in[$c->id] ?? 0),
+            'transfers_out' => (int) ($out[$c->id] ?? 0),
+        ])->values();
+
+        return [
+            'churches' => $rows->count(),
+            'keeping_register' => $rows->where('keeps_register', true)->count(),
+            'active' => $rows->sum('active'),
+            'new_this_month' => $rows->sum('new_this_month'),
+            'baptised' => $rows->sum('baptised'),
+            'transfers_in' => $rows->sum('transfers_in'),
+            'transfers_out' => $rows->sum('transfers_out'),
+            'rows' => $rows->all(),
+        ];
+    }
+}

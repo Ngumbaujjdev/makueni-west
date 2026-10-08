@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\ModuleController;
 use App\Http\Controllers\Api\ModuleGroupController;
 use App\Http\Controllers\Api\NotificationsController;
 use App\Http\Controllers\Api\PasswordResetController;
+use App\Http\Controllers\Api\People\PeopleController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\Reports\MonthlyReportsController;
@@ -114,6 +115,28 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('monthly-reports/{year}/{month}', [MonthlyReportsController::class, 'save'])->whereNumber(['year', 'month']);
     Route::post('monthly-reports/{year}/{month}/send', [MonthlyReportsController::class, 'send'])->whereNumber(['year', 'month']);
     Route::post('monthly-reports/{year}/{month}/reopen', [MonthlyReportsController::class, 'reopen'])->whereNumber(['year', 'month']);
+
+    // People & care P1 - the church's private member register; /people/totals is
+    // the region's and diocese's (counts only) - docs/specs/people-and-care-spec.md
+    Route::get('people/overview', [PeopleController::class, 'overview']);
+    Route::get('people/check', [PeopleController::class, 'check']);
+    Route::get('people/insights', [PeopleController::class, 'insights']);
+    Route::get('people/register-counts', [PeopleController::class, 'registerCounts']);
+    Route::get('people/totals', [PeopleController::class, 'totals']);
+    Route::get('people/transfers', [PeopleController::class, 'transfers']);
+    Route::post('people/transfer-in', [PeopleController::class, 'transferIn']);
+    Route::get('people', [PeopleController::class, 'index']);
+    Route::post('people', [PeopleController::class, 'store']);
+    Route::get('people/{id}', [PeopleController::class, 'show'])->whereNumber('id');
+    Route::put('people/{id}', [PeopleController::class, 'update'])->whereNumber('id');
+    Route::get('people/{id}/history', [PeopleController::class, 'history'])->whereNumber('id');
+    Route::get('people/{id}/photo', [PeopleController::class, 'photo'])->whereNumber('id');
+    Route::post('people/{id}/photo', [PeopleController::class, 'uploadPhoto'])->whereNumber('id');
+    Route::delete('people/{id}/photo', [PeopleController::class, 'removePhoto'])->whereNumber('id');
+    Route::post('people/{id}/archive', [PeopleController::class, 'archive'])->whereNumber('id');
+    Route::post('people/{id}/restore', [PeopleController::class, 'restore'])->whereNumber('id');
+    Route::post('people/{id}/anonymise', [PeopleController::class, 'anonymise'])->whereNumber('id');
+    Route::post('people/{id}/transfer-out', [PeopleController::class, 'transferOut'])->whereNumber('id');
 
     Route::get('activities', [ActivitiesController::class, 'index']);
     Route::get('activities/overview', [ActivitiesController::class, 'overview']);

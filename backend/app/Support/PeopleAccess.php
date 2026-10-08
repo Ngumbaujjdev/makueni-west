@@ -23,6 +23,9 @@ final class PeopleAccess
             'read' => 'members.members.read',
             'manage' => 'members.members.manage',
             'export' => 'members.members.export',
+            // The Transfers and Insights pages' own read permissions (the menu shows a page through its permission).
+            'transfers' => 'members.transfers.read',
+            'insights' => 'members.insights.read',
             'below' => 'members.below.read',
         ],
         'visitors' => [
