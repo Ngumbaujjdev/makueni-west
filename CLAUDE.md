@@ -144,6 +144,7 @@ These are already mapped onto the YNEX template's Bootstrap variables (`--primar
   - **Inputs stay plain (2026-10-08):** white, the normal grey border, a grey placeholder; teal only on focus. No tinted fields anywhere.
   - **Use colour sparingly (2026-10-08):** the content must stay the most visible thing - a few accents per screen (status, the picked option, a section's identity), not a colour on every item. Written answers read as plain rows, not tinted boxes.
   - Don't make everything solid, and don't make everything pale.
+- **Windows (2026-10-09).** Every `.app-modal` has a navy header band (`--modal-band-rgb`, the dark sidebar's colour) with a frosted icon tile, a white title and subtitle, and a soft close button. The band is red for windows that remove something (`.is-danger`) and green on the done view. Split a window's body into titled parts (`.app-modal-part`), not one flat grid. This replaces the 2026-10-01 white header.
 - **Section tabs (2026-09-30).** A dashboard's main tabs use `.section-tabs` (see Attendance Analytics):
   - a white strip of equal tabs, each with an icon tile, its name and a live figure
   - the active tab solid, and one scrollable row on a phone

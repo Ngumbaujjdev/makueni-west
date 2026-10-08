@@ -29,8 +29,7 @@
       { icon: "ri-timer-line", label: "Days to the first follow-up", value: i.average_wait === null ? "-" : String(i.average_wait), color: "success", sub: i.never_followed ? `${M.num(i.never_followed)} still waiting for one` : "On average" },
     ];
     const row = $("statCardsRow");
-    row.innerHTML = c.map((x) => `<div class="col-xl-3 col-lg-6 col-md-6">${UI.renderSparkCard(x)}</div>`).join("");
-    UI.mountSparklines(row);
+    PeopleKit.statRow(row, c);
   }
 
   function funnel(i) {
@@ -97,7 +96,7 @@
   }
 
   async function load() {
-    $("statCardsRow").innerHTML = UI.skeletonCards(4, "col-xl-3 col-lg-6 col-md-6");
+    $("statCardsRow").innerHTML = UI.skeletonCards(4, "col-xl-3 col-sm-6");
     const res = await VisitorsAPI.insights(year);
     if (!res.ok) {
       $("statCardsRow").innerHTML = `<div class="col-12">${M.errorBox(res.message)}</div>`;

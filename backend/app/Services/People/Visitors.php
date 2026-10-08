@@ -2,6 +2,8 @@
 
 namespace App\Services\People;
 
+use App\Http\Controllers\Api\Settings\ServiceTimesController;
+use App\Models\GatheringCategory;
 use App\Models\GatheringType;
 use App\Models\Person;
 use App\Models\Territory;
@@ -15,6 +17,7 @@ use App\Support\PlaceAccess;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Visitors and their follow-up (docs/specs/people-and-care-spec.md, P2): the
@@ -50,12 +53,56 @@ final class Visitors
             'welcome_template' => (string) $this->settings->get('visitors.welcome_template', $church),
             'gathering_types' => GatheringType::active()->forTerritory($church->id)->orderBy('display_order')->orderBy('name')->get(['id', 'name'])
                 ->map(fn ($g) => ['id' => $g->id, 'name' => $g->name])->all(),
+            'gathering_choices' => $this->gatheringChoices($church),
             'leaders' => $this->leaders($church)->map(fn (User $u) => ['id' => $u->id, 'name' => trim("{$u->firstname} {$u->lastname}")])->sortBy('name')->values()->all(),
             'stages' => Person::STAGES,
             'types' => VisitorFollowup::TYPES,
             'outcomes' => VisitorFollowup::OUTCOMES,
             'church_name' => $church->name,
         ];
+    }
+
+    /**
+     * Where a visit can be: our weekly services first (Settings > Service
+     * times - "Sunday morning · 09:00"; a plain "Sunday service" when none
+     * are set), then the church's other gatherings. Each has a key:
+     * "service:<name>" or "type:<id>".
+     */
+    public function gatheringChoices(Territory $church): array
+    {
+        $days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        $services = collect(ServiceTimesController::normalize($church->metadata['service_times'] ?? []))
+            ->filter(fn ($t) => trim((string) ($t['name'] ?? '')) !== '')
+            ->map(fn ($t) => ['key' => 'service:'.trim($t['name']), 'label' => trim($t['name']).' · '.($days[$t['day']] ?? '').' '.$t['start'], 'group' => 'Weekly services', 'day' => (int) $t['day']])
+            ->unique('key')->values();
+        if ($services->isEmpty()) {
+            $services = collect([['key' => 'service:Sunday service', 'label' => 'Sunday service', 'group' => 'Weekly services', 'day' => 0]]);
+        }
+        $types = GatheringType::active()->forTerritory($church->id)->orderBy('display_order')->orderBy('name')->get(['id', 'name'])
+            ->map(fn ($g) => ['key' => "type:{$g->id}", 'label' => $g->name, 'group' => 'Other gatherings', 'day' => null]);
+
+        return [...$services->all(), ...$types->all()];
+    }
+
+    /** A choice's key as the visit's columns - a weekly service is stored the way attendance stores Sunday. */
+    public function resolveGathering(Territory $church, ?string $key, ?int $typeId = null): array
+    {
+        $none = ['gathering_type_id' => null, 'gathering_category_id' => null, 'service_name' => null];
+        if (($key === null || $key === '') && $typeId) {
+            $key = "type:{$typeId}";
+        }
+        if ($key === null || $key === '') {
+            return $none;
+        }
+        $choice = collect($this->gatheringChoices($church))->firstWhere('key', $key);
+        if (! $choice) {
+            throw ValidationException::withMessages(['gathering' => 'Pick a service or gathering from the list.']);
+        }
+        if (str_starts_with($key, 'type:')) {
+            return ['gathering_type_id' => (int) substr($key, 5)] + $none;
+        }
+
+        return ['gathering_category_id' => GatheringCategory::where('slug', 'sunday_service')->value('id'), 'service_name' => substr($key, 8)] + $none;
     }
 
     /** The church's leaders who can follow visitors up. */

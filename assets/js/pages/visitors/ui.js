@@ -64,11 +64,11 @@ const VisitorsUI = (function () {
   const privateChip = () => '<span class="soft-chip soft-success"><i class="ri-lock-2-line"></i>Private to our church</span>';
 
   /** An .app-modal window (removed when closed); returns the element. */
-  function modal({ title, subtitle = "", icon, color = "primary", body, foot, size = "" }) {
+  function modal({ title, subtitle = "", icon, color = "primary", body, foot, size = "", danger = false }) {
     document.getElementById("vsModal")?.remove();
     document.body.insertAdjacentHTML(
       "beforeend",
-      `<div class="modal fade app-modal" id="vsModal" tabindex="-1" aria-labelledby="vsModalTitle">
+      `<div class="modal fade app-modal${danger ? " is-danger" : ""}" id="vsModal" tabindex="-1" aria-labelledby="vsModalTitle">
         <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down ${size}"><div class="modal-content">
           <div class="modal-header"><span class="app-modal-icon bg-${color} ${M.textOn(color)}"><i class="${icon}"></i></span><div class="flex-fill"><h5 class="modal-title" id="vsModalTitle">${title}</h5>${subtitle ? `<div class="app-modal-subtitle">${M.esc(subtitle)}</div>` : ""}</div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
           <div class="modal-body">${body}</div>
@@ -122,7 +122,21 @@ const VisitorsUI = (function () {
     return el;
   }
 
-  return { STAGES, TYPES, OUTCOMES, stagePill, due, dueChip, todayIso, daysBetween, ordinal, privateChip, modal, becomeMember };
+  /**
+   * Where a visit was: our weekly services ("Sunday morning · Sun 09:00",
+   * from Settings > Service times) then the other gatherings - a select with
+   * groups. On a date that is a service's day, that service is picked.
+   */
+  function gatheringOptions(choices, dateIso, selected = null) {
+    const day = dateIso ? new Date(`${dateIso}T12:00:00`).getDay() : null;
+    const pick = selected ?? choices.find((c) => c.day !== null && c.day === day)?.key ?? "";
+    const groups = [...new Set(choices.map((c) => c.group))];
+    return `<option value="">Not at a gathering</option>${groups
+      .map((g) => `<optgroup label="${M.esc(g)}">${choices.filter((c) => c.group === g).map((c) => `<option value="${M.esc(c.key)}"${c.key === pick ? " selected" : ""}>${M.esc(c.label)}</option>`).join("")}</optgroup>`)
+      .join("")}`;
+  }
+
+  return { STAGES, TYPES, OUTCOMES, stagePill, due, dueChip, todayIso, daysBetween, ordinal, privateChip, modal, becomeMember, gatheringOptions };
 })();
 
 window.VisitorsUI = VisitorsUI;

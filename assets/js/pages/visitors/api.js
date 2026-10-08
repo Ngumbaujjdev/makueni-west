@@ -70,6 +70,7 @@ const VisitorsAPI = (function () {
     followup: (id, body) => request("POST", `/visitors/${id}/followups`, { body }),
     sms: (id, text) => request("POST", `/visitors/${id}/sms`, { body: { text } }),
     becomeMember: (id, body = {}) => request("POST", `/visitors/${id}/become-member`, { body }),
+    bulk: (body) => request("POST", "/visitors/bulk", { body }),
     archive: (id) => request("POST", `/visitors/${id}/archive`),
     restore: (id) => request("POST", `/visitors/${id}/restore`),
     anonymise: (id) => request("POST", `/visitors/${id}/anonymise`, { body: { confirm: "REMOVE" } }),

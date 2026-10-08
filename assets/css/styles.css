@@ -86,6 +86,8 @@ typography
   --diocese-red-rgb: 242, 53, 53; /* #F23535 - Accent */
   --diocese-black-rgb: 13, 13, 13; /* #0D0D0D - Text */
   --diocese-white-rgb: 255, 255, 255; /* #FFFFFF - Background */
+  /* Every window's header band (2026-10-09) - the dark sidebar's navy. */
+  --modal-band-rgb: 21, 26, 46; /* #151a2e */
 
   /* Map to template variables */
   --body-bg-rgb: 240, 241, 247;
@@ -30132,10 +30134,11 @@ tr.list-row-flash > td {
 }
 
 /* ==========================================================================
-   App modal (2026-09-29) - add/edit modals, same design as the
-   v1-events-backend edit modals: solid accent header with an icon tile,
-   title + subtitle, roomy body, light footer, an in-modal "Saving..." state
-   and a success view. Opt in with .app-modal on the .modal element.
+   App modal (2026-09-29; header band 2026-10-09) - every add/edit window.
+   A solid navy band across the top (like esoma-server and v1-events'
+   bd-modal): a frosted icon tile, white title and subtitle, a soft close
+   button. Red band for windows that remove something (.is-danger), green
+   once the done view shows. Opt in with .app-modal on the .modal element.
    ========================================================================== */
 .app-modal .modal-content {
   border: 0;
@@ -30144,14 +30147,15 @@ tr.list-row-flash > td {
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
 }
 .app-modal .modal-header {
-  /* 2026-10-01: white header with one solid icon tile, like the Demographics
-     report window (.rp-head) - not a solid colour bar across every window. */
   gap: 0.85rem;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--default-border);
-  background: var(--custom-white);
-  color: var(--v2-heading);
+  padding: 1.15rem 1.5rem;
+  border-bottom: 0;
+  background: rgb(var(--modal-band-rgb));
+  color: #fff;
 }
+.app-modal.is-danger .modal-header { background: rgb(var(--danger-rgb)); }
+.app-modal:has(.app-modal-state.is-done) .modal-header,
+.app-modal.is-done .modal-header { background: rgb(var(--success-rgb)); }
 .app-modal-icon {
   display: grid;
   place-items: center;
@@ -30159,31 +30163,42 @@ tr.list-row-flash > td {
   width: 2.6rem;
   height: 2.6rem;
   border-radius: 0.7rem;
-  background: rgb(var(--primary-rgb));
-  color: #fff;
-  font-size: 1.3rem;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+  font-size: 1.25rem;
 }
 .app-modal .modal-title {
-  color: var(--v2-heading);
+  color: #fff;
   font-size: 1.05rem;
   font-weight: 700;
   line-height: 1.25;
 }
 .app-modal-subtitle {
+  margin-top: 0.1rem;
   font-size: 0.8rem;
-  color: var(--default-text-color);
+  color: rgba(255, 255, 255, 0.72);
 }
-.app-modal .btn-close {
-  opacity: 0.75;
+.app-modal .modal-header .btn-close {
+  flex-shrink: 0;
+  width: 1.85rem;
+  height: 1.85rem;
+  margin: 0;
+  padding: 0;
+  border-radius: 0.45rem;
+  background: rgba(255, 255, 255, 0.12) url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23fff'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e") center / 0.7rem auto no-repeat;
+  opacity: 1;
 }
+.app-modal .modal-header .btn-close:hover { background-color: rgba(255, 255, 255, 0.24); }
+.app-modal .modal-header .btn-close:focus { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35); }
 .app-modal .modal-body {
   position: relative;
   padding: 1.35rem 1.5rem;
 }
 .app-modal .modal-footer {
+  gap: 0.5rem;
   padding: 0.9rem 1.5rem;
   border-top: 1px solid var(--default-border);
-  background: rgba(var(--primary-rgb), 0.03);
+  background: var(--custom-white);
 }
 .app-modal-section {
   margin-bottom: 1.1rem;
@@ -30196,6 +30211,12 @@ tr.list-row-flash > td {
   text-transform: uppercase;
   color: var(--text-muted);
 }
+/* A window in parts (esoma's be-sec): a small icon heading, hairline between parts. */
+.app-modal-part + .app-modal-part { margin-top: 1.25rem; padding-top: 1.15rem; border-top: 1px solid var(--default-border); }
+.app-modal-part-head { display: flex; align-items: center; gap: 0.55rem; margin-bottom: 0.85rem; font-size: 0.86rem; font-weight: 700; color: var(--v2-heading); }
+.app-modal-part-head i { display: inline-grid; place-items: center; width: 1.65rem; height: 1.65rem; border-radius: 0.5rem; background: rgba(var(--primary-rgb), 0.12); color: rgb(var(--primary-rgb)); font-size: 0.9rem; }
+.app-modal.is-danger .app-modal-part-head i { background: rgba(var(--danger-rgb), 0.12); color: rgb(var(--danger-rgb)); }
+.app-modal-part-head small { margin-left: auto; font-size: 0.75rem; font-weight: 600; color: var(--default-text-color); }
 .app-modal .form-text,
 .app-modal .field-hint {
   font-size: 0.78rem;
@@ -38271,42 +38292,44 @@ button.cal-side-item:focus-visible {
    (.ynex-kanban-board) with white cards and no coloured top stripes - each
    column's identity is its small icon tile. "Late" is the one loud colour.
    ========================================================================== */
-/* My follow-ups */
-.vs-due-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: .6rem; }
-.vs-due-item { display: flex; align-items: center; gap: .65rem; min-width: 0; padding: .65rem .8rem; border: 1px solid var(--default-border); border-radius: .75rem; background: var(--custom-white); color: var(--v2-heading); transition: border-color .15s, box-shadow .15s; }
-.vs-due-item:hover { border-color: rgba(var(--primary-rgb), .45); box-shadow: 0 4px 12px rgba(15, 23, 42, .06); color: var(--v2-heading); }
-.vs-due-item.is-late { border-color: rgba(var(--danger-rgb), .35); }
-.vs-due-item > .min-w-0 { flex: 1; }
-.vs-due-item strong { display: block; overflow: hidden; font-size: .86rem; text-overflow: ellipsis; white-space: nowrap; }
-.vs-due-item small { display: block; overflow: hidden; font-size: .75rem; color: var(--default-text-color); text-overflow: ellipsis; white-space: nowrap; }
+/* My follow-ups - compact tiles, late in red */
+.vs-due-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr)); gap: .75rem; }
+.vs-due-tile { display: flex; flex-direction: column; gap: .7rem; padding: .85rem .9rem; border: 1px solid var(--default-border); border-radius: .85rem; background: var(--custom-white); transition: border-color .15s, box-shadow .15s; }
+.vs-due-tile:hover { border-color: rgba(var(--primary-rgb), .4); box-shadow: 0 6px 16px rgba(15, 23, 42, .06); }
+.vs-due-tile.is-late { border-color: rgba(var(--danger-rgb), .4); background: rgba(var(--danger-rgb), .025); }
+.vs-due-tile strong { display: block; overflow: hidden; font-size: .88rem; color: var(--v2-heading); text-overflow: ellipsis; white-space: nowrap; }
+.vs-due-tile small { display: block; overflow: hidden; font-size: .75rem; color: var(--default-text-color); text-overflow: ellipsis; white-space: nowrap; }
+.vs-due-tile-foot { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding-top: .6rem; border-top: 1px dashed var(--default-border); }
 .vs-due-none { display: flex; align-items: center; gap: .65rem; font-weight: 600; color: var(--v2-heading); }
 .vs-due { display: inline-flex; align-items: center; gap: .25rem; flex-shrink: 0; font-size: .74rem; font-weight: 700; color: var(--default-text-color); white-space: nowrap; }
 .vs-due.is-today { color: var(--v2-heading); }
 .vs-due.is-today i { color: rgb(var(--warning-rgb)); }
 .vs-due.is-late { color: rgb(var(--danger-rgb)); }
 
-/* The board */
+/* The board - each column a pale tint of its stage, white cards */
 .vs-board-wrap { padding: 1.25rem; }
-.vs-board { margin-bottom: 0; padding-bottom: .5rem; }
-.vs-board .kanban-tasks-type { min-width: 12.75rem; flex: 1 1 0; }
-.vs-col { display: flex; flex-direction: column; padding: .75rem; border-radius: .9rem; background: rgba(var(--dark-rgb), .025); }
-.vs-col-head { display: flex; align-items: center; gap: .6rem; margin-bottom: .75rem; }
-.vs-col-head strong { display: block; font-size: .88rem; color: var(--v2-heading); }
+.vs-board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(12.25rem, 1fr); gap: .9rem; overflow-x: auto; padding-bottom: .4rem; }
+.vs-col { display: flex; flex-direction: column; min-width: 0; padding: .7rem; border-radius: 1rem; background: rgba(var(--q), .06); }
+.vs-col-head { display: flex; align-items: center; gap: .6rem; margin-bottom: .7rem; padding: .15rem .1rem; }
+.vs-col-icon { display: inline-grid; flex: none; place-items: center; width: 2.1rem; height: 2.1rem; border-radius: .65rem; background: rgb(var(--q)); color: #fff; font-size: 1rem; }
+.vs-col-head strong { display: block; font-size: .9rem; color: var(--v2-heading); }
 .vs-col-head small { display: block; overflow: hidden; font-size: .72rem; color: var(--default-text-color); text-overflow: ellipsis; white-space: nowrap; }
-.vs-col-count { flex-shrink: 0; min-width: 1.6rem; padding: .1rem .45rem; border-radius: 1rem; background: var(--custom-white); border: 1px solid var(--default-border); font-size: .75rem; font-weight: 700; text-align: center; color: var(--v2-heading); }
-.vs-board .kanban-tasks { flex: 1; max-height: 34rem; overflow-y: auto; }
-.vs-drop { min-height: 6rem; height: 100%; border-radius: .7rem; }
-.vs-drop:empty { border: 1.5px dashed var(--input-border); }
-.vs-drop:empty::before { content: "Nobody here"; display: flex; align-items: center; justify-content: center; height: 6rem; font-size: .78rem; font-weight: 600; color: var(--default-text-color); }
-.vs-card { margin-bottom: .6rem; cursor: grab; transition: box-shadow .15s, border-color .15s; }
-.vs-card:hover { border-color: rgba(var(--primary-rgb), .35); box-shadow: 0 4px 12px rgba(15, 23, 42, .06); }
+.vs-col-count { flex-shrink: 0; min-width: 1.75rem; padding: .12rem .5rem; border-radius: 1rem; background: rgb(var(--q)); color: #fff; font-size: .75rem; font-weight: 700; text-align: center; }
+.vs-drop { display: flex; flex-direction: column; gap: .6rem; flex: 1; min-height: 7rem; max-height: 36rem; overflow-y: auto; border-radius: .75rem; }
+.vs-drop:empty { border: 1.5px dashed rgba(var(--q), .45); }
+.vs-drop:empty::before { content: "Drop here"; display: flex; align-items: center; justify-content: center; height: 7rem; font-size: .78rem; font-weight: 600; color: var(--default-text-color); }
+.vs-card { display: flex; flex-direction: column; gap: .6rem; padding: .8rem; border: 1px solid var(--default-border); border-radius: .8rem; background: var(--custom-white); box-shadow: 0 1px 2px rgba(15, 23, 42, .04); cursor: grab; transition: box-shadow .15s, border-color .15s, transform .15s; }
+.vs-card:hover { border-color: rgba(var(--q), .55); box-shadow: 0 6px 16px rgba(15, 23, 42, .08); transform: translateY(-1px); }
+.vs-card.is-late { border-color: rgba(var(--danger-rgb), .45); }
 .vs-card.is-fixed { cursor: default; }
-.vs-card .kanban-board-head { padding: .8rem !important; }
-.vs-card .kanban-content { margin-top: .55rem; }
-.vs-card-name { display: block; overflow: hidden; font-size: .86rem; text-overflow: ellipsis; white-space: nowrap; }
-.vs-card-foot { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .5rem .8rem; border-top: 1px dashed var(--default-border); }
-.vs-card .avatar-xs { width: 1.5rem; height: 1.5rem; font-size: .62rem; }
-.gu-mirror.vs-card { cursor: grabbing; transform: rotate(2deg); box-shadow: 0 12px 28px rgba(15, 23, 42, .16); }
+.vs-card-name { display: block; overflow: hidden; font-size: .87rem; text-overflow: ellipsis; white-space: nowrap; }
+.vs-card-chips { display: flex; flex-wrap: wrap; gap: .3rem; }
+.vs-card-foot { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding-top: .55rem; border-top: 1px dashed var(--default-border); }
+.vs-card-who { display: inline-flex; align-items: center; gap: .35rem; font-size: .76rem; font-weight: 600; color: var(--v2-heading); }
+.vs-card .avatar-xs { width: 1.45rem; height: 1.45rem; font-size: .6rem; }
+.vs-take { flex-shrink: 0; padding: .15rem .5rem; font-size: .74rem; white-space: nowrap; }
+.vs-card-foot > .mb-sub { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gu-mirror.vs-card { cursor: grabbing; transform: rotate(2deg); box-shadow: 0 14px 30px rgba(15, 23, 42, .18); }
 .gu-transit.vs-card { opacity: .35; }
 .vs-board-loading { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; }
 
@@ -38426,4 +38449,70 @@ button.cal-side-item:focus-visible {
   .cm-sheet-side { gap: .9rem; padding: 1rem; }
   .cm-sheet-main { padding: 1rem; }
   .cm-sheet-toggle { display: inline-flex; }
+}
+
+/* ==========================================================================
+   People, round 2 (2026-10-09) - the list kit shared by Members and
+   Visitors (assets/js/pages/members/list-kit.js): crisp stat cards
+   (index-11), pills with counts for filtering (v1-events cn-tab), a tick
+   box per row and a floating "N selected" bar (v1-events ni-bulkbar), and
+   the Messages composer's "Pick people" search. Colour per pill comes from
+   --q; the active pill is solid, the rest pale.
+   ========================================================================== */
+.pp-stat .card-body { padding: 1.2rem 1.25rem; }
+.pp-stat-label { margin: 0; font-size: .92rem; font-weight: 700; color: var(--v2-heading); }
+.pp-stat-sub { display: block; margin-top: .15rem; font-size: .76rem; color: var(--default-text-color); }
+.pp-stat-value { font-size: 1.65rem; font-weight: 700; line-height: 1.1; color: var(--v2-heading); }
+.pp-stat-delta { display: inline-flex; align-items: center; gap: .1rem; font-size: .78rem; font-weight: 700; }
+.pp-stat-delta.is-up { color: rgb(var(--success-rgb)); }
+.pp-stat-delta.is-down { color: rgb(var(--danger-rgb)); }
+.pp-stat-delta.is-flat { color: var(--default-text-color); }
+.pp-stat-caption { font-size: .72rem; color: var(--default-text-color); }
+.pp-stat-spark { flex: 0 0 6.5rem; max-width: 45%; }
+.pp-stat-bar { display: flex; align-items: center; gap: .75rem; margin-top: .9rem; }
+.pp-stat-bar span { flex-shrink: 0; font-size: .74rem; font-weight: 600; color: var(--default-text-color); }
+
+.pp-pills { display: flex; gap: .45rem; overflow-x: auto; padding-bottom: .9rem; scrollbar-width: none; }
+.pp-pills::-webkit-scrollbar { display: none; }
+.pp-pill { display: inline-flex; flex: none; align-items: center; gap: .4rem; height: 2.3rem; padding: 0 .85rem; border: 1px solid rgba(var(--q), .28); border-radius: .65rem; background: rgba(var(--q), .07); font-size: .84rem; font-weight: 600; color: var(--v2-heading); transition: background .15s, border-color .15s; }
+.pp-pill i { color: rgb(var(--q)); }
+.pp-pill:hover { border-color: rgba(var(--q), .6); }
+.pp-pill-count { min-width: 1.5rem; padding: .05rem .45rem; border-radius: 1rem; background: rgba(var(--q), .16); font-size: .72rem; font-weight: 700; text-align: center; color: rgb(var(--q)); }
+.pp-pill.is-on { border-color: rgb(var(--q)); background: rgb(var(--q)); color: #fff; }
+.pp-pill.is-on i { color: #fff; }
+.pp-pill.is-on .pp-pill-count { background: rgba(255, 255, 255, .25); color: #fff; }
+
+.pp-table .pp-check { width: 2.5rem; padding-inline-end: 0 !important; }
+.pp-table .pp-check .form-check-input { margin: 0; cursor: pointer; }
+.pp-table tbody tr.is-picked > td { background: rgba(var(--primary-rgb), .07); }
+.pp-selectall { padding: .55rem 1.25rem; border-bottom: 1px solid var(--default-border); background: rgba(var(--primary-rgb), .06); font-size: .82rem; color: var(--v2-heading); text-align: center; }
+.pp-selectall .btn-link { font-size: .82rem; font-weight: 700; }
+
+.pp-bulkbar { position: fixed; left: 50%; bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)); z-index: 1040; display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: .45rem; max-width: calc(100vw - 2rem); padding: .55rem .6rem .55rem 1.1rem; border-radius: .9rem; background: rgb(var(--modal-band-rgb)); color: #fff; font-size: .85rem; box-shadow: 0 12px 32px rgba(15, 12, 40, .3); transform: translateX(-50%); animation: ppUp .18s ease-out; }
+.pp-bulkbar[hidden] { display: none; }
+@keyframes ppUp { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.pp-bulkbar-count { margin-right: .35rem; white-space: nowrap; }
+.pp-bulkbar-btn { border: 0; background: rgba(255, 255, 255, .12); color: #fff; }
+.pp-bulkbar-btn:hover, .pp-bulkbar-btn:focus { background: rgba(255, 255, 255, .24); color: #fff; }
+
+/* Messages composer: pick people one by one */
+.pp-picker-search { position: relative; }
+.pp-picker-search > i { position: absolute; top: 50%; left: .7rem; transform: translateY(-50%); color: var(--default-text-color); }
+.pp-picker-search input { padding-left: 2rem; }
+.pp-picker-list { max-height: 15rem; margin-top: .4rem; overflow-y: auto; border: 1px solid var(--default-border); border-radius: .7rem; }
+.pp-picker-list:empty { display: none; }
+.pp-picker-row { display: flex; align-items: center; gap: .6rem; margin: 0; padding: .5rem .7rem; border-top: 1px solid var(--default-border); cursor: pointer; }
+.pp-picker-row:first-child { border-top: 0; }
+.pp-picker-row:hover { background: rgba(var(--primary-rgb), .05); }
+.pp-picker-row.is-checked { background: rgba(var(--primary-rgb), .08); }
+.pp-picker-row strong { display: block; font-size: .84rem; color: var(--v2-heading); }
+.pp-picker-row small { display: block; font-size: .74rem; color: var(--default-text-color); }
+.pp-picker-none { padding: .6rem .75rem; font-size: .8rem; color: var(--default-text-color); }
+.pp-chips { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .5rem; }
+.pp-chip { display: inline-flex; align-items: center; gap: .3rem; max-width: 12rem; padding: .15rem .3rem .15rem .6rem; border-radius: 1rem; background: rgb(var(--modal-band-rgb)); color: #fff; font-size: .74rem; font-weight: 600; }
+.pp-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp-chip button { display: inline-grid; place-items: center; width: 1rem; height: 1rem; padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .2); color: #fff; font-size: .7rem; line-height: 1; }
+@media (max-width: 575.98px) {
+  .pp-bulkbar { left: 1rem; right: 1rem; max-width: none; transform: none; animation: none; }
+  .pp-stat-spark { flex-basis: 5rem; }
 }

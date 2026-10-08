@@ -72,6 +72,31 @@ After P1 and P2 the user asked for less: churches record a **visitor's name, pho
   - Every demo person has a +254 700 000 xxx number (`Phone::isDemo`), which is never texted.
   - `PeopleDemoRemoveSeeder` takes them away again.
 
+## Round 2 design (2026-10-09)
+- **Windows (app-wide):** every `.app-modal` has a navy band (`--modal-band-rgb`, the dark sidebar's colour) with a frosted icon tile, a white title and a soft close button. The band is red with `.is-danger` and green once the done view shows. Bodies are split into titled parts (`PeopleKit.parts`).
+- **Lists:** `assets/js/pages/members/list-kit.js` (`PeopleKit`) gives Members and Visitors:
+  - crisp stat cards;
+  - pills with counts for filtering;
+  - a search (name, phone or area) and a Sort menu in the filter strip;
+  - a tick box per row, with "Select all N matching";
+  - a floating "N selected" bar.
+- **Bulk changes:**
+  - `POST /people/bulk {ids, action: inactive|archive}`;
+  - `POST /visitors/bulk {ids, action: assign|stage|archive}`.
+  - Both are own church only, need the manage permission, and are audited. A leader given visitors is told once.
+- **Messages:**
+  - `GET /people/search?q=` finds one member or visitor. Demo numbers show, marked never texted.
+  - `register.people_ids` sends to people picked one by one. It skips "Don't text them" and demo numbers.
+  - "Send message" on the lists opens the composer with the ticked people (`?people=`).
+- **Sunday service:**
+  - `visitor_visits.gathering_category_id` and `service_name` hold a weekly service from Settings → Service times, the way attendance stores Sunday.
+  - The picker lists weekly services, then other gatherings. A plain "Sunday service" appears when none are set, and it's picked on a Sunday.
+- **Visitors, top-down:**
+  - cards;
+  - "My follow-ups" tiles with Log and SMS (`?act=log|sms` opens the window);
+  - pills;
+  - the board, with stage-tinted columns and "Take it", or the list.
+
 ---
 
 ## P0 - Foundation

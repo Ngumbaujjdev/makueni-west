@@ -160,9 +160,9 @@
     document.getElementById("mbModal")?.remove();
     document.body.insertAdjacentHTML(
       "beforeend",
-      `<div class="modal fade app-modal" id="mbModal" tabindex="-1" aria-labelledby="mbModalTitle">
+      `<div class="modal fade app-modal${color === "danger" ? " is-danger" : ""}" id="mbModal" tabindex="-1" aria-labelledby="mbModalTitle">
         <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down"><div class="modal-content">
-          <div class="modal-header"><span class="app-modal-icon bg-${color} ${M.textOn(color)}"><i class="${icon}"></i></span><div class="flex-fill"><h5 class="modal-title" id="mbModalTitle">${title}</h5><div class="app-modal-subtitle">${M.esc(state.p.name)}</div></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+          <div class="modal-header"><span class="app-modal-icon"><i class="${icon}"></i></span><div class="flex-fill min-w-0"><h5 class="modal-title" id="mbModalTitle">${title}</h5><div class="app-modal-subtitle">${M.esc(state.p.name)}</div></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
           <div class="modal-body">${body}</div>
           <div class="modal-footer">${foot}</div>
         </div></div>
@@ -183,14 +183,20 @@
       "Transfer out",
       "ri-logout-box-r-line",
       "warning",
-      `<div class="row g-3">
-        <div class="col-12"><label class="form-label" for="trChurch">Moving to</label>
-          <select class="form-select" id="trChurch"><option value="">A church outside the diocese</option>${state.churches.map((c) => `<option value="${c.id}">${M.esc(c.name)}</option>`).join("")}</select></div>
-        <div class="col-12" id="trNameWrap"><label class="form-label" for="trName">Name of that church</label><input class="form-control" id="trName" maxlength="160" placeholder="e.g. AIC Wote"></div>
-        <div class="col-md-6"><label class="form-label" for="trOn">On</label><input type="date" class="form-control" id="trOn" value="${new Date().toISOString().slice(0, 10)}"></div>
-        <div class="col-12"><label class="form-label" for="trReason">Why <span class="fw-normal">(optional)</span></label><input class="form-control" id="trReason" maxlength="1000" placeholder="e.g. Moved to Nairobi for work"></div>
-        <div class="col-12" id="trNotifyWrap" hidden><div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="trNotify" checked><label class="form-check-label" for="trNotify">Tell that church's leaders they're coming (with their name and phone)</label></div></div>
-      </div>`,
+      PeopleKit.parts([
+        {
+          icon: "ri-community-line",
+          title: "Where they're going",
+          body: `<div class="row g-3">
+            <div class="col-12"><label class="form-label" for="trChurch">Moving to</label>
+              <select class="form-select" id="trChurch"><option value="">A church outside the diocese</option>${state.churches.map((c) => `<option value="${c.id}">${M.esc(c.name)}</option>`).join("")}</select></div>
+            <div class="col-12" id="trNameWrap"><label class="form-label" for="trName">Name of that church</label><input class="form-control" id="trName" maxlength="160" placeholder="e.g. AIC Wote"></div>
+            <div class="col-md-6"><label class="form-label" for="trOn">On</label><input type="date" class="form-control" id="trOn" value="${new Date().toISOString().slice(0, 10)}"></div>
+            <div class="col-md-6"><label class="form-label" for="trReason">Why <span class="fw-normal">(optional)</span></label><input class="form-control" id="trReason" maxlength="1000" placeholder="e.g. Moved to Nairobi for work"></div>
+          </div>`,
+        },
+        { icon: "ri-notification-3-line", title: "Tell them", hint: "Only for a church in our diocese", body: `<div id="trNotifyWrap" hidden><div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" role="switch" id="trNotify" checked><label class="form-check-label" for="trNotify">Tell that church's leaders they're coming (with their name and phone)</label></div></div>` },
+      ]),
       `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="trSave"><i class="ri-check-line me-1"></i>Transfer out</button>`,
     );
     const sel = $("trChurch");
@@ -217,8 +223,10 @@
       "Remove personal details",
       "ri-user-unfollow-line",
       "danger",
-      `<p class="fw-semibold">This clears their name, phone and area. They still count in the totals, and their history stays. <strong>It can't be undone.</strong></p>
-       <label class="form-label" for="anConfirm">Type <strong>REMOVE</strong> to confirm</label><input class="form-control" id="anConfirm" autocomplete="off">`,
+      PeopleKit.parts([
+        { icon: "ri-error-warning-line", title: "What happens", body: "<p class=\"mb-0\">This clears their name, phone and area. They still count in the totals, and their history stays. <strong>It can't be undone.</strong></p>" },
+        { icon: "ri-shield-keyhole-line", title: "Confirm", body: '<label class="form-label" for="anConfirm">Type <strong>REMOVE</strong> to confirm</label><input class="form-control" id="anConfirm" autocomplete="off">' },
+      ]),
       `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Keep them</button><button type="button" class="btn btn-danger" id="anGo" disabled><i class="ri-user-unfollow-line me-1"></i>Remove their details</button>`,
     );
     $("anConfirm").addEventListener("input", (e) => ($("anGo").disabled = e.target.value.trim() !== "REMOVE"));

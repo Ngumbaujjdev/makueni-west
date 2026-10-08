@@ -60,7 +60,7 @@ function membersPageScripts(string $page): void
     foreach (['assets/libs/select2/select2.min.js', 'assets/data-tables/1.12.1/js/jquery.dataTables.min.js', 'assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js', 'assets/data-tables/responsive/2.3.0/js/dataTables.responsive.min.js'] as $src) {
         echo '<script src="' . SITE_URL . "/{$src}\"></script>\n";
     }
-    foreach (['assets/js/pages/demographics/api-handler.js', 'assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/members/api.js', 'assets/js/pages/members/ui.js', "assets/js/pages/members/{$page}.js"] as $src) {
+    foreach (['assets/js/pages/demographics/api-handler.js', 'assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/members/api.js', 'assets/js/pages/members/ui.js', 'assets/js/pages/members/list-kit.js', "assets/js/pages/members/{$page}.js"] as $src) {
         echo '<script src="' . $v($src) . '"></script>' . "\n";
     }
 }
