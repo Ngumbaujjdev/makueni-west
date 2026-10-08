@@ -351,17 +351,20 @@ const DemographicsUI = (function () {
       const color = cssColor(el.getAttribute("data-spark-color") || "primary");
       new ApexCharts(el, {
         chart: {
-          type: "line",
+          type: "area",
           height: parseInt(el.getAttribute("data-spark-height"), 10) || 56,
           sparkline: { enabled: true },
           animations: { enabled: !document.documentElement.classList.contains("app-reduce-motion") },
         },
         series: [{ name: "", data: series.data }],
         labels: series.labels,
-        // A line only, with a dot on the latest point: a shaded area's straight left and bottom
-        // edges read as a y and an x axis on a small card (2026-10-08).
-        stroke: { width: 2.25, curve: "smooth", colors: [color] },
-        colors: [color],
+        // The shaded area in the card's colour, the line on top and a dot on the latest point. The
+        // "axis" lines people saw were the template's global .apexcharts-xaxis/grid line rule
+        // painting sparklines' hidden lines grey - styles.css turns those off for [data-spark].
+        // Transparency lives in the fill colour - see renderTrendChart().
+        stroke: { width: 2, curve: "smooth", colors: [color] },
+        fill: { type: "solid" },
+        colors: [withAlpha(color, 0.16)],
         markers: { size: 0, discrete: [{ seriesIndex: 0, dataPointIndex: series.data.length - 1, fillColor: color, strokeColor: "#fff", size: 3.5 }] },
         // No axis lines, ticks or grid - a sparkline is the shape only.
         xaxis: { axisBorder: { show: false }, axisTicks: { show: false }, labels: { show: false }, crosshairs: { show: false } },
