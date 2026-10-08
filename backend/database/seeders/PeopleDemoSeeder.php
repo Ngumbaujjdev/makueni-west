@@ -434,6 +434,21 @@ class PeopleDemoSeeder extends Seeder
                     }
                 }
             }
+            // A team for each duty (Settings > Facilities), from the demo people - unless the church set its own.
+            $metadata = $church->fresh()->metadata ?? [];
+            if (empty($metadata['facilities_setup'])) {
+                $setup = app(Facilities::class)->setup($church);
+                $at = 0;
+                $metadata['facilities_setup'] = ['kinds' => $setup['kinds'], 'duties' => collect($setup['duties'])->map(function ($d) use ($people, &$at, $need) {
+                    $size = $d['key'] === 'ushering' ? 6 : 4;
+                    $team = collect(range(0, $size - 1))->map(fn ($i) => $people[($at + $i) % $people->count()])->unique('id')->map(fn ($p) => ['person_id' => $p->id, 'name' => $p->name])->values()->all();
+                    $at += $size;
+
+                    return ['needed' => $need[$d['key']] ?? 1, 'team' => $team] + $d;
+                })->all()];
+                $church->metadata = $metadata;
+                Territory::withoutAuditing(fn () => $church->save());
+            }
         }
     }
 

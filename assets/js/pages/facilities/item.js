@@ -305,12 +305,9 @@
       if (a) return act(a.dataset.act);
       const open = e.target.closest("[data-open]");
       if (open) {
-        const r = state.it.receipts.find((x) => x.id === Number(open.dataset.open));
-        const tab = window.open("", "_blank");
-        const url = r && (await FacilitiesAPI.fileUrl(r.url));
-        if (!url) return tab?.close(), Toast.error("Couldn't open the receipt.");
-        if (tab) tab.location.href = url;
-        return;
+        // Inside the app: a photo fitted, a PDF in the browser's own reader.
+        const list = state.it.receipts;
+        return F.fileViewer(list, Math.max(0, list.findIndex((x) => x.id === Number(open.dataset.open))));
       }
       const unr = e.target.closest("[data-unreceipt]");
       if (unr) {

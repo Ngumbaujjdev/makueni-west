@@ -820,3 +820,55 @@ A purchasing workflow (ask → approve → buy) is planned as its own module nex
 - [x] Receipts attach, open and come off. Linking accepts only our church's money-out entries, and copies the receipts across.
 - [x] An ask waits for a manager. Agreeing checks what is here, declining is recorded, and the asker can take it back.
 - [x] What we own adds up our church's things only. Both reports build, and need the export permission.
+
+### P5 round 3: set up in Settings, receipts in the app, asset reports (2026-10-08)
+The user asked for this after round 2:
+- open receipts inside the app;
+- the Add window's preview "looks weird" (prices were cut off);
+- one place in Settings for the rooms, the people on each duty (the ushers…) and the kinds of equipment;
+- a page of asset reports.
+
+**Settings › Facilities** (`assets/js/pages/settings/sections/facilities.js`) has these cards:
+- **Rooms:**
+  - name, how many it holds, colour, can be booked, and the order;
+  - saved through the `/rooms` routes, which now take an `order`.
+- **Duties and teams:**
+  - each duty has a name, icon and colour, how many people each service needs, and on/off;
+  - **its team** is people from the register or typed names.
+  - A removed duty that is on the rota is kept, switched off.
+- **Kinds of equipment:**
+  - each kind has a name, icon and colour;
+  - a kind with things in it can't be removed.
+- **The section's fields** (booking hours, lending, duty reminders), saved with the same Save.
+
+**How duties and kinds are stored and used:**
+- They live in `territories.metadata.facilities_setup` (`metadata.facilities` is the church's amenities list) through `GET/PUT /settings/facilities-setup`, with the `settings.hub.facilities` permissions. The defaults are `DutyRota::DUTIES` and `Equipment::CATEGORIES` until a church saves.
+- `Facilities::setup()`, `duties()`, `dutyList()`, `kinds()`, `kindList()` and `kind()` replace the constants everywhere. A removed key still reads as itself. The resolved setup is kept for the request.
+- `duty_rota.duty` is widened to 40 characters; new keys are made from the name.
+
+**The rota:**
+- The cell window shows the duty's team as one-tap chips.
+- **Fill from the teams** (`POST /rota/fill {from, to}`, for managers) fills only the empty duties. Each team takes turns, as many people as the duty needs. The turn comes from the date, so a refill gives the same people.
+
+**Receipts** open in a window inside the app (`FacilitiesUI.fileViewer`): a photo fitted, a PDF in the browser's reader, previous and next, Download, and Open in a new tab.
+
+**The Add / Change window's preview:**
+- the photo, full width, with a photo count;
+- the name, condition, kind and room;
+- rows (asset number, how many, price each, in all, bought, where) with full amounts.
+
+**Asset reports page** (`church/facilities/reports.php`, the shared reports page with module `facilities`, needing `facilities.facilities.export`):
+- What we own;
+- What is borrowed;
+- **Room by room (stock-take):** a section per room with a "Checked" column, and what is on loan or being repaired;
+- **Bought in a year:** each month, by kind, the shop, the receipt kept and in Budgets;
+- **Repairs and their cost:** fixed and cost, by item, and still open.
+- "All time" gives every year, charted by year.
+
+**Demo data:** the main church's duties get teams from the demo people (unless it set its own). Removing the demo takes them off the teams.
+
+**Tests:** `tests/Feature/Facilities/SetupTest.php` (3).
+
+- [x] Duties (with teams) and kinds are each church's own. A kind in use can't go. A duty on the rota is switched off, not dropped. Others can read but not change.
+- [x] The rota fills the empty duties from the teams in turn, and leaves filled ones alone.
+- [x] Room by room, Bought in a year and Repairs and their cost build (PDF and Excel), and need the export permission.

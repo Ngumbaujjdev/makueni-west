@@ -3,7 +3,7 @@
     <div class="page-toolbar-sub d-flex flex-wrap align-items-center gap-2"><span><?= htmlspecialchars($facCtx['place']['name'] ?: 'Our church') ?></span><span class="soft-chip soft-success"><i class="ri-lock-2-line"></i>Private to our church</span><span class="soft-chip soft-primary"><i class="ri-information-line"></i>Worth is what we paid</span></div>
     <div class="page-toolbar-controls">
         <?php if ($facCtx['can']['export']): ?>
-        <button type="button" class="btn btn-outline-primary" data-report-key="facilities.loans" data-module="facilities"><i class="ri-hand-coin-line me-1"></i>What is borrowed</button>
+        <a class="btn btn-outline-primary" href="<?= $facCtx['baseUrl'] ?>/reports"><i class="ri-file-list-3-line me-1"></i>All asset reports</a>
         <button type="button" class="btn btn-primary" data-report-key="facilities.assets" data-module="facilities"><i class="ri-download-2-line me-1"></i>Export the register</button>
         <?php endif ?>
         <?php if ($facCtx['can']['manage']): ?>

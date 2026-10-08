@@ -78,8 +78,10 @@ final class AssetRegisterReport extends Report
         $items = Equipment::with(['room', 'budgetEntry'])->withCount(['media as receipts_count' => fn ($q) => $q->where('collection_name', 'receipts')])
             ->where('territory_id', $context->territory->id)->orderBy('category')->orderBy('name')->get();
         $yes = fn (bool $v) => $v ? 'Yes' : 'No';
-        $sections = $items->groupBy('category')->sortBy(fn ($list, $k) => array_search($k, array_keys(Equipment::CATEGORIES), true))
-            ->map(fn ($list, $k) => new ReportSection(Equipment::CATEGORIES[$k][0] ?? 'Other', [
+        $order = array_keys($facilities->kinds($context->territory));
+        $kind = fn ($k) => $facilities->kind($context->territory, $k)[0];
+        $sections = $items->groupBy('category')->sortBy(fn ($list, $k) => array_search($k, $order, true) === false ? 999 : array_search($k, $order, true))
+            ->map(fn ($list, $k) => new ReportSection($kind($k), [
                 ReportColumn::text('Asset no'), ReportColumn::text('Item', true), ReportColumn::text('Room'), ReportColumn::number('How many', 'sum'),
                 ReportColumn::money('Price each', null), ReportColumn::money('Total'), ReportColumn::text('Bought'), ReportColumn::text('Where bought'),
                 ReportColumn::text('Condition'), ReportColumn::text('Receipt'), ReportColumn::text('In Budgets'),
@@ -88,7 +90,7 @@ final class AssetRegisterReport extends Report
                 $e->value !== null ? (float) $e->value : null, $e->value !== null ? round((float) $e->value * (int) $e->quantity, 2) : null,
                 $e->bought_on?->format('j M Y') ?? '-', $e->supplier ?: '-', Equipment::CONDITIONS[$e->condition][0] ?? '-',
                 $yes($e->receipts_count > 0), $yes((bool) $e->budget_entry_id),
-            ])->values()->all(), null, 'Total '.strtolower(Equipment::CATEGORIES[$k][0] ?? 'other')))->values()->all();
+            ])->values()->all(), null, 'Total '.mb_strtolower($kind($k))))->values()->all();
         $money = fn (float $v) => 'KES '.number_format($v, 0);
 
         return new ReportData(

@@ -24,7 +24,7 @@ class RemindDuty extends Command
 
     protected $description = "Text tomorrow's duty rota to the people on it (churches that switched it on)";
 
-    public function handle(Settings $settings, PlaceMessenger $messenger): int
+    public function handle(Settings $settings, PlaceMessenger $messenger, Facilities $facilities): int
     {
         $now = $this->option('at') ? CarbonImmutable::parse($this->option('at'), Facilities::TZ) : CarbonImmutable::now(Facilities::TZ);
         $tomorrow = $now->startOfDay()->addDay();
@@ -43,7 +43,7 @@ class RemindDuty extends Command
                 if (! Cache::add("duty-remind:{$church->id}:{$tomorrow->toDateString()}:{$personId}", true, now()->addDays(3))) {
                     continue;
                 }
-                $what = $theirs->map(fn ($e) => strtolower(DutyRota::DUTIES[$e->duty][0] ?? $e->duty)." at the {$e->service}")->unique()->implode(' and ');
+                $what = $theirs->map(fn ($e) => mb_strtolower($facilities->dutyLabel($church, $e->duty))." at the {$e->service}")->unique()->implode(' and ');
                 $messenger->sms($church, $person->phone, "Hello {$person->first_name}, a reminder: you're on {$what} tomorrow, {$tomorrow->format('D j M')}. Thank you for serving!", 'duty_reminder');
                 $sent++;
             }

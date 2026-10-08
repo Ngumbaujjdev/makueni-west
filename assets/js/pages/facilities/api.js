@@ -114,6 +114,7 @@ const FacilitiesAPI = (function () {
     rota: (params) => request("GET", "/rota", { params }),
     saveRota: (body) => request("PUT", "/rota", { body }),
     copyRota: (body) => request("POST", "/rota/copy", { body }),
+    fillRota: (body) => request("POST", "/rota/fill", { body }),
   };
 })();
 

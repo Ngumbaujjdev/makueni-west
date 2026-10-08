@@ -67,6 +67,9 @@ final class ReportRegistry
         \App\Reports\People\VisitorsListReport::class,
         \App\Reports\Facilities\AssetRegisterReport::class,
         \App\Reports\Facilities\BorrowedReport::class,
+        \App\Reports\Facilities\RoomByRoomReport::class,
+        \App\Reports\Facilities\BoughtInYearReport::class,
+        \App\Reports\Facilities\RepairsCostReport::class,
     ];
 
     /** @return Report[] */

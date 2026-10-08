@@ -60,6 +60,13 @@ class PeopleDemoRemoveSeeder extends Seeder
         DB::table('rooms')->whereIn('id', $rooms ?: [0])->delete();
         $ids = self::ids();
         DB::table('duty_rota')->whereIn('person_id', $ids ?: [0])->delete();
+        // The duty teams the demo made (Settings > Facilities) lose the demo people.
+        foreach (\App\Models\Territory::whereNotNull('metadata')->where('metadata', 'like', '%"facilities_setup"%')->get() as $t) {
+            $m = $t->metadata;
+            $m['facilities_setup']['duties'] = collect($m['facilities_setup']['duties'] ?? [])->map(fn ($d) => ['team' => collect($d['team'] ?? [])->reject(fn ($p) => in_array($p['person_id'] ?? null, $ids, true))->values()->all()] + $d)->all();
+            $t->metadata = $m;
+            \App\Models\Territory::withoutAuditing(fn () => $t->save());
+        }
         if (! $ids) {
             return 0;
         }

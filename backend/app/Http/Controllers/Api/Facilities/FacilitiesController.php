@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\Facilities;
 
-use App\Models\DutyRota;
 use App\Models\Equipment;
 use App\Models\MaintenanceJob;
 use App\Models\Ministry;
@@ -54,10 +53,10 @@ class FacilitiesController extends FacilitiesBase
         return $this->ok([
             'rooms' => $this->facilities->rooms($church, $this->facilities->canManage($request->user(), $church))->map(fn (Room $r) => $this->facilities->roomRow($r))->values(),
             'colours' => Room::COLOURS,
-            'categories' => collect(Equipment::CATEGORIES)->map(fn ($c, $k) => ['key' => $k, 'label' => $c[0], 'icon' => $c[1], 'color' => $c[2]])->values(),
+            'categories' => $this->facilities->kindList($church),
             'conditions' => collect(Equipment::CONDITIONS)->map(fn ($c, $k) => ['key' => $k, 'label' => $c[0], 'color' => $c[1]])->values(),
             'statuses' => collect(MaintenanceJob::STATUSES)->map(fn ($s, $k) => ['key' => $k, 'label' => $s[0], 'icon' => $s[1], 'color' => $s[2], 'hint' => $s[3]])->values(),
-            'duties' => collect(DutyRota::DUTIES)->map(fn ($d, $k) => ['key' => $k, 'label' => $d[0], 'icon' => $d[1], 'color' => $d[2]])->values(),
+            'duties' => $this->facilities->dutyList($church),
             'ministries' => Ministry::where('territory_id', $church->id)->where('active', true)->orderBy('order')->get()->map(fn ($m) => ['id' => $m->id, 'name' => $m->name, 'icon' => $m->icon_name, 'colour' => $m->colour_name, 'meets_day' => $m->meets_day, 'meets_time' => $m->meets_time ? substr($m->meets_time, 0, 5) : null])->values(),
             'leaders' => $leaders->map(fn ($u) => ['id' => $u->id, 'name' => trim("{$u->firstname} {$u->lastname}")])->values(),
             'hours' => ['from' => $from, 'to' => $to],

@@ -259,7 +259,7 @@ return [
             'group' => 'people',
             'levels' => ['church'],
             'kind' => 'form',
-            'sentence' => 'When rooms can be booked, how long things are lent for, and the duty reminders.',
+            'sentence' => 'Our rooms, the duties and who serves on each, the kinds of equipment, when rooms can be booked, lending and duty reminders.',
         ],
 
         // S5 - how to pay a region or the diocese. Read by Contributions ("How to

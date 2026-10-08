@@ -89,6 +89,7 @@ class PeopleCareAccessSeeder extends Seeder
                 'bookings.php' => ['Bookings', 'Book a room, and see who has it when.', ['bookings', 'book']],
                 'equipment.php' => ['Equipment', 'Our things, where they are kept, and who has borrowed them.', ['equipment']],
                 'assets.php' => ['What we own', 'What our things are worth and cost, with the receipts - the asset register.', ['assets']],
+                'reports.php' => ['Reports', 'The asset register, room by room, what we bought, repairs and what is borrowed - as PDF or Excel.', ['export']],
                 'repairs.php' => ['Repairs', 'What needs fixing, who is on it, and what it cost.', ['repairs']],
                 'rota.php' => ['Duty rota', 'Who is on duty at each service.', ['rota']],
             ],

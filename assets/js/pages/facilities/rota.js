@@ -99,7 +99,35 @@
     UI.enhanceSelect(el.querySelector("#cpTo"), { search: false });
   }
 
+  /** Fill the empty duties in the four weeks shown from each duty's team, taking turns. */
+  function fillWindow() {
+    const teams = state.data.duties.filter((d) => d.team?.length);
+    const to = addDays(state.from, 27);
+    K.confirmWindow({
+      title: "Fill from the teams",
+      subtitle: `The empty duties, ${F.day(F.iso(state.from), { day: "numeric", month: "short" })} - ${F.day(F.iso(to), { day: "numeric", month: "short" })}`,
+      icon: "ri-magic-line",
+      go: '<i class="ri-magic-line me-1"></i>Fill them',
+      body: K.parts([
+        {
+          icon: "ri-team-line",
+          title: "From these teams",
+          hint: "Each team takes turns; anyone already on a duty stays",
+          body: teams.length
+            ? `<ul class="fx-fill-list">${state.data.duties.map((d) => `<li><span class="avatar avatar-sm avatar-rounded bg-${d.color} ${d.color === "warning" || d.color === "secondary" ? "text-dark" : "text-white"}"><i class="${d.icon}"></i></span><span class="flex-fill">${F.esc(d.label)}<small>${d.team?.length ? `${d.team.length} on the team · ${d.needed} each service` : "No team - left as it is"}</small></span></li>`).join("")}</ul>`
+            : `<p class="mb-2 fw-semibold">No duty has a team yet.</p><a class="btn btn-sm btn-outline-primary" href="${CTX.settingsUrl}"><i class="ri-settings-3-line me-1"></i>Set up the teams</a>`,
+        },
+      ]),
+      run: async () => {
+        const res = await FacilitiesAPI.fillRota({ from: F.iso(state.from), to: F.iso(to) });
+        if (res.ok) load();
+        return res;
+      },
+    });
+  }
+
   function init() {
+    $("fillBtn")?.addEventListener("click", fillWindow);
     $("rtPrev").addEventListener("click", () => ((state.from = addDays(state.from, -28)), load()));
     $("rtNext").addEventListener("click", () => ((state.from = addDays(state.from, 28)), load()));
     $("rtToday").addEventListener("click", () => ((state.from = monday(new Date())), load()));

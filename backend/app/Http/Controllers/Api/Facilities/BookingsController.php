@@ -121,6 +121,7 @@ class BookingsController extends FacilitiesBase
             'bookable' => ['sometimes', 'boolean'],
             'active' => ['sometimes', 'boolean'],
             'colour' => ['sometimes', 'nullable', Rule::in(Room::COLOURS)],
+            'order' => ['sometimes', 'integer', 'between:0,1000'],
             'notes' => ['sometimes', 'nullable', 'string', 'max:500'],
         ], ['name.unique' => 'There is already a room with that name.']);
         if ($room) {
