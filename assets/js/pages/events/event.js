@@ -22,9 +22,29 @@
   const $ = (id) => document.getElementById(id);
   const id = Number(new URLSearchParams(window.location.search).get("id"));
   const GROUPS = Object.keys(E.GROUPS);
+  const GROUP_ICONS = { youth: "ri-user-star-line", adults: "ri-group-line", children: "ri-emotion-happy-line", leaders: "ri-shield-user-line" };
   const state = { ev: null, regs: null, money: null, history: null, sessions: null, tab: new URLSearchParams(window.location.search).get("tab") || "details" };
   let donut = null;
   let progressChart = null;
+
+  /**
+   * Balanced colours (2026-10-08): neighbours take different colours from the
+   * category palette and alternate solid and pale - never one colour across a
+   * page (one colour is for form fields only).
+   */
+  const PALETTE = ["primary", "purple", "success", "warning", "pink", "danger"];
+  const tone = (i) => ({ color: PALETTE[i % PALETTE.length], solid: i % 2 === 0 });
+  const tile = (icon, i, size = "") => {
+    const t = tone(i);
+    return `<span class="ev-tile${size ? ` is-${size}` : ""}${t.solid ? "" : " is-soft"}" style="--q: var(--${t.color}-rgb)"><i class="${icon}"></i></span>`;
+  };
+  /** Status: solid for what happened (held / cancelled), pale for what hasn't yet. */
+  const sessionPill = (x) => {
+    if (x.status === "held") return `<span class="badge bg-success list-pill"><i class="ri-checkbox-circle-line me-1"></i>Held</span>`;
+    if (x.status === "cancelled") return `<span class="badge bg-danger list-pill"><i class="ri-close-circle-line me-1"></i>Cancelled</span>`;
+    if (x.held_on < todayIso()) return `<span class="soft-chip soft-warning"><i class="ri-error-warning-line"></i>Not recorded</span>`;
+    return `<span class="soft-chip soft-primary"><i class="ri-time-line"></i>Planned</span>`;
+  };
 
   // ================================================================ header
   function renderHero() {
@@ -78,17 +98,18 @@
     const now = new Date();
     const start = new Date(ev.starts_at);
     const end = new Date(ev.ends_at);
-    if (ev.status === "cancelled") return `<span class="soft-chip soft-danger"><i class="ri-close-circle-line"></i>Cancelled</span>`;
-    if (now < start) return `<span class="soft-chip soft-primary ev-countdown"><i class="ri-hourglass-line"></i>${E.relative(ev.starts_at)}${INIT ? " until it starts" : ""}</span>`;
-    if (now <= end) return `<span class="soft-chip soft-success ev-countdown"><i class="ri-live-line"></i>${INIT ? "Running now" : "Happening now"}</span>`;
-    return `<span class="soft-chip soft-primary ev-countdown"><i class="ri-checkbox-circle-line"></i>${ev.status === "completed" ? "Done" : "Ended"} · ${E.longDate(end)}</span>`;
+    // A solid signal (beside the pale type chip).
+    if (ev.status === "cancelled") return `<span class="badge bg-danger list-pill"><i class="ri-close-circle-line me-1"></i>Cancelled</span>`;
+    if (now < start) return `<span class="badge bg-primary list-pill"><i class="ri-hourglass-line me-1"></i>${E.relative(ev.starts_at)}${INIT ? " until it starts" : ""}</span>`;
+    if (now <= end) return `<span class="badge bg-success list-pill"><i class="ri-live-line me-1"></i>${INIT ? "Running now" : "Happening now"}</span>`;
+    return `<span class="badge bg-purple list-pill"><i class="ri-checkbox-circle-line me-1"></i>${ev.status === "completed" ? "Done" : "Ended"} · ${E.longDate(end)}</span>`;
   }
 
   /** The hero's strip of four figures (in place of a separate row of cards). */
   function strip(items) {
     const el = $("evStrip");
     if (!el) return;
-    el.innerHTML = items.map((c) => `<div class="ev-strip-item"><span class="ev-strip-icon"><i class="${c.icon}"></i></span><div class="min-w-0"><div class="ev-strip-value">${c.value}</div><div class="ev-strip-label">${c.label}</div>${c.sub ? `<div class="ev-strip-sub">${c.sub}</div>` : ""}</div></div>`).join("");
+    el.innerHTML = items.map((c, i) => `<div class="ev-strip-item" style="--q: var(--${tone(i).color}-rgb)">${tile(c.icon, i)}<div class="min-w-0"><div class="ev-strip-value">${c.value}</div><div class="ev-strip-label">${c.label}</div>${c.sub ? `<div class="ev-strip-sub">${c.sub}</div>` : ""}</div></div>`).join("");
     el.hidden = !items.length;
   }
 
@@ -170,6 +191,8 @@
     const bar = $("evTabs");
     if (!tabs.some((t) => t.key === state.tab)) state.tab = "details";
     bar.hidden = tabs.length < 2;
+    // More than four: one row of equal tabs, never wrapped into card-like rows.
+    bar.classList.toggle("is-row", tabs.length > 4);
     bar.innerHTML = tabs
       .map(
         (t) => `
@@ -208,6 +231,7 @@
     const initials = (n) => n.replace(/^(Rev|Pst|Bishop|Dr|Hon|Mama|Evangelist)\.?\s+/i, "").split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0].toUpperCase()).join("") || "?";
     const editHint = (what) => (ev.can?.edit ? `<a class="fw-semibold" href="${CTX.baseUrl}/new?id=${ev.id}">${what}</a>` : "");
     pane("details").innerHTML = `
+      ${INIT && ev.relation !== "invited" ? `<div class="card custom-card" id="sessionDots"><div class="card-body"><span class="skel skel-line" style="width:40%"></span></div></div>` : ""}
       ${ev.report_back ? `<div class="card custom-card ev-report"><div class="card-body"><div class="ev-report-head"><span class="avatar avatar-md avatar-rounded bg-primary text-white"><i class="ri-double-quotes-l"></i></span><div><strong>How it went</strong><small>The report back</small></div></div><p class="ev-report-text">${E.esc(ev.report_back)}</p></div></div>` : ""}
       <div class="card custom-card">
         <div class="card-header"><div class="card-title">About the ${N.one}</div></div>
@@ -238,15 +262,43 @@
           }
         </div>
       </div>`;
+    if (INIT && ev.relation !== "invited") renderSessionDots();
+  }
+
+  /** The sessions at a glance: one dot per session, coloured by status; a dot opens its window. */
+  async function renderSessionDots() {
+    const data = await fetchSessions();
+    const box = $("sessionDots");
+    if (!box) return;
+    if (!data) return box.remove();
+    const today = todayIso();
+    const kind = (x) => (x.status === "held" ? "held" : x.status === "cancelled" ? "cancelled" : x.held_on < today ? "missed" : "planned");
+    const counts = data.items.reduce((a, x) => ((a[kind(x)] = (a[kind(x)] || 0) + 1), a), {});
+    const LEG = [["held", "Held"], ["planned", "Planned"], ["missed", "Not recorded"], ["cancelled", "Cancelled"]];
+    box.innerHTML = `
+      <div class="card-header justify-content-between flex-wrap gap-2">
+        <div><div class="card-title">The sessions at a glance</div><span class="card-subtitle-text">${E.esc(E.meets(state.ev))}</span></div>
+        <button type="button" class="btn btn-sm btn-outline-primary" data-goto="sessions">See all sessions<i class="ri-arrow-right-line ms-1"></i></button>
+      </div>
+      <div class="card-body">
+        <div class="ev-dots">${data.items.map((x) => `<button type="button" class="ev-dot is-${kind(x)}" data-view="${x.id}" title="#${x.number} · ${dayOf(x.held_on).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}${x.topic ? ` · ${E.esc(x.topic)}` : ""}" aria-label="Session ${x.number}"><span>${x.number}</span></button>`).join("")}</div>
+        <div class="ev-dots-legend">${LEG.filter(([k]) => counts[k]).map(([k, l]) => `<span><i class="ev-dot-key is-${k}"></i>${l} <b>${counts[k]}</b></span>`).join("")}</div>
+      </div>`;
+    box.querySelector("[data-goto]").addEventListener("click", () => showTab("sessions"));
+    box.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => openSessionView(data.items.find((x) => x.id === Number(b.dataset.view)), data)));
   }
 
   /** The side's facts as tinted fact boxes (one colour), not a list repeating the header. */
   function renderFacts() {
     const ev = state.ev;
     const invitees = ev.invitees || [];
-    const fact = (icon, label, value, extra = "") => `<div class="profile-fact profile-tint-primary"><span class="avatar avatar-sm avatar-rounded bg-primary text-white flex-shrink-0"><i class="${icon}"></i></span><div class="min-w-0 flex-fill"><div class="profile-fact-label">${label}</div><div class="profile-fact-value">${value}</div>${extra}</div></div>`;
+    let n = 0;
+    const fact = (icon, label, value, extra = "") => {
+      const i = n++;
+      return `<div class="profile-fact ev-fact" style="--q: var(--${tone(i).color}-rgb)">${tile(icon, i, "sm")}<div class="min-w-0 flex-fill"><div class="profile-fact-label">${label}</div><div class="profile-fact-value">${value}</div>${extra}</div></div>`;
+    };
     const plan = ev.relation === "own" && (ev.planned_income || ev.planned_spend);
-    const planBar = plan && ev.planned_income ? `<div class="progress mt-2" style="height:.4rem" role="progressbar" aria-label="Expenses against income"><div class="progress-bar bg-primary" style="width:${Math.min(100, Math.round((ev.planned_spend / ev.planned_income) * 100))}%"></div></div>` : "";
+    const planBar = plan && ev.planned_income ? `<div class="progress mt-2" style="height:.4rem" role="progressbar" aria-label="Expenses against income"><div class="progress-bar bg-warning" style="width:${Math.min(100, Math.round((ev.planned_spend / ev.planned_income) * 100))}%"></div></div>` : "";
     const s = ev.sessions || {};
     return `
       ${INIT && s.next ? `<div class="card custom-card ev-next"><div class="card-body"><div class="ev-next-label">Next session</div><div class="ev-next-date">${E.longDate(new Date(`${s.next}T12:00:00`))}</div><div class="ev-next-sub"><i class="ri-repeat-line"></i>${E.esc(E.meets(ev))}${ev.venue ? ` · ${E.esc(ev.venue)}` : ""}</div></div></div>` : ""}
@@ -254,7 +306,7 @@
         <div class="card-header"><div class="card-title">At a glance</div></div>
         <div class="card-body">
           ${fact("ri-user-heart-line", "Who it's for", `${E.esc((ev.audience || "everyone").replace(/^\w/, (c) => c.toUpperCase()))}${ev.capacity ? ` · ${INIT ? "places" : "room"} for ${E.num(ev.capacity)}` : ""}`)}
-          ${fact("ri-community-line", "Open to", E.esc(ev.open_to_label), invitees.length ? `<div class="d-flex flex-wrap gap-1 mt-2">${invitees.map((p) => `<span class="soft-chip soft-primary"><i class="${p.type === "region" ? "ri-map-2-line" : "ri-home-heart-line"}"></i>${E.esc(p.name)}</span>`).join("")}</div>` : "")}
+          ${fact("ri-community-line", "Open to", E.esc(ev.open_to_label), invitees.length ? `<div class="d-flex flex-wrap gap-1 mt-2">${invitees.map((p) => `<span class="soft-chip soft-${p.type === "region" ? "purple" : "success"}"><i class="${p.type === "region" ? "ri-map-2-line" : "ri-home-heart-line"}"></i>${E.esc(p.name)}</span>`).join("")}</div>` : "")}
           ${fact("ri-user-add-line", INIT ? "Joining" : "Registration", ev.registration ? `${INIT ? "Join" : "Register"}${ev.register_by ? ` by ${E.longDate(new Date(ev.register_by))}` : INIT ? " until the last day" : ""} · ${ev.fee_per_person ? `${E.money(ev.fee_per_person)} a person` : "free"}` : INIT ? "Nothing to join - it's for our own place" : "No registration needed")}
           ${INIT ? fact("ri-calendar-line", "Runs", `${E.longDate(new Date(ev.starts_at))} - ${E.longDate(new Date(ev.ends_at))} · ${E.num(s.total || 0)} sessions${ev.certificate ? " · certificate" : ""}`) : ""}
           ${plan ? fact("ri-hand-coin-line", "Money plan", `Income ${E.money(ev.planned_income)} · expenses ${E.money(ev.planned_spend)}`, planBar) : ""}
@@ -640,40 +692,142 @@
     const data = await fetchSessions();
     if (!data) return;
     const today = todayIso();
+    const s = data.summary;
+    const next = data.items.find((x) => x.status === "planned" && x.held_on >= today);
+    const missed = data.items.filter((x) => x.status === "planned" && x.held_on < today).length;
+    const avg = s.average;
     const row = (x) => {
-      const missed = x.status === "planned" && x.held_on < today;
-      const [label, color] = missed ? ["Not recorded", "secondary"] : SESSION_STATUS[x.status];
       const d = dayOf(x.held_on);
+      const due = data.can_manage && x.status !== "cancelled" && x.held_on <= today && x.attendance == null;
+      const bar = x.attendance != null && avg ? Math.min(100, Math.round((x.attendance / Math.max(avg * 1.5, 1)) * 100)) : 0;
       return `
-        <li class="ev-session${x.status === "cancelled" ? " is-cancelled" : ""}" data-session="${x.id}">
-          <span class="ev-session-no bg-${color} ${E.textOn(color)}">${x.number}</span>
-          <div class="ev-session-day"><strong>${d.getDate()} ${d.toLocaleDateString(undefined, { month: "short" })}</strong><small>${d.toLocaleDateString(undefined, { weekday: "short" })}</small></div>
-          <div class="flex-fill" style="min-width:0">
-            <div class="fw-semibold text-break">${x.topic ? E.esc(x.topic) : `<span class="ev-session-none">No topic yet</span>`}</div>
-            <div class="ev-card-meta mt-1">${UI.pill(label, color)}${x.attendance != null ? `<span><i class="ri-user-follow-line"></i>${E.num(x.attendance)} came</span>` : ""}${x.notes ? `<span class="text-break"><i class="ri-sticky-note-line"></i>${E.esc(x.notes).slice(0, 80)}</span>` : ""}</div>
+        <li class="ev-srow${x.status === "cancelled" ? " is-cancelled" : ""}${next && x.id === next.id ? " is-next" : ""}" data-view="${x.id}" tabindex="0" role="button" aria-label="Session ${x.number}">
+          <span class="ev-sdate"><strong>${d.getDate()}</strong><small>${d.toLocaleDateString("en-GB", { weekday: "short" })}</small></span>
+          <div class="ev-smain">
+            <div class="ev-stitle"><span class="ev-sno">#${x.number}</span>${x.topic ? E.esc(x.topic) : `<span class="ev-session-none">No topic yet</span>`}${next && x.id === next.id ? ` <span class="badge bg-primary list-pill ms-1">Next</span>` : ""}</div>
+            <div class="ev-smeta">${sessionPill(x)}${x.attendance != null ? `<span class="soft-chip soft-purple"><i class="ri-user-follow-line"></i>${E.num(x.attendance)} came</span><span class="ev-sbar" title="Against the average of ${E.num(avg)}"><i style="width:${bar}%"></i></span>` : ""}${x.notes ? `<span class="soft-chip soft-pink"><i class="ri-sticky-note-line"></i>Notes</span>` : ""}</div>
           </div>
-          ${data.can_manage
-            ? `<div class="flex-shrink-0">${x.status !== "cancelled" && x.held_on <= today ? `<button class="btn btn-sm btn-success" data-record="${x.id}"><i class="ri-user-follow-line me-1"></i>${x.attendance != null ? "Edit" : "Record"}</button>` : `<button class="btn btn-sm btn-outline-primary" data-record="${x.id}"><i class="ri-edit-line me-1"></i>Edit</button>`}</div>`
-            : ""}
+          ${due ? `<button class="btn btn-sm btn-primary ev-saction" data-record="${x.id}"><i class="ri-user-follow-line me-1"></i>Record attendance</button>` : `<i class="ri-arrow-right-s-line ev-schev" aria-hidden="true"></i>`}
         </li>`;
     };
-    const s = data.summary;
+    // By month: "August 2026", "September 2026"...
+    const months = [];
+    data.items.forEach((x) => {
+      const key = x.held_on.slice(0, 7);
+      let m = months.find((g) => g.key === key);
+      if (!m) months.push((m = { key, label: dayOf(x.held_on).toLocaleDateString("en-GB", { month: "long", year: "numeric" }), items: [] }));
+      m.items.push(x);
+    });
+    const pct = s.total ? Math.round((s.held / s.total) * 100) : 0;
     p.innerHTML = `
       <div class="card custom-card">
         <div class="card-header justify-content-between flex-wrap gap-2">
           <div><div class="card-title">Sessions</div><span class="card-subtitle-text">${E.esc(E.meets(state.ev))}</span></div>
-          <div class="d-flex flex-wrap align-items-center gap-2">
-            <span class="soft-chip soft-success"><i class="ri-checkbox-circle-line"></i>${E.num(s.held)} of ${E.num(s.total)} held</span>
-            ${s.average != null ? `<span class="soft-chip soft-purple"><i class="ri-user-follow-line"></i>${E.num(s.average)} a session</span>` : ""}
-            ${data.can_manage ? `<button class="btn btn-sm btn-primary" id="addSessionBtn"><i class="ri-add-line me-1"></i>Add a session</button>` : ""}
+          ${data.can_manage ? `<button class="btn btn-sm btn-primary" id="addSessionBtn"><i class="ri-add-line me-1"></i>Add a session</button>` : ""}
+        </div>
+        <div class="ev-ssummary">
+          <div class="ev-sprogress">
+            <div class="d-flex justify-content-between align-items-baseline mb-1"><strong>${E.num(s.held)} of ${E.num(s.total)} held</strong><span>${pct}%</span></div>
+            <div class="progress" role="progressbar" aria-label="Sessions held" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar bg-success" style="width:${pct}%"></div></div>
+          </div>
+          <div class="ev-sfigs">
+            <div class="ev-sfig">${tile("ri-calendar-event-line", 0, "sm")}<div><small>Next session</small><strong>${next ? dayOf(next.held_on).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : "-"}</strong></div></div>
+            <div class="ev-sfig">${tile("ri-user-follow-line", 1, "sm")}<div><small>Average</small><strong>${avg != null ? `${E.num(avg)} people` : "-"}</strong></div></div>
+            <div class="ev-sfig">${missed ? `<span class="ev-tile is-sm is-soft" style="--q: var(--warning-rgb)"><i class="ri-error-warning-line"></i></span>` : tile("ri-checkbox-circle-line", 2, "sm")}<div><small>Not recorded</small><strong>${missed ? `${missed} ${missed === 1 ? "session" : "sessions"}` : "None"}</strong></div></div>
           </div>
         </div>
-        <div class="card-body">
-          ${data.items.length ? `<ul class="ev-sessions">${data.items.map(row).join("")}</ul>` : `<div class="ev-empty"><h6 class="mb-1">No sessions</h6><p class="mb-0">Add one, or change how often it meets.</p></div>`}
+        <div class="card-body pt-0">
+          ${data.items.length
+            ? months.map((m) => `<div class="ev-smonth"><span>${m.label}</span><span class="soft-chip soft-primary">${m.items.length}</span></div><ul class="ev-slist">${m.items.map(row).join("")}</ul>`).join("")
+            : `<div class="ev-empty"><h6 class="mb-1">No sessions</h6><p class="mb-0">Add one, or change how often it meets.</p></div>`}
         </div>
       </div>`;
-    p.querySelectorAll("[data-record]").forEach((b) => b.addEventListener("click", () => openSession(data.items.find((x) => x.id === Number(b.dataset.record)))));
+    const find = (v) => data.items.find((x) => x.id === Number(v));
+    p.querySelectorAll("[data-record]").forEach((b) =>
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openSession(find(b.dataset.record));
+      }),
+    );
+    p.querySelectorAll("[data-view]").forEach((r) => {
+      r.addEventListener("click", () => openSessionView(find(r.dataset.view), data));
+      r.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), openSessionView(find(r.dataset.view), data)));
+    });
     $("addSessionBtn")?.addEventListener("click", () => openSession(null));
+  }
+
+  /**
+   * One session, to look at (v1-events' view-window pattern): a key-facts box,
+   * who came by group (balanced tiles, a stacked bar, against the average),
+   * the notes; Edit and Record attendance for whoever can manage.
+   */
+  function openSessionView(x, data) {
+    if (!x) return;
+    document.getElementById("evSessionView")?.remove();
+    const ev = state.ev;
+    const today = todayIso();
+    const d = dayOf(x.held_on);
+    const day = d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+    const avg = data?.summary?.average;
+    const can = !!data?.can_manage;
+    const recorded = x.attendance != null;
+    const due = can && x.status !== "cancelled" && x.held_on <= today && !recorded;
+    const total = recorded ? x.attendance : 0;
+    const groups = GROUPS.map((g, i) => ({ g, n: x[g] || 0, i }));
+    const diff = recorded && avg ? x.attendance - avg : null;
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      `<div class="modal fade app-modal" id="evSessionView" tabindex="-1" aria-labelledby="evSessionViewTitle">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable modal-fullscreen-sm-down">
+          <div class="modal-content">
+            <div class="modal-header">
+              <span class="app-modal-icon bg-primary text-white"><i class="ri-calendar-check-line"></i></span>
+              <div class="flex-fill min-w-0"><h5 class="modal-title" id="evSessionViewTitle">Session ${x.number} · ${day}</h5><div class="app-modal-subtitle">${E.esc(ev.title)}</div></div>
+              <span class="me-2">${sessionPill(x)}</span>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <dl class="ev-keyfacts">
+                <div><dt>When</dt><dd>${day}${ev.meeting_time ? ` · ${E.esc(ev.meeting_time.slice(0, 5))}` : ""}${ev.venue ? ` · ${E.esc(ev.venue)}` : ""}</dd></div>
+                <div><dt>Topic</dt><dd>${x.topic ? E.esc(x.topic) : "No topic yet"}</dd></div>
+                ${ev.coordinator ? `<div><dt>Facilitator</dt><dd>${E.esc(ev.coordinator)}</dd></div>` : ""}
+              </dl>
+              ${
+                recorded
+                  ? `<div class="app-modal-section-title mt-4 mb-2">Who came</div>
+                <div class="row g-2">${groups.map((x2) => `<div class="col-6 col-md-3"><div class="ev-gtile" style="--q: var(--${tone(x2.i).color}-rgb)">${tile(GROUP_ICONS[x2.g] || "ri-user-line", x2.i, "sm")}<div><strong>${E.num(x2.n)}</strong><small>${E.GROUPS[x2.g]}</small></div></div></div>`).join("")}</div>
+                <div class="ev-total-row">
+                  <div><span class="ev-total-n">${E.num(total)}</span><span class="ev-total-l">came</span></div>
+                  ${diff != null ? `<span class="badge ${diff >= 0 ? "bg-success" : "bg-danger"} list-pill"><i class="${diff >= 0 ? "ri-arrow-up-line" : "ri-arrow-down-line"} me-1"></i>${diff >= 0 ? "+" : ""}${E.num(Math.round(diff))} vs the average of ${E.num(avg)}</span>` : ""}
+                </div>
+                <div class="ev-stack" aria-hidden="true">${groups.filter((x2) => x2.n).map((x2) => `<i style="width:${total ? (x2.n / total) * 100 : 0}%; background: rgb(var(--${tone(x2.i).color}-rgb))" title="${E.GROUPS[x2.g]} ${x2.n}"></i>`).join("")}</div>`
+                  : x.status === "cancelled"
+                    ? `<div class="alert alert-danger d-flex gap-2 mt-4 mb-0"><i class="ri-close-circle-line fs-16"></i><span>This session didn't happen.</span></div>`
+                    : x.held_on > today
+                      ? `<div class="alert alert-primary d-flex gap-2 mt-4 mb-0"><i class="ri-time-line fs-16"></i><span>Coming up - attendance can be recorded on the day or after.</span></div>`
+                      : `<div class="alert alert-warning d-flex align-items-center gap-2 mt-4 mb-0"><i class="ri-error-warning-line fs-16"></i><span class="flex-fill">Nothing recorded for this session yet.</span>${due ? `<button type="button" class="btn btn-sm btn-primary" data-sv="record"><i class="ri-user-follow-line me-1"></i>Record attendance</button>` : ""}</div>`
+              }
+              ${x.notes ? `<div class="mr-quote mt-4" style="--q: var(--pink-rgb)"><div class="mr-quote-head"><i class="ri-sticky-note-line"></i>Notes</div><p>${E.esc(x.notes)}</p></div>` : ""}
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-light${can ? " me-auto" : ""}" data-bs-dismiss="modal">Close</button>
+              ${can ? `<button type="button" class="btn btn-outline-primary" data-sv="edit"><i class="ri-edit-line me-1"></i>Edit</button>` : ""}
+              ${due ? `<button type="button" class="btn btn-primary" data-sv="record"><i class="ri-user-follow-line me-1"></i>Record attendance</button>` : ""}
+            </div>
+          </div>
+        </div>
+      </div>`,
+    );
+    const el = $("evSessionView");
+    const modal = new bootstrap.Modal(el);
+    el.querySelectorAll("[data-sv]").forEach((b) =>
+      b.addEventListener("click", () => {
+        el.addEventListener("hidden.bs.modal", () => openSession(x), { once: true });
+        modal.hide();
+      }),
+    );
+    el.addEventListener("hidden.bs.modal", () => el.remove());
+    modal.show();
   }
 
   /** One session's window: day and topic, attendance (once the day has come), notes; it didn't happen / remove. */
@@ -686,7 +840,7 @@
         <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
           <div class="modal-content">
             <div class="modal-header">
-              <span class="app-modal-icon bg-success text-white"><i class="ri-calendar-check-line"></i></span>
+              <span class="app-modal-icon bg-primary text-white"><i class="ri-calendar-check-line"></i></span>
               <div class="flex-fill"><h5 class="modal-title" id="evSessionTitle">${x ? `Session ${x.number}` : "Add a session"}</h5><div class="app-modal-subtitle">${E.esc(state.ev.title)}</div></div>
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -709,7 +863,7 @@
               ${x && x.status !== "cancelled" ? `<button type="button" class="btn btn-link text-danger me-auto" id="sCancel">${x.attendance == null && x.status === "planned" ? "Remove this session" : "It didn't happen"}</button>` : ""}
               ${x && x.status === "cancelled" ? `<button type="button" class="btn btn-link me-auto" id="sRestore">Put it back</button>` : ""}
               <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-              <button type="button" class="btn btn-success" id="sSave"><i class="ri-check-line me-1"></i>Save</button>
+              <button type="button" class="btn btn-primary" id="sSave"><i class="ri-check-line me-1"></i>Save</button>
             </div>
           </div>
         </div>

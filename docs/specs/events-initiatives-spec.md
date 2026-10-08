@@ -225,6 +225,20 @@ The form follows v1-events' event wizard, in our one colour:
 - **The side** shows "At a glance" as tinted fact boxes in one colour, the money plan with a small bar, and for an initiative a solid "Next session" card.
 - **Empty fields** say what to do ("Add a programme in Edit").
 
+### Balanced colours and the sessions, round 4 (2026-10-08)
+- **No left-border accents. Pages aren't one colour:**
+  - tiles and fact boxes take the category palette in turn, solid and pale alternately;
+  - the countdown is a solid badge;
+  - session status is solid for what happened (held, cancelled) and pale for what hasn't (planned, not recorded).
+- **Sessions tab:**
+  - a progress band: held, next, average, not recorded;
+  - sessions grouped by month, with the next one highlighted;
+  - the whole row opens the **session window**;
+  - the only row button is Record attendance, on a past session with nothing recorded.
+- **The session window (view):** key facts, then who came by group with a stacked bar and the difference from the average, then notes. Edit opens the edit window.
+- **Initiative Details:** the sessions at a glance as numbered dots coloured by status; a dot opens its session.
+- **More than four tabs** share one row (`.section-tabs.is-row`); under 992px they stay one scrollable row.
+
 ## Initiatives (L2)
 An initiative is an `activities` row with `kind = initiative`. It uses the same visibility, open-to rules, registrations, money and history as an event; what differs is below.
 

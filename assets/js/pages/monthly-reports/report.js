@@ -150,7 +150,7 @@
         ? `<ol class="ev-timeline">${all.map((x) => `<li><span class="ev-timeline-dot"></span><div class="flex-fill">${x.date ? `<span class="ev-timeline-when">${R.shortDate(x.date)}</span>` : `<span class="ev-timeline-when">Sessions</span>`}<span class="ev-timeline-what fw-semibold">${R.esc(x.title)}</span><div class="mr-tl-sub">${x.sub}${x.n ? ` <span class="soft-chip soft-primary ms-1">${x.n}</span>` : ""}</div></div></li>`).join("")}</ol>`
         : `<p class="fw-semibold mb-0">No events or initiative sessions this month.</p>`) +
       extra +
-      (r.outreach ? `<div class="mr-quote mt-3"><div class="mr-quote-head"><i class="ri-road-map-line"></i>Outreach</div><p>${R.esc(r.outreach)}</p></div>` : "")
+      (r.outreach ? `<div class="mr-quote mt-3" style="--q: var(--success-rgb)"><div class="mr-quote-head"><i class="ri-road-map-line"></i>Outreach</div><p>${R.esc(r.outreach)}</p></div>` : "")
     );
   }
 
@@ -306,7 +306,7 @@
       <div class="card custom-card"><div class="card-header"><div class="card-title">What happened</div></div><div class="card-body">${happenedTimeline(r.figures)}</div></div>
       <div class="card custom-card"><div class="card-header"><div class="card-title">In the pastor's words</div></div><div class="card-body">${
         words.length
-          ? `<div class="row g-3">${words.map(([k, [label, , icon]]) => `<div class="col-md-6"><div class="mr-quote h-100"><div class="mr-quote-head"><i class="${icon}"></i>${label}</div><p>${R.esc(r.words[k])}</p></div></div>`).join("")}</div>`
+          ? `<div class="row g-3">${words.map(([k, [label, , icon, color]]) => `<div class="col-md-6"><div class="mr-quote h-100" style="--q: var(--${color}-rgb)"><div class="mr-quote-head"><i class="${icon}"></i>${label}</div><p>${R.esc(r.words[k])}</p></div></div>`).join("")}</div>`
           : `<p class="fw-semibold mb-0">Nothing was written.</p>`
       }</div></div>
       ${r.attachments.length ? `<div class="card custom-card"><div class="card-header"><div class="card-title">Photos and files</div></div><div class="card-body"><div class="mr-gallery" id="gallery">${r.attachments.map((a) => `<button type="button" class="mr-thumb" data-file="${a.id}" data-image="${a.is_image ? 1 : 0}" title="${R.esc(a.name)}">${a.is_image ? `<span class="skel" style="display:block;height:100%"></span>` : `<i class="ri-file-pdf-line"></i><small>${R.esc(a.name)}</small>`}</button>`).join("")}</div></div></div>` : ""}`;
