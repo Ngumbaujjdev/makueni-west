@@ -447,7 +447,7 @@
           </div>
           <div class="cm-sheet-foot">
             ${unknown.length ? `<div class="cm-sheet-error"><i class="ri-error-warning-line"></i><span><b>Won't be filled in</b>${unknown.map(esc).join(", ")} - they go out exactly as written.</span></div>` : ""}
-            ${!ours && !t.our_copy_id ? `<div class="cm-sheet-note"><i class="ri-lightbulb-line"></i><span>Make your own copy to send it - <b>${esc(placeName())}</b> goes in wherever it says {sender}, and you can change anything.</span></div>` : ""}
+            ${!ours && !t.our_copy_id ? `<div class="cm-sheet-note"><i class="ri-information-line"></i><span>Make your own copy to send it - <b>${esc(placeName())}</b> goes in wherever it says {sender}, and you can change anything.</span></div>` : ""}
           </div>
         </aside>
         <section class="cm-sheet-main"><div id="cmTplPv"></div></section>
@@ -468,7 +468,7 @@
       <button type="button" class="btn btn-light border me-auto" data-bs-dismiss="modal">Close</button>
       ${ours ? `<button type="button" class="btn btn-light border" data-f="edit"><i class="ri-pencil-line me-1"></i>Edit</button><a class="btn btn-primary" href="${composeUrl(t)}"><i class="ri-send-plane-line me-1"></i>Use in a campaign</a>` : ""}
       ${!ours && t.our_copy_id ? `<button type="button" class="btn btn-primary" data-f="mine"><i class="ri-arrow-right-line me-1"></i>Open our copy</button>` : ""}
-      ${!ours && !t.our_copy_id ? `<button type="button" class="btn btn-success" data-f="copy"><i class="ri-file-copy-line me-1"></i>Make our copy</button>` : ""}`;
+      ${!ours && !t.our_copy_id ? `<button type="button" class="btn btn-primary" data-f="copy"><i class="ri-file-copy-line me-1"></i>Make our copy</button>` : ""}`;
     const m = bootstrap.Modal.getOrCreateInstance(el);
     foot.querySelector('[data-f="edit"]')?.addEventListener("click", () => {
       m.hide();

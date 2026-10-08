@@ -38416,8 +38416,8 @@ button.cal-side-item:focus-visible {
 .cm-sheet-error { background: rgba(var(--danger-rgb), .08); }
 .cm-sheet-error i { color: rgb(var(--danger-rgb)); font-size: 1.05rem; }
 .cm-sheet-error b { display: block; }
-.cm-sheet-note { background: var(--custom-white); box-shadow: 0 1px 3px rgba(15, 23, 42, .07); }
-.cm-sheet-note i { color: rgb(var(--warning-rgb)); font-size: 1.1rem; }
+.cm-sheet-note { background: rgba(var(--primary-rgb), .1); }
+.cm-sheet-note i { color: var(--primary-color); font-size: 1.1rem; }
 @media (min-width: 992px) {
   .cm-sheet-more.collapse:not(.show) { display: block; }
 }
