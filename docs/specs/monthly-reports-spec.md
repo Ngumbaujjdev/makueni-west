@@ -141,3 +141,12 @@ The placeholders' unbuilt sub-pages are switched off.
 - [x] Church and region: Monthly reports (the year at a glance, KPI cards, comments), Write (stepper with the live figures and Send), and the report page.
 - [x] Region and diocese: the reports below for a month, with tiles that filter, Mark as seen and Comment.
 - [x] No console errors; light and dark; 390 px.
+
+### Reading a report, round 3 (2026-10-08)
+The read view is a document, in one colour:
+- **The hero** carries a Started → Sent → Seen stepper with dates and who. It replaces the "Where it is" card, and also shows while writing.
+- **What happened** is a timeline: date pill, title, "with ..." and a count chip. Initiatives are marked "Sessions", then pastoral visits as a fact box and outreach as a quote.
+- **The pastor's words** become one quote card per filled heading.
+- **Comments** use the inbox's thread (`mi-thread`), with the tinted reply box (`mi-reply`) under them.
+- **The figures** keep their meaning colours (income green, expenses red). There are no "vs last month" changes, because the report data carries only the members change.
+
