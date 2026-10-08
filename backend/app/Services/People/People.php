@@ -150,6 +150,7 @@ final class People
             'baptised_share' => $active ? round($baptised / $active * 100) : 0,
             'leaving_this_year' => $leftIn($today->startOfYear(), $today),
             'sunday_school' => (clone $members)->where('congregation', 'sunday_school')->count(),
+            'areas' => $this->knownAreas($church),
             'archived' => Person::where('territory_id', $church->id)->whereNotNull('archived_at')->whereNull('anonymised_at')->count(),
             'months' => $months->map(fn ($m) => $m->format('M'))->all(),
             'joins' => $months->map(fn ($m) => $joinedIn($m))->all(),
@@ -189,6 +190,13 @@ final class People
                 'recorded_at' => $last->created_at?->toDateString(),
             ] : null,
         ];
+    }
+
+    /** The areas our people already come from, most used first - suggestions for the Area box. */
+    public function knownAreas(Territory $church): array
+    {
+        return Person::where('territory_id', $church->id)->whereNull('anonymised_at')->whereNotNull('area')
+            ->selectRaw('area, count(*) as n')->groupBy('area')->orderByDesc('n')->limit(40)->pluck('area')->all();
     }
 
     /** Where people live: the top areas and how many in each ("Not given" last). */

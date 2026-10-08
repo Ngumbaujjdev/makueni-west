@@ -40,18 +40,11 @@ final class Visitors
         return max(1, (int) ($this->settings->get('visitors.followup_days', $church) ?: 3));
     }
 
-    /** The areas our people already come from - suggestions for the Area box. */
-    public function knownAreas(Territory $church): array
-    {
-        return Person::where('territory_id', $church->id)->whereNull('anonymised_at')->whereNotNull('area')
-            ->selectRaw('area, count(*) as n')->groupBy('area')->orderByDesc('n')->limit(40)->pluck('area')->all();
-    }
-
     /** What the Sunday form and the visitor page pick from. */
     public function options(Territory $church): array
     {
         return [
-            'areas' => $this->knownAreas($church),
+            'areas' => $this->people->knownAreas($church),
             'followup_days' => $this->followupDays($church),
             'welcome_sms' => (bool) $this->settings->get('visitors.welcome_sms', $church),
             'welcome_template' => (string) $this->settings->get('visitors.welcome_template', $church),
