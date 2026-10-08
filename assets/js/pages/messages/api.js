@@ -81,6 +81,8 @@ const MessagesAPI = (function () {
     /** The real email (and signed SMS) for this text - Settings > Communication's template preview. */
     emailPreview: (subject, body) => request("POST", "/messages/templates/preview", { body: { subject, body } }),
     options: () => request("GET", "/messages/options"),
+    /** One person from the church's register, to message them (People & care). */
+    people: (q) => request("GET", "/people/search", { params: { q } }),
     preview: (body) => request("POST", "/messages/preview", { body }),
     send: (body) => request("POST", "/messages", { body }),
     sent: (year) => request("GET", "/messages/sent", { params: { year } }),

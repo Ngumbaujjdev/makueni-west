@@ -21,6 +21,7 @@
   const params = new URLSearchParams(window.location.search);
   let list = params.get("list") === "archived" ? "archived" : "current";
   let kit = null;
+  let byId = new Map();
 
   // -------------------------------------------------------------- the cards
   function renderCards(o) {
@@ -54,7 +55,7 @@
   }
 
   function actions() {
-    const send = { key: "sms", label: "Send message", icon: "ri-chat-3-line", primary: true, run: (ids) => (window.location.href = `${CTX.messagesUrl}?channel=sms&people=${ids.join(",")}`) };
+    const send = { key: "sms", label: "Send message", icon: "ri-chat-3-line", primary: true, run: (ids) => K.messagePeople(CTX.messagesUrl, ids.map((id) => byId.get(id)).filter(Boolean)) };
     if (!CTX.can.manage || list === "archived") return [send];
     const change = (action, title, icon, danger, text) => ({
       key: action,
@@ -91,6 +92,7 @@
       return;
     }
     const items = res.data.items;
+    byId = new Map(items.map((p) => [p.id, p]));
     if (!items.length) {
       $("memberFilters").innerHTML = "";
       $("memberPills").innerHTML = "";

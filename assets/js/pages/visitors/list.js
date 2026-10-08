@@ -110,7 +110,7 @@
   }
 
   function bulkActions() {
-    const send = { key: "sms", label: "Send message", icon: "ri-chat-3-line", primary: true, run: (ids) => (window.location.href = `${CTX.messagesUrl}?channel=sms&people=${ids.join(",")}`) };
+    const send = { key: "sms", label: "Send message", icon: "ri-chat-3-line", primary: true, run: (ids) => K.messagePeople(CTX.messagesUrl, ids.map((id) => state.byId.get(id)).filter(Boolean)) };
     if (!state.can.manage || state.view === "archived") return [send];
     const leaders = state.options?.leaders || [];
     const call = (ids, body) => async () => {

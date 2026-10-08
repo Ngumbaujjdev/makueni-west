@@ -27,7 +27,7 @@ const PeopleKit = (function () {
     const color = c.color || "primary";
     const d = c.delta;
     const delta = d
-      ? `<span class="pp-stat-delta is-${d.dir}"><i class="ri-arrow-${d.dir === "down" ? "down-right" : d.dir === "up" ? "up-right" : "right"}-line"></i>${esc(d.text)}</span>`
+      ? `<span class="pp-stat-delta is-${d.dir}"><i class="ri-arrow-${d.dir === "down" ? "right-down" : d.dir === "up" ? "right-up" : "right"}-line"></i>${esc(d.text)}</span>`
       : "";
     const spark = c.series ? `<div class="pp-stat-spark" data-spark='${JSON.stringify(c.series).replace(/'/g, "&#39;")}' data-spark-color="${color}" data-spark-height="42"></div>` : "";
     const bar = c.bar
@@ -297,7 +297,17 @@ const PeopleKit = (function () {
     return el;
   }
 
-  return { statCard, statRow, listTable, checkCell, checkHead, parts, confirmWindow, esc };
+  /** "Send message" for picked people: their names go along (sessionStorage), the ids in the link. */
+  function messagePeople(messagesUrl, people) {
+    try {
+      sessionStorage.setItem("pp-picked", JSON.stringify(people.map((p) => ({ id: p.id, name: p.name }))));
+    } catch (e) {
+      /* names are a nicety - the composer shows "Person 12" without them */
+    }
+    window.location.href = `${messagesUrl}?channel=sms&people=${people.map((p) => p.id).join(",")}`;
+  }
+
+  return { statCard, statRow, listTable, checkCell, checkHead, parts, confirmWindow, messagePeople, esc };
 })();
 
 window.PeopleKit = PeopleKit;
