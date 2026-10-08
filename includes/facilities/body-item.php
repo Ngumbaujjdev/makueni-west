@@ -2,16 +2,20 @@
 <div class="card custom-card" id="itHero">
     <div class="card-body">
         <div class="d-flex align-items-center gap-3">
-            <span class="skel" style="width:64px;height:64px;border-radius:50%"></span>
+            <span class="skel" style="width:96px;height:96px;border-radius:1rem"></span>
             <div class="flex-fill"><span class="skel skel-title"></span><span class="skel skel-line mt-2" style="width:40%"></span></div>
         </div>
     </div>
 </div>
 
 <div class="nav section-tabs" id="itTabs" role="tablist" aria-label="Equipment" hidden>
-    <button class="nav-link section-tab active" data-tab="loans" type="button" role="tab">
+    <button class="nav-link section-tab active" data-tab="purchase" type="button" role="tab">
+        <span class="section-tab-icon bg-success"><i class="ri-bill-line"></i></span>
+        <span class="section-tab-text"><strong>Purchase</strong><small id="tabPurchase">What it cost, and the receipt</small></span>
+    </button>
+    <button class="nav-link section-tab" data-tab="loans" type="button" role="tab">
         <span class="section-tab-icon bg-primary"><i class="ri-hand-coin-line"></i></span>
-        <span class="section-tab-text"><strong>Loans</strong><small id="tabLoans">Who has borrowed it</small></span>
+        <span class="section-tab-text"><strong>Borrowing</strong><small id="tabLoans">Who has borrowed it</small></span>
     </button>
     <button class="nav-link section-tab" data-tab="repairs" type="button" role="tab">
         <span class="section-tab-icon bg-warning"><i class="ri-tools-line"></i></span>

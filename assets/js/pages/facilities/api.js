@@ -55,8 +55,28 @@ const FacilitiesAPI = (function () {
     }
   }
 
+  /** Files (photos, a receipt) as multipart - field: "photos[]" or "receipt". */
+  function upload(path, field, files) {
+    const form = new FormData();
+    (Array.isArray(files) ? files : [files]).forEach((f) => form.append(field, f));
+    return request("POST", path, { form });
+  }
+
+  /** A receipt through the API (receipts aren't public) - as a blob URL for <img> or a new tab. */
+  async function fileUrl(path) {
+    const h = headers(false);
+    h.Accept = "*/*";
+    try {
+      const res = await fetch(url(path), { headers: h });
+      return res.ok ? URL.createObjectURL(await res.blob()) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   return {
     overview: () => request("GET", "/facilities/overview"),
+    assets: () => request("GET", "/facilities/assets"),
     options: () => request("GET", "/facilities/options"),
     people: (q) => request("GET", "/facilities/people", { params: { q } }),
     saveRoom: (id, body) => request(id ? "PUT" : "POST", id ? `/rooms/${id}` : "/rooms", { body }),
@@ -72,8 +92,21 @@ const FacilitiesAPI = (function () {
     removeItem: (id) => request("DELETE", `/equipment/${id}`),
     bulkItems: (body) => request("POST", "/equipment/bulk", { body }),
     lend: (id, body) => request("POST", `/equipment/${id}/loans`, { body }),
-    loans: () => request("GET", "/loans"),
+    ask: (id, body) => request("POST", `/equipment/${id}/loans`, { body: { ...body, ask: true } }),
+    loans: (status = "out") => request("GET", "/loans", { params: { status } }),
     giveBack: (loanId) => request("POST", `/loans/${loanId}/return`),
+    approve: (loanId) => request("POST", `/loans/${loanId}/approve`),
+    decline: (loanId, reason) => request("POST", `/loans/${loanId}/decline`, { body: { reason } }),
+    cancelAsk: (loanId) => request("DELETE", `/loans/${loanId}`),
+    addPhotos: (id, files) => upload(`/equipment/${id}/photos`, "photos[]", files),
+    removePhoto: (id, photoId) => request("DELETE", `/equipment/${id}/photos/${photoId}`),
+    orderPhotos: (id, ids) => request("POST", `/equipment/${id}/photos/order`, { body: { ids } }),
+    addReceipt: (id, file) => upload(`/equipment/${id}/receipts`, "receipt", file),
+    removeReceipt: (id, mediaId) => request("DELETE", `/equipment/${id}/receipts/${mediaId}`),
+    fileUrl,
+    expenses: (q) => request("GET", "/equipment/expenses", { params: { q } }),
+    linkItemExpense: (id, entryId) => request("POST", `/equipment/${id}/expense`, { body: { budget_entry_id: entryId } }),
+    unlinkItemExpense: (id) => request("DELETE", `/equipment/${id}/expense`),
     repairs: () => request("GET", "/repairs"),
     report: (body) => request("POST", "/repairs", { body }),
     updateRepair: (id, body) => request("PUT", `/repairs/${id}`, { body }),
