@@ -8,6 +8,7 @@ use App\Support\Images;
 use App\Support\Kenya;
 use App\Support\Settings\PlaceProfile;
 use App\Support\SettingsAccess;
+use App\Support\YouTube;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -25,7 +26,7 @@ class ProfileController extends SettingsController
     private const SECTION = 'profile';
 
     private const FIELDS = [
-        'name', 'description', 'established_date', 'phone', 'email', 'website',
+        'name', 'description', 'established_date', 'phone', 'email', 'website', 'youtube_url',
         'address', 'town', 'sub_county', 'county', 'postal_code', 'latitude', 'longitude',
     ];
 
@@ -58,6 +59,9 @@ class ProfileController extends SettingsController
         if ($website !== '' && ! preg_match('~^https?://~i', $website)) {
             $request->merge(['website' => "https://{$website}"]);
         }
+        if ($request->filled('youtube_url')) {
+            $request->merge(['youtube_url' => YouTube::normalise($request->input('youtube_url'))]);
+        }
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
@@ -65,6 +69,11 @@ class ProfileController extends SettingsController
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+()\s-]{7,30}$/'],
             'email' => ['nullable', 'email', 'max:255'],
             'website' => ['nullable', 'url', 'max:255'],
+            'youtube_url' => ['nullable', 'string', 'max:255', function ($attribute, $value, $fail) {
+                if ($value && ! YouTube::valid($value)) {
+                    $fail('Use a YouTube link - your channel (youtube.com/@yourchurch) or a video.');
+                }
+            }],
             'address' => ['nullable', 'string', 'max:255'],
             'town' => ['nullable', 'string', 'max:100'],
             'sub_county' => ['nullable', 'string', 'max:100'],
@@ -116,7 +125,7 @@ class ProfileController extends SettingsController
             'logo.max' => 'The logo must be 2 MB or smaller.',
         ]);
 
-        $image = @imagecreatefromstring((string) file_get_contents($request->file('logo')->getRealPath()));
+        $image = Images::fromUpload($request->file('logo')->getRealPath());
         if (! $image) {
             throw ValidationException::withMessages(['logo' => "That file couldn't be read as an image."]);
         }

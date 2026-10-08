@@ -30,7 +30,8 @@ class ProfilePhotoController extends Controller
             'photo.max' => 'The photo must be 5 MB or smaller.',
         ]);
 
-        $image = @imagecreatefromstring((string) file_get_contents($request->file('photo')->getRealPath()));
+        // Upright first - a phone photo arrives sideways with an EXIF note.
+        $image = Images::fromUpload($request->file('photo')->getRealPath());
         if (! $image) {
             throw ValidationException::withMessages(['photo' => "That file couldn't be read as a photo."]);
         }

@@ -28,6 +28,7 @@ class Territory extends Model implements Auditable
         'email',
         'website',
         'logo_path',
+        'youtube_url',
         'postal_code',
         'town',
         'sub_county',

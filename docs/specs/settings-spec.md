@@ -323,8 +323,13 @@ All routes are under `/api/settings`, inside `auth:sanctum`, with a FormRequest 
 | GET | `/settings/sections` | — | the rail: groups → sections `{key,label,icon,colour,kind,url,attention}` plus `can` per section | `{level}.settings.hub.overview.read` |
 | GET | `/settings/sections/{section}` | — | cards → fields `{key,label,type,value,source,from,locked_by,changed,secret_set,options,help,used_by,lockable}` | `.{section}.read` |
 | PUT | `/settings/sections/{section}` | `{values:{key:value}, locks:{key:bool}, reset:[key]}` | the section again | `.{section}.update`; 422 for keys not editable at this level or locked above ("Set by the diocese") |
-| GET / PUT | `/settings/profile` | name, description, established_date, phone, email, website, address, town, sub_county, county, postal_code, latitude, longitude | profile + completeness % | `.profile.read` / `.update` (code is read-only) |
+| GET / PUT | `/settings/profile` | name, description, established_date, phone, email, website, youtube_url, address, town, sub_county, county, postal_code, latitude, longitude | profile (with `youtube_video`, `photo_count`) + completeness % | `.profile.read` / `.update` (code is read-only) |
 | POST / DELETE | `/settings/profile/logo` | image (png, jpg or webp, ≤ 2 MB) | `{logo_url}` | `.profile.update` |
+| GET | `/settings/profile/photos` | — | `{photos:[{id,url,thumb_url,caption,width,height,position}], max: 30, can}` | `.profile.read` |
+| POST | `/settings/profile/photos` | `photos[]` (1–10; png, jpg or webp, ≤ 10 MB each; 30 per place) | the gallery | `.profile.update` |
+| PATCH / DELETE | `/settings/profile/photos/{id}` | `{caption}` (≤ 160) | the photo / the gallery | `.profile.update` |
+| POST | `/settings/profile/photos/order` | `{ids:[…]}` - every photo, once | the gallery | `.profile.update` |
+| GET | `/places/{territory}/photos/{photo}[/thumb]` and `/places/{territory}/gallery` | — | the WebP file / `{place, youtube_url, youtube_video, photos}` | public, like the logo - for the church's own page |
 | GET / PUT | `/settings/service-times` | `{times:[…]}` (≤ 20) | the list | `.servicetimes.read` / `.update` |
 | GET | `/settings/team` | — | people `{assignment_id, user, role, assignment_type, is_active, last_login_at}` + `grantable` roles | `.team.read` |
 | POST | `/settings/team` | firstname, lastname, phone, email?, role_id, assignment_type | person + `{employee_code, temporary_password}` (shown once) | `.team.manage` + role grantable |
@@ -438,7 +443,10 @@ The pages themselves include `includes/settings/shell-start.php` / `shell-end.ph
   - KPI cards in different colours: profile complete, team members, last change.
   - The setup checklist.
   - At the diocese, Health tiles with solid status pills (Working / Check) and action buttons, plus "What's running".
-- **Profile:** Identity, Contact and Location cards, with a county Select2, a Leaflet map pin and a FilePond logo, next to a sticky "how others see us" preview card.
+- **Profile:** Identity, Contact and Location cards, with a county Select2, a Leaflet map pin and a logo, next to a sticky "how others see us" preview card.
+  - **Services online (2026-10-08):** a YouTube link - a channel (`youtube.com/@…`, `/channel`, `/c`, `/user`), a video, a live stream or a playlist (`app/Support/YouTube.php`). A video plays in the card; a channel shows as a link card. The preview gets a "Watch our service" button.
+  - **Gallery (2026-10-08):** up to 30 photos (`place_photos`), added several at a time (one request per photo, with progress), captioned, reordered and removed in place; opened full size with GLightbox. The preview shows the first four.
+  - **The image engine** (`app/Services/Images/ImageEngine.php`, after v1-events-backend's ImageService): every uploaded photo is decoded, stood upright from its EXIF orientation, scaled to at most 1920px (logos 512px, profile photos a 400px square) and kept as WebP at quality 82, with a 480px thumbnail for the gallery. The original file - with its GPS and camera details - is never stored. Files are on the private disk and served by public routes, like the logo.
 - **Team:** a DataTable with initials avatars and role pills. Adding someone opens an `.app-modal`; its done state shows the code and temporary password with copy buttons.
 - **Audit log:** KPI cards (changes this month with a sparkline, people, places, last change), then the shared filter toolbar (section, place, person, date range) over a DataTable of changes. Each change shows the old value in a soft red chip and the new one in a soft green chip. Built as a table rather than the planned timeline so it reuses the shared list helpers (filter in place, paging, URL state).
 - **Loading:** skeletons on first load; spinners only inside buttons.
@@ -464,7 +472,9 @@ The pages themselves include `includes/settings/shell-start.php` / `shell-end.ph
 - [ ] The app boots and `GET /settings/sections` works when the `settings` table is missing; defaults are used.
 - [ ] `GET /settings/sections` for a church lists only church sections, grouped, and `can` matches the role.
 - [ ] A Church Secretary can read the Profile but gets 403 on `PUT /settings/profile`.
-- [ ] A county not in the list returns 422. The returned completeness % counts phone, email, address, county, map pin and logo.
+- [ ] A county not in the list returns 422. The returned completeness % counts phone, email, address, county, map pin, logo and at least 3 photos (the YouTube link is optional - not every church streams).
+- [ ] A link that isn't YouTube returns 422; a video link returns its `youtube_video` id.
+- [ ] Gallery photos are WebP, at most 1920px, with a 480px thumbnail; a sideways phone photo is stood upright; only Profile editors add, caption, reorder or remove; 10 MB and 30 photos are enforced; another place's photo id is 404.
 - [ ] Service times: more than 20 returns 422; a bad time returns 422; saved times come back in order.
 - [ ] A user from another church can't read or write this church's settings.
 - [ ] Only global admins can use `?territory_id=`.

@@ -50,6 +50,8 @@ function settingsPageStyles(bool $withMap = true): void
     if ($withMap) {
         echo '<link rel="stylesheet" href="' . SITE_URL . '/assets/libs/leaflet/leaflet.css" />' . "\n";
     }
+    // Profile's gallery opens photos full size.
+    echo '<link rel="stylesheet" href="' . SITE_URL . '/assets/libs/glightbox/css/glightbox.min.css" />' . "\n";
     echo '<link href="' . $v('assets/css/styles.min.css') . '" rel="stylesheet" />' . "\n";
 }
 
@@ -80,6 +82,7 @@ function settingsPageScripts(bool $withMap = true): void
         echo '<script src="' . SITE_URL . '/assets/libs/leaflet/leaflet.js"></script>' . "\n";
     }
     echo '<script src="' . SITE_URL . '/assets/libs/apexcharts/apexcharts.min.js"></script>' . "\n";
+    echo '<script src="' . SITE_URL . '/assets/libs/glightbox/js/glightbox.min.js"></script>' . "\n";
     echo '<script src="' . $v('assets/js/pages/demographics/ui-helpers.js') . '"></script>' . "\n";
     settingsRailScripts();
     foreach ([

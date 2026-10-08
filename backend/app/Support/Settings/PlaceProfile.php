@@ -2,8 +2,10 @@
 
 namespace App\Support\Settings;
 
+use App\Models\PlacePhoto;
 use App\Models\Territory;
 use App\Support\Kenya;
+use App\Support\YouTube;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -20,6 +22,7 @@ final class PlaceProfile
         'county' => 'County',
         'location' => 'Map pin',
         'logo' => 'Logo or photo',
+        'photos' => 'At least 3 photos',
     ];
 
     /** @return array{percent: int, done: int, total: int, missing: array<string, string>} */
@@ -32,6 +35,7 @@ final class PlaceProfile
             'county' => filled($place->county),
             'location' => $place->latitude !== null && $place->longitude !== null,
             'logo' => filled($place->logo_path),
+            'photos' => PlacePhoto::where('territory_id', $place->id)->count() >= 3,
         ];
         $count = count(array_filter($done));
 
@@ -75,6 +79,9 @@ final class PlaceProfile
             'latitude' => $place->latitude !== null ? (float) $place->latitude : null,
             'longitude' => $place->longitude !== null ? (float) $place->longitude : null,
             'logo_url' => self::logoUrl($place),
+            'youtube_url' => $place->youtube_url,
+            'youtube_video' => YouTube::videoId($place->youtube_url),
+            'photo_count' => PlacePhoto::where('territory_id', $place->id)->count(),
             'parent' => $parent ? ['name' => $parent->name, 'type' => $parent->territory_type?->value] : null,
         ];
     }
