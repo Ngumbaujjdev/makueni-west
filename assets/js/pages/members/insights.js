@@ -46,8 +46,27 @@
       el.innerHTML = M.empty("ri-line-chart-line", "Nothing yet this year", "When members join or leave, the months show here.");
       return;
     }
-    UI.renderTrendChart("flowChart", { categories: o.months, type: "bar", colors: [UI.cssColor("success"), UI.cssColor("secondary")], series: [{ name: "Joined", data: o.joins }, { name: "Left", data: o.leaves }] });
+    flowChart = UI.renderTrendChart("flowChart", { categories: o.months, type: "bar", colors: [UI.cssColor("success"), UI.cssColor("secondary")], series: [{ name: "Joined", data: o.joins }, { name: "Left", data: o.leaves }] });
   }
+
+  // Joining and leaving grows to the height of the cards beside it, so no empty space opens under it.
+  let flowChart = null;
+  let flowHeight = 300;
+  function fitFlow() {
+    if (!flowChart) return;
+    const side = $("insSide").querySelectorAll(".card");
+    const wide = window.matchMedia("(min-width: 1200px)").matches;
+    const gap = wide && side.length ? side[side.length - 1].getBoundingClientRect().bottom - $("flowCard").getBoundingClientRect().bottom : 0;
+    const h = wide ? Math.max(300, Math.round(flowHeight + gap)) : 300;
+    if (Math.abs(h - flowHeight) < 3) return;
+    flowHeight = h;
+    flowChart.updateOptions({ chart: { height: h } }, false, false);
+  }
+  let fitTimer = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(fitTimer);
+    fitTimer = setTimeout(fitFlow, 200);
+  });
 
   function gender(i) {
     const el = $("genderDonut");
@@ -57,7 +76,7 @@
       el.innerHTML = M.empty("ri-pie-chart-line", "No members yet", "Add members, and the split shows here.");
       return;
     }
-    UI.renderRingDonut("genderDonut", { labels: ["Men", "Women", "Not given"], series: [g.male, g.female, g.unknown], colors: [UI.cssColor("primary"), UI.cssColor("pink"), UI.cssColor("secondary")], centerLabel: "Members" });
+    UI.renderRingDonut("genderDonut", { labels: ["Men", "Women", "Not given"], series: [g.male, g.female, g.unknown], colors: ["primary", "pink", "secondary"], centerLabel: "Members" });
   }
 
   function areas(i) {
@@ -71,21 +90,32 @@
       .join("")}</div>`;
   }
 
+  /** The register beside the last Demographics count: how much of the count is on the register. */
   function registerVsDemo(i) {
     const r = i.register;
     const d = i.demographics;
     const rows = [
-      ["Members", r.total, d?.total],
-      ["Men", r.male, d?.male],
-      ["Women", r.female, d?.female],
-      ["Sunday school", r.sunday_school_male + r.sunday_school_female, d?.sunday_school],
+      ["ri-group-line", "primary", "Members", r.total, d?.total, true],
+      ["ri-men-line", "info", "Men", r.male, d?.male, false],
+      ["ri-women-line", "pink", "Women", r.female, d?.female, false],
+      ["ri-book-open-line", "purple", "Sunday school", r.sunday_school_male + r.sunday_school_female, d?.sunday_school, true],
     ];
     $("registerVsDemo").innerHTML = `
-      <div class="mb-compare">
-        <div class="mb-compare-head"><span></span><span>Register</span><span>Last count</span></div>
-        ${rows.map(([k, a, b]) => `<div class="mb-compare-row"><span>${k}</span><strong>${M.num(a)}</strong><strong>${b == null ? "-" : M.num(b)}</strong></div>`).join("")}
+      <div class="mb-reg">
+        ${rows
+          .map(([icon, c, label, have, counted, solid]) => {
+            const pct = counted ? Math.min(100, Math.round((have / counted) * 100)) : null;
+            return `<div class="mb-reg-row" style="--q: var(--${c}-rgb)">
+              <span class="mb-reg-icon${solid ? " is-solid" : ""}"><i class="${icon}"></i></span>
+              <div class="flex-fill min-w-0">
+                <div class="mb-reg-top"><span class="mb-reg-label">${label}</span><span class="mb-reg-figs"><strong>${M.num(have)}</strong>${counted == null ? "" : `<small>of ${M.num(counted)} counted</small>`}</span></div>
+                ${pct == null ? '<div class="mb-reg-none">No count recorded yet</div>' : `<div class="mb-reg-bar"><i style="width:${Math.max(2, pct)}%"></i></div><div class="mb-reg-pct">${pct}% on the register</div>`}
+              </div>
+            </div>`;
+          })
+          .join("")}
       </div>
-      <p class="mb-0 mt-2 mb-sub">${d ? `Demographics recorded ${M.day(d.recorded_at)}. The two don't have to match - Demographics counts everyone, the register only those you've added.` : "No Demographics count recorded yet."}</p>`;
+      <div class="mb-reg-note"><i class="ri-information-line"></i><span>${d ? `Demographics counted on ${M.day(d.recorded_at)}. The two don't have to match - Demographics counts everyone, the register only those you've added.` : "No Demographics count recorded yet - record one to compare."}</span></div>`;
   }
 
   async function init() {
@@ -99,6 +129,8 @@
     gender(ins.data);
     areas(ins.data);
     registerVsDemo(ins.data);
+    // After the right column has its height (the donut draws a moment later).
+    setTimeout(fitFlow, 400);
   }
 
   document.addEventListener("DOMContentLoaded", init);

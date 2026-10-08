@@ -17,7 +17,6 @@
   const thisYear = new Date().getFullYear();
   let year = Number(new URLSearchParams(window.location.search).get("year")) || thisYear;
   let data = null;
-  let table = null;
 
   function renderCards() {
     PeopleKit.statRow(
@@ -31,42 +30,122 @@
     );
   }
 
+  const K = PeopleKit;
+  const DIR = {
+    in: { label: "Moved in", icon: "ri-login-box-line", color: "success", from: "Came from" },
+    out: { label: "Moved out", icon: "ri-logout-box-r-line", color: "warning", from: "Went to" },
+  };
+  const dirPill = (d) => `<span class="badge bg-${DIR[d].color} ${M.textOn(DIR[d].color)}"><i class="${DIR[d].icon} me-1"></i>${DIR[d].label}</span>`;
+  const churchChip = (t) => (t.other.in_system ? '<span class="soft-chip soft-purple"><i class="ri-community-line"></i>Our diocese</span>' : '<span class="soft-chip soft-primary"><i class="ri-earth-line"></i>Outside the diocese</span>');
+
+  function rowHtml(t) {
+    const p = t.person;
+    const name = p ? p.name : "Someone no longer in the register";
+    const pills = [t.direction, t.other.in_system ? "diocese" : "", t.notified ? "told" : ""].filter(Boolean).join(" ");
+    return `<tr class="mb-row" data-id="${t.id}" data-pills="${pills}">
+      ${K.checkCell(t.id, name)}
+      <td data-search="${M.esc(`${name} ${t.other.name} ${t.reason || ""}`)}" data-order="${M.esc(name.toLowerCase())}">
+        <div class="d-flex align-items-center gap-2">
+          ${p ? M.avatar(p, "sm") : '<span class="avatar avatar-sm avatar-rounded bg-light text-dark"><i class="ri-user-line"></i></span>'}
+          <div class="min-w-0">${p ? `<a class="fw-semibold mb-link" href="${CTX.baseUrl}/member?id=${p.id}">${M.esc(name)}</a>` : `<span class="fw-semibold">${M.esc(name)}</span>`}<div class="mb-sub">${M.esc((p && (p.phone || p.area)) || "No phone")}</div></div>
+        </div>
+      </td>
+      <td data-order="${t.direction}">${dirPill(t.direction)}</td>
+      <td data-order="${M.esc(t.other.name.toLowerCase())}"><div class="fw-semibold">${M.esc(t.other.name)}</div><div class="d-flex flex-wrap gap-1 mt-1">${churchChip(t)}${t.notified ? '<span class="soft-chip soft-success"><i class="ri-notification-3-line"></i>Told</span>' : ""}</div></td>
+      <td class="d-none d-lg-table-cell text-wrap tr-why">${t.reason ? M.esc(t.reason) : '<span class="mb-sub">Not given</span>'}</td>
+      <td data-order="${t.on}" class="text-nowrap">${M.day(t.on)}</td>
+      <td class="text-end"><button type="button" class="btn btn-sm btn-primary-light" data-view="${t.id}">View<i class="ri-arrow-right-s-line ms-1"></i></button></td>
+    </tr>`;
+  }
+
+  let kit = null;
   function renderTable() {
-    $("yearLine").textContent = `In ${data.year}`;
+    $("yearLine").textContent = `Members who moved in or out in ${data.year} - open one for the details`;
     const rows = data.items;
+    kit?.destroy();
+    kit = null;
     if (!rows.length) {
-      table?.destroy?.();
-      table = null;
-      $("transferFilters").hidden = true;
-      $("transferRows").innerHTML = `<tr><td colspan="5">${M.empty("ri-arrow-left-right-line", `No transfers in ${data.year}`, "When a member moves to another church, or someone joins from one, it shows here.")}</td></tr>`;
+      $("transferPills").innerHTML = "";
+      $("transferFilters").innerHTML = "";
+      $("transferRows").innerHTML = `<tr><td colspan="7">${M.empty("ri-arrow-left-right-line", `No transfers in ${data.year}`, "When a member moves to another church, or someone joins from one, it shows here.")}</td></tr>`;
       return;
     }
-    $("transferFilters").hidden = false;
-    $("transferRows").innerHTML = rows
-      .map(
-        (t) => `<tr>
-          <td data-order="${t.on}">${M.day(t.on)}</td>
-          <td>${t.person ? `<a class="fw-semibold mb-link" href="${CTX.baseUrl}/member?id=${t.person.id}">${M.esc(t.person.name)}</a>` : "-"}</td>
-          <td data-search="${t.direction}">${t.direction === "in" ? '<span class="badge bg-success">Moved in</span>' : '<span class="badge bg-secondary text-dark">Moved out</span>'}</td>
-          <td>${M.esc(t.other.name)}${t.other.in_system ? ' <span class="soft-chip soft-primary">Our diocese</span>' : ""}${t.notified ? ' <span class="soft-chip soft-success"><i class="ri-notification-3-line"></i>Told</span>' : ""}</td>
-          <td class="text-wrap">${t.reason ? M.esc(t.reason) : '<span class="mb-sub">-</span>'}</td>
-        </tr>`,
-      )
-      .join("");
-    const filters = [{ id: "fDir", label: "In and out", options: [{ value: "in", label: "Moved in", color: "success" }, { value: "out", label: "Moved out", color: "secondary" }], columnIndex: 2, exact: true }];
-    UI.renderFilterToolbar("transferFilters", { searchPlaceholder: "Search by name or church...", filters });
-    table = UI.initListDataTable("transferTable", { hideDefaultSearch: true, order: [[0, "desc"]], pageLength: 25 });
-    UI.enhanceSelect($("fDir"), { search: false });
-    UI.wireFilterToolbar("transferFilters", table, filters, { noun: "transfers" });
+    const byId = new Map(rows.map((t) => [t.id, t]));
+    kit = K.listTable({
+      tableId: "transferTable",
+      stripId: "transferFilters",
+      pillsId: "transferPills",
+      rowsId: "transferRows",
+      items: rows,
+      rowHtml,
+      noun: "transfers",
+      searchPlaceholder: "Search by name, church or reason...",
+      pills: [
+        { key: "in", label: "Moved in", icon: "ri-login-box-line", color: "success", test: (t) => t.direction === "in" },
+        { key: "out", label: "Moved out", icon: "ri-logout-box-r-line", color: "warning", test: (t) => t.direction === "out" },
+        { key: "diocese", label: "Our diocese", icon: "ri-community-line", color: "purple", test: (t) => t.other.in_system },
+        { key: "told", label: "Told", icon: "ri-notification-3-line", color: "primary", test: (t) => t.notified },
+      ],
+      sorts: [
+        { key: "newest", label: "Newest first", order: [[5, "desc"]] },
+        { key: "oldest", label: "Oldest first", order: [[5, "asc"]] },
+        { key: "name", label: "Name A-Z", order: [[1, "asc"]] },
+        { key: "church", label: "Church A-Z", order: [[3, "asc"], [5, "desc"]] },
+      ],
+      nonSortable: [6],
+      actions: [{ key: "sms", label: "Send message", icon: "ri-chat-3-line", primary: true, run: (ids) => K.messagePeople(CTX.messagesUrl, ids.map((id) => byId.get(id)?.person).filter(Boolean)) }],
+    });
+  }
+
+  /** One transfer, in a window: who, where from or to, when, why, and who recorded it. */
+  function view(t) {
+    const p = t.person;
+    const d = DIR[t.direction];
+    const fact = (icon, color, label, value, solid = false) =>
+      `<div class="pp-fact" style="--q: var(--${color}-rgb)"><span class="pp-fact-icon${solid ? " is-solid" : ""}"><i class="${icon}"></i></span><div class="min-w-0"><span>${label}</span><strong>${value}</strong></div></div>`;
+    const when = new Date(`${t.on}T12:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    const recorded = t.recorded_at ? new Date(t.recorded_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "";
+    const el = modal(
+      d.label,
+      d.icon,
+      when,
+      K.parts([
+        {
+          icon: "ri-user-3-line",
+          title: "Who",
+          body: p
+            ? `<div class="tr-who">${M.avatar(p, "lg")}<div class="min-w-0"><div class="fw-bold fs-16 text-break">${M.esc(p.name)}</div><div class="d-flex flex-wrap gap-1 mt-1">${M.statusPill(p.status)}${p.congregation ? M.groupChip(p.congregation) : ""}</div>
+                <div class="tr-who-contact">${p.phone ? `<span><i class="ri-phone-line"></i>${M.esc(p.phone)}</span>` : ""}${p.area ? `<span><i class="ri-map-pin-line"></i>${M.esc(p.area)}</span>` : ""}${p.gender ? `<span><i class="${p.gender === "male" ? "ri-men-line" : "ri-women-line"}"></i>${p.gender === "male" ? "Male" : "Female"}</span>` : ""}</div></div></div>`
+            : '<p class="mb-0 fw-semibold">This person is no longer in the register.</p>',
+        },
+        {
+          icon: "ri-arrow-left-right-line",
+          title: "The move",
+          body: `<div class="pp-facts">
+            ${fact(d.icon, d.color, "Direction", d.label, true)}
+            ${fact("ri-calendar-2-line", "primary", "On", M.day(t.on))}
+            ${fact("ri-community-line", "purple", d.from, `${M.esc(t.other.name)}<small>${t.other.in_system ? "A church in our diocese" : "Outside the diocese"}</small>`)}
+            ${t.direction === "out" ? fact("ri-notification-3-line", t.notified ? "success" : "secondary", "Their leaders", t.notified ? "Told they're coming" : "Not told") : fact("ri-user-follow-line", "pink", "Joined as", "A member")}
+          </div>
+          <div class="tr-why-box"><span><i class="ri-chat-quote-line"></i>Why</span><p class="mb-0">${t.reason ? M.esc(t.reason) : "No reason was given."}</p></div>`,
+        },
+        { icon: "ri-history-line", title: "Recorded", body: `<p class="mb-0">${t.recorded_by ? `By <strong>${M.esc(t.recorded_by)}</strong>` : "Recorded"}${recorded ? ` on ${recorded}` : ""}.</p>` },
+      ]),
+      `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Close</button>${p ? `<a class="btn btn-primary" href="${CTX.baseUrl}/member?id=${p.id}"><i class="ri-user-line me-1"></i>Open member</a>` : ""}`,
+    );
+    return el;
   }
 
   async function load() {
     $("statCardsRow").innerHTML = UI.skeletonCards(3, "col-xl-4 col-md-6");
-    $("transferRows").innerHTML = UI.renderTableLoading(5);
+    kit?.destroy();
+    kit = null;
+    $("transferRows").innerHTML = UI.renderTableLoading(7);
     const res = await MembersAPI.transfers({ year });
     if (!res.ok) {
       $("statCardsRow").innerHTML = `<div class="col-12">${M.errorBox(res.message)}</div>`;
       $("transferTableWrap").innerHTML = "";
+      $("transferPills").innerHTML = "";
       return;
     }
     data = res.data;
@@ -98,14 +177,15 @@
     title,
     body: `<div class="row g-3">
       <div class="col-md-6"><label class="form-label" for="trChurch">The other church</label>
-        <select class="form-select" id="trChurch"><option value="">Outside the diocese</option>${churches.map((c) => `<option value="${c.id}">${M.esc(c.name)}</option>`).join("")}</select></div>
+        <select class="form-select" id="trChurch"><option value="" data-icon="ri-earth-line" data-color="primary">Outside the diocese</option>${churches.map((c) => `<option value="${c.id}" data-icon="ri-community-line" data-color="purple">${M.esc(c.name)}</option>`).join("")}</select></div>
       <div class="col-md-6" id="trNameWrap"><label class="form-label" for="trName">Its name</label><input class="form-control" id="trName" maxlength="160" placeholder="e.g. AIC Wote"></div>
-      <div class="col-md-6"><label class="form-label" for="trOn">On</label><input type="date" class="form-control" id="trOn" value="${new Date().toISOString().slice(0, 10)}"></div>
+      <div class="col-md-6"><label class="form-label" for="trOn">On</label><input type="date" class="form-control" id="trOn" value="${DateField.iso(new Date())}"></div>
       <div class="col-md-6"><label class="form-label" for="trReason">Why <span class="fw-normal">(optional)</span></label><input class="form-control" id="trReason" maxlength="1000" placeholder="e.g. Moved for work"></div>
     </div>`,
   });
 
   function wireChurch(el, onChange) {
+    DateField.enhance($("trOn"), { quick: ["today", "yesterday", "lastSunday"] });
     const sel = $("trChurch");
     UI.enhanceSelect(sel, { dropdownParent: window.jQuery ? window.jQuery(el) : undefined });
     const sync = () => {
@@ -117,8 +197,11 @@
     return sel;
   }
 
+  // Two choices as coloured tiles, like the kinds in Record care.
   const pills = (name, options) =>
-    `<div class="mb-choice-row" role="radiogroup">${options.map(([v, icon, label]) => `<label class="mb-choice"><input type="radio" name="${name}" value="${v}"><i class="${icon}"></i>${label}</label>`).join("")}</div>`;
+    `<div class="ec-choices is-varied is-tinted is-two" role="radiogroup">${options
+      .map(([v, icon, label, color]) => `<label class="ec-choice" style="--q: var(--${color}-rgb)"><input type="radio" name="${name}" value="${v}"><span class="ec-choice-icon"><i class="${icon}"></i></span><strong>${label}</strong><span class="ec-choice-tick"><i class="ri-check-line"></i></span></label>`)
+      .join("")}</div>`;
 
   function transferIn() {
     const el = modal(
@@ -130,12 +213,12 @@
           icon: "ri-user-3-line",
           title: "Who is joining",
           body: `<div class="row g-3">
-            <div class="col-md-6"><label class="form-label" for="tiFirst">First name <span class="text-danger">*</span></label><input class="form-control" id="tiFirst" maxlength="80"></div>
-            <div class="col-md-6"><label class="form-label" for="tiLast">Last name</label><input class="form-control" id="tiLast" maxlength="80"></div>
+            <div class="col-md-6"><label class="form-label" for="tiFirst">First name <span class="text-danger">*</span></label><input class="form-control" id="tiFirst" maxlength="80" placeholder="e.g. Grace" autocomplete="off"></div>
+            <div class="col-md-6"><label class="form-label" for="tiLast">Last name</label><input class="form-control" id="tiLast" maxlength="80" placeholder="e.g. Ndinda" autocomplete="off"></div>
             <div class="col-md-6"><label class="form-label" for="tiPhone">Phone</label><input type="tel" class="form-control" id="tiPhone" maxlength="30" placeholder="e.g. 0712 345 678"></div>
             <div class="col-md-6"><label class="form-label" for="tiArea">Area</label><input class="form-control" id="tiArea" maxlength="80" placeholder="Where they live"></div>
-            <div class="col-md-6"><label class="form-label mb-2">Gender</label>${pills("tiGender", [["female", "ri-women-line", "Female"], ["male", "ri-men-line", "Male"]])}</div>
-            <div class="col-md-6"><label class="form-label mb-2">Part of</label>${pills("tiPart", [["main_church", "ri-community-line", "Main church"], ["sunday_school", "ri-book-open-line", "Sunday school"]])}</div>
+            <div class="col-md-6"><span class="form-label d-block">Gender</span>${pills("tiGender", [["female", "ri-women-line", "Female", "pink"], ["male", "ri-men-line", "Male", "primary"]])}</div>
+            <div class="col-md-6"><span class="form-label d-block">Part of</span>${pills("tiPart", [["main_church", "ri-community-line", "Main church", "purple"], ["sunday_school", "ri-book-open-line", "Sunday school", "pink"]])}</div>
           </div>`,
         },
         churchPart(data.churches, "Where they come from"),
@@ -203,6 +286,13 @@
       year === thisYear ? q.delete("year") : q.set("year", year);
       history.replaceState(null, "", `${window.location.pathname}${q.toString() ? `?${q}` : ""}`);
       load();
+    });
+    // A row opens its details (not when ticking it or following the name link).
+    $("transferRows").addEventListener("click", (e) => {
+      if (e.target.closest("a, input, .pp-check") && !e.target.closest("[data-view]")) return;
+      const tr = e.target.closest("tr[data-id]");
+      const t = tr && data?.items.find((x) => x.id === Number(tr.dataset.id));
+      if (t) view(t);
     });
     $("inBtn")?.addEventListener("click", () => data && transferIn());
     $("outBtn")?.addEventListener("click", () => data && transferOut());
