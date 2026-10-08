@@ -70,6 +70,8 @@ const ReportCenter = (function () {
     "attendance.ministries": "success",
     "attendance.events": "purple",
     "attendance.children": "pink",
+    "facilities.assets": "success",
+    "facilities.loans": "purple",
     "budget.summary": "primary",
     "budget.spending": "success",
     "budget.statement": "purple",
@@ -542,7 +544,7 @@ const ReportCenter = (function () {
     } else if (!report.inputs.length) {
       // A list as it stands today (the member directory, the visitors) - no period to pick.
       $("rpPeriodTitle").textContent = "Covers";
-      wrap.innerHTML = `<span class="soft-chip soft-primary rp-period-chip"><i class="ri-calendar-check-line"></i>Everyone, as at today</span>`;
+      wrap.innerHTML = `<span class="soft-chip soft-primary rp-period-chip"><i class="ri-calendar-check-line"></i>${report.module === "facilities" ? "Everything" : "Everyone"}, as at today</span>`;
     } else {
       $("rpPeriodTitle").textContent = "Submission";
       wrap.innerHTML = `<span class="soft-chip soft-primary rp-period-chip"><i class="ri-file-list-3-line"></i>${esc(state.params.submission_label || "The submission you're viewing")}</span>`;

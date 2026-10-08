@@ -298,6 +298,36 @@ class PeopleDemoSeeder extends Seeder
     public const DEMO_SERIAL = 'DEMO-';
 
     /**
+     * The demo equipment's photos (free-licence photos kept in
+     * database/seeders/demo/equipment, see its CREDITS.md) and a DEMO receipt
+     * for most priced items - a few are left without, for "Needs details".
+     */
+    private function equipmentFiles(\Illuminate\Support\Collection $items, bool $main): void
+    {
+        $dir = database_path('seeders/demo/equipment');
+        $engine = app(\App\Services\Images\ImageEngine::class);
+        foreach ($items as $name => $e) {
+            $file = $dir.'/'.\Illuminate\Support\Str::slug(preg_replace('/\s*\(.*\)/', '', $name)).'.jpg';
+            if (! is_file($file)) {
+                $file = $dir.'/'.(['Tent' => 'tent'][$name] ?? 'none').'.jpg';
+            }
+            if (is_file($file)) {
+                $img = $engine->store(new \Illuminate\Http\UploadedFile($file, basename($file), 'image/jpeg', null, true), "equipment/{$e->territory_id}/{$e->id}", 1600, 82, true);
+                \App\Models\EquipmentPhoto::create(['equipment_id' => $e->id, 'path' => $img->path, 'thumb_path' => $img->thumbPath, 'width' => $img->width, 'height' => $img->height, 'bytes' => $img->bytes, 'position' => 0]);
+            }
+            if ($e->value === null || ($main && in_array($name, ['Pulpit', 'Brooms and mops', 'Drum set'], true))) {
+                continue;
+            }
+            $total = number_format((float) $e->value * $e->quantity, 2);
+            $html = '<div style="font-family:sans-serif;font-size:13px;width:340px"><h2 style="margin:0">'.e($e->supplier ?: 'Shop').'</h2><p style="color:#c00;font-weight:bold">DEMO RECEIPT - not a real purchase</p>'
+                .'<p>Date: '.$e->bought_on?->format('j M Y').'<br>Receipt no: DEMO-'.$e->id.'</p><table style="width:100%;border-collapse:collapse"><tr><th align="left">Item</th><th>Qty</th><th align="right">KES</th></tr>'
+                .'<tr><td>'.e($e->name).'</td><td align="center">'.$e->quantity.'</td><td align="right">'.$total.'</td></tr></table><p style="text-align:right;font-weight:bold">Total KES '.$total.'</p><p>Paid: M-Pesa</p></div>';
+            $e->addMediaFromString(\Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('a5')->output())
+                ->usingFileName(\Illuminate\Support\Str::uuid().'.pdf')->usingName('Receipt - '.$e->name)->toMediaCollection('receipts');
+        }
+    }
+
+    /**
      * Facilities (P5): rooms, the ministries' weekly meetings booked in them
      * and a few one-off bookings, equipment in every condition with two loans
      * out (one late), repairs on every column of the board, and four weeks
@@ -350,14 +380,27 @@ class PeopleDemoSeeder extends Seeder
             ['Speakers', 'sound', $sanctuary, 2, 'good', 40000], ['Wireless microphone', 'sound', $sanctuary, 2, 'fair', 12000], ['Plastic chairs', 'furniture', $hall, 80, 'good', 600],
             ['Keyboard', 'instruments', $sanctuary, 1, 'poor', 45000], ['Tent', 'other', $hall, 1, 'broken', 30000],
         ];
-        $items = collect($kit)->mapWithKeys(fn ($k) => [$k[0] => Equipment::create([
+        $shops = ['sound' => 'Sound and music shop, Nairobi', 'instruments' => 'Sound and music shop, Nairobi', 'it' => 'Computer shop, Machakos', 'furniture' => 'Furniture market, Wote',
+            'kitchen' => 'Supermarket, Wote', 'cleaning' => 'Hardware shop, Emali', 'other' => 'Hardware shop, Emali'];
+        $items = collect($kit)->mapWithKeys(fn ($k, $n) => [$k[0] => Equipment::create([
             'territory_id' => $church->id, 'name' => $k[0], 'category' => $k[1], 'room_id' => $k[2]?->id, 'quantity' => $k[3], 'condition' => $k[4],
-            'value' => $k[5], 'bought_on' => $this->today->subDays(mt_rand(120, 1500))->toDateString(), 'serial' => self::DEMO_SERIAL.str_pad((string) mt_rand(1, 9999), 4, '0', STR_PAD_LEFT),
+            // A few have no price yet - the "Needs details" list shows them.
+            'value' => in_array($k[0], ['Extension cables', 'Cooking pots'], true) ? null : $k[5], 'supplier' => $n % 5 === 4 ? null : $shops[$k[1]],
+            'bought_on' => $this->today->subDays(mt_rand(120, 1500))->toDateString(), 'serial' => self::DEMO_SERIAL.str_pad((string) mt_rand(1, 9999), 4, '0', STR_PAD_LEFT),
         ])]);
+        $this->equipmentFiles($items, $main);
         $people = Person::where('territory_id', $church->id)->where('phone', 'like', '+254700000%')->where('status', 'member')->where('congregation', 'main_church')->orderBy('id')->get();
         if ($main && $people->count() > 2) {
-            EquipmentLoan::create(['equipment_id' => $items['Tent (10x20)']->id, 'to_person_id' => $people[0]->id, 'to_name' => $people[0]->name, 'quantity' => 1, 'out_on' => $this->today->subDays(20)->toDateString(), 'due_on' => $this->today->subDays(6)->toDateString(), 'note' => 'For a family gathering', 'by' => $by]);
-            EquipmentLoan::create(['equipment_id' => $items['Projector']->id, 'to_name' => 'Youth outreach team', 'quantity' => 1, 'out_on' => $this->today->subDays(2)->toDateString(), 'due_on' => $this->today->addDays(5)->toDateString(), 'note' => 'Film night at Kasikeu', 'by' => $by]);
+            EquipmentLoan::create(['equipment_id' => $items['Tent (10x20)']->id, 'to_person_id' => $people[0]->id, 'to_name' => $people[0]->name, 'quantity' => 1, 'out_on' => $this->today->subDays(20)->toDateString(), 'due_on' => $this->today->subDays(6)->toDateString(), 'note' => 'For a family gathering', 'by' => $by, 'status' => 'out']);
+            EquipmentLoan::create(['equipment_id' => $items['Projector']->id, 'to_name' => 'Youth outreach team', 'quantity' => 1, 'out_on' => $this->today->subDays(2)->toDateString(), 'due_on' => $this->today->addDays(5)->toDateString(), 'note' => 'Film night at Kasikeu', 'by' => $by, 'status' => 'out']);
+            // Two asks to borrow, waiting for the facilities manager.
+            $askers = app(Activities::class)->leadersWith([$church->id], PeopleAccess::permission('facilities', 'read'))->where('id', '!=', $by)->take(2)->values();
+            foreach ([['Plastic chairs', 40, 6, 8, 'Youth fellowship at a member\'s home'], ['Wireless microphone', 2, 3, 4, 'Women\'s fellowship day']] as $n => [$what, $qty, $from, $days, $why]) {
+                $u = $askers[$n] ?? null;
+                if ($u) {
+                    EquipmentLoan::create(['equipment_id' => $items[$what]->id, 'to_name' => trim("{$u->firstname} {$u->lastname}"), 'quantity' => $qty, 'status' => 'requested', 'out_on' => $this->today->addDays($from)->toDateString(), 'due_on' => $this->today->addDays($from + $days)->toDateString(), 'note' => $why, 'requested_by' => $u->id]);
+                }
+            }
         }
 
         // Repairs on every column of the board.

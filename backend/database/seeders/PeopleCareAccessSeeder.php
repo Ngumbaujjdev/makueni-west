@@ -85,9 +85,10 @@ class PeopleCareAccessSeeder extends Seeder
             'reuse' => ['Facility Management', 'Facilities'],
             'description' => 'Rooms and bookings, equipment, repairs and the duty rota.',
             'pages' => [
-                '' => ['Facilities', "Today's bookings, repairs and this Sunday's duty.", ['read', 'manage']],
+                '' => ['Facilities', "Today's bookings, repairs and this Sunday's duty.", ['read', 'manage', 'export']],
                 'bookings.php' => ['Bookings', 'Book a room, and see who has it when.', ['bookings', 'book']],
-                'equipment.php' => ['Equipment', 'What we own, where it is kept, and who has borrowed it.', ['equipment']],
+                'equipment.php' => ['Equipment', 'Our things, where they are kept, and who has borrowed them.', ['equipment']],
+                'assets.php' => ['What we own', 'What our things are worth and cost, with the receipts - the asset register.', ['assets']],
                 'repairs.php' => ['Repairs', 'What needs fixing, who is on it, and what it cost.', ['repairs']],
                 'rota.php' => ['Duty rota', 'Who is on duty at each service.', ['rota']],
             ],
@@ -105,9 +106,9 @@ class PeopleCareAccessSeeder extends Seeder
     /** Role => module => abilities (PeopleAccess::ABILITIES keys), per level. */
     private const GRANTS = [
         'church' => [
-            'Senior Pastor' => ['members' => ['read', 'manage', 'export'], 'visitors' => ['read', 'manage', 'export'], 'pastoral' => ['read', 'manage', 'confidential'], 'ministries' => ['read', 'manage'], 'facilities' => ['read', 'manage', 'book']],
+            'Senior Pastor' => ['members' => ['read', 'manage', 'export'], 'visitors' => ['read', 'manage', 'export'], 'pastoral' => ['read', 'manage', 'confidential'], 'ministries' => ['read', 'manage'], 'facilities' => ['read', 'manage', 'book', 'export']],
             'Associate Pastor' => ['members' => ['read', 'manage'], 'visitors' => ['read', 'manage'], 'pastoral' => ['read', 'manage'], 'ministries' => ['read', 'manage'], 'facilities' => ['read', 'manage', 'book']],
-            'Church Administrator' => ['members' => ['read', 'manage', 'export'], 'visitors' => ['read', 'manage', 'export'], 'ministries' => ['read', 'manage'], 'facilities' => ['read', 'manage', 'book']],
+            'Church Administrator' => ['members' => ['read', 'manage', 'export'], 'visitors' => ['read', 'manage', 'export'], 'ministries' => ['read', 'manage'], 'facilities' => ['read', 'manage', 'book', 'export']],
             'Church Secretary' => ['members' => ['read', 'manage'], 'visitors' => ['read', 'manage'], 'ministries' => ['read'], 'facilities' => ['read', 'book']],
             'Elder' => ['members' => ['read'], 'visitors' => ['read', 'manage'], 'pastoral' => ['read', 'manage'], 'ministries' => ['read'], 'facilities' => ['read', 'book']],
             'Deacon' => ['members' => ['read'], 'visitors' => ['read', 'manage'], 'pastoral' => ['read'], 'ministries' => ['read'], 'facilities' => ['read', 'book']],
@@ -116,7 +117,7 @@ class PeopleCareAccessSeeder extends Seeder
             "Women's Ministry Leader" => ['members' => ['read'], 'visitors' => ['read'], 'ministries' => ['read'], 'facilities' => ['read', 'book']],
             "Men's Ministry Leader" => ['members' => ['read'], 'visitors' => ['read'], 'ministries' => ['read'], 'facilities' => ['read', 'book']],
             "Children's Ministry Leader" => ['members' => ['read'], 'visitors' => ['read'], 'ministries' => ['read'], 'facilities' => ['read', 'book']],
-            'Church Treasurer' => ['ministries' => ['read'], 'facilities' => ['read']],
+            'Church Treasurer' => ['ministries' => ['read'], 'facilities' => ['read', 'export']],
             'Church Committee Member' => ['members' => ['read'], 'visitors' => ['read'], 'ministries' => ['read'], 'facilities' => ['read']],
         ],
         'region' => [

@@ -9,8 +9,14 @@
  *                      new booking green when free, red with the clash named
  *   bookingWindow()  - one booking: who, when, for what; change or cancel
  *   roomsWindow()    - add and change rooms (those who manage)
- *   itemWindow()     - add or change a piece of equipment
- *   lendWindow()     - lend it to someone in the register or a name
+ *   itemWindow()     - add or change a piece of equipment: what it is, where,
+ *                      what it cost and where it was bought, its photos
+ *   lendWindow()     - lend it to someone in the register or a name - or, with
+ *                      ask: true, ask to borrow it (a manager answers)
+ *   askRow()         - one ask to borrow, with Agree / Decline / Take back
+ *   decideAsk()      - agree to an ask, or decline it with a reason
+ *   recordPurchase() - the Budgets Record money window, filled in for it
+ *   linkWindow()     - link a Budgets entry already recorded
  *   reportWindow()   - report a repair (anyone who sees the facilities)
  *   repairWindow()   - move a repair along, who is on it, what it cost
  *   rotaWindow()     - who is on one duty at one service
@@ -25,6 +31,8 @@ const FacilitiesUI = (function () {
   const num = N.num;
   const textOn = (c) => (c === "secondary" || c === "warning" ? "text-dark" : "text-white");
   const money = (v) => (v === null || v === undefined ? "-" : `KES ${Number(v).toLocaleString("en-GB", { maximumFractionDigits: 0 })}`);
+  /** Money in a small space: KES 7.5k, KES 1.2m. */
+  const short = (v) => (v === null || v === undefined ? "-" : v >= 1000000 ? `KES ${(v / 1000000).toFixed(1).replace(/\.0$/, "")}m` : v >= 1000 ? `KES ${(v / 1000).toFixed(1).replace(/\.0$/, "")}k` : money(v));
   const pad = (n) => String(n).padStart(2, "0");
   const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const todayIso = () => iso(new Date());
@@ -384,13 +392,23 @@ const FacilitiesUI = (function () {
             </div>`,
           })}
           ${N.step(3, {
-            icon: "ri-file-list-3-line",
+            icon: "ri-money-dollar-circle-line",
             color: "success",
-            title: "Records",
-            help: "Optional - for insurance and the asset list",
+            title: "What it cost",
+            help: "So we know what our things are worth - leave out what you don't know",
             body: `<div class="mw-fields">
+              ${N.field("Price each (KES)", N.affix("ri-money-dollar-circle-line", `<input type="number" class="form-control mw-input" id="eqValue" min="0" step="100" value="${it.value ?? ""}" placeholder="What one cost">`), { id: "eqValue", optional: true, wide: false })}
               ${N.field("Bought on", N.affix("ri-calendar-line", `<input type="date" class="form-control mw-input" id="eqBought" value="${it.bought_on || ""}" max="${todayIso()}">`), { id: "eqBought", optional: true, wide: false })}
-              ${N.field("Value (KES)", N.affix("ri-money-dollar-circle-line", `<input type="number" class="form-control mw-input" id="eqValue" min="0" step="100" value="${it.value ?? ""}">`), { id: "eqValue", optional: true, wide: false })}
+              ${N.field("Where it was bought", N.affix("ri-store-2-line", `<input class="form-control mw-input" id="eqSupplier" maxlength="120" value="${esc(it.supplier || "")}" placeholder="e.g. a music shop in Nairobi">`), { id: "eqSupplier", optional: true })}
+            </div>`,
+          })}
+          ${N.step(4, {
+            icon: "ri-camera-line",
+            color: "purple",
+            title: item ? "Records" : "Photos and records",
+            help: item ? "Optional" : "Optional - a photo helps everyone know which one it is",
+            body: `<div class="mw-fields">
+              ${item ? "" : N.field("Photos", `<label class="gal-drop mb-0" for="eqPhotos"><span class="gal-drop-icon"><i class="ri-image-add-line"></i></span><div><strong>Choose up to 4 photos</strong><small>JPG, PNG or WebP - we stand them upright and make them small.</small></div></label><input type="file" id="eqPhotos" accept="image/png,image/jpeg,image/webp" multiple hidden><div class="fx-pick-thumbs" id="eqPicked"></div>`, { optional: true })}
               ${N.field("Serial number", N.affix("ri-barcode-line", `<input class="form-control mw-input" id="eqSerial" maxlength="80" value="${esc(it.serial || "")}">`), { id: "eqSerial", optional: true, wide: false })}
               ${N.field("Notes", `<textarea class="form-control" id="eqNotes" rows="2" maxlength="500">${esc(it.notes || "")}</textarea>`, { id: "eqNotes", optional: true })}
             </div>`,
@@ -411,13 +429,24 @@ const FacilitiesUI = (function () {
       value: el.querySelector("#eqValue").value === "" ? null : Number(el.querySelector("#eqValue").value),
       serial: el.querySelector("#eqSerial").value.trim() || null,
       notes: el.querySelector("#eqNotes").value.trim() || null,
+      supplier: el.querySelector("#eqSupplier").value.trim() || null,
+    });
+    // Photos picked for a new item - uploaded once it is saved.
+    let files = [];
+    el.querySelector("#eqPhotos")?.addEventListener("change", (e) => {
+      files = [...e.target.files].filter((f) => /^image\//.test(f.type)).slice(0, 4);
+      if (e.target.files.length > 4) Toast.warning("Up to 4 photos - the first 4 are kept.");
+      el.querySelector("#eqPicked").innerHTML = files.map((f) => `<img src="${URL.createObjectURL(f)}" alt="">`).join("");
+      preview();
     });
     const preview = () => {
       const b = read();
       const c = o.categories.find((x) => x.key === b.category);
       const room = o.rooms.find((r) => r.id === b.room_id);
-      el.querySelector("#eqPreview").innerHTML = `<div class="d-flex align-items-center gap-3">${tile(c.icon, c.color)}<div class="flex-fill min-w-0"><strong class="d-block">${esc(b.name || "Your item")}</strong><small class="mb-sub">${esc(c.label)} · ${room ? esc(room.name) : "No room"}</small></div>${conditionPill(b.condition)}</div>
-        <div class="mn-facts"><div><small>How many</small><strong>${num(b.quantity)}</strong></div><div><small>Value</small><strong>${b.value === null ? "-" : num(b.value)}</strong></div><div><small>Bought</small><strong>${b.bought_on ? day(b.bought_on, { month: "short", year: "numeric" }) : "-"}</strong></div></div>`;
+      const pic = files[0] ? URL.createObjectURL(files[0]) : item?.photo?.thumb_url;
+      el.querySelector("#eqPreview").innerHTML = `<div class="d-flex align-items-center gap-3">${pic ? `<img class="fx-thumb fx-thumb-lg" src="${pic}" alt="">` : tile(c.icon, c.color)}<div class="flex-fill min-w-0"><strong class="d-block">${esc(b.name || "Your item")}</strong><small class="mb-sub">${esc(c.label)} · ${room ? esc(room.name) : "No room"}</small></div>${conditionPill(b.condition)}</div>
+        <div class="mn-facts"><div><small>How many</small><strong>${num(b.quantity)}</strong></div><div><small>Price each</small><strong>${b.value === null ? "-" : short(b.value)}</strong></div><div><small>In all</small><strong>${b.value === null ? "-" : short(b.value * b.quantity)}</strong></div></div>
+        <p class="mb-sub mt-2 mb-0">${b.supplier ? `<i class="ri-store-2-line me-1"></i>${esc(b.supplier)}` : "Where it was bought - not said"}${b.bought_on ? ` · ${day(b.bought_on, { day: "numeric", month: "short", year: "numeric" })}` : ""}</p>`;
     };
     el.querySelector(".mw-form").addEventListener("input", preview);
     el.querySelector(".mw-form").addEventListener("change", preview);
@@ -431,7 +460,13 @@ const FacilitiesUI = (function () {
     el.querySelector("#eqSave").addEventListener("click", () => {
       const b = read();
       if (!b.name) return Toast.error("Give it a name.");
-      N.submit(el, () => FacilitiesAPI.saveItem(item ? item.id : null, b), (saved) => {
+      N.submit(el, async () => {
+        const res = await FacilitiesAPI.saveItem(item ? item.id : null, b);
+        if (!res.ok || !files.length) return res;
+        const up = await FacilitiesAPI.addPhotos(res.data.id, files);
+        if (!up.ok) Toast.warning(`Saved - but the photos didn't go up: ${up.message}`);
+        return up.ok ? { ...up, message: res.message } : res;
+      }, (saved) => {
         onDone?.(saved);
         return {
           title: item ? `${saved.name} saved` : `${saved.name} added`,
@@ -442,39 +477,155 @@ const FacilitiesUI = (function () {
     });
   }
 
-  /** Lend it out - to someone in the register, or a name. */
-  async function lendWindow(item, { onDone } = {}) {
+  /**
+   * Lend it out - to someone in the register, or a name (those who manage).
+   * ask: true - anyone asks to borrow it for themselves: how many, from when,
+   * until when and what for; a manager agrees or declines.
+   */
+  async function lendWindow(item, { onDone, ask = false } = {}) {
     const o = await options();
     if (!o) return;
     const due = new Date(Date.now() + o.loan_days * 86400000);
     const picked = [];
+    const max = ask ? item.quantity : item.available;
     const el = N.windowEl({
       id: "fcModal",
-      title: `Lend ${item.name}`,
-      subtitle: `${num(item.available)} of ${num(item.quantity)} here to lend`,
-      icon: "ri-hand-coin-line",
+      title: ask ? `Ask to borrow ${item.name}` : `Lend ${item.name} out`,
+      subtitle: ask ? "The facilities manager will say yes or no - you'll see the answer on this item" : `${num(item.available)} of ${num(item.quantity)} here to lend`,
+      icon: ask ? "ri-question-answer-line" : "ri-hand-coin-line",
       size: "modal-lg",
       body: `<div class="mw-form">
-        ${N.step(1, { icon: "ri-user-line", color: "primary", title: "Who has it", body: '<div id="lnWho"></div>' })}
-        ${N.step(2, {
+        ${ask ? "" : N.step(1, { icon: "ri-user-line", color: "primary", title: "Who is borrowing it", body: '<div id="lnWho"></div>' })}
+        ${N.step(ask ? 1 : 2, {
           icon: "ri-calendar-line",
           color: "warning",
-          title: "How many, and when it comes back",
+          title: ask ? "How many, and for when" : "How many, and when it comes back",
           body: `<div class="mw-fields">
-            ${N.field("How many", N.affix("ri-hashtag", `<input type="number" class="form-control mw-input" id="lnQty" min="1" max="${item.available}" value="1">`), { id: "lnQty", wide: false })}
+            ${N.field("How many", N.affix("ri-hashtag", `<input type="number" class="form-control mw-input" id="lnQty" min="1" max="${max}" value="1">`), { id: "lnQty", wide: false })}
+            ${ask ? N.field("From", N.affix("ri-calendar-line", `<input type="date" class="form-control mw-input" id="lnFrom" min="${todayIso()}" value="${todayIso()}">`), { id: "lnFrom", wide: false }) : ""}
             ${N.field("Back by", N.affix("ri-calendar-event-line", `<input type="date" class="form-control mw-input" id="lnDue" min="${todayIso()}" value="${iso(due)}">`), { id: "lnDue", wide: false })}
-            ${N.field("Note", `<input class="form-control mw-input" id="lnNote" maxlength="300" placeholder="e.g. For the youth outreach">`, { id: "lnNote", optional: true })}
+            ${N.field(ask ? "What it's for" : "Note", `<input class="form-control mw-input" id="lnNote" maxlength="300" placeholder="e.g. For the youth outreach">`, { id: "lnNote", optional: !ask })}
           </div>`,
         })}
       </div>`,
-      foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="lnSave"><i class="ri-check-line me-1"></i>Lend it</button>`,
+      foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="lnSave"><i class="ri-${ask ? "send-plane" : "check"}-line me-1"></i>${ask ? "Send my ask" : "Lend it"}</button>`,
     });
-    personPicker(el, { id: "lnWho", picked, many: false });
+    if (!ask) personPicker(el, { id: "lnWho", picked, many: false });
     el.querySelector("#lnSave").addEventListener("click", () => {
-      if (!picked.length) return Toast.error("Pick who has it, or type their name.");
+      const qty = Number(el.querySelector("#lnQty").value || 1);
+      const dueOn = el.querySelector("#lnDue").value || null;
+      const note = el.querySelector("#lnNote").value.trim() || null;
+      const done = (d, message) => (onDone?.(d), { title: message, facts: [{ icon: "ri-calendar-event-line", text: `Back by ${day(dueOn)}`, color: "warning" }, { icon: "ri-hashtag", text: `${num(qty)} ${qty === 1 ? "item" : "items"}`, color: "primary" }], actions: [{ label: "Done", icon: "ri-check-line", primary: true, run: () => N.close(el) }] });
+      if (ask) {
+        if (!note) return Toast.error("Say what it's for.");
+        return N.submit(el, () => FacilitiesAPI.ask(item.id, { quantity: qty, from: el.querySelector("#lnFrom").value || null, due_on: dueOn, note }), done);
+      }
+      if (!picked.length) return Toast.error("Pick who is borrowing it, or type their name.");
       const p = picked[0];
-      N.submit(el, () => FacilitiesAPI.lend(item.id, { to_person_id: p.person_id || null, to_name: p.person_id ? null : p.name, quantity: Number(el.querySelector("#lnQty").value || 1), due_on: el.querySelector("#lnDue").value || null, note: el.querySelector("#lnNote").value.trim() || null }), (d, message) => (onDone?.(d), { title: message, facts: [{ icon: "ri-calendar-event-line", text: `Back by ${day(el.querySelector("#lnDue").value)}`, color: "warning" }], actions: [{ label: "Done", icon: "ri-check-line", primary: true, run: () => N.close(el) }] }));
+      N.submit(el, () => FacilitiesAPI.lend(item.id, { to_person_id: p.person_id || null, to_name: p.person_id ? null : p.name, quantity: qty, due_on: dueOn, note }), done);
     });
+  }
+
+  /** One ask to borrow: who, how many, when, what for - and Agree / Decline (managers) or Take back (the one who asked). */
+  function askRow(l, { showItem = false, itemUrl = "" } = {}) {
+    const what = showItem ? `<a class="fw-semibold mb-link" href="${itemUrl}">${esc(l.equipment)}${l.quantity > 1 ? ` ×${l.quantity}` : ""}</a>` : `<strong>${esc(l.to_name)}${l.quantity > 1 ? ` · ${num(l.quantity)}` : ""}</strong>`;
+    return `<div class="fx-loan fx-ask" data-ask="${l.id}">
+      <span class="avatar avatar-sm avatar-rounded bg-warning text-dark flex-shrink-0"><i class="ri-question-answer-line"></i></span>
+      <div class="flex-fill min-w-0">${what}<small>${showItem ? `${esc(l.to_name)} · ` : ""}${day(l.out_on, { day: "numeric", month: "short" })} → ${day(l.due_on, { day: "numeric", month: "short" })}${l.note ? ` · ${esc(l.note)}` : ""}</small></div>
+      <span class="badge bg-warning text-dark">Asked</span>
+      ${l.can_decide || l.can_cancel ? `<div class="fx-ask-acts">${l.can_decide ? `<button type="button" class="btn btn-sm btn-outline-danger" data-decline="${l.id}">Decline</button><button type="button" class="btn btn-sm btn-success" data-agree="${l.id}"><i class="ri-check-line me-1"></i>Agree</button>` : `<button type="button" class="btn btn-sm btn-outline-danger" data-takeback="${l.id}">Take back</button>`}</div>` : ""}
+    </div>`;
+  }
+
+  /** Agree to an ask, decline it (with a reason), or take it back - wired on a container of askRow()s. */
+  function wireAsks(box, onDone) {
+    box.addEventListener("click", async (e) => {
+      const agree = e.target.closest("[data-agree]");
+      const decline = e.target.closest("[data-decline]");
+      const back = e.target.closest("[data-takeback]");
+      if (agree) {
+        UI.setButtonLoading(agree, "...");
+        const r = await FacilitiesAPI.approve(Number(agree.dataset.agree));
+        UI.restoreButton(agree);
+        r.ok ? (Toast.success(r.message), onDone(r.data)) : Toast.error(r.message);
+      }
+      if (decline) {
+        PeopleKit.confirmWindow({
+          title: "Decline this ask",
+          subtitle: "They'll see it was declined, and why",
+          icon: "ri-close-circle-line",
+          go: '<i class="ri-close-line me-1"></i>Decline',
+          body: PeopleKit.parts([{ icon: "ri-chat-3-line", title: "Why (optional)", body: '<input class="form-control mw-input" id="dcWhy" maxlength="200" placeholder="e.g. We need them on Sunday">' }]),
+          run: async () => {
+            const r = await FacilitiesAPI.decline(Number(decline.dataset.decline), document.getElementById("dcWhy").value.trim() || null);
+            if (r.ok) onDone(r.data);
+            return r;
+          },
+        });
+      }
+      if (back) {
+        UI.setButtonLoading(back, "...");
+        const r = await FacilitiesAPI.cancelAsk(Number(back.dataset.takeback));
+        UI.restoreButton(back);
+        r.ok ? (Toast.success(r.message), onDone(r.data)) : Toast.error(r.message);
+      }
+    });
+  }
+
+  /** The Budgets Record money window, filled in for what it cost - then the entry is linked to it. */
+  function recordPurchase(item, budget, onDone) {
+    if (typeof BudgetsEntryModal === "undefined") return;
+    if (!budget) return Toast.error("No budget is in use today - start this month's budget first, or link an entry already recorded.");
+    BudgetsEntryModal.open({
+      budgetId: budget.id,
+      direction: "out",
+      prefill: { amount: item.total, description: `Bought: ${item.name}${item.quantity > 1 ? ` ×${item.quantity}` : ""}`, counterparty: item.supplier || "" },
+      onSaved: async (entry) => {
+        if (!entry?.id) return onDone?.();
+        const res = await FacilitiesAPI.linkItemExpense(item.id, entry.id);
+        res.ok ? Toast.success(res.message) : Toast.error(res.message);
+        onDone?.(res.ok ? res.data : null);
+      },
+    });
+  }
+
+  /** Link a Budgets entry already recorded: our church's money paid out, latest first, searchable. */
+  function linkWindow(item, { onDone } = {}) {
+    let chosen = null;
+    const el = N.windowEl({
+      id: "fcModal",
+      title: "Link what was paid in Budgets",
+      subtitle: `The entry that paid for ${item.name}`,
+      icon: "ri-links-line",
+      size: "modal-lg",
+      body: `<div class="mw-form">${N.step(1, {
+        icon: "ri-search-line",
+        color: "success",
+        title: "Find the entry",
+        help: "Money paid out, the latest first - search by what it was for, who was paid or the reference",
+        body: `<div class="pp-picker-search mb-2"><i class="ri-search-line"></i><input type="search" class="form-control mw-input" id="lkQ" placeholder="e.g. guitar, music shop" value="${esc(item.name.split(" ")[0])}"></div><div class="fx-entries" id="lkList"></div>`,
+      })}</div>`,
+      foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="lkSave" disabled><i class="ri-links-line me-1"></i>Link it</button>`,
+    });
+    const list = el.querySelector("#lkList");
+    let t = null;
+    const search = async () => {
+      list.innerHTML = '<div class="skel skel-line"></div><div class="skel skel-line mt-2"></div>';
+      const res = await FacilitiesAPI.expenses(el.querySelector("#lkQ").value.trim());
+      if (!res.ok) return (list.innerHTML = `<p class="mb-0 text-danger">${esc(res.message)}</p>`);
+      list.innerHTML = res.data.length
+        ? res.data
+            .map((x) => `<label class="fx-entry${x.taken ? " is-taken" : ""}"><input type="radio" name="lkEntry" value="${x.id}"${x.taken ? " disabled" : ""}><span class="flex-fill min-w-0"><strong>${esc(x.description)}</strong><small>${day(x.date, { day: "numeric", month: "short", year: "numeric" })}${x.counterparty ? ` · ${esc(x.counterparty)}` : ""}${x.reference ? ` · ${esc(x.reference)}` : ""}${x.taken ? " · already linked to another item" : ""}</small></span><strong class="text-nowrap">${money(x.amount)}</strong></label>`)
+            .join("")
+        : '<p class="mb-0 fw-semibold">Nothing paid out matches - try another word, or record it in Budgets.</p>';
+    };
+    el.querySelector("#lkQ").addEventListener("input", () => (clearTimeout(t), (t = setTimeout(search, 300))));
+    list.addEventListener("change", (e) => {
+      chosen = Number(e.target.value);
+      el.querySelector("#lkSave").disabled = false;
+    });
+    el.querySelector("#lkSave").addEventListener("click", () => N.submit(el, () => FacilitiesAPI.linkItemExpense(item.id, chosen), (d) => (onDone?.(d), null)));
+    search();
   }
 
   // ---------------------------------------------------------------- repairs
@@ -578,7 +729,7 @@ const FacilitiesUI = (function () {
     el.querySelector("#rtSave").addEventListener("click", () => N.submit(el, () => FacilitiesAPI.saveRota({ on: date, service, duty: duty.key, people: picked }), (d) => (onDone?.(d), null)));
   }
 
-  return { esc, num, money, day, ampm, iso, todayIso, minutes, tile, roomDot, conditionPill, statusPill, CONDITION, STATUS, options, personPicker, bookWindow, bookingWindow, roomsWindow, itemWindow, lendWindow, reportWindow, repairWindow, recordCost, rotaWindow };
+  return { esc, num, money, short, day, ampm, iso, todayIso, minutes, tile, roomDot, conditionPill, statusPill, CONDITION, STATUS, options, personPicker, bookWindow, bookingWindow, roomsWindow, itemWindow, lendWindow, askRow, wireAsks, recordPurchase, linkWindow, reportWindow, repairWindow, recordCost, rotaWindow };
 })();
 
 window.FacilitiesUI = FacilitiesUI;

@@ -34,7 +34,7 @@
 <div class="row mn-fill-row">
     <div class="col-xl-7 d-flex">
         <div class="card custom-card flex-fill">
-            <div class="card-header"><div><div class="card-title">Needs attention</div><span class="card-subtitle-text">Urgent repairs, broken things and loans not back</span></div></div>
+            <div class="card-header"><div><div class="card-title">Needs attention</div><span class="card-subtitle-text">Urgent repairs, broken things, loans not back and asks to borrow</span></div></div>
             <div class="card-body" id="attention"><span class="skel skel-line"></span></div>
         </div>
     </div>

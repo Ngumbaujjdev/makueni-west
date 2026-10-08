@@ -2,7 +2,7 @@
 // Facilities (docs/specs/people-and-care-spec.md, P5). The wrapper sets
 // $facCtx (includes/facilities/context.php); the body for each page is includes/facilities/body-{page}.php.
 $titles = [
-    'index' => 'Facilities', 'bookings' => 'Bookings', 'equipment' => 'Equipment', 'item' => 'Equipment',
+    'index' => 'Facilities', 'bookings' => 'Bookings', 'equipment' => 'Equipment', 'item' => 'Equipment', 'assets' => 'What we own',
     'repairs' => 'Repairs', 'rota' => 'Duty rota',
 ];
 $pageTitle = $titles[$facCtx['page']];

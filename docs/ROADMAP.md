@@ -84,6 +84,8 @@ The five empty church modules, rebuilt in phases (`docs/specs/people-and-care-sp
 - **P3** Pastoral care
 - **P4** Ministries
 - **P5** Facilities
+- **P5 round 2** Equipment as assets (photos, receipts, cost in Budgets, asset register), asking to borrow
+- **Next: Purchases** - its own module: ask to buy → approve → buy → receipt → it becomes an asset (and a Budgets entry)
 
 Names and phone numbers stay with the church, as the original Final Documentation said ("Diocese never sees names"). The region and diocese get totals pages only.
 

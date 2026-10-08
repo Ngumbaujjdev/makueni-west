@@ -28,6 +28,17 @@ class FacilitiesController extends FacilitiesBase
         return $this->ok($this->facilities->overview($church, $request->user()) + ['can' => $this->can($request, $church)]);
     }
 
+    /** GET /facilities/assets - what we own, as assets: worth by kind, room and year, Budgets, what still needs details. */
+    public function assets(Request $request): JsonResponse
+    {
+        $church = $this->church($request);
+        if ($church instanceof JsonResponse) {
+            return $church;
+        }
+
+        return $this->ok($this->facilities->assets($church) + ['can' => $this->can($request, $church)]);
+    }
+
     /** GET /facilities/options - rooms, kinds and duties, ministries, leaders, opening hours. */
     public function options(Request $request): JsonResponse
     {

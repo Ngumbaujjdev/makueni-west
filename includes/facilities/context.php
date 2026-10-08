@@ -9,13 +9,14 @@ require_once __DIR__ . '/../session-manager.php';
 require_once __DIR__ . '/../auth-check.php';
 require_once __DIR__ . '/../permission-check.php';
 
-/** @param string $page index | bookings | equipment | item | repairs | rota */
+/** @param string $page index | bookings | equipment | item | assets | repairs | rota */
 function facilitiesPageContext(string $page): array
 {
     $permission = [
         'bookings' => 'church.facilities.bookings.read',
         'equipment' => 'church.facilities.equipment.read',
         'item' => 'church.facilities.equipment.read',
+        'assets' => 'church.facilities.assets.read',
         'repairs' => 'church.facilities.repairs.read',
         'rota' => 'church.facilities.rota.read',
     ][$page] ?? 'church.facilities.facilities.read';
@@ -40,6 +41,7 @@ function facilitiesPageContext(string $page): array
             'book' => $can('facilities.facilities.book') || $can('facilities.facilities.manage'),
             'members' => $can('members.members.read'),
             'budget' => $can('budget.budgets.read') || $can('budgets.budgets.read') || hasGlobalAccess(),
+            'export' => $can('facilities.facilities.export'),
         ],
     ];
 }
@@ -53,6 +55,10 @@ function facilitiesPageStyles(string $page): void
     }
     if ($page === 'repairs') {
         $css[] = 'assets/libs/dragula/dragula.min.css';
+    }
+    if ($page === 'item') {
+        // Its photos open full size.
+        $css[] = 'assets/libs/glightbox/css/glightbox.min.css';
     }
     foreach ($css as $c) {
         echo '<link rel="stylesheet" href="' . SITE_URL . "/{$c}\" />\n";
@@ -79,11 +85,14 @@ function facilitiesPageScripts(string $page): void
     if ($page === 'repairs') {
         $libs[] = 'assets/libs/dragula/dragula.min.js';
     }
+    if ($page === 'item') {
+        $libs[] = 'assets/libs/glightbox/js/glightbox.min.js';
+    }
     foreach ($libs as $src) {
         echo '<script src="' . SITE_URL . "/{$src}\"></script>\n";
     }
     $scripts = ['assets/js/pages/demographics/api-handler.js', 'assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/members/api.js', 'assets/js/pages/members/ui.js', 'assets/js/pages/members/list-kit.js', 'assets/js/pages/ministries/ui.js', 'assets/js/pages/facilities/api.js', 'assets/js/pages/facilities/ui.js'];
-    if ($page === 'repairs') {
+    if ($page === 'repairs' || $page === 'item') {
         // "Record the cost" opens the Budgets Record money window.
         $scripts = [...$scripts, 'assets/js/pages/budgets/api.js', 'assets/js/pages/budgets/ui.js', 'assets/js/pages/budgets/entry-modal.js', 'assets/js/pages/demographics/attendance-form-shared.js'];
     }

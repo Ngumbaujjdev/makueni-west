@@ -47,6 +47,7 @@ abstract class FacilitiesBase extends Controller
         return [
             'manage' => $this->facilities->canManage($request->user(), $church),
             'book' => $this->facilities->canBook($request->user(), $church),
+            'export' => PeopleAccess::canNamed($request->user(), $church, 'facilities', 'export'),
         ];
     }
 

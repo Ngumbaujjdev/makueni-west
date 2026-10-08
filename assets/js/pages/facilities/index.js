@@ -4,7 +4,7 @@
  * ============================================================================
  * Four cards (bookings this week, repairs, equipment, loans), today and this
  * week's bookings by day, who is on duty at the next service, what needs
- * attention (urgent repairs, broken things, loans not back) and our rooms.
+ * attention (urgent repairs, broken things, loans not back, asks to borrow) and our rooms.
  * ============================================================================
  */
 (function () {
@@ -83,6 +83,7 @@
       ${group("Urgent repairs", "ri-alarm-warning-line", "danger", a.repairs.map((j) => `<li><div class="flex-fill min-w-0"><a class="fw-semibold mb-link" href="${CTX.baseUrl}/repairs">${F.esc(j.title)}</a><small>${F.esc(j.equipment?.name || j.room?.name || "")}${j.days_open !== null ? ` · ${j.days_open} ${j.days_open === 1 ? "day" : "days"} open` : ""}</small></div>${F.statusPill(j.status)}</li>`))}
       ${group("Broken", "ri-error-warning-line", "warning", a.broken.map((e) => `<li><div class="flex-fill min-w-0"><a class="fw-semibold mb-link" href="${CTX.baseUrl}/item?id=${e.id}">${F.esc(e.name)}</a></div>${F.conditionPill("broken")}</li>`))}
       ${group("Loans not back", "ri-hand-coin-line", "purple", a.overdue.map((l) => `<li><div class="flex-fill min-w-0"><a class="fw-semibold mb-link" href="${CTX.baseUrl}/item?id=${l.equipment_id}">${F.esc(l.equipment)}</a><small>${F.esc(l.to_name)} · due ${F.day(l.due_on)}</small></div><span class="badge bg-danger">Late</span></li>`))}
+      ${group("Asks to borrow", "ri-question-answer-line", "primary", (a.asks || []).map((l) => `<li><div class="flex-fill min-w-0"><a class="fw-semibold mb-link" href="${CTX.baseUrl}/item?id=${l.equipment_id}&tab=loans">${F.esc(l.equipment)}${l.quantity > 1 ? ` ×${l.quantity}` : ""}</a><small>${F.esc(l.to_name)} · from ${F.day(l.out_on)}</small></div><span class="badge bg-warning text-dark">Asked</span></li>`))}
     </div>`;
   }
 
