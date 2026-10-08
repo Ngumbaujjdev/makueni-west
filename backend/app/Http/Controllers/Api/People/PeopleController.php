@@ -249,6 +249,60 @@ class PeopleController extends Controller
         return $this->ok($this->people->registerCounts($church));
     }
 
+    /**
+     * POST /people/bulk {ids[], action: inactive|archive} - many members at
+     * once from the list. Only this church's members; each change is audited.
+     */
+    public function bulk(Request $request): JsonResponse
+    {
+        $church = $this->church($request, 'manage');
+        if ($church instanceof JsonResponse) {
+            return $church;
+        }
+        $d = $request->validate(['ids' => ['required', 'array', 'min:1', 'max:500'], 'ids.*' => ['integer'], 'action' => ['required', Rule::in(['inactive', 'archive'])]]);
+        $people = Person::where('territory_id', $church->id)->whereIn('id', $d['ids'])->whereNull('anonymised_at')->where('status', '!=', 'visitor')->get();
+        $done = 0;
+        foreach ($people as $person) {
+            if ($d['action'] === 'inactive' && $person->status === 'member') {
+                $person->forceFill(['status' => 'inactive', 'updated_by' => $request->user()->id])->save();
+                $done++;
+            } elseif ($d['action'] === 'archive' && ! $person->archived_at) {
+                $person->forceFill(['archived_at' => now(), 'updated_by' => $request->user()->id])->save();
+                $done++;
+            }
+        }
+        $verb = $d['action'] === 'inactive' ? 'marked inactive' : 'archived';
+
+        return $this->ok(['done' => $done, 'skipped' => count(array_unique($d['ids'])) - $done], "{$done} ".($done === 1 ? 'member' : 'members')." {$verb}.");
+    }
+
+    /**
+     * GET /people/search?q= - one person by name, phone or area, to message
+     * them: this church's members and visitors (whichever the role may read),
+     * never a demo number or someone whose details were removed.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $id = $request->query('territory_id');
+        $place = PlaceAccess::place($request->user(), $id !== null && ctype_digit((string) $id) ? (int) $id : null);
+        $members = $place && PeopleAccess::canNamed($request->user(), $place, 'members');
+        $visitors = $place && PeopleAccess::canNamed($request->user(), $place, 'visitors');
+        if (! $members && ! $visitors) {
+            return $this->forbidden("Your role can't see the church's members or visitors.");
+        }
+        $d = $request->validate(['q' => ['required', 'string', 'min:2', 'max:80'], 'limit' => ['nullable', 'integer', 'between:1,50']]);
+        // People still with us: members and visitors - not those who left.
+        $rows = $this->people->query($place, ['q' => $d['q'], 'status' => array_values(array_filter([$members ? 'member' : null, $visitors ? 'visitor' : null]))])
+            ->whereNotNull('phone')
+            ->orderBy('first_name')->limit($d['limit'] ?? 25)->get();
+
+        return $this->ok($rows->map(fn (Person $p) => [
+            'id' => $p->id, 'name' => $p->name, 'initials' => $p->initials, 'phone' => $p->phone, 'area' => $p->area,
+            'kind' => $p->status === 'visitor' ? 'visitor' : 'member', 'demo' => Phone::isDemo($p->phone),
+            'can_text' => ! Phone::isDemo($p->phone) && ($p->status !== 'visitor' || $p->consent_contact),
+        ])->values());
+    }
+
     /** GET /people/totals - the region's and diocese's view: counts per church, never a name. */
     public function totals(Request $request): JsonResponse
     {

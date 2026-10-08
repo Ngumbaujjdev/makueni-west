@@ -10,7 +10,7 @@
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-md-4"><label class="form-label" for="vsOn">Date</label><input type="date" class="form-control" id="vsOn" required></div>
-                    <div class="col-md-4"><label class="form-label" for="vsGathering">Gathering <span class="fw-normal">(optional)</span></label><select class="form-select" id="vsGathering"><option value="">Not linked to one</option></select></div>
+                    <div class="col-md-4"><label class="form-label" for="vsGathering">Service or gathering</label><select class="form-select" id="vsGathering"></select></div>
                     <div class="col-md-4"><label class="form-label" for="vsAssign">Follows them up</label><select class="form-select" id="vsAssign"><option value="">Nobody yet</option></select></div>
                 </div>
             </div>

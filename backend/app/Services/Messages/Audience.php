@@ -66,6 +66,15 @@ final class Audience
 
         // Our register (a church's own members and visitors - only for those who may read them).
         $register = (array) ($audience['register'] ?? []);
+        $picked = array_values(array_filter(array_map('intval', (array) ($register['people_ids'] ?? []))));
+        if ($picked) {
+            if ($level !== 'church' || (! PeopleAccess::canNamed($by, $place, 'members') && ! PeopleAccess::canNamed($by, $place, 'visitors'))) {
+                throw ValidationException::withMessages(['audience' => ["Your role can't send to the church's members or visitors."]]);
+            }
+            $people = $this->picked($place, $picked, $by);
+            $out = $out->merge($people);
+            $parts[] = count($picked).' picked '.(count($picked) === 1 ? 'person' : 'people').($people->count() < count($picked) ? ' ('.(count($picked) - $people->count()).' can\'t be texted)' : '');
+        }
         foreach (['members' => 'members', 'visitors' => 'visitors'] as $key => $module) {
             if (empty($register[$key])) {
                 continue;
@@ -141,6 +150,19 @@ final class Audience
                 'place_id' => (int) $a->territory_id,
                 'role' => $a->role?->name,
             ])->values();
+    }
+
+    /** People picked one by one: this church's, with a phone, not "Don't text them", never a demo number. */
+    public function picked(Territory $church, array $ids, ?User $by): Collection
+    {
+        $members = PeopleAccess::canNamed($by, $church, 'members');
+        $visitors = PeopleAccess::canNamed($by, $church, 'visitors');
+
+        return Person::where('territory_id', $church->id)->whereIn('id', $ids ?: [0])->whereNull('anonymised_at')->whereNotNull('phone')
+            ->get()
+            ->filter(fn (Person $p) => ($p->status === 'visitor' ? $visitors && $p->consent_contact : $members) && ! Phone::isDemo($p->phone))
+            ->map(fn (Person $p) => ['user_id' => null, 'name' => $p->name, 'phone' => Phone::kenyaMobile($p->phone), 'email' => null, 'place_id' => (int) $church->id, 'role' => $p->status === 'visitor' ? 'Visitor' : 'Member'])
+            ->values();
     }
 
     /** A church's members (with a phone), or its visitors who didn't ask not to be texted (with a phone). */

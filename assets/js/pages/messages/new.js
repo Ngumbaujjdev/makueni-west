@@ -42,6 +42,7 @@
     contacts: false,
     typed: "",
     register: [],
+    people: [], // picked one by one from the register: [{id, name}]
     channel: "sms",
     subject: "",
     body: "",
@@ -67,7 +68,7 @@
     own: { roles: s.own },
     below: { scope: s.scope, levels: s.levels, group_ids: s.groups, place_ids: s.places, roles: s.rolesBelow, place_contacts: s.contacts },
     typed: s.typed.trim() ? [s.typed] : [],
-    register: { members: s.register.includes("members"), visitors: s.register.includes("visitors") },
+    register: { members: s.register.includes("members"), visitors: s.register.includes("visitors"), people_ids: s.people.map((p) => p.id) },
   });
 
   // ================================================================ channel
@@ -182,8 +183,12 @@
           ? `<div class="pb-sub">Our register</div>
         <div class="d-flex flex-wrap gap-1 mb-3">
           ${opts.register.members != null ? roleChip("members", "Our members", opts.register.members, s.register.includes("members"), "register") : ""}
-          ${opts.register.visitors != null ? roleChip("visitors", "Visitors who said yes", opts.register.visitors, s.register.includes("visitors"), "register") : ""}
-        </div>`
+          ${opts.register.visitors != null ? roleChip("visitors", "Our visitors", opts.register.visitors, s.register.includes("visitors"), "register") : ""}
+        </div>
+        <div class="pb-sub">Pick people</div>
+        <div class="pp-picker-search"><i class="ri-search-line"></i><input type="search" class="form-control form-control-sm" id="pickSearch" placeholder="Search a member or visitor - name, phone or area" autocomplete="off" aria-label="Search a member or visitor"></div>
+        <div class="pp-picker-list" id="pickList"></div>
+        <div class="pp-chips mb-3" id="pickChips"></div>`
           : ""
       }
       <div class="pb-sub">Numbers or emails typed in</div>
@@ -231,6 +236,62 @@
     }
     $("typedIn").addEventListener("input", () => {
       s.typed = $("typedIn").value;
+      queuePreview();
+    });
+    if (opts.register) wirePicker();
+  }
+
+  // ================================================================ pick people (People & care)
+  let pickTimer = null;
+  let pickFound = [];
+  function renderPicked() {
+    const shown = s.people.slice(0, 6);
+    $("pickChips").innerHTML = shown.length
+      ? `${shown.map((p) => `<span class="pp-chip"><span>${M.esc(p.name)}</span><button type="button" data-unpick="${p.id}" aria-label="Remove ${M.esc(p.name)}">&times;</button></span>`).join("")}${s.people.length > 6 ? `<span class="pp-chip"><span>+${s.people.length - 6} more</span></span>` : ""}`
+      : "";
+  }
+  function renderFound() {
+    const q = $("pickSearch").value.trim();
+    if (q.length < 2) return ($("pickList").innerHTML = "");
+    $("pickList").innerHTML = pickFound.length
+      ? pickFound
+          .map((p) => {
+            const on = s.people.some((x) => x.id === p.id);
+            return `<label class="pp-picker-row${on ? " is-checked" : ""}"><input type="checkbox" class="form-check-input mt-0" data-pick="${p.id}"${on ? " checked" : ""}${p.can_text ? "" : " disabled"}><span class="flex-fill min-w-0"><strong>${M.esc(p.name)}</strong><small>${M.esc([p.kind === "visitor" ? "Visitor" : "Member", p.phone, p.area].filter(Boolean).join(" · "))}${p.can_text ? "" : p.demo ? " · demo number, never texted" : " · asked not to be texted"}</small></span></label>`;
+          })
+          .join("")
+      : `<div class="pp-picker-none">Nobody found for "${M.esc(q)}".</div>`;
+  }
+  function wirePicker() {
+    renderPicked();
+    $("pickSearch").addEventListener("input", () => {
+      clearTimeout(pickTimer);
+      pickTimer = setTimeout(async () => {
+        const q = $("pickSearch").value.trim();
+        if (q.length < 2) {
+          pickFound = [];
+          return renderFound();
+        }
+        const res = await MessagesAPI.people(q);
+        pickFound = res.ok ? res.data : [];
+        renderFound();
+      }, 300);
+    });
+    $("pickList").addEventListener("change", (e) => {
+      const box = e.target.closest("[data-pick]");
+      if (!box) return;
+      const p = pickFound.find((x) => x.id === Number(box.dataset.pick));
+      s.people = box.checked ? [...s.people, { id: p.id, name: p.name }] : s.people.filter((x) => x.id !== p.id);
+      box.closest(".pp-picker-row").classList.toggle("is-checked", box.checked);
+      renderPicked();
+      queuePreview();
+    });
+    $("pickChips").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-unpick]");
+      if (!b) return;
+      s.people = s.people.filter((x) => x.id !== Number(b.dataset.unpick));
+      renderPicked();
+      renderFound();
       queuePreview();
     });
   }
@@ -707,9 +768,25 @@
     // A number from a member's page or a birthday (Members, docs/specs/people-and-care-spec.md).
     if (q.get("typed")) s.typed = q.get("typed");
     if (["members", "visitors"].includes(q.get("register"))) s.register = [q.get("register")];
+    // People ticked on Members or Visitors ("Send message") - their names come along in sessionStorage.
+    if (q.get("people") && opts.register) {
+      let named = [];
+      try {
+        named = JSON.parse(sessionStorage.getItem("pp-picked") || "[]");
+      } catch (e) {
+        /* no names - show them as picked people */
+      }
+      const names = new Map(named.map((p) => [Number(p.id), p.name]));
+      s.people = q
+        .get("people")
+        .split(",")
+        .map(Number)
+        .filter(Boolean)
+        .map((id) => ({ id, name: names.get(id) || `Person ${id}` }));
+    }
     const tpl = opts.templates.find((t) => t.id === Number(q.get("template")));
     if (tpl) Object.assign(s, { template: tpl.id, channel: tpl.channel, subject: tpl.subject || "", body: tpl.body });
-    if (!s.own.length && s.scope === "none" && !opts.below && !s.register.length) s.own = ["*"];
+    if (!s.own.length && s.scope === "none" && !opts.below && !s.register.length && !s.people.length) s.own = ["*"];
   }
 
   document.addEventListener("DOMContentLoaded", async () => {

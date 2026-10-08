@@ -255,4 +255,37 @@ class VisitorsTest extends TestCase
         $this->assertSame(0, Person::where('phone', 'like', '+254700000%')->count());
         $this->assertNotNull($real->fresh(), 'real people stay');
     }
+
+    public function test_many_visitors_at_once_a_sunday_service_and_picked_people_in_messages(): void
+    {
+        $this->myChurch->forceFill(['metadata' => ['service_times' => [['name' => 'Sunday morning', 'day' => 0, 'start' => '09:00', 'end' => null, 'gathering_type_id' => null, 'language' => null]]]])->save();
+        Sanctum::actingAs($this->senior);
+        $choices = $this->getJson('/api/visitors/options')->assertOk()->json('data.gathering_choices');
+        $this->assertSame('service:Sunday morning', $choices[0]['key']);
+
+        $this->sunday([['name' => 'Ann One', 'phone' => '0712000901'], ['name' => 'Bob Two', 'phone' => '0712000902'], ['name' => 'Cy Three']], ['gathering' => 'service:Sunday morning'])->assertCreated();
+        $this->sunday([['name' => 'Nope']], ['gathering' => 'service:Saturday disco'])->assertStatus(422)->assertJsonValidationErrors('gathering');
+        $ann = Person::where('first_name', 'Ann')->first();
+        $this->assertSame('Sunday morning', $this->getJson("/api/visitors/{$ann->id}")->json('data.visit_list.0.gathering'));
+        $this->assertSame('sunday_service', \App\Models\GatheringCategory::find(VisitorVisit::where('person_id', $ann->id)->value('gathering_category_id'))?->slug);
+
+        $ids = Person::whereIn('first_name', ['Ann', 'Bob', 'Cy'])->pluck('id')->all();
+        $this->postJson('/api/visitors/bulk', ['ids' => $ids, 'action' => 'assign', 'user_id' => $this->elder->id])->assertOk()->assertJsonPath('data.done', 3);
+        $this->assertSame(1, $this->elder->notifications()->count(), 'told once');
+        $this->postJson('/api/visitors/bulk', ['ids' => $ids, 'action' => 'stage', 'stage' => 'contacted'])->assertOk()->assertJsonPath('data.done', 3);
+        $this->postJson('/api/visitors/bulk', ['ids' => $ids, 'action' => 'stage', 'stage' => 'member'])->assertStatus(422);
+        $this->assertSame(['contacted'], Person::whereIn('id', $ids)->pluck('stage')->unique()->values()->all());
+
+        // Messages: picked people, not a whole group - and only those who can be texted.
+        $bob = Person::where('first_name', 'Bob')->first();
+        $this->putJson("/api/visitors/{$bob->id}", ['consent_contact' => false])->assertOk();
+        $r = $this->postJson('/api/messages/preview', ['audience' => ['register' => ['people_ids' => $ids]], 'channel' => 'sms', 'body' => 'Hi'])->assertOk()->json('data');
+        $this->assertSame(['Ann One'], $r['names'], 'Bob said no, Cy has no phone');
+        $this->assertStringContainsString('3 picked people (2 can', $r['summary']);
+
+        Sanctum::actingAs($this->otherPastor);
+        $this->postJson('/api/visitors/bulk', ['ids' => $ids, 'action' => 'archive'])->assertOk()->assertJsonPath('data.done', 0);
+        Sanctum::actingAs($this->reader);
+        $this->postJson('/api/visitors/bulk', ['ids' => $ids, 'action' => 'archive'])->assertForbidden();
+    }
 }

@@ -78,7 +78,7 @@ function visitorsPageScripts(string $page): void
         echo '<script src="' . SITE_URL . "/{$src}\"></script>\n";
     }
     // Members' look (avatars, dates, empty states) is shared; the Visitors API and look sit on top.
-    foreach (['assets/js/pages/demographics/api-handler.js', 'assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/members/api.js', 'assets/js/pages/members/ui.js', 'assets/js/pages/visitors/api.js', 'assets/js/pages/visitors/ui.js', "assets/js/pages/visitors/{$page}.js"] as $src) {
+    foreach (['assets/js/pages/demographics/api-handler.js', 'assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/members/api.js', 'assets/js/pages/members/ui.js', 'assets/js/pages/members/list-kit.js', 'assets/js/pages/visitors/api.js', 'assets/js/pages/visitors/ui.js', "assets/js/pages/visitors/{$page}.js"] as $src) {
         echo '<script src="' . $v($src) . '"></script>' . "\n";
     }
 }

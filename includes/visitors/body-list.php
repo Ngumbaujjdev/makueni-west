@@ -15,11 +15,14 @@
 
 <div class="row" id="statCardsRow"></div>
 
-<div class="card custom-card" id="dueCard">
+<div class="card custom-card vs-due-card" id="dueCard">
     <div class="card-header justify-content-between flex-wrap gap-2">
-        <div>
-            <div class="card-title">My follow-ups</div>
-            <span class="card-subtitle-text">Visitors given to you, and those nobody has taken yet - due this week or late</span>
+        <div class="d-flex align-items-center gap-2">
+            <span class="avatar avatar-sm avatar-rounded bg-danger text-white"><i class="ri-alarm-warning-line"></i></span>
+            <div>
+                <div class="card-title">My follow-ups</div>
+                <span class="card-subtitle-text">Given to you, or nobody's yet - due this week or late</span>
+            </div>
         </div>
         <div class="d-flex align-items-center gap-2" id="dueHead"></div>
     </div>
@@ -34,14 +37,16 @@
         </div>
         <div id="viewSwitchWrap"></div>
     </div>
+    <div class="card-body pb-0 pt-3" id="visitorPills"></div>
     <div class="card-body p-0">
         <div id="visitorFilters" class="list-filterbar-wrap"></div>
         <div class="vs-board-wrap" id="vsBoardWrap"><div id="vsBoard"></div></div>
         <div id="vsTableWrap" hidden>
             <div class="table-responsive">
-                <table class="table table-hover mb-0" id="visitorTable">
+                <table class="table table-hover mb-0 pp-table" id="visitorTable">
                     <thead>
                         <tr>
+                            <th class="pp-check"><input type="checkbox" class="form-check-input pp-pick-page" aria-label="Pick everyone on this page"></th>
                             <th>Name</th>
                             <th>Stage</th>
                             <th>Area</th>

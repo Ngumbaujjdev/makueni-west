@@ -20,7 +20,7 @@
       { icon: "ri-book-open-line", label: "Sunday school", value: M.num(t.sunday_school), color: "pink", sub: `${M.num(t.baptised)} members baptised` },
       { icon: "ri-arrow-left-right-line", label: "Transfers this year", value: `${M.num(t.transfers_in)} in · ${M.num(t.transfers_out)} out`, color: "secondary", sub: "Between churches" },
     ];
-    $("statCardsRow").innerHTML = cards.map((c) => `<div class="col-xl-3 col-lg-6 col-md-6">${UI.renderSparkCard(c)}</div>`).join("");
+    PeopleKit.statRow($("statCardsRow"), cards);
 
     if (!t.rows.length) {
       $("totalFilters").hidden = true;
@@ -49,7 +49,7 @@
   }
 
   async function init() {
-    $("statCardsRow").innerHTML = UI.skeletonCards(4, "col-xl-3 col-lg-6 col-md-6");
+    $("statCardsRow").innerHTML = UI.skeletonCards(4, "col-xl-3 col-sm-6");
     $("totalRows").innerHTML = UI.renderTableLoading(8);
     const res = await MembersAPI.totals();
     if (!res.ok) {

@@ -146,7 +146,7 @@
     UI.setButtonLoading(btn, "Saving...");
     const res = await VisitorsAPI.batch({
       on: $("vsOn").value,
-      gathering_type_id: $("vsGathering").value || null,
+      gathering: $("vsGathering").value || null,
       assigned_to: $("vsAssign").value || null,
       welcome_sms: !$("vsWelcome").hidden && $("vsWelcomeSw").checked,
       rows: rows.map((r) => ({ name: r.name.trim(), phone: r.phone.trim() || null, area: r.area.trim() || null })),
@@ -232,10 +232,16 @@
     const o = (state.options = res.data);
     $("vsOn").value = V.todayIso();
     $("vsOn").max = V.todayIso();
-    $("vsGathering").insertAdjacentHTML("beforeend", o.gathering_types.map((g) => `<option value="${g.id}">${M.esc(g.name)}</option>`).join(""));
+    // Our weekly services first (Sunday service is picked on a Sunday), then the other gatherings.
+    const choices = o.gathering_choices || [];
+    $("vsGathering").innerHTML = V.gatheringOptions(choices, $("vsOn").value);
+    $("vsOn").addEventListener("change", () => {
+      $("vsGathering").innerHTML = V.gatheringOptions(choices, $("vsOn").value);
+      UI.syncSelect($("vsGathering"));
+    });
     $("vsAssign").insertAdjacentHTML("beforeend", o.leaders.map((l) => `<option value="${l.id}" data-color="${UI.colorFor(l.name)}"${l.id === CTX.userId ? " selected" : ""}>${M.esc(l.name)}${l.id === CTX.userId ? " (me)" : ""}</option>`).join(""));
     $("vsAreas").innerHTML = (o.areas || []).map((a) => `<option value="${M.esc(a)}">`).join("");
-    UI.enhanceSelect($("vsGathering"), { search: o.gathering_types.length > 8 });
+    UI.enhanceSelect($("vsGathering"), { search: choices.length > 8 });
     UI.enhanceSelect($("vsAssign"));
     $("vsWelcomeSw").checked = !!o.welcome_sms;
     state.rows = [blank(), blank(), blank()];
