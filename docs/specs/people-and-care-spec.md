@@ -766,3 +766,57 @@ All tables are church-scoped (`territory_type`, `territory_id`).
 - [x] Only the booker or a facilities manager can cancel.
 - [x] Bookings show on the calendar under `sources[]=bookings` for our church only.
 - [x] Another church is refused every facilities route.
+
+### P5 round 2: equipment as assets, and borrowing (2026-10-08)
+The user asked for this after seeing an equipment item page:
+- each item should be an **asset**, with photos, the receipt, what was paid and where, linked to its cost in Budgets;
+- a breakdown of what the church owns and what it cost;
+- a clear way to borrow things.
+A purchasing workflow (ask → approve → buy) is planned as its own module next.
+
+- **Data** (`add_assets_to_equipment`):
+  - `equipment` gets:
+    - `asset_no`: A-0001… per church, given on create, kept after removal and backfilled for existing items;
+    - `supplier`;
+    - `budget_entry_id`.
+  - `equipment.value` is the **price each**; the total is price × how many.
+  - `equipment_photos`: at most 4 per item, stored as upright WebP through `ImageEngine`.
+  - **Receipts** are the `receipts` media collection on the private disk: JPG/PNG/WEBP/PDF, 5 MB, at most 3.
+  - `equipment_loans` get:
+    - `status`: requested → out (or declined) → returned;
+    - `requested_by`, `decided_by`, `decided_at` and `decline_reason`.
+    Only loans that are `out` count as away.
+- **Photos** are shown through a **signed link** (`GET /equipment-photos/{photo}/{size?}`, valid for a day), so `<img>` and the lightbox work without the sign-in token. Receipts go through the API with the token.
+- **Budgets:**
+  - `POST /equipment/{id}/expense` links a money-out entry, ours only. It fills the price and the bought date when they're empty, and copies the item's receipts onto an entry that has none.
+  - `DELETE` unlinks (the entry stays).
+  - `GET /equipment/expenses?q=` lists entries to link.
+  - "Record it in Budgets" opens the Record money window, filled in, on the budget in use.
+- **Borrowing:**
+  - Anyone who sees the facilities can **ask to borrow** (`POST /equipment/{id}/loans` with `ask: true`, needing what it's for and until when). One waiting ask per person per item.
+  - Managers **agree** (`POST /loans/{id}/approve`, availability checked again; it is out from the day asked, or from today) or **decline** with a reason (`POST /loans/{id}/decline`).
+  - The asker can take the ask back (`DELETE /loans/{id}`).
+  - "Lend it out" stays the managers' direct way to lend.
+  - Asks show on the item, on Equipment ("Asks to borrow") and on the Facilities page under "Needs attention".
+- **What we own** (`church/facilities/assets.php`, `GET /facilities/assets`, page read `facilities.assets.read`):
+  - what our things cost;
+  - how much is recorded in Budgets and how many have a receipt;
+  - repairs spending;
+  - cost by kind, by room and by the year bought;
+  - what cost the most;
+  - **Needs details**: no price, receipt or photo.
+- **Reports** (`facilities.facilities.export`, given to the Senior Pastor, the Church Administrator and the Church Treasurer):
+  - `facilities.assets`, the asset register: one section per kind with totals, plus charts;
+  - `facilities.loans`, what is borrowed: out now, asks waiting, and back in the last 90 days.
+- **Demo data:**
+  - free-licence photos from Wikimedia Commons (`backend/database/seeders/demo/equipment/`, credits in `CREDITS.md`);
+  - shops, and DEMO receipt PDFs on most priced items, with a few items left without, for "Needs details";
+  - two asks to borrow.
+  - No Budgets entries are created or linked.
+- **Tests:** `tests/Feature/Facilities/AssetsTest.php` (5).
+
+- [x] Asset numbers run per church.
+- [x] Photos are stored upright as WebP, at most 4, and only open through a signed link. Another church gets 404.
+- [x] Receipts attach, open and come off. Linking accepts only our church's money-out entries, and copies the receipts across.
+- [x] An ask waits for a manager. Agreeing checks what is here, declining is recorded, and the asker can take it back.
+- [x] What we own adds up our church's things only. Both reports build, and need the export permission.
