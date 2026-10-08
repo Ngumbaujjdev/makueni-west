@@ -149,6 +149,8 @@
       items: state.members,
       rowHtml: memberRow,
       noun: "members",
+      // It opens on the people the ministry is for - Sunday school, women or men; "All" is a tap away.
+      defaultPill: { children: "sunday_school", women: "female", men: "male" }[state.m.kind],
       searchPlaceholder: "Search by name, phone or area...",
       pills: [
         { key: "main_church", label: "Main church", icon: "ri-community-line", color: "primary", test: (p) => p.congregation === "main_church" },
@@ -190,7 +192,7 @@
     const d = g.detail;
     const s = d.summary;
     K.statRow($("gaCards"), [
-      { icon: "ri-calendar-check-line", label: "Times it met", sub: "The last twelve months", value: N.num(s.times), color: "primary", series: { labels: d.monthly.map((x) => x.label), data: d.monthly.map((x) => x.meetings) } },
+      { icon: "ri-calendar-check-line", label: "Times it met", sub: "The last twelve months", value: N.num(s.times), color: "primary", series: { labels: d.monthly.map((x) => x.label), data: d.monthly.map((x) => x.meetings) }, trim: true },
       { icon: "ri-group-line", label: "Average", sub: s.previous_average !== null && s.previous_average !== undefined ? `${N.num(s.previous_average)} the year before` : "People each time", value: s.average === null ? "-" : N.num(s.average), color: "success", delta: s.previous_average ? UI.periodDelta(s.average || 0, s.previous_average) : null },
       { icon: "ri-trophy-line", label: "Highest", sub: s.peak ? N.day(s.peak.date) : "Not yet", value: s.peak ? N.num(s.peak.total) : "-", color: "purple" },
       { icon: "ri-time-line", label: "Last met", sub: s.last ? "" : "Not recorded yet", value: s.last ? N.day(s.last) : "-", color: "pink" },
@@ -205,33 +207,58 @@
       )}</div></div>`;
       return;
     }
+    // The months from the first one it met - no empty months on the left.
+    const firstMet = Math.max(0, d.monthly.findIndex((x) => x.meetings));
+    const months = d.monthly.slice(firstMet);
     $("gaBody").innerHTML = `<div class="row mn-fill-row">
       <div class="col-xl-7 d-flex"><div class="card custom-card flex-fill">
         <div class="card-header justify-content-between flex-wrap gap-2"><div><div class="card-title">Each month</div><span class="card-subtitle-text">The average each time it met</span></div><a class="btn btn-sm btn-outline-primary" href="${CTX.attendanceUrl}/gathering?type=${state.m.gathering_type.id}"><i class="ri-external-link-line me-1"></i>In Attendance</a></div>
-        <div class="card-body"><div id="gaChart" style="min-height:280px"></div></div>
+        <div class="card-body"><div id="gaChart" style="min-height:300px"></div></div>
       </div></div>
       <div class="col-xl-5 d-flex"><div class="card custom-card flex-fill">
-        <div class="card-header justify-content-between"><div><div class="card-title">Each time</div><span class="card-subtitle-text">Newest first</span></div><span class="badge bg-primary">${N.num(rows.length)}</span></div>
-        <div class="card-body p-0 mn-fill-body"><div class="table-responsive"><table class="table text-nowrap mb-0"><thead><tr><th>Date</th><th>Adults</th><th>Youth</th><th>Children</th><th>Total</th></tr></thead><tbody>${
-          rows.length
-            ? rows
-                .map((r) => `<tr><td>${N.day(r.date)}</td><td>${N.num(r.adults_count)}</td><td>${N.num(r.youth_count)}</td><td>${N.num(r.children_male_count + r.children_female_count)}</td><td class="fw-semibold">${N.num(r.total)}</td></tr>`)
-                .join("")
-            : `<tr><td colspan="5"><p class="mb-0 p-2 fw-semibold">Nothing recorded in the last twelve months.</p></td></tr>`
-        }</tbody></table></div></div>
+        <div class="card-header justify-content-between"><div><div class="card-title">Each time</div><span class="card-subtitle-text">Newest first - who came, and the change from the time before</span></div><span class="badge bg-primary">${N.num(rows.length)}</span></div>
+        <div class="card-body mn-fill-body"><ul class="mn-meetings">${meetingRows(rows, s.peak)}</ul></div>
       </div></div>
     </div>`;
     new ApexCharts($("gaChart"), {
-      chart: { type: "bar", height: 280, toolbar: { show: false }, fontFamily: "inherit" },
-      plotOptions: { bar: { columnWidth: "45%", borderRadius: 3 } },
-      series: [{ name: "Average", data: d.monthly.map((x) => x.average) }],
+      chart: { type: "bar", height: 300, toolbar: { show: false }, fontFamily: "inherit" },
+      plotOptions: { bar: { columnWidth: months.length > 8 ? "50%" : "38%", borderRadius: 5, borderRadiusApplication: "end", dataLabels: { position: "top" } } },
+      series: [{ name: "Average", data: months.map((x) => x.average) }],
       colors: [UI.cssColor(state.m.colour)],
-      xaxis: { categories: d.monthly.map((x) => x.label) },
+      xaxis: { categories: months.map((x) => x.label), axisBorder: { show: false }, axisTicks: { show: false } },
       yaxis: { labels: { formatter: (v) => Math.round(v) } },
-      dataLabels: { enabled: false },
-      tooltip: { y: { formatter: (v, { dataPointIndex }) => (d.monthly[dataPointIndex].meetings ? `${v} on average · met ${d.monthly[dataPointIndex].meetings}x` : "Didn't meet") } },
-      grid: { borderColor: "rgba(var(--dark-rgb), .06)" },
+      dataLabels: { enabled: true, offsetY: -18, style: { fontSize: "11px", fontWeight: 700, colors: [UI.cssColor("dark")] }, formatter: (v) => (v ? v : "") },
+      tooltip: { y: { formatter: (v, { dataPointIndex }) => (months[dataPointIndex].meetings ? `${v} on average · met ${months[dataPointIndex].meetings}x` : "Didn't meet") } },
+      grid: { borderColor: "rgba(var(--dark-rgb), .05)", strokeDashArray: 4, xaxis: { lines: { show: false } } },
     }).render();
+  }
+
+  /** Each meeting, newest first: its date, how many came, adults · youth · children, and the change from the one before. */
+  function meetingRows(rows, peak) {
+    if (!rows.length) return '<li class="mn-meeting-none">Nothing recorded in the last twelve months.</li>';
+    const week = Date.now() - 7 * 86400000;
+    return rows
+      .map((r, i) => {
+        const before = rows[i + 1];
+        const children = r.children_male_count + r.children_female_count;
+        const parts = [
+          ["Adults", r.adults_count, "primary"],
+          ["Youth", r.youth_count, "success"],
+          ["Children", children, "warning"],
+        ];
+        const when = new Date(`${r.date}T12:00:00`);
+        const change = before ? r.total - before.total : null;
+        return `<li>
+          <span class="mn-date${when.getTime() >= week ? "" : " is-past"}"><strong>${when.getDate()}</strong><small>${when.toLocaleDateString("en-GB", { month: "short" })}</small></span>
+          <div class="flex-fill min-w-0">
+            <div class="d-flex align-items-center gap-2 flex-wrap"><span class="mn-meeting-total">${N.num(r.total)}</span><span class="mb-sub">came</span>${peak && peak.date === r.date ? '<span class="soft-chip soft-purple"><i class="ri-trophy-line"></i>Highest</span>' : ""}</div>
+            <div class="count-bar mn-split" aria-hidden="true">${parts.map(([, v, c]) => (r.total && v ? `<span class="bg-${c}" style="width:${(v / r.total) * 100}%"></span>` : "")).join("")}</div>
+            <div class="mn-meeting-parts">${parts.map(([l, v, c]) => `<span><i class="bg-${c}"></i>${l} <b>${N.num(v)}</b></span>`).join("")}</div>
+          </div>
+          ${change === null ? "" : `<span class="stat-delta is-${change > 0 ? "up" : change < 0 ? "down" : "flat"}"><i class="ri-arrow-${change > 0 ? "up" : change < 0 ? "down" : "right"}-s-fill"></i>${Math.abs(change)}</span>`}
+        </li>`;
+      })
+      .join("");
   }
 
   // -------------------------------------------------------------- activities

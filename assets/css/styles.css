@@ -38674,6 +38674,14 @@ button.cal-side-item:focus-visible {
 .mn-cell-bar small { font-size: .74rem; color: var(--default-text-color); }
 .mn-row-spark { width: 8rem; height: 34px; }
 .mn-split { margin: .45rem 0 .3rem; }
+.mn-meetings { margin: 0; padding: 0; list-style: none; }
+.mn-meetings > li { display: flex; align-items: center; gap: .85rem; padding: .75rem 0; border-top: 1px dashed var(--default-border); }
+.mn-meetings > li:first-child { padding-top: 0; border-top: 0; }
+.mn-meeting-total { font-size: 1.15rem; font-weight: 800; line-height: 1; color: var(--v2-heading); }
+.mn-meeting-parts { display: flex; flex-wrap: wrap; gap: .2rem .8rem; font-size: .74rem; color: var(--default-text-color); }
+.mn-meeting-parts i { display: inline-block; width: .5rem; height: .5rem; margin-right: .3rem; border-radius: 50%; }
+.mn-meeting-parts b { color: var(--v2-heading); }
+.mn-meeting-none { padding: .5rem 0; font-weight: 600; color: var(--v2-heading); }
 .mn-ring { padding: .9rem 1rem 0; border-bottom: 1px dashed var(--default-border); }
 
 /* A ministry, linked from other pages (Demographics, Attendance) */

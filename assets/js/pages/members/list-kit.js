@@ -21,7 +21,7 @@ const PeopleKit = (function () {
 
   // ---------------------------------------------------------------- stat card
   /**
-   * @param {object} c {icon, label, sub, value, color, delta (UI.periodDelta), series {labels,data}, bar {pct, text}}
+   * @param {object} c {icon, label, sub, value, color, delta (UI.periodDelta), series {labels,data}, trim (start the sparkline at its first non-zero month), bar {pct, text}}
    */
   function statCard(c) {
     const color = c.color || "primary";
@@ -29,7 +29,7 @@ const PeopleKit = (function () {
     const delta = d
       ? `<span class="pp-stat-delta is-${d.dir}"><i class="ri-arrow-${d.dir === "down" ? "right-down" : d.dir === "up" ? "right-up" : "right"}-line"></i>${esc(d.text)}</span>`
       : "";
-    const spark = c.series ? `<div class="pp-stat-spark" data-spark='${JSON.stringify(c.series).replace(/'/g, "&#39;")}' data-spark-color="${color}" data-spark-height="42"></div>` : "";
+    const spark = c.series ? `<div class="pp-stat-spark" data-spark='${JSON.stringify(c.series).replace(/'/g, "&#39;")}' data-spark-color="${color}" data-spark-height="42"${c.trim ? " data-spark-trim" : ""}></div>` : "";
     const bar = c.bar
       ? `<div class="pp-stat-bar"><div class="progress progress-xs flex-fill"><div class="progress-bar bg-${color}" style="width:${Math.max(0, Math.min(100, c.bar.pct || 0))}%"></div></div><span>${esc(c.bar.text)}</span></div>`
       : "";
@@ -77,6 +77,7 @@ const PeopleKit = (function () {
    *   tableId, stripId, pillsId, rowsId - the elements
    *   items, rowHtml(item) - <tr data-id data-pills="a b"> with the first cell from checkCell(id)
    *   pills [{key, label, icon, color, test(item)}] - "all" is added first
+   *   defaultPill - the pill it opens on when the URL names none (Reset goes back to it)
    *   sorts [{key, label, order: [[col, "asc"|"desc"]]}]
    *   actions [{key, label, icon, run(ids)}] - the bulk bar's buttons
    *   selects [{key, label, options: [{value, label, icon, color}]}] - optional dropdowns
@@ -88,8 +89,9 @@ const PeopleKit = (function () {
     registerPillFilter();
     const $id = (x) => document.getElementById(x);
     const q = new URLSearchParams(window.location.search);
-    const state = { pill: q.get("pill") || "all", picked: new Set() };
-    if (!o.pills.some((p) => p.key === state.pill)) state.pill = "all";
+    const home = o.pills.some((p) => p.key === o.defaultPill) ? o.defaultPill : "all";
+    const state = { pill: q.get("pill") || home, picked: new Set() };
+    if (state.pill !== "all" && !o.pills.some((p) => p.key === state.pill)) state.pill = home;
     active[o.tableId] = state.pill;
     const selects = o.selects || [];
     picks[o.tableId] = Object.fromEntries(selects.map((x) => [x.key, x.options.some((op) => String(op.value) === q.get(x.key)) ? q.get(x.key) : ""]));
@@ -122,7 +124,7 @@ const PeopleKit = (function () {
       const p = new URLSearchParams(window.location.search);
       const set = (k, v, def) => (v && v !== def ? p.set(k, v) : p.delete(k));
       set("q", search.value.trim(), "");
-      set("pill", state.pill, "all");
+      set("pill", state.pill, home);
       set("sort", $id(`${o.stripId}Sort`).value, o.sorts[0].key);
       selects.forEach((x) => set(x.key, picks[o.tableId][x.key], ""));
       history.replaceState(null, "", `${window.location.pathname}${p.toString() ? `?${p}` : ""}`);
@@ -130,7 +132,7 @@ const PeopleKit = (function () {
 
     function counts() {
       const info = table ? table.page.info() : { recordsDisplay: 0, recordsTotal: 0 };
-      const filtered = state.pill !== "all" || search.value.trim() || Object.values(picks[o.tableId]).some(Boolean);
+      const filtered = state.pill !== home || search.value.trim() || Object.values(picks[o.tableId]).some(Boolean);
       $id(`${o.stripId}Count`).textContent = filtered ? `${info.recordsDisplay} of ${info.recordsTotal} ${o.noun}` : `${info.recordsTotal} ${o.noun}`;
       $id(`${o.stripId}Clear`).classList.toggle("d-none", !filtered && $id(`${o.stripId}Sort`).value === o.sorts[0].key);
     }
@@ -234,7 +236,7 @@ const PeopleKit = (function () {
         $id(`${o.stripId}_${x.key}`).value = "";
         UI.syncSelect($id(`${o.stripId}_${x.key}`));
       });
-      $id(o.pillsId).querySelector('[data-pill="all"]').click();
+      $id(o.pillsId).querySelector(`[data-pill="${home}"]`).click();
       apply();
     });
     $id(`${o.stripId}All`).onclick = (e) => {
