@@ -314,7 +314,7 @@ class MinistryController extends Controller
         $m->loadMissing(['leaders.user', 'leaders.person', 'gatheringType']);
         $count = (int) ($this->ministries->memberCounts([$m->id])[$m->id] ?? 0);
 
-        return $this->ministries->row($m, $count) + [
+        return $this->ministries->detailRow($church, $m, $count) + [
             'demographic' => $this->ministries->demographic($church, $m),
             'can' => $this->can($request->user(), $church) + ['roster' => $this->ministries->canRoster($m, $request->user(), $church), 'mine' => $this->ministries->isLeader($m, $request->user())],
         ];

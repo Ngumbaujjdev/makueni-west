@@ -106,11 +106,13 @@ final class Ministries
         if (! $m) {
             return;
         }
-        $children = Person::where('territory_id', $church->id)->where('congregation', 'sunday_school')->whereIn('status', self::SERVING)->listed()->pluck('id');
+        $joined = Person::where('territory_id', $church->id)->where('congregation', 'sunday_school')->whereIn('status', self::SERVING)->listed()->pluck('joined_on', 'id');
+        $children = $joined->keys();
         $now = now();
-        DB::table('ministry_members')->insertOrIgnore($children->map(fn ($id) => [
-            'ministry_id' => $m->id, 'person_id' => $id, 'joined_on' => $this->today()->toDateString(), 'auto' => true, 'created_at' => $now, 'updated_at' => $now,
-        ])->all());
+        // In it since they joined the church (or today, when that isn't known).
+        DB::table('ministry_members')->insertOrIgnore($joined->map(fn ($on, $id) => [
+            'ministry_id' => $m->id, 'person_id' => $id, 'joined_on' => $on ? substr((string) $on, 0, 10) : $this->today()->toDateString(), 'auto' => true, 'created_at' => $now, 'updated_at' => $now,
+        ])->values()->all());
         DB::table('ministry_members')->where('ministry_id', $m->id)->whereIn('person_id', $children->all() ?: [0])->update(['auto' => true]);
         DB::table('ministry_members')->where('ministry_id', $m->id)->where('auto', true)->whereNotIn('person_id', $children->all() ?: [0])->delete();
     }
@@ -131,15 +133,17 @@ final class Ministries
         $row = ChurchDemographic::query()->where('church_demographics.territory_type', 'church')->where('church_demographics.territory_id', $church->id)->where('church_demographics.status', 'approved')
             ->join('fiscal_years', 'fiscal_years.id', '=', 'church_demographics.fiscal_year_id')
             ->leftJoin('fiscal_months', 'fiscal_months.id', '=', 'church_demographics.fiscal_month_id')
-            ->orderByDesc('fiscal_years.year')->orderByRaw('fiscal_months.number is null')->orderByDesc('fiscal_months.number')->orderByDesc('church_demographics.id')
-            ->first(['church_demographics.*', 'fiscal_years.year as fy', 'fiscal_months.number as fm']);
+            ->leftJoin('fiscal_semi_annuals', 'fiscal_semi_annuals.id', '=', 'church_demographics.fiscal_semi_annual_id')
+            // The newest by where its period ends: a month, a half (June or December), or the whole year.
+            ->orderByDesc('fiscal_years.year')->orderByRaw('coalesce(fiscal_months.number, fiscal_semi_annuals.number * 6, 12) desc')->orderByDesc('church_demographics.id')
+            ->first(['church_demographics.*', 'fiscal_years.year as fy', 'fiscal_months.number as fm', 'fiscal_semi_annuals.name as half']);
         if (! $row) {
             return null;
         }
 
         return [
             'value' => (int) collect($cols)->sum(fn ($c) => (int) $row->{$c}), 'label' => $label, 'metric' => $metric,
-            'period' => $row->fm ? date('M Y', mktime(0, 0, 0, (int) $row->fm, 1, (int) $row->fy)) : (string) $row->fy,
+            'period' => $row->fm ? date('M Y', mktime(0, 0, 0, (int) $row->fm, 1, (int) $row->fy)) : ($row->half ?: (string) $row->fy),
         ];
     }
 
@@ -248,6 +252,16 @@ final class Ministries
             'last_gathering' => $mine->max(fn ($r) => $r->service_date->toDateString()),
             'gatherings_this_month' => $mine->filter(fn ($r) => $r->service_date->format('Y-m') === $this->today()->format('Y-m'))->count(),
         ];
+    }
+
+    /** One ministry as its own page shows it - with six months of its gathering's attendance. */
+    public function detailRow(Territory $church, Ministry $m, int $members): array
+    {
+        $today = $this->today();
+        $months = collect(range(5, 0))->map(fn ($i) => $today->startOfMonth()->subMonthsNoOverflow($i))->all();
+        $records = $this->gatherings($church, array_filter([$m->gathering_type_id]), $months[0]);
+
+        return $this->row($m, $members, $records, $months) + ['months' => array_map(fn ($mo) => $mo->format('M'), $months), 'gatherings_six_months' => $records->count()];
     }
 
     /** The Ministries page: cards, then a card per ministry. */
