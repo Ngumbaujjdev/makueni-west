@@ -341,20 +341,32 @@ const DemographicsUI = (function () {
       } catch (e) {
         return;
       }
+      // data-spark-trim: start at the first month with something in it - empty months drawn as a flat line
+      // along the bottom, then a jump, read as an x and a y axis.
+      if (el.hasAttribute("data-spark-trim")) {
+        const first = series.data.findIndex((v) => Number(v) > 0);
+        const from = Math.min(Math.max(0, first), Math.max(0, series.data.length - 2));
+        series = { labels: (series.labels || []).slice(from), data: series.data.slice(from) };
+      }
       const color = cssColor(el.getAttribute("data-spark-color") || "primary");
       new ApexCharts(el, {
         chart: {
-          type: "area",
+          type: "line",
           height: parseInt(el.getAttribute("data-spark-height"), 10) || 56,
           sparkline: { enabled: true },
           animations: { enabled: !document.documentElement.classList.contains("app-reduce-motion") },
         },
         series: [{ name: "", data: series.data }],
         labels: series.labels,
-        // Transparency lives in the fill colour - see renderTrendChart().
-        stroke: { width: 2, curve: "smooth", colors: [color] },
-        fill: { type: "solid" },
-        colors: [withAlpha(color, 0.16)],
+        // A line only, with a dot on the latest point: a shaded area's straight left and bottom
+        // edges read as a y and an x axis on a small card (2026-10-08).
+        stroke: { width: 2.25, curve: "smooth", colors: [color] },
+        colors: [color],
+        markers: { size: 0, discrete: [{ seriesIndex: 0, dataPointIndex: series.data.length - 1, fillColor: color, strokeColor: "#fff", size: 3.5 }] },
+        // No axis lines, ticks or grid - a sparkline is the shape only.
+        xaxis: { axisBorder: { show: false }, axisTicks: { show: false }, labels: { show: false }, crosshairs: { show: false } },
+        yaxis: { show: false },
+        grid: { show: false, padding: { top: 2, bottom: 2, left: 0, right: 0 } },
         tooltip: { x: { show: true }, y: { title: { formatter: () => "" } }, marker: { show: false } },
       }).render();
     });
