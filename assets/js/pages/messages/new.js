@@ -402,6 +402,8 @@
     if (q.get("channel") && M.CHANNELS[q.get("channel")]) s.channel = q.get("channel");
     if (q.get("subject")) s.subject = q.get("subject");
     if (q.get("body")) s.body = q.get("body");
+    // A number from a member's page or a birthday (Members, docs/specs/people-and-care-spec.md).
+    if (q.get("typed")) s.typed = q.get("typed");
     const tpl = opts.templates.find((t) => t.id === Number(q.get("template")));
     if (tpl) Object.assign(s, { template: tpl.id, channel: tpl.channel, subject: tpl.subject || "", body: tpl.body });
     if (!s.own.length && s.scope === "none" && !opts.below) s.own = ["*"];
