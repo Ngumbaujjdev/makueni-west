@@ -223,6 +223,45 @@ The placeholders' unbuilt sub-pages are switched off.
   - On a phone, rows stack as label/value pairs.
   - `initListDataTable` takes `responsive: false` for this table.
 
+## Chat (L6, 2026-10-08)
+Two-way chat between the diocese's leaders, next to the one-way announcements above. The owner asked for a contact list, one-to-one chats and WhatsApp-like groups, kept very simple and very close to the template's chat.html.
+
+- **Who:** anyone who can read the Inbox (`{level}.messages.inbox.read` - every role) can chat with **any active leader in the diocese** - up, down or sideways. Global admins too.
+- **Live:** Laravel Reverb (`php artisan reverb:start`), Echo and pusher-js in the browser. If the live connection is down, the page asks every few seconds instead.
+
+### Data
+| Table | Columns |
+|---|---|
+| `chats` | `id, type (direct, group), name, photo_path, direct_key ("small:big" user ids, unique - one chat per pair), created_by, last_message_at` |
+| `chat_members` | `chat_id, user_id, is_admin, joined_at, left_at, last_read_message_id` - unique per chat and person |
+| `chat_messages` | `id, chat_id, user_id, kind (text, system), body (<= 4000), soft deletes` |
+
+### API (`/chat/*`, signed in)
+| Method | Path | What |
+|---|---|---|
+| GET | `/chat/contacts?q=` | every active leader but me, each once with their main role and place; search by name, place or role |
+| GET | `/chat/chats` | my chats (groups I left stay, read-only): name, photo, last message, unread, `read_upto` - plus the total unread |
+| GET | `/chat/chats/{id}` | details: the person, or the group's people with their admin flags |
+| POST | `/chat/direct` | `{user_id}` - open, or start, my one-to-one chat; the same chat whoever starts it |
+| POST | `/chat/groups` | `{name, member_ids[]}` - I'm its admin |
+| PATCH | `/chat/groups/{id}` | `{name}` - admins |
+| POST / GET | `/chat/groups/{id}/photo` | a 400px square WebP - admins upload; public to show |
+| POST | `/chat/groups/{id}/members` | `{user_ids[]}` - admins |
+| DELETE | `/chat/groups/{id}/members/{user}` | admins remove; anyone leaves (themselves). A group always keeps an admin. |
+| GET | `/chat/chats/{id}/messages?before=` | 50 at a time, newest last, with `read_upto`; someone who left sees up to then |
+| POST | `/chat/chats/{id}/messages` | `{body}` (1-4000), 60 a minute |
+| POST | `/chat/chats/{id}/read` | `{message_id}` |
+
+Adding, removing, leaving, renaming and creating write a system line ("Benson added Titus").
+
+### Live channels (`routes/channels.php`, auth at `/api/broadcasting/auth` with the Bearer token)
+- `private-chat.{id}` - members still in the chat: `.message` (a new line), `.read` (someone read up to a message - the double tick).
+- `private-user.{id}` - that person only: `.chat` (their list changed).
+- `presence-online` - everyone who can chat: the green online dots. Typing uses client whispers on the chat channel.
+
+### Look
+The template's chat.html, its markup and classes as they are: the list (Recent with ACTIVE CHATS, ALL CHATS and ANNOUNCEMENTS; Groups; Contacts in the Calls tab), the conversation (online or typing in the header, day labels, ticks, Enter to send) and the details (the person, or the group's members; their place's photos).
+
 ## Acceptance Criteria
 
 ### L5a: backend
@@ -247,3 +286,11 @@ The placeholders' unbuilt sub-pages are switched off.
 - [x] Send this to me goes to my own email or phone; a missing contact is refused.
 - [x] A region's shared templates reach only its own churches; the diocese never sees a church's own; without send, nothing.
 - [x] Five tabs, `&tab=` kept on refresh, save and Discard; no overflow and no console errors at 1440, 820 and 390, as a church and as the diocese.
+
+### L6: chat
+- [ ] Contacts are every active leader in the diocese but me, each once; search finds by name, place and role; someone without the Inbox permission gets 403.
+- [ ] A one-to-one chat is the same chat whoever starts it; only its two members read or write (others get 404).
+- [ ] Unread counts fall when read; the sender's `read_upto` follows the other's read.
+- [ ] Group admins add, remove and rename; members can't, but can leave; a person who left can read up to then but not send; a group always keeps an admin; each change writes a system line.
+- [ ] An empty message, one over 4000 characters, chatting with yourself and a group with nobody get 422.
+- [ ] Sending broadcasts to `private-chat.{id}` and each member's `private-user.{id}`; the channel auth lets members in and keeps others out.
