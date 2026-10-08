@@ -4,10 +4,10 @@
  * ============================================================================
  * Four crisp cards (active, new this month, Sunday school, leaving this
  * year), then the register: pills with counts (main church, Sunday school,
- * inactive, transferred out), a search (name, phone or area) and a Sort
- * menu, a tick box per row and a floating "N selected" bar - Send message,
- * Mark inactive, Archive. All in place and kept in the URL. "Archived"
- * shows the people taken off the lists.
+ * inactive, transferred out), a search (name, phone or area), a Ministry
+ * menu and a Sort menu, a tick box per row and a floating "N selected" bar -
+ * Send message, Add to ministry, Mark inactive, Archive. All in place and
+ * kept in the URL. "Archived" shows the people taken off the lists.
  * ============================================================================
  */
 (function () {
@@ -37,7 +37,8 @@
   // -------------------------------------------------------------- the table
   function rowHtml(p) {
     const href = `${CTX.baseUrl}/member?id=${p.id}`;
-    return `<tr class="mb-row" data-id="${p.id}" data-href="${href}" data-pills="${[p.congregation || "", p.status].join(" ")}">
+    const ministries = p.ministries || [];
+    return `<tr class="mb-row" data-id="${p.id}" data-href="${href}" data-pills="${[p.congregation || "", p.status].join(" ")}" data-f-ministry="${ministries.length ? ministries.map((m) => m.id).join(" ") : "none"}">
       ${K.checkCell(p.id, p.name)}
       <td data-search="${M.esc(`${p.name} ${p.phone || ""} ${p.area || ""}`)}" data-order="${M.esc(p.name.toLowerCase())}">
         <div class="d-flex align-items-center gap-2">
@@ -46,7 +47,7 @@
         </div>
       </td>
       <td data-order="${M.esc((p.area || "~").toLowerCase())}">${p.area ? M.esc(p.area) : '<span class="mb-sub">Not given</span>'}</td>
-      <td>${p.congregation ? M.groupChip(p.congregation) : '<span class="mb-sub">Not set</span>'}</td>
+      <td>${p.congregation ? M.groupChip(p.congregation) : '<span class="mb-sub">Not set</span>'}${ministries.length ? `<div class="mb-sub mt-1">${ministries.map((m) => M.esc(m.name)).join(" · ")}</div>` : ""}</td>
       <td class="d-none d-md-table-cell">${p.gender ? (p.gender === "male" ? "Male" : "Female") : "-"}</td>
       <td>${M.statusPill(p.status)}</td>
       <td class="d-none d-lg-table-cell" data-order="${p.joined_on || ""}">${M.day(p.joined_on)}</td>
@@ -56,7 +57,9 @@
 
   function actions() {
     const send = { key: "sms", label: "Send message", icon: "ri-chat-3-line", primary: true, run: (ids) => K.messagePeople(CTX.messagesUrl, ids.map((id) => byId.get(id)).filter(Boolean)) };
-    if (!CTX.can.manage || list === "archived") return [send];
+    const toMinistry = { key: "ministry", label: "Add to ministry", icon: "ri-team-line", run: (ids) => MinistriesUI.addToMinistryWindow(ids, { onDone: () => load() }) };
+    if (list === "archived") return [send];
+    if (!CTX.can.manage) return CTX.can.ministries_manage ? [send, toMinistry] : [send];
     const change = (action, title, icon, danger, text) => ({
       key: action,
       label: title,
@@ -78,9 +81,21 @@
     });
     return [
       send,
+      ...(CTX.can.ministries_manage ? [toMinistry] : []),
       change("inactive", "Mark inactive", "ri-user-unfollow-line", false, "They stay in the register as inactive - you can change it back on each person's page."),
       change("archive", "Archive", "ri-archive-line", true, "They leave the lists but stay counted. You can bring each one back from Archived."),
     ];
+  }
+
+  /** The Ministry menu: each ministry these people serve in, and "Not in a ministry". */
+  function ministrySelect(items) {
+    const seen = new Map();
+    items.forEach((p) => (p.ministries || []).forEach((m) => seen.set(m.id, m)));
+    return {
+      key: "ministry",
+      label: "Any ministry",
+      options: [...[...seen.values()].sort((a, b) => a.name.localeCompare(b.name)).map((m) => ({ value: String(m.id), label: m.name, icon: m.icon, color: m.colour })), { value: "none", label: "Not in a ministry", icon: "ri-user-add-line", color: "warning" }],
+    };
   }
 
   async function load() {
@@ -125,6 +140,7 @@
         { key: "area", label: "Area", order: [[2, "asc"], [1, "asc"]] },
       ],
       nonSortable: [7],
+      selects: CTX.can.ministries && list !== "archived" ? [ministrySelect(items)] : [],
       actions: actions(),
     });
   }

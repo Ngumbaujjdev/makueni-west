@@ -56,15 +56,18 @@ const PeopleKit = (function () {
   // ---------------------------------------------------------------- the list
   let filterRegistered = false;
   const active = {}; // tableId -> pill key
+  const picks = {}; // tableId -> {select key: value} (the optional dropdowns)
 
   function registerPillFilter() {
     if (filterRegistered || typeof $ === "undefined" || !$.fn.dataTable) return;
     filterRegistered = true;
     $.fn.dataTable.ext.search.push((settings, data, i) => {
-      const pill = active[settings.nTable.id];
-      if (!pill || pill === "all") return true;
       const tr = settings.aoData[i] && settings.aoData[i].nTr;
-      return tr ? ` ${tr.dataset.pills || ""} `.includes(` ${pill} `) : true;
+      if (!tr) return true;
+      const pill = active[settings.nTable.id];
+      if (pill && pill !== "all" && !` ${tr.dataset.pills || ""} `.includes(` ${pill} `)) return false;
+      // A dropdown matches a token in the row's data-f-{key}.
+      return Object.entries(picks[settings.nTable.id] || {}).every(([k, v]) => !v || ` ${tr.getAttribute(`data-f-${k}`) || ""} `.includes(` ${v} `));
     });
   }
 
@@ -75,6 +78,8 @@ const PeopleKit = (function () {
    *   pills [{key, label, icon, color, test(item)}] - "all" is added first
    *   sorts [{key, label, order: [[col, "asc"|"desc"]]}]
    *   actions [{key, label, icon, run(ids)}] - the bulk bar's buttons
+   *   selects [{key, label, options: [{value, label, icon, color}]}] - optional dropdowns
+   *     in the strip; a row matches when its data-f-{key} holds the value
    *   noun, searchPlaceholder, columns (count, for the empty row)
    *   onDraw() - after each draw (the board follows the list)
    */
@@ -85,6 +90,8 @@ const PeopleKit = (function () {
     const state = { pill: q.get("pill") || "all", picked: new Set() };
     if (!o.pills.some((p) => p.key === state.pill)) state.pill = "all";
     active[o.tableId] = state.pill;
+    const selects = o.selects || [];
+    picks[o.tableId] = Object.fromEntries(selects.map((x) => [x.key, x.options.some((op) => String(op.value) === q.get(x.key)) ? q.get(x.key) : ""]));
 
     // Pills with counts.
     const all = [{ key: "all", label: "All", icon: "ri-apps-2-line", color: "primary", test: () => true }, ...o.pills];
@@ -97,6 +104,7 @@ const PeopleKit = (function () {
     $id(o.stripId).innerHTML = `
       <div class="list-filterbar">
         <div class="list-search"><i class="ri-search-line"></i><input type="search" class="form-control" id="${o.stripId}Search" placeholder="${esc(o.searchPlaceholder || "Search...")}" autocomplete="off" value="${esc(q.get("q") || "")}"></div>
+        ${selects.map((x) => `<select class="form-select list-filter" id="${o.stripId}_${x.key}" data-pick-select="${x.key}" aria-label="${esc(x.label)}"><option value="">${esc(x.label)}</option>${x.options.map((op) => `<option value="${esc(op.value)}"${op.icon ? ` data-icon="${op.icon}"` : ""}${op.color ? ` data-color="${op.color}"` : ""}${String(op.value) === picks[o.tableId][x.key] ? " selected" : ""}>${esc(op.label)}</option>`).join("")}</select>`).join("")}
         <select class="form-select list-filter" id="${o.stripId}Sort" aria-label="Sort">${o.sorts.map((s) => `<option value="${s.key}" data-icon="ri-sort-desc" data-color="primary"${s.key === sortKey ? " selected" : ""}>${esc(s.label)}</option>`).join("")}</select>
         <div class="list-filterbar-end"><span class="list-count" id="${o.stripId}Count"></span><button type="button" class="list-reset d-none" id="${o.stripId}Clear"><i class="ri-refresh-line"></i><span>Reset</span></button></div>
       </div>
@@ -106,6 +114,7 @@ const PeopleKit = (function () {
     const sortOrder = (k) => o.sorts.find((s) => s.key === k).order;
     const table = UI.initListDataTable(o.tableId, { hideDefaultSearch: true, order: sortOrder(sortKey), nonSortableColumns: [0, ...(o.nonSortable || [])], noun: o.noun, pageLength: 25, responsive: false });
     UI.enhanceSelect($id(`${o.stripId}Sort`), { search: false });
+    selects.forEach((x) => UI.enhanceSelect($id(`${o.stripId}_${x.key}`), { search: x.options.length > 8 }));
     const search = $id(`${o.stripId}Search`);
 
     function syncUrl() {
@@ -114,12 +123,13 @@ const PeopleKit = (function () {
       set("q", search.value.trim(), "");
       set("pill", state.pill, "all");
       set("sort", $id(`${o.stripId}Sort`).value, o.sorts[0].key);
+      selects.forEach((x) => set(x.key, picks[o.tableId][x.key], ""));
       history.replaceState(null, "", `${window.location.pathname}${p.toString() ? `?${p}` : ""}`);
     }
 
     function counts() {
       const info = table ? table.page.info() : { recordsDisplay: 0, recordsTotal: 0 };
-      const filtered = state.pill !== "all" || search.value.trim();
+      const filtered = state.pill !== "all" || search.value.trim() || Object.values(picks[o.tableId]).some(Boolean);
       $id(`${o.stripId}Count`).textContent = filtered ? `${info.recordsDisplay} of ${info.recordsTotal} ${o.noun}` : `${info.recordsTotal} ${o.noun}`;
       $id(`${o.stripId}Clear`).classList.toggle("d-none", !filtered && $id(`${o.stripId}Sort`).value === o.sorts[0].key);
     }
@@ -208,10 +218,21 @@ const PeopleKit = (function () {
       t = setTimeout(apply, 250);
     });
     $id(`${o.stripId}Sort`).addEventListener("change", apply);
+    selects.forEach((x) =>
+      $id(`${o.stripId}_${x.key}`).addEventListener("change", (e) => {
+        picks[o.tableId][x.key] = e.target.value;
+        apply();
+      }),
+    );
     $id(`${o.stripId}Clear`).addEventListener("click", () => {
       search.value = "";
       $id(`${o.stripId}Sort`).value = o.sorts[0].key;
       UI.syncSelect($id(`${o.stripId}Sort`));
+      selects.forEach((x) => {
+        picks[o.tableId][x.key] = "";
+        $id(`${o.stripId}_${x.key}`).value = "";
+        UI.syncSelect($id(`${o.stripId}_${x.key}`));
+      });
       $id(o.pillsId).querySelector('[data-pill="all"]').click();
       apply();
     });

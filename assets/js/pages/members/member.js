@@ -119,6 +119,7 @@
           </div>
         </div>
       </div>
+      ${CTX.can.ministries && typeof MinistriesUI !== "undefined" ? MinistriesUI.personCard(p, { ministriesUrl: CTX.ministriesUrl }) : ""}
       <div class="card custom-card">
         <div class="card-header"><div class="card-title">Transfers</div></div>
         <div class="card-body">${transfers.length ? `<ul class="mb-mini-list">${transfers.map((t) => `<li><i class="${JOURNEY[t.kind].icon}"></i><div><strong>${M.esc(t.label)}</strong><small>${M.day(t.on)}</small></div></li>`).join("")}</ul>` : '<p class="mb-0 fw-semibold">None.</p>'}</div>
