@@ -36,7 +36,9 @@ Part of the **Church life** plan (2026-10-05), L5. A church, region or the dioce
 `message_batch_id`, `message_recipient_id`, `user_id`, `territory_id` (the replier's place), `body` (≤ 2000), timestamps. In the app only, to the sender.
 
 ### `message_templates` ("Saved messages")
-`territory_id`, `name` (≤ 80), `channel`, `subject`, `body`, `created_by`, timestamps. The Settings spec lists templates as "Later"; this module takes them.
+`territory_id`, `name` (≤ 80), `channel`, `subject`, `body`, `shared_below` (bool), `copied_from_id` (nullable, null on delete), `created_by`, timestamps; index (`territory_id`, `channel`). The Settings spec lists templates as "Later"; this module takes them.
+- **Shared (L5c, 2026-10-08).** The diocese, or a region, marks a template `shared_below`. Every place below sees it, but only the owner can edit or remove it. A church can't share, because nothing is below it.
+- **Copies.** A place copies a shared template: `copied_from_id` links back, and its display name (`comms.display_name`, else its name) replaces `{sender}`. **Reset** puts the shared text back. A copy is per place: copying again returns the same copy.
 
 ## Who you can send to
 `audience` is resolved on the server:
@@ -80,7 +82,11 @@ All routes are under `auth:sanctum` and the acting role. Responses are `{success
 | GET | `/messages/inbox` | Messages to me (any of my roles), newest first, with unread count | `{L}.messages.inbox.read` |
 | POST | `/messages/inbox/{recipient}/read` | | my own |
 | POST | `/messages/inbox/{recipient}/reply` | `{body}` → tells the sender | my own |
-| GET/POST/PUT/DELETE | `/messages/templates[/{id}]` | Saved messages of our place | send |
+| GET | `/messages/templates` | Ours, plus those shared from above; each has `source` (ours / shared), `owner`, `copied_from` and `our_copy_id` | send |
+| POST/PUT/DELETE | `/messages/templates[/{id}]` | Our own (`shared_below` above church level only) | send |
+| POST | `/messages/templates/{id}/copy` · `/{id}/reset` | Make our copy of a shared one · put our copy back to the shared text | send |
+| POST | `/messages/templates/preview` | `{subject, body}` gives back the real branded email (`emails.place-message`), the SMS with our signature and its parts, the From line and the sender ID, all written to a sample person. Nothing is sent or logged. Throttled 60/min. | send |
+| POST | `/messages/templates/test` | `{channel: email\|sms, subject, body}` sends it to my own email or phone through `PlaceMessenger` (kind `test`, subject `[Test] …`). Throttled 5/min. | send |
 
 ## Permission Rules
 Per level: `{L}.messages.messages.read`, `.messages.send`, and `{L}.messages.inbox.read`.
@@ -136,6 +142,24 @@ The placeholders' unbuilt sub-pages are switched off.
 - **The Settings message log** names the new kinds: "Message" and "Report reminder".
 - **A queue worker** started before this code exists must be restarted (`php artisan queue:restart`) to know the new job.
 
+### L5c as built (2026-10-08): templates and the Communication workspace
+- **Settings → Communication** became five tabs on one row, each showing a live figure. The open tab is in the URL (`&tab=`), and the rail's sub-links open the tabs:
+  - **Overview:** email and SMS as they apply now, this month's figures, and four ways in.
+  - **Templates:** the library and the writer (below).
+  - **Campaigns:** "Send a campaign" opens the composer, followed by the latest campaigns as cards (reached bar, replies, status).
+  - **Sending:** the settings form (how we send, own account, "How our messages look" beside one large live preview, Check it works).
+  - **Log:** the message log.
+- **The library**, at a church or region:
+  - It is grouped into "From the diocese" and "Ours" (at the diocese: "Shared with every church and region" and "For the diocese only").
+  - All / Email / SMS filters and search.
+  - Each card shows a small look at how it lands, its tags (channel, owner, "Copied from", "You have a copy") and its actions: Preview, Use (the composer with `?template=`), Make our copy, Edit, Reset and Remove.
+- **Preview and writer:**
+  - Preview has On a phone / As an email and Desktop / Mobile. The email is the server's own render in a sandboxed frame, so it shows exactly what goes out. Send this to me sends a test.
+  - The writer runs in three steps: Write, Details, Check. It has placeholder chips that insert at the cursor, a warning for placeholders that won't be filled in, the SMS counter, the channel cards, Share (region and diocese) and the live preview beside it.
+- **The composer** gets our templates plus the shared ones we haven't copied, so a copied one never shows twice.
+- **The branded email** keeps single line breaks inside a paragraph (`nl2br`), so "God bless,⏎{sender}" lands on two lines.
+- **The demo seeder** adds 4 shared diocese templates: Monthly report reminder, Event invitation, Welcome to the church and Prayer request.
+
 ## Acceptance Criteria
 
 ### L5a: backend
@@ -151,3 +175,12 @@ The placeholders' unbuilt sub-pages are switched off.
 - [x] Inbox, Send a message (who, message, live count and preview), Sent with each message's page, Saved messages.
 - [x] "Invite by message" on an event or initiative, and "Remind" on the reports below, open the composer filled in.
 - [x] No console errors; light and dark; 390 px.
+
+### L5c: templates and the Communication workspace
+- [x] A church sees the diocese's shared templates and can't edit or remove them; a church can't share.
+- [x] Make our copy puts our name in for `{sender}`; copying again gives the same copy; Reset brings the shared text back; only a copy can be reset.
+- [x] The composer lists our copy, not the shared one twice.
+- [x] The preview returns the branded email with the place's name and the signed SMS, and logs nothing.
+- [x] Send this to me goes to my own email or phone; a missing contact is refused.
+- [x] A region's shared templates reach only its own churches; the diocese never sees a church's own; without send, nothing.
+- [x] Five tabs, `&tab=` kept on refresh, save and Discard; no overflow and no console errors at 1440, 820 and 390, as a church and as the diocese.
