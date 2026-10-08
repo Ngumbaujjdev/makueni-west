@@ -296,6 +296,11 @@ The L1b routes take `kind=initiative`. The permission checks follow the activity
   - registration turns green when on;
   - the preview's fact rows get coloured tiles, and session chips change colour by month;
   - inputs and buttons stay teal.
+- **Calmer form (2026-10-08):**
+  - inputs are plain (white, grey border, grey placeholder, teal only on focus), and a chosen dropdown value no longer gets the teal filter outline;
+  - kind cards are plain until one is picked;
+  - session chips are one pale teal;
+  - the preview's icons take the kind's colour, with no tiles.
 
 ### Pages (L2)
 The Events pages, shared, with the kind set by the wrapper (`{L}/initiatives/{index,new,initiative}.php`):

@@ -139,7 +139,9 @@ These are already mapped onto the YNEX template's Bootstrap variables (`--primar
 - **Badges, pills, icon tiles and avatars are solid, never the pale `bg-*-transparent` tint.** Use `badge bg-success` / `avatar bg-primary text-white`, not the `-transparent` variants. Global overrides at the end of `styles.css` ("DESIGN SYSTEM v2") already render existing `.badge`/`.avatar`/`.rounded.p-3` `-transparent` markup solid, and `btn-*-light` soft buttons solid (white-bordered icon buttons inside tables) — but write new markup solid. Alerts/callouts are one place a light tint is fine.
 - **Colour balance (2026-09-29): solid for signals, soft for supporting facts.**
   - Solid: KPI icon tiles, status pills (Approved/Active...), delta pills and primary buttons.
-  - Soft tints, via the `.soft-chip.soft-{color}` classes: info and legend chips ("Latest · 622"), secondary tags, table group headers, the filter-bar strip, and modal panels (tinted sections and inputs).
+  - Soft tints, via the `.soft-chip.soft-{color}` classes: info and legend chips ("Latest · 622"), secondary tags, table group headers, the filter-bar strip, and modal panels (tinted sections).
+  - **Inputs stay plain (2026-10-08):** white, the normal grey border, a grey placeholder; teal only on focus. No tinted fields anywhere.
+  - **Use colour sparingly (2026-10-08):** the content must stay the most visible thing - a few accents per screen (status, the picked option, a section's identity), not a colour on every item. Written answers read as plain rows, not tinted boxes.
   - Don't make everything solid, and don't make everything pale.
 - **Section tabs (2026-09-30).** A dashboard's main tabs use `.section-tabs` (see Attendance Analytics):
   - a white strip of equal tabs, each with an icon tile, its name and a live figure
