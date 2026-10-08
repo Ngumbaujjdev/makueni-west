@@ -62,25 +62,20 @@ $breadcrumbs = ['Home' => $calendarCtx['homeUrl'], 'Calendar' => null];
 
                 <div class="tab-content section-tab-content">
                     <div class="tab-pane fade<?= $calendarCtx['tab'] === 'calendar' ? ' show active' : '' ?>" id="tab-calendar" role="tabpanel">
-                        <div class="row" id="calStats"></div>
-                        <div class="row g-4">
+                        <!-- The clean month (2026-10-08): a left column (small month, the chosen day, what to show, whose dates, what needs doing) beside the grid -->
+                        <div class="row g-4 cal-layout">
+                            <div class="col-xxl-3 col-xl-4 cal-side-col">
+                                <div class="card custom-card"><div class="card-body cal-mini" id="calMini"><span class="skel skel-line"></span><span class="skel skel-chart mt-2" style="height:200px;display:block"></span></div></div>
+                                <div class="card custom-card cal-day" id="calDay"><div class="card-body"><span class="skel skel-line"></span><span class="skel skel-line mt-2" style="width:70%"></span></div></div>
+                                <div class="card custom-card"><div class="card-body cal-checks" id="calShow"><span class="skel skel-line"></span><span class="skel skel-line mt-2"></span><span class="skel skel-line mt-2" style="width:70%"></span></div></div>
+                                <div class="card custom-card"><div class="card-body cal-checks" id="calWhose"><span class="skel skel-line"></span><span class="skel skel-line mt-2" style="width:70%"></span></div></div>
+                                <div class="card custom-card d-none" id="calAttentionCard"><div class="card-body cal-checks" id="calAttention"></div></div>
+                            </div>
                             <div class="col-xxl-9 col-xl-8">
                                 <div class="card custom-card">
-                                    <div class="card-body calendar-filters" id="calFilters"></div>
-                                    <div class="card-body pt-0">
-                                        <div id="calendar" class="cal-board" aria-live="polite"></div>
+                                    <div class="card-body">
+                                        <div id="calendar" class="cal-board cal-clean" aria-live="polite"></div>
                                     </div>
-                                </div>
-                            </div>
-                            <!-- Coming up and due soon (C3): the next week, and what needs doing -->
-                            <div class="col-xxl-3 col-xl-4">
-                                <div class="card custom-card">
-                                    <div class="card-header justify-content-between"><div class="card-title">Due soon</div><span id="dueCount"></span></div>
-                                    <div class="card-body" id="dueSoon"><span class="skel skel-line"></span><span class="skel skel-line mt-2" style="width:70%"></span></div>
-                                </div>
-                                <div class="card custom-card">
-                                    <div class="card-header justify-content-between"><div class="card-title">Coming up</div><span class="soft-chip soft-primary">Next 7 days</span></div>
-                                    <div class="card-body" id="comingUp"><span class="skel skel-line"></span><span class="skel skel-line mt-2" style="width:70%"></span></div>
                                 </div>
                             </div>
                         </div>
