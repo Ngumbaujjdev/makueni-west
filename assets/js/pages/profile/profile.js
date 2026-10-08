@@ -92,6 +92,13 @@
 
   const daysBetween = (a, b) => Math.round((b.getTime() - a.getTime()) / 86400000);
   const initials = (name) => (name || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("");
+  /** An avatar shows the person's photo when they have one, else their initials. */
+  function fillAvatar(el, url, text) {
+    if (!el) return;
+    el.classList.toggle("has-photo", !!url);
+    if (url) el.innerHTML = `<img src="${esc(url)}" alt="">`;
+    else el.textContent = text;
+  }
   const titleCase = (s) => String(s || "").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
   /** "Chrome 144 on Mac" + an icon, from a user agent. */
@@ -125,6 +132,7 @@
     phone: "phone",
     username: "username",
     position: "position",
+    photo_path: "photo",
     status: "status",
     employee_code: "sign-in code",
     must_change_password: "must-change-password flag",
@@ -154,6 +162,8 @@
   }
 
   const shown = (v) => (v === null || v === undefined || v === "" ? "nothing" : typeof v === "boolean" ? (v ? "yes" : "no") : String(v));
+  // The photo is stored as a file path - say "a photo", not the path.
+  const shownField = (k, v) => (k === "photo_path" ? (v ? "a photo" : "no photo") : shown(v));
 
   /** One plain sentence for an activity entry. */
   function sentence(a) {
@@ -174,6 +184,7 @@
       if (keys.length === 1) {
         const k = keys[0];
         const ov = (a.old_values || {})[k];
+        if (k === "photo_path") return !ov ? "You added a profile photo" : !nv[k] ? "You removed your profile photo" : "You changed your profile photo";
         return ov === undefined || ov === null || ov === "" ? `You added your ${FIELDS[k] || titleCase(k).toLowerCase()}: ${shown(nv[k])}` : `You changed your ${FIELDS[k] || titleCase(k).toLowerCase()} from ${shown(ov)} to ${shown(nv[k])}`;
       }
       const names = keys.map((k) => FIELDS[k] || titleCase(k).toLowerCase());
@@ -218,6 +229,7 @@
 
     wireTabs();
     wireEditProfile();
+    wirePhoto();
     wirePassword();
     document.querySelectorAll("[data-copy-field]").forEach((btn) => btn.addEventListener("click", () => copy(me?.[btn.dataset.copyField], btn)));
 
@@ -257,7 +269,8 @@
 
   function renderHeader() {
     document.getElementById("profileCover").classList.remove("placeholder-glow");
-    document.getElementById("profileHeaderAvatar").textContent = initials(me.full_name);
+    fillAvatar(document.getElementById("profileHeaderAvatar"), me.photo_url, initials(me.full_name));
+    document.querySelectorAll("[data-photo-open]").forEach((b) => (b.disabled = false));
     document.getElementById("profileHeaderName").textContent = me.full_name || "";
     document.getElementById("profileHeaderPosition").textContent = me.position || "No position set";
     document.getElementById("profileHeaderContact").innerHTML = [
@@ -715,9 +728,9 @@
                 .map(
                   (key) => `<tr>
                     <td class="fw-semibold">${esc(titleCase(FIELDS[key] || key))}</td>
-                    <td>${ov[key] === undefined ? `<span class="fst-italic">-</span>` : `<span class="soft-chip soft-danger text-break">${esc(shown(ov[key]))}</span>`}</td>
+                    <td>${ov[key] === undefined ? `<span class="fst-italic">-</span>` : `<span class="soft-chip soft-danger text-break">${esc(shownField(key, ov[key]))}</span>`}</td>
                     <td class="text-center"><i class="ri-arrow-right-line"></i></td>
-                    <td><span class="soft-chip soft-success text-break">${esc(shown(nv[key]))}</span></td>
+                    <td><span class="soft-chip soft-success text-break">${esc(shownField(key, nv[key]))}</span></td>
                   </tr>`,
                 )
                 .join("")}
@@ -905,7 +918,7 @@
     const form = document.getElementById("editProfileForm");
     const v = (k) => form.elements[k].value.trim();
     const name = [v("firstname"), v("lastname")].filter(Boolean).join(" ");
-    document.getElementById("previewAvatar").textContent = initials(name) || "?";
+    fillAvatar(document.getElementById("previewAvatar"), me?.photo_url, initials(name) || "?");
     document.getElementById("previewName").textContent = name || "Your name";
     document.getElementById("previewPosition").textContent = v("position") || "No position set";
     document.getElementById("previewContact").innerHTML =
@@ -970,6 +983,7 @@
       if (fresh.ok) me = fresh.data;
       renderProfile();
       syncStoredUser();
+      syncShell();
       Toast.success("Your details are saved");
       const acts = await api("GET", `/auth/user/${userId}/audits?limit=200`);
       if (acts.ok) {
@@ -993,13 +1007,136 @@
     try {
       const stored = JSON.parse(localStorage.getItem(KEYS.USER_DATA) || "null");
       if (!stored) return;
-      ["firstname", "lastname", "email", "phone", "username", "position", "full_name"].forEach((k) => {
+      ["firstname", "lastname", "email", "phone", "username", "position", "full_name", "photo_url"].forEach((k) => {
         if (me[k] !== undefined) stored[k] = me[k];
       });
       localStorage.setItem(KEYS.USER_DATA, JSON.stringify(stored));
     } catch (e) {
       /* storage not available - the page itself is already updated */
     }
+  }
+
+  /** The header and sidebar are drawn from the PHP session - swap them now and keep the session in step. */
+  function syncShell() {
+    document.querySelectorAll("[data-user-avatar]").forEach((el) => fillAvatar(el, me.photo_url, initials(me.full_name) || el.dataset.initials));
+    fetch(`${AppConfig.FRONTEND_BASE_URL || "/makueni-west"}/authentication/ajax/update-session-user`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ firstname: me.firstname, lastname: me.lastname, email: me.email, phone: me.phone, position: me.position, photo_url: me.photo_url || null }),
+    }).catch(() => {
+      /* the page is already updated; the next sign-in refreshes the session */
+    });
+  }
+
+  // ------------------------------------------------------------- your photo
+
+  const PHOTO_TYPES = ["image/png", "image/jpeg", "image/webp"];
+  const PHOTO_MAX = 5 * 1024 * 1024;
+  let photoFile = null;
+  let photoBlobUrl = null;
+
+  function openPhoto() {
+    if (!me) return;
+    photoFile = null;
+    document.getElementById("photoInput").value = "";
+    renderPhotoModal();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById("photoModal")).show();
+  }
+
+  function renderPhotoModal(error) {
+    if (photoBlobUrl && !photoFile) {
+      URL.revokeObjectURL(photoBlobUrl);
+      photoBlobUrl = null;
+    }
+    const url = photoFile ? photoBlobUrl : me.photo_url;
+    fillAvatar(document.getElementById("photoPreview"), url, initials(me.full_name) || "?");
+    document.getElementById("photoName").textContent = me.full_name || "";
+    document.getElementById("photoState").textContent = photoFile ? "Your new photo - save to use it" : me.photo_url ? "Your current photo" : "No photo yet - your initials show instead";
+    document.getElementById("photoPick").innerHTML = `<i class="ri-image-add-line me-1"></i>${photoFile || me.photo_url ? "Choose another" : "Choose a photo"}`;
+    document.getElementById("photoRemove").hidden = !me.photo_url || !!photoFile;
+    const err = document.getElementById("photoError");
+    err.hidden = !error;
+    err.textContent = error || "";
+    document.getElementById("photoSave").disabled = !photoFile;
+    document.getElementById("photoSummary").textContent = photoFile ? `${photoFile.name} · ${photoFile.size < 1048576 ? `${Math.max(1, Math.round(photoFile.size / 1024))} KB` : `${(photoFile.size / 1048576).toFixed(1)} MB`}` : "Choose a photo to save";
+  }
+
+  /** After a save or remove: fresh details, then everything that shows the avatar. */
+  async function photoChanged(message) {
+    bootstrap.Modal.getInstance(document.getElementById("photoModal"))?.hide();
+    const fresh = await api("GET", `/users/${userId}`);
+    if (fresh.ok) me = fresh.data;
+    renderHeader();
+    syncStoredUser();
+    syncShell();
+    Toast.success(message);
+    const acts = await api("GET", `/auth/user/${userId}/audits?limit=200`);
+    if (acts.ok) {
+      activity = acts.data?.audits || [];
+      rebuildTable("activityTable");
+      activityTable = null;
+      renderActivity();
+    }
+  }
+
+  function wirePhoto() {
+    document.querySelectorAll("[data-photo-open]").forEach((b) => b.addEventListener("click", openPhoto));
+    const input = document.getElementById("photoInput");
+    document.getElementById("photoPick").addEventListener("click", () => input.click());
+    input.addEventListener("change", () => {
+      const file = input.files[0];
+      input.value = "";
+      if (!file) return;
+      if (!PHOTO_TYPES.includes(file.type)) return renderPhotoModal("That file is not a photo. Use a png, jpg or webp.");
+      if (file.size > PHOTO_MAX) return renderPhotoModal("The photo must be 5 MB or smaller.");
+      if (photoBlobUrl) URL.revokeObjectURL(photoBlobUrl);
+      photoFile = file;
+      photoBlobUrl = URL.createObjectURL(file);
+      renderPhotoModal();
+    });
+
+    document.getElementById("photoForm").addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      if (!photoFile) return;
+      const btn = document.getElementById("photoSave");
+      UI.setButtonLoading(btn, "Saving...");
+      const body = new FormData();
+      body.append("photo", photoFile);
+      let res;
+      try {
+        const r = await fetch(`${BASE}/auth/profile/photo`, {
+          method: "POST",
+          headers: { Accept: "application/json", Authorization: `Bearer ${localStorage.getItem(KEYS.AUTH_TOKEN)}` },
+          body,
+        });
+        const json = await r.json().catch(() => ({}));
+        res = { ok: r.ok && json.success !== false, message: json.message, errors: json.errors || {} };
+      } catch (e) {
+        res = { ok: false, message: "Check your connection and try again." };
+      }
+      UI.restoreButton(btn);
+      if (!res.ok) {
+        renderPhotoModal([].concat(res.errors.photo || [])[0] || res.message || "Your photo couldn't be saved");
+        return;
+      }
+      photoFile = null;
+      await photoChanged("Your photo is saved");
+    });
+
+    document.getElementById("photoRemove").addEventListener("click", async (ev) => {
+      const btn = ev.currentTarget;
+      UI.setButtonLoading(btn, "Removing...");
+      const res = await api("DELETE", "/auth/profile/photo");
+      UI.restoreButton(btn);
+      if (!res.ok) return renderPhotoModal(res.message || "Your photo couldn't be removed");
+      await photoChanged("Your photo is removed");
+    });
+
+    document.getElementById("photoModal").addEventListener("hidden.bs.modal", () => {
+      photoFile = null;
+      if (photoBlobUrl) URL.revokeObjectURL(photoBlobUrl);
+      photoBlobUrl = null;
+    });
   }
 
   function rebuildTable(id) {

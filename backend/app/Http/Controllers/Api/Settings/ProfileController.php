@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Settings;
 
 use App\Models\Territory;
 use App\Services\Settings\Settings;
+use App\Support\Images;
 use App\Support\Kenya;
 use App\Support\Settings\PlaceProfile;
 use App\Support\SettingsAccess;
@@ -119,12 +120,7 @@ class ProfileController extends SettingsController
         if (! $image) {
             throw ValidationException::withMessages(['logo' => "That file couldn't be read as an image."]);
         }
-        $image = $this->fitWithin($image, 512);
-        imagesavealpha($image, true);
-        ob_start();
-        imagewebp($image, null, 85);
-        $bytes = ob_get_clean();
-        imagedestroy($image);
+        $bytes = Images::webp(Images::fitWithin($image, 512));
 
         $path = "logos/{$place->id}.webp";
         Storage::disk('local')->put($path, $bytes);
@@ -178,26 +174,5 @@ class ProfileController extends SettingsController
             'completeness' => PlaceProfile::completeness($place),
             'can' => ['update' => SettingsAccess::can($request->user(), $place, self::SECTION, 'update')],
         ];
-    }
-
-    /** Scale down (never up) so the longest side is at most $max pixels. */
-    private function fitWithin(\GdImage $image, int $max): \GdImage
-    {
-        $w = imagesx($image);
-        $h = imagesy($image);
-        if (max($w, $h) <= $max) {
-            return $image;
-        }
-        $ratio = $max / max($w, $h);
-        $nw = max(1, (int) round($w * $ratio));
-        $nh = max(1, (int) round($h * $ratio));
-        $out = imagecreatetruecolor($nw, $nh);
-        imagealphablending($out, false);
-        imagesavealpha($out, true);
-        imagefill($out, 0, 0, imagecolorallocatealpha($out, 0, 0, 0, 127));
-        imagecopyresampled($out, $image, 0, 0, 0, 0, $nw, $nh, $w, $h);
-        imagedestroy($image);
-
-        return $out;
     }
 }

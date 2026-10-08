@@ -25,6 +25,12 @@ if (strlen($initials) < 2) {
     $initials = strtoupper(substr($userFirstName, 0, 2));
 }
 
+// Their own photo (My Profile), when they have added one - else the initials.
+$userPhoto = is_string($currentUser['photo_url'] ?? null) ? $currentUser['photo_url'] : '';
+$avatarInner = $userPhoto !== ''
+    ? '<img src="' . htmlspecialchars($userPhoto) . '" alt="">'
+    : htmlspecialchars($initials);
+
 // Avatar color based on user ID (for variety)
 $userId = $currentUser['id'] ?? 1;
 $avatarColors = ['primary', 'secondary', 'success', 'info', 'warning', 'danger'];
@@ -190,9 +196,7 @@ $baseUrl = '/makueni-west';
                     <div class="d-flex align-items-center">
                         <div class="me-sm-2 me-0">
                             <!-- Dynamic Avatar with Initials (solid, not a pale -transparent tint) -->
-                            <span class="avatar avatar-sm rounded-circle bg-<?= $avatarColor ?> <?= $avatarTextClass ?> fw-semibold">
-                                <?= $initials ?>
-                            </span>
+                            <span class="avatar avatar-sm rounded-circle bg-<?= $avatarColor ?> <?= $avatarTextClass ?> fw-semibold" data-user-avatar data-initials="<?= htmlspecialchars($initials) ?>"><?= $avatarInner ?></span>
                         </div>
                         <div class="d-sm-block d-none">
                             <p class="fw-semibold mb-0 lh-1"><?= htmlspecialchars($userFullName) ?></p>
@@ -205,9 +209,7 @@ $baseUrl = '/makueni-west';
                     <!-- User Info Header -->
                     <li class="dropdown-header">
                         <div class="d-flex align-items-center p-2">
-                            <span class="avatar avatar-md rounded-circle bg-<?= $avatarColor ?> <?= $avatarTextClass ?> fw-semibold">
-                                <?= $initials ?>
-                            </span>
+                            <span class="avatar avatar-md rounded-circle bg-<?= $avatarColor ?> <?= $avatarTextClass ?> fw-semibold" data-user-avatar data-initials="<?= htmlspecialchars($initials) ?>"><?= $avatarInner ?></span>
                             <div class="ms-3" style="min-width: 0;">
                                 <p class="mb-0 fw-semibold text-dark"><?= htmlspecialchars($userFullName) ?></p>
                                 <small class="d-block text-body text-truncate"><?= htmlspecialchars($userEmail) ?></small>

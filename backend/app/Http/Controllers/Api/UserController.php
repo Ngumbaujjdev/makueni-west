@@ -304,6 +304,7 @@ class UserController extends Controller
                 'employee_code' => $user->employee_code,
                 'phone' => $user->phone,
                 'position' => $user->position,
+                'photo_url' => $user->photo_url,
                 'status' => $user->status,
                 'last_login_at' => $user->last_login_at,
                 'login_attempts' => $user->login_attempts,

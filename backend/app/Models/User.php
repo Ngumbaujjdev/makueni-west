@@ -35,6 +35,7 @@ class User extends Authenticatable implements Auditable
         'email',
         'phone',
         'position',
+        'photo_path',
         'employee_code',
         'password',
         'pin',
@@ -53,7 +54,11 @@ class User extends Authenticatable implements Auditable
         'password',
         'remember_token',
         'pin',
+        'photo_path',
     ];
+
+    /** The photo is shared as a URL, never as its path on disk. */
+    protected $appends = ['photo_url'];
 
     protected function casts(): array
     {
@@ -85,6 +90,7 @@ class User extends Authenticatable implements Auditable
         'email',
         'phone',
         'position',
+        'photo_path',
         'employee_code',
         'status',
         'login_attempts',
@@ -633,6 +639,16 @@ public function getStatusChangeHistory($limit = 20)
     public function getFullNameAttribute(): string
     {
         return trim($this->firstname . ' ' . $this->lastname);
+    }
+
+    /** The public photo link, or null. The file name changes with each upload, so it busts caches too. */
+    public function getPhotoUrlAttribute(): ?string
+    {
+        if (! $this->photo_path) {
+            return null;
+        }
+
+        return rtrim(config('app.url'), '/').'/api/users/'.$this->id.'/photo?v='.pathinfo($this->photo_path, PATHINFO_FILENAME);
     }
 
     public function getDisplayNameAttribute(): string

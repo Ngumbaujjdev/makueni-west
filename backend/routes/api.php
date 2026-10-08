@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\People\PeopleController;
 use App\Http\Controllers\Api\People\VisitorsController;
 use App\Http\Controllers\Api\PermissionController;
+use App\Http\Controllers\Api\ProfilePhotoController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\Reports\MonthlyReportsController;
 use App\Http\Controllers\Api\RoleController;
@@ -80,6 +81,8 @@ Route::get('/system-admin/contact', [UserController::class, 'getSystemAdminConta
 // === PROTECTED ROUTES (Authentication Required) ===
 // A place's logo is public - it shows on its pages and documents (Settings > Profile).
 Route::get('settings/logo/{territory}', [SettingsProfileController::class, 'logo']);
+// A person's photo is public the same way - it shows beside their name (My Profile).
+Route::get('users/{user}/photo', [ProfilePhotoController::class, 'show'])->whereNumber('user');
 
 Route::middleware(['auth:sanctum'])->group(function () {
 
@@ -241,6 +244,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
         Route::post('switch-role', [AuthController::class, 'switchRole']);
         Route::put('profile', [AuthController::class, 'profileChange']);
+        Route::post('profile/photo', [ProfilePhotoController::class, 'store'])->middleware('throttle:20,1');
+        Route::delete('profile/photo', [ProfilePhotoController::class, 'destroy']);
         Route::post('support', [AuthController::class, 'submitSupportRequest']);
     });
     // User Self-Service Password Management
