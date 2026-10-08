@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\ModuleGroupController;
 use App\Http\Controllers\Api\NotificationsController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\People\PeopleController;
+use App\Http\Controllers\Api\People\VisitorsController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\Reports\MonthlyReportsController;
@@ -137,6 +138,28 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('people/{id}/restore', [PeopleController::class, 'restore'])->whereNumber('id');
     Route::post('people/{id}/anonymise', [PeopleController::class, 'anonymise'])->whereNumber('id');
     Route::post('people/{id}/transfer-out', [PeopleController::class, 'transferOut'])->whereNumber('id');
+
+    // People & care P2 - visitors and their follow-up; /visitors/totals is the
+    // region's and diocese's (counts only)
+    Route::get('visitors/options', [VisitorsController::class, 'options']);
+    Route::get('visitors/overview', [VisitorsController::class, 'overview']);
+    Route::get('visitors/check', [VisitorsController::class, 'check']);
+    Route::get('visitors/insights', [VisitorsController::class, 'insights']);
+    Route::get('visitors/totals', [VisitorsController::class, 'totals']);
+    Route::post('visitors/batch', [VisitorsController::class, 'batch']);
+    Route::get('visitors', [VisitorsController::class, 'index']);
+    Route::get('visitors/{id}', [VisitorsController::class, 'show'])->whereNumber('id');
+    Route::put('visitors/{id}', [VisitorsController::class, 'update'])->whereNumber('id');
+    Route::get('visitors/{id}/history', [VisitorsController::class, 'history'])->whereNumber('id');
+    Route::post('visitors/{id}/stage', [VisitorsController::class, 'stage'])->whereNumber('id');
+    Route::post('visitors/{id}/assign', [VisitorsController::class, 'assign'])->whereNumber('id');
+    Route::post('visitors/{id}/visits', [VisitorsController::class, 'visit'])->whereNumber('id');
+    Route::post('visitors/{id}/followups', [VisitorsController::class, 'followup'])->whereNumber('id');
+    Route::post('visitors/{id}/sms', [VisitorsController::class, 'sms'])->whereNumber('id');
+    Route::post('visitors/{id}/become-member', [VisitorsController::class, 'becomeMember'])->whereNumber('id');
+    Route::post('visitors/{id}/archive', [VisitorsController::class, 'archive'])->whereNumber('id');
+    Route::post('visitors/{id}/restore', [VisitorsController::class, 'restore'])->whereNumber('id');
+    Route::post('visitors/{id}/anonymise', [VisitorsController::class, 'anonymise'])->whereNumber('id');
 
     Route::get('activities', [ActivitiesController::class, 'index']);
     Route::get('activities/overview', [ActivitiesController::class, 'overview']);

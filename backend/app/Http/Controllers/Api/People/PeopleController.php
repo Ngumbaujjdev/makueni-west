@@ -19,7 +19,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use OwenIt\Auditing\Models\Audit;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -195,14 +194,7 @@ class PeopleController extends Controller
         if ($request->input('confirm') !== 'REMOVE') {
             return $this->unprocessable('confirm', 'Type REMOVE to confirm. This cannot be undone.');
         }
-        if ($person->photo_path) {
-            Storage::disk('local')->delete($person->photo_path);
-        }
-        $person->forceFill([
-            'first_name' => 'Removed', 'last_name' => 'person', 'other_names' => null, 'date_of_birth' => null, 'phone' => null, 'email' => null,
-            'address' => null, 'national_id' => null, 'occupation' => null, 'photo_path' => null, 'previous_church' => null,
-            'next_of_kin_name' => null, 'next_of_kin_phone' => null, 'notes' => null, 'anonymised_at' => now(), 'updated_by' => $request->user()->id,
-        ])->save();
+        $person->anonymise($request->user()->id);
 
         return $this->ok($this->detail($request, $person->fresh()), 'Their personal details are removed.');
     }
@@ -214,37 +206,8 @@ class PeopleController extends Controller
         if ($error) {
             return $error;
         }
-        $transferIds = PersonTransfer::where('person_id', $person->id)->pluck('id')->all();
-        $audits = Audit::query()
-            ->where(fn ($q) => $q->where(fn ($q) => $q->where('auditable_type', 'person')->where('auditable_id', $person->id))
-                ->orWhere(fn ($q) => $q->where('auditable_type', 'person_transfer')->whereIn('auditable_id', $transferIds ?: [0])))
-            ->latest('id')->limit(200)->get();
-        $users = User::whereIn('id', $audits->pluck('user_id')->filter()->unique())->get()->keyBy('id');
-        $labels = [
-            'first_name' => 'first name', 'last_name' => 'last name', 'other_names' => 'other names', 'date_of_birth' => 'date of birth',
-            'national_id' => 'national ID', 'marital_status' => 'marital status', 'joined_on' => 'date joined', 'how_joined' => 'how they joined',
-            'previous_church' => 'previous church', 'saved_on' => 'salvation date', 'baptised_on' => 'baptism date',
-            'next_of_kin_name' => "next of kin's name", 'next_of_kin_phone' => "next of kin's phone",
-        ];
 
-        return $this->ok($audits->map(function (Audit $a) use ($users, $labels) {
-            $who = ($u = $users->get($a->user_id)) ? trim("{$u->firstname} {$u->lastname}") : 'The system';
-            $new = (array) $a->new_values;
-            if ($a->auditable_type === 'person_transfer') {
-                $sentence = ($new['direction'] ?? '') === 'in' ? "{$who} recorded a transfer in" : "{$who} recorded a transfer out";
-            } else {
-                $sentence = match (true) {
-                    $a->event === 'created' => "{$who} added them to the register",
-                    array_key_exists('anonymised_at', $new) && $new['anonymised_at'] => "{$who} removed their personal details",
-                    array_key_exists('archived_at', $new) => $new['archived_at'] ? "{$who} archived them" : "{$who} brought them back from the archive",
-                    isset($new['status']) && count($new) <= 2 => "{$who} marked them ".strtolower(Person::STATUSES[$new['status']] ?? $new['status']),
-                    default => "{$who} changed ".collect(array_keys($new))->reject(fn ($k) => in_array($k, ['updated_by', 'anonymised_at', 'archived_at'], true))
-                        ->map(fn ($k) => $labels[$k] ?? str_replace('_', ' ', $k))->implode(', '),
-                };
-            }
-
-            return ['id' => $a->id, 'at' => $a->created_at?->toIso8601String(), 'who' => $who, 'sentence' => $sentence];
-        })->values());
+        return $this->ok($this->people->history($person));
     }
 
     /** GET /people/transfers?direction=&year= */
@@ -367,6 +330,7 @@ class PeopleController extends Controller
         $journey = collect([
             $p->saved_on ? ['on' => $p->saved_on->toDateString(), 'kind' => 'saved', 'label' => 'Saved'] : null,
             $p->baptised_on ? ['on' => $p->baptised_on->toDateString(), 'kind' => 'baptised', 'label' => 'Baptised'] : null,
+            $p->first_visit_on ? ['on' => $p->first_visit_on->toDateString(), 'kind' => 'visited', 'label' => 'First visited'] : null,
             $p->joined_on ? ['on' => $p->joined_on->toDateString(), 'kind' => 'joined', 'label' => 'Joined '.($p->church?->name ?? 'the church').($p->how_joined ? ' ('.strtolower(Person::HOW_JOINED[$p->how_joined]).')' : '')] : null,
             ...$p->transfers->map(fn ($t) => ['on' => $t->on->toDateString(), 'kind' => "transfer_{$t->direction}", 'label' => $t->direction === 'in' ? "Moved here from {$t->other_name}" : "Moved to {$t->other_name}"])->all(),
         ])->filter()->sortBy('on')->values();

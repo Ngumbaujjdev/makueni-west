@@ -46,3 +46,27 @@ Schedule::command('reports:remind')->dailyAt('08:00')->timezone('Africa/Nairobi'
 
 // Messages scheduled for later go out when they're due. docs/specs/messages-spec.md.
 Schedule::command('messages:send-scheduled')->everyMinute()->withoutOverlapping();
+
+// Visitors' details are removed after the months set in Settings > Visitors
+// with no visit (0 = never). Members are never touched; counts stay.
+// docs/specs/people-and-care-spec.md, "Retention".
+Artisan::command('people:retention', function (\App\Services\Settings\Settings $settings) {
+    $count = 0;
+    $today = \Carbon\CarbonImmutable::now('Africa/Nairobi')->startOfDay();
+    $visitors = fn () => \App\Models\Person::query()->where('status', 'visitor')->whereNotNull('stage')->whereNull('anonymised_at');
+    foreach (\App\Models\Territory::whereIn('id', $visitors()->distinct()->pluck('territory_id'))->get() as $church) {
+        $months = (int) $settings->get('people.retention_visitor_months', $church);
+        if ($months <= 0) {
+            continue;
+        }
+        $cutoff = $today->subMonthsNoOverflow($months)->toDateString();
+        $visitors()->where('territory_id', $church->id)->whereRaw('coalesce(last_visit_on, date(created_at)) < ?', [$cutoff])->get()
+            ->each(function (\App\Models\Person $p) use (&$count) {
+                $p->anonymise();
+                $count++;
+            });
+    }
+    $this->info("Removed the details of {$count} visitor(s) with no recent visit.");
+})->purpose("Remove visitors' details after the months each church chose");
+
+Schedule::command('people:retention')->dailyAt('02:30')->timezone('Africa/Nairobi');

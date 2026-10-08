@@ -2,9 +2,11 @@
 
 namespace App\Services\Messages;
 
+use App\Models\Person;
 use App\Models\Territory;
 use App\Models\User;
 use App\Models\UserTerritoryAssignment;
+use App\Support\PeopleAccess;
 use App\Support\Phone;
 use App\Support\PlaceAccess;
 use Illuminate\Support\Collection;
@@ -14,15 +16,17 @@ use Illuminate\Validation\ValidationException;
 /**
  * Who a message reaches (docs/specs/messages-spec.md): people at our own
  * place by role, the places below (all, by subregion/region, or picked) by
- * role and/or their own contact, and numbers or emails typed in. Down,
- * never up or sideways; each person once.
+ * role and/or their own contact, numbers or emails typed in and - at a
+ * church - its own register: members, and visitors who said yes to being
+ * contacted (docs/specs/people-and-care-spec.md, P2). Down, never up or
+ * sideways; each person once.
  */
 final class Audience
 {
     public const MAX = 2000;
 
     /** @return array{recipients: array<int, array>, invalid: string[], summary: string} */
-    public function resolve(Territory $place, array $audience): array
+    public function resolve(Territory $place, array $audience, ?User $by = null): array
     {
         $level = PlaceAccess::level($place);
         $out = collect();
@@ -58,6 +62,20 @@ final class Audience
             if ($roles || ! empty($below['place_contacts'])) {
                 $parts[] = $this->belowWords($roles, $places, $place, $scope, ! empty($below['place_contacts']));
             }
+        }
+
+        // Our register (a church's own members and visitors - only for those who may read them).
+        $register = (array) ($audience['register'] ?? []);
+        foreach (['members' => 'members', 'visitors' => 'visitors'] as $key => $module) {
+            if (empty($register[$key])) {
+                continue;
+            }
+            if ($level !== 'church' || ! PeopleAccess::canNamed($by, $place, $module)) {
+                throw ValidationException::withMessages(['audience' => ["Your role can't send to the church's {$key}."]]);
+            }
+            $people = $this->register($place, $key);
+            $out = $out->merge($people);
+            $parts[] = ($key === 'members' ? 'Our members' : 'Our visitors who said yes to contact').($people->isEmpty() ? ' (nobody yet)' : '');
         }
 
         // Typed in.
@@ -123,6 +141,24 @@ final class Audience
                 'place_id' => (int) $a->territory_id,
                 'role' => $a->role?->name,
             ])->values();
+    }
+
+    /** A church's members (with a phone or email), or its visitors who said yes to being contacted (with a phone). */
+    public function register(Territory $church, string $who): Collection
+    {
+        $q = Person::where('territory_id', $church->id)->listed();
+        $who === 'members'
+            ? $q->where('status', 'member')->where(fn ($w) => $w->whereNotNull('phone')->orWhereNotNull('email'))
+            : $q->where('status', 'visitor')->where('consent_contact', true)->whereNotNull('phone');
+
+        return $q->orderBy('first_name')->get()->map(fn (Person $p) => [
+            'user_id' => null,
+            'name' => $p->name,
+            'phone' => Phone::kenyaMobile($p->phone),
+            'email' => $who === 'members' && filter_var($p->email, FILTER_VALIDATE_EMAIL) ? $p->email : null,
+            'place_id' => (int) $church->id,
+            'role' => $who === 'members' ? 'Member' : 'Visitor',
+        ])->values();
     }
 
     /** @return array{0: Collection, 1: string[]} typed numbers/emails, and the ones that aren't either */

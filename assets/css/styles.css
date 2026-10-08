@@ -38255,3 +38255,116 @@ button.cal-side-item:focus-visible {
   .pb-when-card > .d-flex { width: 100%; justify-content: flex-start !important; }
   .pb-ev-item .soft-chip { display: none; }
 }
+
+/* ==========================================================================
+   Visitors - visitors and their follow-up (2026-10-09,
+   docs/specs/people-and-care-spec.md P2). The board is the YNEX kanban
+   (.ynex-kanban-board) with white cards and no coloured top stripes - each
+   column's identity is its small icon tile. "Late" is the one loud colour.
+   ========================================================================== */
+/* My follow-ups */
+.vs-due-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: .6rem; }
+.vs-due-item { display: flex; align-items: center; gap: .65rem; min-width: 0; padding: .65rem .8rem; border: 1px solid var(--default-border); border-radius: .75rem; background: var(--custom-white); color: var(--v2-heading); transition: border-color .15s, box-shadow .15s; }
+.vs-due-item:hover { border-color: rgba(var(--primary-rgb), .45); box-shadow: 0 4px 12px rgba(15, 23, 42, .06); color: var(--v2-heading); }
+.vs-due-item.is-late { border-color: rgba(var(--danger-rgb), .35); }
+.vs-due-item > .min-w-0 { flex: 1; }
+.vs-due-item strong { display: block; overflow: hidden; font-size: .86rem; text-overflow: ellipsis; white-space: nowrap; }
+.vs-due-item small { display: block; overflow: hidden; font-size: .75rem; color: var(--default-text-color); text-overflow: ellipsis; white-space: nowrap; }
+.vs-due-none { display: flex; align-items: center; gap: .65rem; font-weight: 600; color: var(--v2-heading); }
+.vs-due { display: inline-flex; align-items: center; gap: .25rem; flex-shrink: 0; font-size: .74rem; font-weight: 700; color: var(--default-text-color); white-space: nowrap; }
+.vs-due.is-today { color: var(--v2-heading); }
+.vs-due.is-today i { color: rgb(var(--warning-rgb)); }
+.vs-due.is-late { color: rgb(var(--danger-rgb)); }
+
+/* The board */
+.vs-board { margin-bottom: 0; padding-bottom: .5rem; }
+.vs-board .kanban-tasks-type { min-width: 12.75rem; flex: 1 1 0; }
+.vs-col { display: flex; flex-direction: column; padding: .75rem; border-radius: .9rem; background: rgba(var(--dark-rgb), .025); }
+.vs-col-head { display: flex; align-items: center; gap: .6rem; margin-bottom: .75rem; }
+.vs-col-head strong { display: block; font-size: .88rem; color: var(--v2-heading); }
+.vs-col-head small { display: block; overflow: hidden; font-size: .72rem; color: var(--default-text-color); text-overflow: ellipsis; white-space: nowrap; }
+.vs-col-count { flex-shrink: 0; min-width: 1.6rem; padding: .1rem .45rem; border-radius: 1rem; background: var(--custom-white); border: 1px solid var(--default-border); font-size: .75rem; font-weight: 700; text-align: center; color: var(--v2-heading); }
+.vs-board .kanban-tasks { flex: 1; max-height: 34rem; overflow-y: auto; }
+.vs-drop { min-height: 6rem; height: 100%; border-radius: .7rem; }
+.vs-drop:empty { border: 1.5px dashed var(--input-border); }
+.vs-drop:empty::before { content: "Nobody here"; display: flex; align-items: center; justify-content: center; height: 6rem; font-size: .78rem; font-weight: 600; color: var(--default-text-color); }
+.vs-card { margin-bottom: .6rem; cursor: grab; transition: box-shadow .15s, border-color .15s; }
+.vs-card:hover { border-color: rgba(var(--primary-rgb), .35); box-shadow: 0 4px 12px rgba(15, 23, 42, .06); }
+.vs-card.is-fixed { cursor: default; }
+.vs-card .kanban-board-head { padding: .8rem !important; }
+.vs-card .kanban-content { margin-top: .55rem; }
+.vs-card-name { display: block; overflow: hidden; font-size: .86rem; text-overflow: ellipsis; white-space: nowrap; }
+.vs-card-foot { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .5rem .8rem; border-top: 1px dashed var(--default-border); }
+.vs-card .avatar-xs { width: 1.5rem; height: 1.5rem; font-size: .62rem; }
+.gu-mirror.vs-card { cursor: grabbing; transform: rotate(2deg); box-shadow: 0 12px 28px rgba(15, 23, 42, .16); }
+.gu-transit.vs-card { opacity: .35; }
+.vs-board-loading { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; }
+
+/* Record visitors */
+.vs-entry { position: relative; display: flex; gap: .75rem; padding: .9rem 0; border-top: 1px solid var(--default-border); }
+.vs-entry:first-child { border-top: 0; padding-top: 0; }
+.vs-entry-num { flex: 0 0 1.75rem; height: 1.75rem; border-radius: 50%; background: rgba(var(--primary-rgb), .1); color: var(--primary-color); font-size: .78rem; font-weight: 700; line-height: 1.75rem; text-align: center; }
+.vs-entry-body { flex: 1; min-width: 0; }
+.vs-entry-flags { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .55rem; }
+.vs-flag { position: relative; display: inline-flex; align-items: center; margin: 0; cursor: pointer; }
+.vs-flag input { position: absolute; opacity: 0; pointer-events: none; }
+.vs-flag span { padding: .3rem .7rem; border: 1.5px solid var(--default-border); border-radius: 1rem; background: var(--custom-white); font-size: .78rem; font-weight: 600; color: var(--default-text-color); transition: border-color .15s, background .15s, color .15s; }
+.vs-flag span::before { content: "\ea13"; font-family: remixicon; margin-right: .3rem; font-weight: 400; }
+.vs-flag input:checked + span { border-color: var(--primary-color); background: rgba(var(--primary-rgb), .08); color: var(--v2-heading); }
+.vs-flag input:checked + span::before { content: "\eb7b"; color: var(--primary-color); }
+.vs-flag input:focus-visible + span { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+.vs-entry-prayer { margin-top: .55rem; }
+.vs-entry-known:empty { display: none; }
+.vs-entry-known { margin-top: .5rem; }
+.vs-known { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; font-weight: 600; color: var(--v2-heading); }
+.vs-known i { color: var(--primary-color); }
+.vs-known.is-warn i { color: rgb(var(--warning-rgb)); }
+.vs-entry-remove { flex-shrink: 0; align-self: flex-start; }
+.vs-sticky { position: sticky; top: 5.5rem; }
+.vs-tally-row { display: flex; align-items: center; gap: .65rem; padding: .5rem 0; border-top: 1px solid var(--default-border); font-size: .88rem; font-weight: 600; color: var(--v2-heading); }
+.vs-tally-row:first-child { border-top: 0; padding-top: 0; }
+.vs-tally-row strong { font-size: 1.05rem; }
+.vs-welcome { margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--default-border); }
+.vs-welcome-text { padding: .7rem .85rem; border-radius: .9rem .9rem .9rem .25rem; background: rgba(var(--dark-rgb), .045); font-size: .84rem; line-height: 1.5; color: var(--v2-heading); white-space: pre-wrap; overflow-wrap: anywhere; }
+.vs-form .select2-container.is-set .select2-selection--single { border-color: var(--input-border) !important; box-shadow: none; }
+
+/* A visitor's page */
+.vs-next { display: flex; align-items: center; gap: .85rem; flex-wrap: wrap; }
+.vs-next strong { display: block; font-size: .95rem; color: var(--v2-heading); }
+.vs-next small { display: block; font-size: .8rem; color: var(--default-text-color); }
+.vs-next.is-late strong { color: rgb(var(--danger-rgb)); }
+.vs-note { margin: .35rem 0 .25rem; font-size: .88rem; line-height: 1.55; color: var(--default-text-color); white-space: pre-line; overflow-wrap: anywhere; }
+.vs-timeline .soft-chip { vertical-align: middle; }
+.vs-prayer { display: flex; gap: .45rem; font-size: .88rem; line-height: 1.55; color: var(--v2-heading); overflow-wrap: anywhere; }
+.vs-prayer i { color: rgb(var(--pink-rgb)); font-size: 1rem; }
+.vs-steps { margin: 0; padding: 0; list-style: none; }
+.vs-steps li { position: relative; display: flex; gap: .75rem; padding-bottom: 1rem; }
+.vs-steps li:last-child { padding-bottom: 0; }
+.vs-steps li:not(:last-child)::after { content: ""; position: absolute; top: 2rem; bottom: .2rem; left: .95rem; width: 2px; background: var(--default-border); }
+.vs-steps li.is-done:not(:last-child)::after { background: rgba(var(--success-rgb), .5); }
+.vs-steps-dot { display: inline-flex; flex: 0 0 1.9rem; align-items: center; justify-content: center; width: 1.9rem; height: 1.9rem; border-radius: 50%; border: 1.5px solid var(--input-border); background: var(--custom-white); color: var(--default-text-color); font-size: .85rem; }
+.vs-steps li.is-done .vs-steps-dot { border-color: rgb(var(--success-rgb)); background: rgb(var(--success-rgb)); color: #fff; }
+.vs-steps li.is-now .vs-steps-dot { border-color: rgb(var(--q)); background: rgb(var(--q)); color: #fff; box-shadow: 0 0 0 4px rgba(var(--q), .15); }
+.vs-steps strong { display: block; font-size: .86rem; color: var(--v2-heading); }
+.vs-steps small { display: block; font-size: .75rem; color: var(--default-text-color); }
+.vs-steps li:not(.is-done):not(.is-now) strong { font-weight: 600; }
+.vs-date { max-width: 11rem; }
+
+/* Insights: first visit to member */
+.vs-funnel { display: flex; flex-direction: column; gap: .8rem; }
+.vs-funnel-row { display: grid; grid-template-columns: minmax(9rem, 12rem) minmax(0, 1fr) 4.5rem; align-items: center; gap: 1rem; }
+.vs-funnel-label { display: flex; align-items: center; gap: .55rem; font-size: .86rem; font-weight: 700; color: var(--v2-heading); }
+.vs-funnel-track { height: .8rem; border-radius: 1rem; background: rgba(var(--dark-rgb), .05); overflow: hidden; }
+.vs-funnel-track span { display: block; height: 100%; border-radius: 1rem; background: rgb(var(--q)); }
+.vs-funnel-num { text-align: right; }
+.vs-funnel-num strong { display: block; font-size: .95rem; color: var(--v2-heading); }
+.vs-funnel-num small { font-size: .74rem; color: var(--default-text-color); }
+
+@media (max-width: 1199.98px) { .vs-sticky { position: static !important; top: auto; } }
+@media (max-width: 767.98px) {
+  .vs-flag span { padding: .25rem .55rem; font-size: .74rem; }
+  .vs-entry { gap: .5rem; }
+  .vs-board-loading { grid-template-columns: minmax(0, 1fr); }
+  .vs-funnel-row { grid-template-columns: minmax(0, 1fr) 4rem; }
+  .vs-funnel-track { grid-column: 1 / -1; grid-row: 2; }
+}

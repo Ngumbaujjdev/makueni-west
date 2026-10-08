@@ -264,7 +264,7 @@ Visitor columns are added in P2.
 |---|---|---|
 | first_visit_on | date null | |
 | last_visit_on | date null | |
-| visits | int | default 0 |
+| visit_count | int | default 0 (as built; see below) |
 | how_heard | string(60) null | from the Settings options |
 | consent_contact | bool | default false |
 | wants_visit | bool | default false |
@@ -327,7 +327,24 @@ A prayer request or "wants a visit" creates a care record (P3). Before P3, it is
 | `visitors.default_assignee` | user |
 | `people.retention_visitor_months` | 0; lockable |
 
-### P2 acceptance criteria
+### P2 as built (2026-10-09)
+- **Data:**
+  - the visit count is `people.visit_count` (`visits` would clash with the `visits()` relation);
+  - `people.became_member_on` is added, so "became members this year" and the conversion rate can be counted;
+  - `visitor_visits` also has `territory_id`, `wants_visit` and `prayer_request` (encrypted, shown as "(private)" in audits); `visitor_followups.note` is encrypted the same way;
+  - outcome `sent` ("Message sent") is added for SMSes sent from the visitor page or the welcome SMS - each one is also logged as a follow-up.
+- **Stages move by themselves only forwards:** `returning` on the 2nd visit, `regular` from the 4th (`Person::REGULAR_AFTER`), and `new` → `contacted` when a follow-up reached them. `/visitors/{id}/stage` won't set `member` - that is "Became a member".
+- **Due:** the next step of the latest follow-up, or - with no follow-up since the last visit - the last visit plus `visitors.followup_days`. "My follow-ups" lists mine and unassigned ones, due within 7 days or late.
+- **The board** shows everyone still visiting and those who became members in the last 90 days. A member's phone in Sunday entry is noted, not counted as a visit.
+- **Extra routes:** `GET /visitors/options`, `GET /visitors/check?phone=`, `POST /visitors/{id}/assign` (the leader is told), `POST /visitors/{id}/visits`, `POST /visitors/{id}/archive · /restore · /anonymise`, `GET /visitors/{id}/history`.
+- **Settings:** `visitors.default_assignee` is dropped - Sunday entry has a "Follows them up" picker (the leader recording, by default).
+- **Menu:** Visitors, Record visitors, and Insights (`church.visitors.insights.read`, given to everyone who reads Visitors); the visitor page is off the menu. Region and diocese: "Church care › Visitors".
+- **Calendar:** follow-ups due are one line a day in the "Due dates" source ("3 visitor follow-ups due"), never a name, for leaders who can follow up; late ones gather on today.
+- **Messages:** the composer's "Our register" (church only, with the read permission): our members (with a phone or email), and visitors who said yes to contact (with a phone). `?register=visitors` opens it picked.
+- **Retention:** `php artisan people:retention`, daily at 02:30. `Person::anonymise()` also clears prayer requests and follow-up notes.
+- **Tests:** `tests/Feature/People/VisitorsTest.php` (6).
+
+
 
 - [ ] Batch entry creates new visitors and adds a visit to a known phone without duplicating the person.
 - [ ] SMS to a visitor without consent is 422. With consent it is sent and logged with kind `visitor`.

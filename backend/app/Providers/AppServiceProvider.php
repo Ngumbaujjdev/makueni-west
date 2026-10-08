@@ -99,6 +99,8 @@ class AppServiceProvider extends ServiceProvider
             // People & care (docs/specs/people-and-care-spec.md)
             'person' => 'App\Models\Person',
             'person_transfer' => 'App\Models\PersonTransfer',
+            'visitor_visit' => 'App\Models\VisitorVisit',
+            'visitor_followup' => 'App\Models\VisitorFollowup',
         ]);
 
         // Saved system settings (email server, ...) take over from .env -

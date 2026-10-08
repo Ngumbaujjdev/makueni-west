@@ -6,11 +6,15 @@ use App\Models\ChurchDemographic;
 use App\Models\Person;
 use App\Models\PersonTransfer;
 use App\Models\Territory;
+use App\Models\User;
+use App\Models\VisitorFollowup;
+use App\Models\VisitorVisit;
 use App\Support\Phone;
 use App\Support\PlaceAccess;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use OwenIt\Auditing\Models\Audit;
 
 /**
  * The member register's figures (docs/specs/people-and-care-spec.md, P1):
@@ -50,18 +54,36 @@ final class People
             $q->whereYear('joined_on', (int) $f['joined_year']);
         }
         if (($term = trim((string) ($f['q'] ?? ''))) !== '') {
-            $key = Phone::key($term);
-            $q->where(function ($w) use ($term, $key) {
+            $phone = self::phoneLike($term);
+            $q->where(function ($w) use ($term, $phone) {
                 $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $term).'%';
                 $w->where('first_name', 'like', $like)->orWhere('last_name', 'like', $like)->orWhere('other_names', 'like', $like)
                     ->orWhereRaw("CONCAT(first_name, ' ', last_name) like ?", [$like]);
-                if ($key && ctype_digit(preg_replace('/\D+/', '', $term))) {
-                    $w->orWhere('phone', 'like', '%'.$key);
+                if ($phone) {
+                    $w->orWhere('phone', 'like', $phone);
                 }
             });
         }
 
         return $q;
+    }
+
+    /**
+     * A search that is a phone number, or part of one ("0712", "345 678"),
+     * as a LIKE pattern on the stored +254... number - or null for a name.
+     */
+    public static function phoneLike(string $term): ?string
+    {
+        if (preg_match('/[^\d\s+()-]/', $term)) {
+            return null;
+        }
+        $digits = preg_replace('/\D+/', '', $term);
+        if (strlen($digits) >= 9) {
+            return '%'.Phone::key($digits);
+        }
+        $digits = preg_replace('/^(254|0)/', '', $digits);
+
+        return strlen($digits) >= 3 ? '%'.$digits.'%' : null;
     }
 
     /** One row of the list. */
@@ -230,5 +252,52 @@ final class People
             'transfers_out' => $rows->sum('transfers_out'),
             'rows' => $rows->all(),
         ];
+    }
+
+    /**
+     * A person's history in plain sentences - their record, transfers,
+     * visits and follow-ups. Private fields only ever show as "changed".
+     */
+    public function history(Person $person): array
+    {
+        $ids = fn (string $model) => $model::where('person_id', $person->id)->pluck('id')->all() ?: [0];
+        $audits = Audit::query()
+            ->where(fn ($q) => $q->where(fn ($q) => $q->where('auditable_type', 'person')->where('auditable_id', $person->id))
+                ->orWhere(fn ($q) => $q->where('auditable_type', 'person_transfer')->whereIn('auditable_id', $ids(PersonTransfer::class)))
+                ->orWhere(fn ($q) => $q->where('auditable_type', 'visitor_visit')->whereIn('auditable_id', $ids(VisitorVisit::class)))
+                ->orWhere(fn ($q) => $q->where('auditable_type', 'visitor_followup')->whereIn('auditable_id', $ids(VisitorFollowup::class))))
+            ->latest('id')->limit(200)->get();
+        $users = User::whereIn('id', $audits->pluck('user_id')->filter()->unique())->get()->keyBy('id');
+        $labels = [
+            'first_name' => 'first name', 'last_name' => 'last name', 'other_names' => 'other names', 'date_of_birth' => 'date of birth',
+            'national_id' => 'national ID', 'marital_status' => 'marital status', 'joined_on' => 'date joined', 'how_joined' => 'how they joined',
+            'previous_church' => 'previous church', 'saved_on' => 'salvation date', 'baptised_on' => 'baptism date',
+            'next_of_kin_name' => "next of kin's name", 'next_of_kin_phone' => "next of kin's phone",
+            'how_heard' => 'how they heard', 'consent_contact' => 'contact consent', 'wants_visit' => 'wants a visit', 'assigned_to' => 'who follows them up',
+            'first_visit_on' => 'first visit', 'last_visit_on' => 'last visit', 'visit_count' => 'visits', 'became_member_on' => 'date they became a member',
+        ];
+        $quiet = ['updated_by', 'anonymised_at', 'archived_at', 'last_visit_on', 'visit_count'];
+
+        return $audits->map(function (Audit $a) use ($users, $labels, $quiet) {
+            $who = ($u = $users->get($a->user_id)) ? trim("{$u->firstname} {$u->lastname}") : 'The system';
+            $new = (array) $a->new_values;
+            $sentence = match ($a->auditable_type) {
+                'person_transfer' => ($new['direction'] ?? '') === 'in' ? "{$who} recorded a transfer in" : "{$who} recorded a transfer out",
+                'visitor_visit' => $a->event === 'created' ? "{$who} recorded a visit".(! empty($new['on']) ? ' on '.CarbonImmutable::parse($new['on'])->format('j M Y') : '') : "{$who} changed a visit",
+                'visitor_followup' => $a->event === 'created' ? "{$who} logged a follow-up (".strtolower(VisitorFollowup::TYPES[$new['type'] ?? ''] ?? 'other').')' : "{$who} changed a follow-up",
+                default => match (true) {
+                    $a->event === 'created' => ($new['status'] ?? '') === 'visitor' ? "{$who} recorded their first visit" : "{$who} added them to the register",
+                    array_key_exists('anonymised_at', $new) && $new['anonymised_at'] => "{$who} removed their personal details",
+                    array_key_exists('archived_at', $new) => $new['archived_at'] ? "{$who} archived them" : "{$who} brought them back from the archive",
+                    ($new['stage'] ?? null) === 'member' => "{$who} marked that they became a member",
+                    isset($new['stage']) && count(array_diff(array_keys($new), ['stage', 'updated_by'])) === 0 => "{$who} moved them to ".strtolower(Person::STAGES[$new['stage']] ?? $new['stage']),
+                    isset($new['status']) && count($new) <= 2 => "{$who} marked them ".strtolower(Person::STATUSES[$new['status']] ?? $new['status']),
+                    default => "{$who} changed ".(collect(array_keys($new))->reject(fn ($k) => in_array($k, $quiet, true))
+                        ->map(fn ($k) => $labels[$k] ?? str_replace('_', ' ', $k))->implode(', ') ?: 'their visits'),
+                },
+            };
+
+            return ['id' => $a->id, 'at' => $a->created_at?->toIso8601String(), 'who' => $who, 'sentence' => $sentence];
+        })->values()->all();
     }
 }
