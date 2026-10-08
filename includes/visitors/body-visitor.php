@@ -21,6 +21,12 @@
         <span class="section-tab-icon bg-pink"><i class="ri-user-3-line"></i></span>
         <span class="section-tab-text"><strong>Details</strong><small>Name, phone and area</small></span>
     </button>
+    <?php if ($visitorsCtx['can']['care']): ?>
+    <button class="nav-link section-tab" data-tab="care" type="button" role="tab">
+        <span class="section-tab-icon bg-danger"><i class="ri-heart-pulse-line"></i></span>
+        <span class="section-tab-text"><strong>Care</strong><small>Visits, prayer and pastoral care</small></span>
+    </button>
+    <?php endif ?>
     <button class="nav-link section-tab" data-tab="history" type="button" role="tab">
         <span class="section-tab-icon bg-purple"><i class="ri-history-line"></i></span>
         <span class="section-tab-text"><strong>History</strong><small>Every change, and who made it</small></span>

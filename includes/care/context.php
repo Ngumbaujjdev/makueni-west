@@ -1,11 +1,10 @@
 <?php
 /**
- * Members - the church's private register (docs/specs/people-and-care-spec.md,
- * P1). The bodies live in includes/members/body-*.php; church/members/*.php
- * are thin wrappers, and region/people/members.php and
- * diocese/people/members.php are the totals pages (counts, never names).
- * What the API allows is decided server-side (App\Support\PeopleAccess);
- * this only checks the page may open and tells the scripts where they are.
+ * Pastoral care (docs/specs/people-and-care-spec.md, P3). The bodies live in
+ * includes/care/body-*.php; church/pastoral-care/*.php are thin wrappers,
+ * and region/people/care.php and diocese/people/care.php are the totals
+ * pages (counts, never a name or a note). What the API allows - including
+ * who reads a confidential note - is decided server-side.
  */
 require_once __DIR__ . '/../session-manager.php';
 require_once __DIR__ . '/../auth-check.php';
@@ -13,34 +12,40 @@ require_once __DIR__ . '/../permission-check.php';
 
 /**
  * @param string $level church | region | diocese
- * @param string $page list | form | member | transfers | insights | totals
+ * @param string $page index | log | case | hospital | prayer | totals
  */
-function membersPageContext(string $level, string $page): array
+function carePageContext(string $level, string $page): array
 {
-    requirePermission($page === 'totals' ? "{$level}.members.below.read" : 'church.members.members.read');
+    $permission = [
+        'totals' => "{$level}.pastoral.below.read",
+        'log' => 'church.pastoral.log.read',
+        'hospital' => 'church.pastoral.hospital.read',
+        'prayer' => 'church.pastoral.prayer.read',
+    ][$page] ?? 'church.pastoral.care.read';
+    requirePermission($permission);
     $role = getCurrentRole() ?? [];
-    $can = fn (string $permission) => hasGlobalAccess() || hasPermission("{$level}.{$permission}");
+    $user = getAuthUser() ?? [];
+    $can = fn (string $p) => hasGlobalAccess() || hasPermission("{$level}.{$p}");
 
     return [
         'level' => $level,
         'page' => $page,
-        'baseUrl' => SITE_URL . '/church/members',
+        'baseUrl' => SITE_URL . '/church/pastoral-care',
+        'membersUrl' => SITE_URL . '/church/members',
+        'visitorsUrl' => SITE_URL . '/church/visitors',
         'homeUrl' => SITE_URL . "/{$level}/dashboard",
         'siteUrl' => SITE_URL,
-        'careUrl' => SITE_URL . '/church/pastoral-care',
-        'userId' => (int) ((getAuthUser() ?? [])['id'] ?? 0),
         'messagesUrl' => SITE_URL . "/{$level}/messages/new",
+        'userId' => (int) ($user['id'] ?? 0),
         'place' => ['id' => (int) ($role['territory_id'] ?? 0), 'name' => $role['territory']['name'] ?? $role['territory_name'] ?? ''],
         'can' => [
-            'care' => $level === 'church' && $can('pastoral.care.read'),
-            'care_manage' => $level === 'church' && $can('pastoral.care.manage'),
-            'manage' => $level === 'church' && $can('members.members.manage'),
-            'export' => $level === 'church' && $can('members.members.export'),
+            'manage' => $level === 'church' && $can('pastoral.care.manage'),
+            'message' => $level === 'church' && $can('messages.messages.send'),
         ],
     ];
 }
 
-function membersPageStyles(): void
+function carePageStyles(): void
 {
     $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
     foreach (['assets/libs/select2/select2.min.css', 'assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css', 'assets/data-tables/responsive/2.3.0/css/responsive.bootstrap.min.css'] as $css) {
@@ -49,7 +54,13 @@ function membersPageStyles(): void
     echo '<link href="' . $v('assets/css/styles.min.css') . '" rel="stylesheet" />' . "\n";
 }
 
-function membersPageScripts(string $page): void
+/** The Care API and look - also loaded on the member and visitor pages (their Care tab and Record care). */
+function careScripts(): array
+{
+    return ['assets/js/pages/care/api.js', 'assets/js/pages/care/ui.js'];
+}
+
+function carePageScripts(string $page): void
 {
     $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
     foreach ([
@@ -64,7 +75,7 @@ function membersPageScripts(string $page): void
     foreach (['assets/libs/select2/select2.min.js', 'assets/data-tables/1.12.1/js/jquery.dataTables.min.js', 'assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js', 'assets/data-tables/responsive/2.3.0/js/dataTables.responsive.min.js'] as $src) {
         echo '<script src="' . SITE_URL . "/{$src}\"></script>\n";
     }
-    foreach (['assets/js/pages/demographics/api-handler.js', 'assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/members/api.js', 'assets/js/pages/members/ui.js', 'assets/js/pages/members/list-kit.js', ...($page === 'member' ? ['assets/js/pages/care/api.js', 'assets/js/pages/care/ui.js'] : []), "assets/js/pages/members/{$page}.js"] as $src) {
+    foreach (['assets/js/pages/demographics/api-handler.js', 'assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/members/api.js', 'assets/js/pages/members/ui.js', 'assets/js/pages/members/list-kit.js', ...careScripts(), "assets/js/pages/care/{$page}.js"] as $src) {
         echo '<script src="' . $v($src) . '"></script>' . "\n";
     }
 }

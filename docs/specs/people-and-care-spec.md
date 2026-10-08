@@ -474,13 +474,31 @@ A prayer request or "wants a visit" creates a care record (P3). Before P3, it is
 | `pastoral.hospital_days` | 7 | |
 | `pastoral.counselling_confidential` | on | locked on, shown as info |
 
+### P3 as built (2026-10-08)
+- **Slimmer data ("collect little"):**
+  - `type` is `home_visit | hospital | counselling | prayer | phone_call | bereavement | concern`; `priority` is `normal | high`; `status` is `open | closed | answered`.
+  - `place` → `hospital`; `ward`, `admitted_on` (the record's `on` is enough) and the encrypted `outcome` are dropped - "Closed" plus the last contact's note covers it.
+  - `testimony` is a short string, kept only with `share_testimony`. `care_contacts` also has `territory_id`; `care_records` has `updated_by`.
+- **Open or done when recorded:** hospital, prayer, counselling and concern open a case; so does a next step or high priority. Other visits are closed the day they're recorded. Whoever records is always one of "who went".
+- **Confidential:** counselling is forced confidential. For anyone but the author and `church.pastoral.care.confidential`, the note and contact notes are `null` with `note_hidden: true`; editing or adding a contact is 403.
+- **Extra routes:** `GET /care/options`, `POST /care/{id}/discharge`, `POST /care/bulk` (`close | assign`, own church only), `GET /care/{id}/history`. `close` takes `{status, testimony?, share_testimony}` - `answered` only for prayer.
+- **Needs care:** high-priority open cases, next steps due or late, and members not cared for in `pastoral.not_contacted_days` (a member with an open case isn't listed).
+- **Hospital:** "last visited" is the newest visit contact, or the day they went in; days are counted on Nairobi dates. Red past `pastoral.hospital_days`.
+- **Settings:** `pastoral.type.{key}` switches stand in for `types_enabled`; `counselling_confidential` isn't a setting - it is always on.
+- **Hooks:**
+  - `MonthlyFigures['pastoral'] = {visits, by_type, testimonies}` (church only). The report form shows "From Pastoral care: N · Use" beside Pastoral visits - a hint, never auto-filled - and offers shared testimonies in the Testimonies box.
+  - The calendar has no separate `care` source: next steps are one line a day in the "Due dates" source ("2 pastoral visits due"), never a name.
+- **Pages:** Pastoral care, Care log, In hospital and Prayer (`church.pastoral.{log,hospital,prayer}.read`, given to readers) on the menu; the case page is off it. A **Care** tab and **Record care** on the member and visitor pages. Region and diocese: "Church care › Pastoral care", counts only.
+- **Demo data:** `PeopleDemoSeeder` adds care at every church (25 at the main one); `PeopleDemoRemoveSeeder` removes it.
+- **Tests:** `tests/Feature/People/CareTest.php` (3).
+
 ### P3 acceptance criteria
 
-- [ ] A counselling note is null for an Associate Pastor who isn't the author, and present for the author and the Senior Pastor.
-- [ ] `/care/totals` has no names or notes. Other churches are refused.
-- [ ] The monthly report's figures carry `pastoral.visits` for the month, and the form defaults `pastoral_visits` from it.
-- [ ] Hospital list: discharged people drop off, and "last visited" uses the newest contact or visit.
-- [ ] Calendar `sources[]=care` returns next steps for our church only.
+- [x] A counselling note is null for an Associate Pastor who isn't the author, and present for the author and the Senior Pastor.
+- [x] `/care/totals` has no names or notes. Other churches are refused.
+- [x] The monthly report's figures carry `pastoral.visits` for the month, and the form offers it as a hint.
+- [x] Hospital list: discharged people drop off, and "last visited" uses the newest contact or visit.
+- [x] Calendar "Due dates" shows next steps for our church only, with no name.
 
 ---
 

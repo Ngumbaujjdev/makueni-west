@@ -20,7 +20,7 @@
   const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(window.location.search);
   const id = Number(params.get("id"));
-  const TABS = ["followup", "visits", "details", "history"];
+  const TABS = ["followup", "visits", "details", "care", "history"];
   const state = { p: null, options: null, tab: TABS.includes(params.get("tab")) ? params.get("tab") : "followup", history: null };
 
   const notGiven = '<span class="mb-sub">Not given</span>';
@@ -215,7 +215,11 @@
     const q = new URLSearchParams(window.location.search);
     state.tab === "followup" ? q.delete("tab") : q.set("tab", state.tab);
     history.replaceState(null, "", `${window.location.pathname}?${q}`);
-    ({ followup: renderFollowup, visits: renderVisits, details: renderDetails, history: renderHistory })[state.tab]();
+    const care = () => {
+      $("vsSide").innerHTML = "";
+      CareUI.personPanel($("vsMain"), { id: state.p.id, name: state.p.name, initials: state.p.initials }, { careUrl: CTX.careUrl, canManage: CTX.can.care_manage && !state.p.anonymised, userId: CTX.userId });
+    };
+    ({ followup: renderFollowup, visits: renderVisits, details: renderDetails, care, history: renderHistory })[state.tab]();
   }
 
   function refresh(p, message) {

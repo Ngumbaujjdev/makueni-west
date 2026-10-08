@@ -201,9 +201,45 @@
       .join("")}</div>`;
     renderFiles();
     UI.initSteppers($("stepBody2"), () => queueSave());
+    pastoralHints();
     document.querySelectorAll("#writeView textarea, #writeView input").forEach((el) => el.addEventListener("input", queueSave));
     renderPreview();
     go(step);
+  }
+
+  /**
+   * Pastoral care's numbers for the month (People & care P3), offered - never
+   * filled in: "12 from Pastoral care · Use" beside Pastoral visits, and the
+   * testimonies people agreed may be shared, beside Testimonies.
+   */
+  function pastoralHints() {
+    const p = r.figures?.pastoral;
+    if (!p) return;
+    const box = $("f_pastoral_visits")?.closest(".col-md-4");
+    if (box && p.visits) {
+      box.insertAdjacentHTML("beforeend", `<div class="mb-register-hint"><i class="ri-heart-pulse-line"></i>From Pastoral care: <strong>${R.num(p.visits)}</strong> · <button type="button" class="btn btn-link p-0 align-baseline" id="usePastoral">Use</button></div>`);
+      $("usePastoral").addEventListener("click", () => {
+        const input = $("f_pastoral_visits");
+        input.value = p.visits;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+    }
+    const words = $("f_testimonies");
+    if (words && p.testimonies?.length) {
+      words.insertAdjacentHTML(
+        "afterend",
+        `<div class="mb-register-hint"><i class="ri-chat-smile-2-line"></i>From answered prayer: ${p.testimonies.map((t, i) => `<button type="button" class="btn btn-link p-0 align-baseline" data-testimony="${i}" title="${R.esc(t)}">Add ${i + 1}</button>`).join(" · ")}</div>`,
+      );
+      words.parentElement.querySelectorAll("[data-testimony]").forEach((b) =>
+        b.addEventListener("click", () => {
+          const t = p.testimonies[Number(b.dataset.testimony)];
+          words.value = words.value.trim() ? `${words.value.trim()}\n\n${t}` : t;
+          words.dispatchEvent(new Event("input", { bubbles: true }));
+          b.remove();
+        }),
+      );
+    }
   }
 
   function renderFiles() {

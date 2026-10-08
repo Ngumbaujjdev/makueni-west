@@ -38,6 +38,10 @@ final class PeopleAccess
             'read' => 'pastoral.care.read',
             'manage' => 'pastoral.care.manage',
             'confidential' => 'pastoral.care.confidential',
+            // The Care log, Hospital and Prayer pages' own read permissions (menu).
+            'log' => 'pastoral.log.read',
+            'hospital' => 'pastoral.hospital.read',
+            'prayer' => 'pastoral.prayer.read',
             'below' => 'pastoral.below.read',
         ],
         'ministries' => [
@@ -53,7 +57,7 @@ final class PeopleAccess
     ];
 
     /** A module's own pages' read permissions, given to everyone who reads the module (the menu shows a page through its permission). */
-    public const PAGE_READS = ['transfers', 'insights'];
+    public const PAGE_READS = ['transfers', 'insights', 'log', 'hospital', 'prayer'];
 
     /** Abilities that only make sense at the church (the rest of the map is church-only too, bar "below"). */
     public const BELOW_LEVELS = ['region', 'diocese'];

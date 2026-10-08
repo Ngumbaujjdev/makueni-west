@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\CareContact;
+use App\Models\CareRecord;
 use App\Models\GatheringType;
 use App\Models\Person;
 use App\Models\PersonTransfer;
@@ -74,8 +76,10 @@ class PeopleDemoSeeder extends Seeder
             ->where('id', '!=', $main->id)->orderBy('name')->limit(8)->get() : collect();
 
         $this->church($main, 40, 15, self::MAIN_AREAS, $others);
+        $this->care($main, 25);
         foreach ($others as $i => $church) {
             $this->church($church, mt_rand(5, 15), mt_rand(2, 6), $this->areasFor($church), collect([$main]));
+            $this->care($church, mt_rand(2, 6));
         }
         $this->command?->info("   ✅ Demo people: {$main->name} (40 members, 15 visitors) and ".$others->count().' other churches');
         $this->command?->warn('   ℹ️  Demo numbers are +254 700 000 xxx and are never texted. Remove with --class=PeopleDemoRemoveSeeder');
@@ -139,6 +143,51 @@ class PeopleDemoSeeder extends Seeder
                 VisitorVisit::create(['person_id' => $person->id, 'territory_id' => $church->id, 'gathering_type_id' => $gathering, 'on' => $day->toDateString(), 'first_time' => $k === 0]);
             }
             $this->followups($person, $church, $stage, $sundays, $leaders, $n);
+        }
+    }
+
+    /**
+     * Pastoral care (P3) for the demo people: every kind, some confidential,
+     * two in hospital, prayers open and answered (one testimony shared),
+     * and next steps this week.
+     */
+    private function care(Territory $church, int $count): void
+    {
+        $people = Person::where('territory_id', $church->id)->where('phone', 'like', '+254700000%')->where('status', 'member')->inRandomOrder()->limit($count)->get();
+        if ($people->isEmpty()) {
+            return;
+        }
+        $carers = app(Activities::class)->leadersWith([$church->id], PeopleAccess::permission('pastoral', 'manage'))->pluck('id')->all();
+        $plan = ['home_visit', 'home_visit', 'hospital', 'counselling', 'prayer', 'prayer', 'phone_call', 'bereavement', 'concern', 'home_visit', 'prayer', 'hospital', 'phone_call', 'home_visit', 'counselling'];
+        $notes = [
+            'home_visit' => 'Visited the family; prayed together.', 'hospital' => 'Admitted after a fall - doing better.', 'counselling' => 'Talked through a hard season at home.',
+            'prayer' => 'Asked for prayer for a job.', 'phone_call' => 'Called to check in after missing two Sundays.', 'bereavement' => 'Lost her mother - the family needs support.',
+            'concern' => 'Has not been in church for a month.',
+        ];
+        foreach ($people as $i => $p) {
+            $type = $plan[$i % count($plan)];
+            $on = $this->today->subDays(mt_rand(1, 170));
+            $open = in_array($type, ['hospital', 'prayer', 'counselling', 'concern'], true) && ($type !== 'hospital' || $i < 3) && $i % 4 !== 3;
+            if ($type === 'hospital' && $open) {
+                $on = $this->today->subDays(mt_rand(2, 12));
+            }
+            $answered = $type === 'prayer' && ! $open;
+            $record = CareRecord::create([
+                'territory_id' => $church->id, 'person_id' => $p->id, 'type' => $type, 'priority' => $i % 6 === 0 ? 'high' : 'normal',
+                'status' => $answered ? 'answered' : ($open ? 'open' : 'closed'), 'on' => $on->toDateString(), 'closed_on' => $open ? null : $on->addDays(mt_rand(0, 20))->min($this->today)->toDateString(),
+                'hospital' => $type === 'hospital' ? $this->pick(['Makueni County Referral', 'Sultan Hamud Health Centre', 'Machakos Level 5']) : null,
+                'discharged_on' => $type === 'hospital' && ! $open ? $on->addDays(4)->min($this->today)->toDateString() : null,
+                'note' => $notes[$type], 'confidential' => $type === 'counselling' || $i % 9 === 0,
+                'next_on' => $open && $i % 2 === 0 ? $this->today->addDays(mt_rand(-2, 6))->toDateString() : null,
+                'testimony' => $answered ? 'She found work two weeks later - God answered.' : null, 'share_testimony' => $answered && $i % 2 === 0,
+                'created_by' => $carers ? $carers[$i % count($carers)] : null,
+            ]);
+            if ($carers) {
+                $record->carers()->sync([$carers[$i % count($carers)]]);
+            }
+            if ($open && $type === 'hospital') {
+                CareContact::create(['care_record_id' => $record->id, 'territory_id' => $church->id, 'on' => $on->addDay()->min($this->today)->toDateString(), 'type' => 'visit', 'note' => 'Visited and prayed with them.', 'done_by' => $carers[0] ?? null]);
+            }
         }
     }
 
