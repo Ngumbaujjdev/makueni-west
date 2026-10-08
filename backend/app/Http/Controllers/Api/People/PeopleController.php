@@ -293,12 +293,13 @@ class PeopleController extends Controller
         $d = $request->validate(['q' => ['required', 'string', 'min:2', 'max:80'], 'limit' => ['nullable', 'integer', 'between:1,50']]);
         // People still with us: members and visitors - not those who left.
         $rows = $this->people->query($place, ['q' => $d['q'], 'status' => array_values(array_filter([$members ? 'member' : null, $visitors ? 'visitor' : null]))])
-            ->whereNotNull('phone')->where('phone', 'not like', '+254700000%')
+            ->whereNotNull('phone')
             ->orderBy('first_name')->limit($d['limit'] ?? 25)->get();
 
         return $this->ok($rows->map(fn (Person $p) => [
             'id' => $p->id, 'name' => $p->name, 'initials' => $p->initials, 'phone' => $p->phone, 'area' => $p->area,
-            'kind' => $p->status === 'visitor' ? 'visitor' : 'member', 'can_text' => $p->status !== 'visitor' || $p->consent_contact,
+            'kind' => $p->status === 'visitor' ? 'visitor' : 'member', 'demo' => Phone::isDemo($p->phone),
+            'can_text' => ! Phone::isDemo($p->phone) && ($p->status !== 'visitor' || $p->consent_contact),
         ])->values());
     }
 

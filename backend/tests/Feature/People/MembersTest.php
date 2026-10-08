@@ -197,7 +197,7 @@ class MembersTest extends TestCase
         $this->postJson('/api/people/bulk', ['ids' => [$a->id], 'action' => 'archive'])->assertForbidden();
         $found = $this->getJson('/api/people/search?q=agn')->assertOk()->json('data');
         $this->assertSame([$a->id], array_column($found, 'id'), 'own church only');
-        $this->assertSame([], $this->getJson('/api/people/search?q=demo')->json('data'), 'demo numbers are never offered');
+        $this->assertFalse($this->getJson('/api/people/search?q=demo')->json('data.0.can_text'), 'a demo number shows but is never texted');
         $this->assertSame([$a->id], array_column($this->getJson('/api/people/search?q=kasikeu')->json('data'), 'id'), 'by area too');
 
         Sanctum::actingAs($this->senior);
