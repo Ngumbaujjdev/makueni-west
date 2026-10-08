@@ -320,7 +320,7 @@ return [
         'mail.from_name' => ['section' => 'email', 'card' => 'Who email comes from', 'label' => 'From name', 'rules' => ['nullable', 'string', 'max:120'], 'default' => env('MAIL_FROM_NAME', 'Makueni West Diocese'), 'levels' => ['diocese'], 'config' => 'mail.from.name'],
 
         // ---- SMS (S4) - read by App\Services\Sms\Sms
-        'sms.driver' => ['section' => 'sms', 'card' => 'Gateway', 'label' => 'Send SMS with', 'type' => 'select', 'options' => ['log' => "Don't send - write to the log", 'africastalking' => "Africa's Talking"], 'default' => 'log', 'levels' => ['diocese'], 'used_by' => 'Every SMS'],
+        'sms.driver' => ['section' => 'sms', 'card' => 'Gateway', 'label' => 'Send SMS with', 'type' => 'select', 'options' => ['log' => "Don't send - write to the log", 'textsms' => 'TextSMS (set up on the server)', 'africastalking' => "Africa's Talking"], 'default' => env('SMS_PROVIDER') === 'textsms' ? 'textsms' : 'log', 'levels' => ['diocese'], 'used_by' => 'Every SMS', 'help' => 'TextSMS uses the account in the server\'s settings (.env) - nothing to fill in here.'],
         'sms.username' => ['section' => 'sms', 'card' => 'Gateway', 'label' => "Africa's Talking username", 'rules' => ['nullable', 'string', 'max:100'], 'default' => null, 'levels' => ['diocese'], 'help' => "'sandbox' for testing"],
         'sms.api_key' => ['section' => 'sms', 'card' => 'Gateway', 'label' => 'API key', 'type' => 'secret', 'secret' => true, 'rules' => ['nullable', 'string', 'max:200'], 'default' => null, 'levels' => ['diocese']],
         'sms.sandbox' => ['section' => 'sms', 'card' => 'Gateway', 'label' => 'Use the sandbox (no real messages)', 'type' => 'switch', 'default' => false, 'levels' => ['diocese']],

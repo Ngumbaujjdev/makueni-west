@@ -127,7 +127,7 @@ Subregions inherit settings but get no Settings page of their own.
 - `mail.from_address`, `mail.from_name`
 
 *SMS:*
-- `sms.driver` (`log` | `africastalking`)
+- `sms.driver` (`log` | `textsms` | `africastalking`). It defaults to `textsms` when the server's `.env` says `SMS_PROVIDER=textsms`, otherwise `log`.
 - `sms.username`
 - `sms.api_key` (secret)
 - `sms.sender_id`
@@ -160,7 +160,12 @@ Subregions inherit settings but get no Settings page of their own.
 ### System settings as built (S4a)
 - **Where they're stored:** Email, SMS and System health are kept at the **diocese** (`Settings::systemPlace()`, the single diocese territory) rather than at `territory_id NULL`. They're marked `global_only` in the registry, so only global admins see or change them; `SettingsAccess::can()` refuses everyone else, and there's no hub permission.
 - **Defaults:** each email field's default is its `.env` value. `applyToConfig()` runs at boot and before each queued job (when the cache version changed), and overrides `mail.default`, `mail.mailers.smtp.*` and `mail.from.*` **only for fields that have been saved**. Unsaved fields keep the `.env` value.
-- **SMS:** `App\Services\Sms\Sms` sends through Africa's Talking (`/version1/messaging` with the `apiKey` header; sandbox host when `sms.sandbox`), or the log until it's set up. Numbers are normalised to `+2547…` / `+2541…`. `balance()` feeds Health.
+- **SMS:** `App\Services\Sms\Sms` sends through one of three routes:
+  - **TextSMS** (2026-10-08): the diocese's account comes from the server's `.env` (`TEXTSMS_API_URL`, `_API_KEY`, `_PARTNER_ID`, `_SHORTCODE` → `config('services.textsms')`) and is never stored or shown. The call POSTs JSON `{apikey, partnerID, mobile, message, shortcode}`. The sender is `sms.sender_id`, else the shortcode. A 1006 reply (invalid credentials) points at the `.env`.
+  - **Africa's Talking:** `/version1/messaging` with the `apiKey` header, and the sandbox host when `sms.sandbox` is set.
+  - **The log,** until one of the others is set up.
+
+  `phpunit.xml` forces `SMS_PROVIDER=log` and blank TextSMS details, so a test never sends. Numbers are normalised to `+2547…` / `+2541…`. `balance()` feeds Health.
 - **Message log:** every email (the `LogSentEmail` listener on `MessageSent`) and every SMS is written to `message_logs`.
 - **Health tiles:** Email, SMS, Background jobs (`jobs` / `failed_jobs`; "Retry failed"), Scheduler (a heartbeat cached every minute by `routes/console.php`, OK if under 3 minutes old) and Storage (free %). There's also a count of messages this month and a "What's running" card.
 

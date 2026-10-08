@@ -27,6 +27,7 @@ cd backend && cp .env.example .env && php artisan key:generate
 php artisan migrate --seed
 PHP_CLI_SERVER_WORKERS=4 php artisan serve --port=8004   # 4 workers: a page's API calls run side by side, not one after another
 php artisan queue:work --queue=reports,default   # PDF/Excel reports are built in the background (docs/specs/reports-spec.md)
+nohup /opt/homebrew/bin/mailhog > /tmp/mailhog.log 2>&1 &   # dev email: SMTP 127.0.0.1:1025 (backend .env), inbox at http://localhost:8025
 
 # Frontend
 # Served via MAMP/Apache at the existing document root (no build step — plain PHP + JS)

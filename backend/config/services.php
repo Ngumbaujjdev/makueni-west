@@ -28,6 +28,14 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // TextSMS (textsms.co.ke) - the diocese's SMS account, set on the server only.
+    'textsms' => [
+        'url' => env('TEXTSMS_API_URL', 'https://sms.textsms.co.ke/api/services/sendsms/'),
+        'api_key' => env('TEXTSMS_API_KEY'),
+        'partner_id' => env('TEXTSMS_PARTNER_ID'),
+        'shortcode' => env('TEXTSMS_SHORTCODE'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
