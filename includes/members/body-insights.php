@@ -3,17 +3,17 @@
 </div>
 
 <div class="row g-4">
-    <div class="col-xl-8">
+    <div class="col-xl-8" id="insMain">
         <div class="card custom-card">
             <div class="card-header"><div><div class="card-title">Sunday school and main church</div><span class="card-subtitle-text">Members in each part of the church, men and women</span></div></div>
             <div class="card-body"><div id="groupChart" class="skel-chart" style="min-height:260px"></div></div>
         </div>
-        <div class="card custom-card">
+        <div class="card custom-card" id="flowCard">
             <div class="card-header"><div><div class="card-title">Joining and leaving</div><span class="card-subtitle-text">The last twelve months</span></div></div>
             <div class="card-body"><div id="flowChart" class="skel-chart" style="min-height:260px"></div></div>
         </div>
     </div>
-    <div class="col-xl-4">
+    <div class="col-xl-4" id="insSide">
         <div class="card custom-card">
             <div class="card-header"><div class="card-title">Men and women</div></div>
             <div class="card-body"><div id="genderDonut" class="skel-chart" style="min-height:220px"></div></div>

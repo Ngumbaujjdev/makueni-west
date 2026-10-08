@@ -134,7 +134,7 @@ const CareUI = (function () {
         {
           icon: "ri-heart-pulse-line",
           title: "What",
-          body: `<div class="ec-choices is-varied cr-kinds mb-3" role="radiogroup" aria-label="Kind of care">${types.map(choice).join("")}</div>
+          body: `<div class="ec-choices is-varied is-tinted cr-kinds mb-3" role="radiogroup" aria-label="Kind of care">${types.map(choice).join("")}</div>
             <div class="row g-3 align-items-start">
               <div class="col-md-6"><label class="form-label" for="crOn">When</label><input type="date" class="form-control" id="crOn" value="${todayIso()}" max="${todayIso()}" data-quick="today,yesterday,lastSunday"></div>
               <div class="col-md-6"><span class="form-label d-block">Priority</span><label class="cr-urgent" for="crUrgent"><span class="cr-urgent-icon"><i class="ri-alarm-warning-line"></i></span><span class="flex-fill min-w-0"><strong>Urgent</strong><small>Put it at the top of Needs care</small></span><span class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" role="switch" id="crUrgent"></span></label></div>

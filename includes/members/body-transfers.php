@@ -15,11 +15,22 @@
     <div class="card-header justify-content-between flex-wrap gap-2">
         <div><div class="card-title">Transfers</div><span class="card-subtitle-text" id="yearLine">This year</span></div>
     </div>
-    <div class="card-body pb-0"><div id="transferFilters"></div></div>
-    <div class="card-body" id="transferTableWrap">
+    <div class="card-body pb-0 pt-3" id="transferPills"></div>
+    <div class="card-body p-0" id="transferTableWrap">
+        <div id="transferFilters" class="list-filterbar-wrap"></div>
         <div class="table-responsive">
-            <table class="table text-nowrap table-hover mb-0" id="transferTable">
-                <thead><tr><th>On</th><th>Who</th><th>Direction</th><th>The other church</th><th>Why</th></tr></thead>
+            <table class="table table-hover mb-0 pp-table" id="transferTable">
+                <thead>
+                    <tr>
+                        <th class="pp-check"><input type="checkbox" class="form-check-input pp-pick-page" aria-label="Pick everyone on this page"></th>
+                        <th>Who</th>
+                        <th>Direction</th>
+                        <th>The other church</th>
+                        <th class="d-none d-lg-table-cell">Why</th>
+                        <th>On</th>
+                        <th class="text-end"><span class="visually-hidden">Open</span></th>
+                    </tr>
+                </thead>
                 <tbody id="transferRows"></tbody>
             </table>
         </div>

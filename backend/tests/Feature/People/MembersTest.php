@@ -156,6 +156,10 @@ class MembersTest extends TestCase
         $t = $this->getJson('/api/people/transfers')->assertOk()->json('data');
         $this->assertSame([1, 2], [$t['in'], $t['out']]);
         $this->assertNotContains($this->myChurch->id, array_column($t['churches'], 'id'), 'pick another church');
+        $grace = collect($t['items'])->firstWhere('person.id', $id);
+        $this->assertSame(['in', 'PCEA Machakos', $this->senior->firstname.' '.$this->senior->lastname], [$grace['direction'], $grace['other']['name'], $grace['recorded_by']]);
+        $this->assertArrayHasKey('phone', $grace['person']);
+        $this->assertNotNull($grace['recorded_at']);
 
         Sanctum::actingAs($this->regionLeader);
         $row = collect($this->getJson('/api/people/totals')->json('data.rows'))->firstWhere('church.id', $this->myChurch->id);

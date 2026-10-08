@@ -20,6 +20,12 @@ class PersonTransfer extends Model implements Auditable
         return $this->belongsTo(Person::class);
     }
 
+    /** Who recorded it. */
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
     public function otherChurch(): BelongsTo
     {
         return $this->belongsTo(Territory::class, 'other_church_id');

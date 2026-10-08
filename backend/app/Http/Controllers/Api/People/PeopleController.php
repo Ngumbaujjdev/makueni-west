@@ -165,7 +165,7 @@ class PeopleController extends Controller
         }
         $d = $request->validate(['direction' => ['nullable', Rule::in(['in', 'out'])], 'year' => ['nullable', 'integer', 'between:1900,2100']]);
         $year = (int) ($d['year'] ?? $this->people->today()->year);
-        $rows = PersonTransfer::with(['person', 'otherChurch'])->where('territory_id', $church->id)
+        $rows = PersonTransfer::with(['person', 'otherChurch', 'createdBy'])->where('territory_id', $church->id)
             ->when($d['direction'] ?? null, fn ($q, $dir) => $q->where('direction', $dir))
             ->whereYear('on', $year)->orderByDesc('on')->orderByDesc('id')->get();
 
@@ -176,7 +176,13 @@ class PeopleController extends Controller
             'items' => $rows->map(fn (PersonTransfer $t) => [
                 'id' => $t->id, 'direction' => $t->direction, 'on' => $t->on->toDateString(), 'reason' => $t->reason, 'notified' => $t->notified,
                 'other' => ['id' => $t->other_church_id, 'name' => $t->other_name, 'in_system' => (bool) $t->other_church_id],
-                'person' => $t->person ? ['id' => $t->person->id, 'name' => $t->person->name, 'initials' => $t->person->initials, 'status' => $t->person->status] : null,
+                // The person's details and who recorded it, for the transfer's details window.
+                'person' => $t->person ? [
+                    'id' => $t->person->id, 'name' => $t->person->name, 'initials' => $t->person->initials, 'status' => $t->person->status,
+                    'phone' => $t->person->phone, 'area' => $t->person->area, 'gender' => $t->person->gender, 'congregation' => $t->person->congregation,
+                ] : null,
+                'recorded_by' => $t->createdBy ? trim("{$t->createdBy->firstname} {$t->createdBy->lastname}") : null,
+                'recorded_at' => $t->created_at?->toIso8601String(),
             ])->values(),
             'churches' => $this->otherChurches($church),
         ]);

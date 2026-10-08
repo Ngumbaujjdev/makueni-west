@@ -38647,7 +38647,6 @@ button.cal-side-item:focus-visible {
 .cr-field-note i { color: rgb(var(--purple-rgb)); }
 .app-modal .select2-container .select2-selection--multiple { min-height: calc(2.5rem + 2px); }
 /* Each kind keeps a pale tint of its colour before it's picked, so the window isn't grey. */
-.cr-kinds.is-varied .ec-choice-icon { background: rgba(var(--q), .12); color: rgb(var(--q)); }
 .cr-kinds.is-varied .ec-choice.is-dark .ec-choice-icon { background: rgba(var(--q), .22); color: var(--v2-heading); }
 @media (max-width: 575.98px) {
   .cr-kinds { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -38702,3 +38701,57 @@ button.cal-side-item:focus-visible {
 .vs-prev-meta span { display: inline-flex; align-items: center; gap: .4rem; }
 .vs-prev-meta i { color: rgb(var(--purple-rgb)); }
 .vs-aside .preview-section { margin-top: .9rem; }
+
+/* Choice tiles with a pale tint of their colour before they're picked (Record care kinds, Transfer in) */
+.ec-choices.is-tinted.is-varied .ec-choice-icon { background: rgba(var(--q), .12); color: rgb(var(--q)); }
+.ec-choices.is-tinted.is-varied .ec-choice.is-dark .ec-choice-icon { background: rgba(var(--q), .22); color: var(--v2-heading); }
+.ec-choices.is-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ec-choices.is-two .ec-choice { padding: .55rem 1.9rem .55rem .55rem; gap: .5rem; }
+
+/* Members: At a glance tiles (member page) */
+.glance-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
+.glance-tile { display: flex; align-items: flex-start; gap: .6rem; padding: .7rem; border-radius: .75rem; background: rgba(var(--q), .07); }
+.glance-tile-icon { display: inline-grid; flex: 0 0 2rem; place-items: center; width: 2rem; height: 2rem; border-radius: .55rem; background: rgba(var(--q), .16); color: rgb(var(--q)); font-size: 1rem; }
+.glance-tile-icon.is-dark { background: rgba(var(--q), .3); color: var(--v2-heading); }
+.glance-tile-icon.is-solid { background: rgb(var(--q)); color: #fff; }
+.glance-tile-label { display: block; font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--default-text-color); }
+.glance-tile strong { display: block; font-size: .92rem; color: var(--v2-heading); overflow-wrap: anywhere; }
+.glance-tile small { display: block; font-size: .74rem; color: var(--default-text-color); }
+.glance-tile-none { display: inline-block; margin-top: .15rem; padding: .05rem .5rem; border-radius: 1rem; background: var(--custom-white); font-size: .74rem; font-weight: 600; color: var(--default-text-color); }
+
+/* Members insights: the register beside the Demographics count */
+.mb-reg { display: flex; flex-direction: column; gap: .9rem; }
+.mb-reg-row { display: flex; align-items: flex-start; gap: .7rem; }
+.mb-reg-icon { display: inline-grid; flex: 0 0 2.1rem; place-items: center; width: 2.1rem; height: 2.1rem; border-radius: .6rem; background: rgba(var(--q), .14); color: rgb(var(--q)); font-size: 1rem; }
+.mb-reg-icon.is-solid { background: rgb(var(--q)); color: #fff; }
+.mb-reg-top { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; }
+.mb-reg-label { font-size: .88rem; font-weight: 600; color: var(--v2-heading); }
+.mb-reg-figs { white-space: nowrap; }
+.mb-reg-figs strong { font-size: 1.05rem; color: var(--v2-heading); }
+.mb-reg-figs small { margin-left: .3rem; font-size: .74rem; color: var(--default-text-color); }
+.mb-reg-bar { height: .38rem; margin-top: .4rem; overflow: hidden; border-radius: 1rem; background: rgba(var(--q), .14); }
+.mb-reg-bar i { display: block; height: 100%; border-radius: inherit; background: rgb(var(--q)); }
+.mb-reg-pct, .mb-reg-none { margin-top: .25rem; font-size: .72rem; font-weight: 600; color: var(--default-text-color); }
+.mb-reg-note { display: flex; gap: .5rem; margin-top: 1rem; padding: .65rem .75rem; border-radius: .65rem; background: rgba(var(--purple-rgb), .07); font-size: .78rem; line-height: 1.45; color: var(--v2-heading); }
+.mb-reg-note i { color: rgb(var(--purple-rgb)); font-size: .95rem; }
+
+/* Transfers: the table and the details window */
+.pp-table .tr-why { max-width: 16rem; font-size: .84rem; }
+.tr-who { display: flex; align-items: center; gap: .85rem; }
+.tr-who-contact { display: flex; flex-wrap: wrap; gap: .35rem .9rem; margin-top: .4rem; font-size: .82rem; color: var(--default-text-color); }
+.tr-who-contact span { display: inline-flex; align-items: center; gap: .3rem; }
+.tr-who-contact i { color: rgb(var(--purple-rgb)); }
+.pp-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
+.pp-fact { display: flex; align-items: flex-start; gap: .6rem; padding: .7rem; border-radius: .75rem; background: rgba(var(--q), .07); }
+.pp-fact-icon { display: inline-grid; flex: 0 0 2rem; place-items: center; width: 2rem; height: 2rem; border-radius: .55rem; background: rgba(var(--q), .16); color: rgb(var(--q)); font-size: 1rem; }
+.pp-fact-icon.is-solid { background: rgb(var(--q)); color: #fff; }
+.pp-fact > div > span { display: block; font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--default-text-color); }
+.pp-fact > div > strong { display: block; font-size: .9rem; color: var(--v2-heading); overflow-wrap: anywhere; }
+.pp-fact > div > strong small { display: block; font-size: .74rem; font-weight: 500; color: var(--default-text-color); }
+.tr-why-box { margin-top: .75rem; padding: .75rem .85rem; border: 1px dashed var(--default-border); border-radius: .75rem; }
+.tr-why-box > span { display: inline-flex; align-items: center; gap: .35rem; margin-bottom: .25rem; font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--default-text-color); }
+.tr-why-box > span i { color: rgb(var(--pink-rgb)); font-size: .9rem; }
+.tr-why-box p { font-size: .9rem; color: var(--v2-heading); }
+@media (max-width: 575.98px) {
+  .pp-facts { grid-template-columns: minmax(0, 1fr); }
+}

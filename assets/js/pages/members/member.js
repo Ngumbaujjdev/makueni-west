@@ -107,15 +107,18 @@
       </div>`;
 
     const transfers = p.journey.filter((j) => j.kind.startsWith("transfer_"));
+    // A tile per fact: an icon in its colour (solid for the milestones), the label, the value - or a soft "Not yet".
+    const glance = (icon, color, label, value, sub = "", solid = false, missing = "Not set") =>
+      `<div class="glance-tile" style="--q: var(--${color}-rgb)"><span class="glance-tile-icon${solid && value ? " is-solid" : ""}${color === "secondary" ? " is-dark" : ""}"><i class="${icon}"></i></span><div class="min-w-0"><span class="glance-tile-label">${label}</span>${value ? `<strong>${M.esc(value)}</strong>` : `<span class="glance-tile-none">${missing}</span>`}${sub ? `<small>${M.esc(sub)}</small>` : ""}</div></div>`;
     $("mbSide").innerHTML = `
       <div class="card custom-card">
         <div class="card-header"><div class="card-title">At a glance</div></div>
         <div class="card-body">
-          <div class="mb-glance">
-            <div><span>Member since</span><strong>${p.joined_on ? M.day(p.joined_on) : "-"}</strong></div>
-            <div><span>Part of</span><strong>${p.congregation ? M.CONGREGATIONS[p.congregation].label : "-"}</strong></div>
-            <div><span>Saved</span><strong>${p.saved_on ? M.day(p.saved_on) : "-"}</strong></div>
-            <div><span>Baptised</span><strong>${p.baptised_on ? M.day(p.baptised_on) : "Not yet"}</strong></div>
+          <div class="glance-tiles">
+            ${glance("ri-calendar-check-line", "primary", "Member since", p.joined_on ? M.day(p.joined_on) : null, p.how_joined ? `By ${(M.HOW_JOINED[p.how_joined] || p.how_joined).toLowerCase()}` : "", true)}
+            ${glance(p.congregation ? M.CONGREGATIONS[p.congregation].icon : "ri-community-line", "purple", "Part of", p.congregation ? M.CONGREGATIONS[p.congregation].label : null)}
+            ${glance("ri-star-smile-line", "secondary", "Saved", p.saved_on ? M.day(p.saved_on) : null, "", false, "Not recorded")}
+            ${glance("ri-drop-line", "pink", "Baptised", p.baptised_on ? M.day(p.baptised_on) : null, "", !!p.baptised_on, "Not yet")}
           </div>
         </div>
       </div>
