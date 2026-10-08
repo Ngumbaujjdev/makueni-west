@@ -503,7 +503,7 @@
         </div>
     </div>
     <!-- End Switcher -->
-    <div class="page error-bg" id="particles-js">z
+    <div class="page error-bg" id="particles-js">
         <!-- Start::error-page -->
         <div class="error-page">
             <div class="container">
