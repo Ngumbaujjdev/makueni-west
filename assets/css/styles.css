@@ -38184,3 +38184,74 @@ button.cal-side-item:focus-visible {
 .mb-register-hint { display: flex; align-items: center; flex-wrap: wrap; gap: .3rem; margin-top: .4rem; font-size: .76rem; color: var(--default-text-color); }
 .mb-register-hint i { color: rgb(var(--success-rgb)); }
 .mb-register-hint .btn-link { font-size: .76rem; font-weight: 700; }
+
+/* ==========================================================================
+   Send a message, livelier (2026-10-08) - the pills in two colours (saved
+   messages teal, people purple; pale, solid when picked), "About an event",
+   the When card and the Schedule window, and the real frames for how it
+   reads. No side stripes, no top borders, no gradients; inputs stay plain.
+   ========================================================================== */
+.pb-tpl-chip { display: inline-flex; align-items: center; gap: .15rem; padding: .3rem .8rem; font-size: 12px; font-weight: 600; }
+.pb-tpl-chip.is-tpl { border-color: rgba(var(--primary-rgb), .3); background: rgba(var(--primary-rgb), .08); color: var(--v2-heading); }
+.pb-tpl-chip.is-tpl i { color: var(--primary-color); }
+.pb-tpl-chip.is-tpl:hover { border-color: var(--primary-color); color: var(--v2-heading); }
+.pb-tpl-chip.is-tpl.active, .pb-tpl-chip.is-tpl.active i { background: var(--primary-color); border-color: var(--primary-color); color: #fff; }
+.pb-tpl-chip.is-who { border-color: rgba(var(--purple-rgb), .3); background: rgba(var(--purple-rgb), .08); color: var(--v2-heading); }
+.pb-tpl-chip.is-who:hover { border-color: rgb(var(--purple-rgb)); color: var(--v2-heading); }
+.pb-tpl-chip.is-who b { display: inline-flex; align-items: center; justify-content: center; min-width: 1.25rem; height: 1.25rem; margin-left: .35rem; padding: 0 .3rem; border-radius: 99px; background: rgb(var(--purple-rgb)); color: #fff; font-size: 10.5px; }
+.pb-tpl-chip.is-who.active { background: rgb(var(--purple-rgb)); border-color: rgb(var(--purple-rgb)); color: #fff; }
+.pb-tpl-chip.is-who.active b { background: #fff; color: rgb(var(--purple-rgb)); }
+.pb-token { display: inline-flex; align-items: center; gap: .35rem; padding: .25rem .6rem; border: 1px solid rgba(var(--primary-rgb), .3); border-radius: 99px; background: rgba(var(--primary-rgb), .07); color: var(--v2-heading); font-size: 11.5px; font-weight: 600; }
+.pb-token code { padding: 0 .3rem; border-radius: .3rem; background: rgba(var(--primary-rgb), .14); color: var(--primary-color); font-size: 10.5px; }
+.pb-token:hover { border-color: var(--primary-color); }
+.pb-token.is-event { border-color: rgba(var(--purple-rgb), .3); background: rgba(var(--purple-rgb), .08); }
+.pb-token.is-event i { color: rgb(var(--purple-rgb)); }
+.pb-token.is-event:hover { border-color: rgb(var(--purple-rgb)); }
+#eventTokens { display: contents; }
+
+/* About an event */
+.pb-event-pick { display: inline-flex; align-items: center; gap: .45rem; padding: .45rem .9rem; border: 1px dashed rgba(var(--purple-rgb), .55); border-radius: .7rem; background: rgba(var(--purple-rgb), .05); color: rgb(var(--purple-rgb)); font-size: 13px; font-weight: 600; }
+.pb-event-pick:hover { background: rgba(var(--purple-rgb), .1); }
+.pb-event-chip { display: inline-flex; align-items: center; gap: .7rem; max-width: 100%; padding: .4rem .5rem .4rem .45rem; border: 1px solid rgba(var(--purple-rgb), .3); border-radius: .8rem; background: rgba(var(--purple-rgb), .06); }
+.pb-event-chip strong { display: block; overflow: hidden; font-size: 13px; color: var(--v2-heading); text-overflow: ellipsis; white-space: nowrap; }
+.pb-event-chip small { display: block; font-size: 11.5px; color: var(--default-text-color); }
+.pb-event-x { display: inline-flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem; border: 0; border-radius: 50%; background: transparent; color: var(--default-text-color); }
+.pb-event-x:hover { background: rgba(var(--purple-rgb), .14); color: rgb(var(--purple-rgb)); }
+.pb-ev-date { display: inline-flex; flex: 0 0 2.6rem; flex-direction: column; align-items: center; justify-content: center; width: 2.6rem; height: 2.7rem; border-radius: .6rem; background: rgb(var(--purple-rgb)); color: #fff; line-height: 1; }
+.pb-ev-date b { font-size: 1rem; }
+.pb-ev-date small { margin-top: .15rem; font-size: .62rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.pb-ev-list { display: flex; flex-direction: column; gap: .6rem; }
+.pb-ev-item { display: flex; align-items: center; gap: .85rem; width: 100%; padding: .8rem .9rem; border: 1px solid var(--default-border); border-radius: .85rem; background: var(--custom-white); text-align: start; transition: border-color .15s, box-shadow .15s; }
+.pb-ev-item:hover { border-color: rgba(var(--purple-rgb), .5); box-shadow: 0 4px 14px rgba(15, 23, 42, .06); }
+.pb-ev-item.active { border-color: rgb(var(--purple-rgb)); box-shadow: 0 0 0 3px rgba(var(--purple-rgb), .15); }
+.pb-ev-text { flex: 1; min-width: 0; }
+.pb-ev-text strong { display: block; font-size: .95rem; color: var(--v2-heading); }
+.pb-ev-text small { display: block; font-size: .8rem; color: var(--default-text-color); }
+.pb-ev-item .soft-chip { flex-shrink: 0; }
+
+/* When: a card, and the Schedule window */
+.pb-when-card { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; padding: .85rem 1rem; border: 1px solid var(--default-border); border-radius: .85rem; background: var(--custom-white); }
+.pb-when-card strong { display: block; font-size: .9rem; color: var(--v2-heading); }
+.pb-when-card small { display: block; font-size: .8rem; color: var(--default-text-color); }
+.pb-when-card.is-later { border-color: rgba(var(--primary-rgb), .35); background: rgba(var(--primary-rgb), .05); }
+.pb-when-card.is-later .pb-ev-date { background: var(--primary-color); }
+.pb-sched-picks { grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr)); }
+.pb-sched-picks .ec-choice { align-items: center; padding: .7rem 2.2rem .7rem .75rem; }
+.pb-sched-picks .ec-choice strong { display: block; font-size: .86rem; }
+.pb-sched-picks .ec-choice small { display: block; font-size: .76rem; color: var(--default-text-color); }
+.pb-sched-picks .ec-choice.is-off { opacity: .55; cursor: not-allowed; }
+.pb-sched-picks .ec-choice.is-off:hover { transform: none; }
+.pb-sched-line { display: flex; align-items: center; gap: .55rem; padding: .7rem .9rem; border-radius: .7rem; background: rgba(var(--primary-rgb), .07); font-size: .88rem; color: var(--v2-heading); }
+.pb-sched-line i { color: var(--primary-color); font-size: 1.1rem; }
+.pb-sched-line.is-bad { background: rgba(var(--danger-rgb), .07); }
+.pb-sched-line.is-bad i { color: rgb(var(--danger-rgb)); }
+
+/* How it reads, in the real frames */
+.pb-reads { padding: 1rem .6rem; }
+.pb-reads .cm-phone { max-width: 290px; }
+.pb-reads .cm-phone-screen { min-height: 420px; }
+.pb-reads-seg { min-width: 10rem; }
+@media (max-width: 575.98px) {
+  .pb-when-card > .d-flex { width: 100%; justify-content: flex-start !important; }
+  .pb-ev-item .soft-chip { display: none; }
+}

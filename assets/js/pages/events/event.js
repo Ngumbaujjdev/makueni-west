@@ -125,6 +125,7 @@
       subject: ev.title,
       body: `Dear {name}, you're invited to ${ev.title} on ${when}${ev.venue ? ` at ${ev.venue}` : ""}.${ev.registration_open ? ` Please register ${INIT ? "to join" : "your numbers"} in ${N.Many}.` : ""} - {sender}`,
     });
+    params.set("event", ev.id); // the composer shows it as the event the message is about
     if (ev.open_to === "selected" && ev.invitees?.length) params.set("places", ev.invitees.map((p) => p.id).join(","));
     else params.set("scope", "all");
     return `<a class="btn btn-outline-primary" href="${CTX.siteUrl}/${CTX.level}/messages/new?${params}"><i class="ri-chat-3-line me-1"></i>Invite by message</a>`;
