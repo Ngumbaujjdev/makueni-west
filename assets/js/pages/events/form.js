@@ -44,7 +44,23 @@
 
   // -------------------------------------------------------------- fill the form
   function fillOptions() {
-    $("f_type").innerHTML = `<option value="">Pick one</option>` + Object.entries(ov.types).map(([k, label]) => `<option value="${k}" data-icon="${E.typeIcon(k)}" data-color="${E.typeColor(k)}">${E.esc(label)}</option>`).join("");
+    $("f_type").innerHTML = `<option value="">Pick one</option>` + Object.entries(ov.types).map(([k, label]) => `<option value="${k}">${E.esc(label)}</option>`).join("");
+    // Kind as cards (v1-events' ec-choices): picking one sets the select and counts as a change.
+    $("typeChoices").innerHTML = Object.entries(ov.types)
+      .map(
+        ([k, label]) => `<label class="ec-choice">
+          <input type="radio" name="type_ui" value="${k}">
+          <span class="ec-choice-icon"><i class="${E.typeIcon(k)}"></i></span>
+          <strong>${E.esc(label)}</strong>
+          <span class="ec-choice-tick"><i class="ri-check-line"></i></span>
+        </label>`,
+      )
+      .join("");
+    $("typeChoices").addEventListener("change", (ev) => {
+      if (ev.target.name !== "type_ui") return;
+      $("f_type").value = ev.target.value;
+      $("f_type").dispatchEvent(new Event("change", { bubbles: true }));
+    });
     $("f_audience").innerHTML = Object.entries(ov.audiences).map(([k, label]) => `<option value="${k}">${E.esc(label)}</option>`).join("");
     $("f_open_to").innerHTML = Object.entries(ov.open_to)
       .map(
@@ -65,7 +81,6 @@
       UI.enhanceSelect("f_frequency", { search: false });
       UI.enhanceSelect("f_meeting_day", { search: false });
     }
-    UI.enhanceSelect("f_type");
     UI.enhanceSelect("f_audience", { search: false });
     UI.enhanceSelect("f_invitees", { placeholder: "Pick regions or churches", closeOnSelect: false, search: true });
   }
@@ -122,7 +137,26 @@
     syncDependents();
   }
 
+  /** How long it runs, from the Starts / Ends cards - red when it ends before it starts. */
+  function syncDuration() {
+    const badge = $("whenDuration");
+    const a = new Date(`${$("f_start_date").value}T${$("f_start_time").value || "00:00"}`);
+    const b = new Date(`${$("f_end_date").value}T${$("f_end_time").value || "00:00"}`);
+    if (isNaN(a) || isNaN(b)) return (badge.hidden = true);
+    badge.hidden = false;
+    const mins = Math.round((b - a) / 60000);
+    badge.classList.toggle("is-bad", mins <= 0);
+    if (mins <= 0) return (badge.innerHTML = '<i class="ri-error-warning-line"></i>It ends before it starts');
+    const days = Math.round((new Date($("f_end_date").value) - new Date($("f_start_date").value)) / 86400000) + 1;
+    const hours = Math.floor(mins / 60);
+    const text = days > 1 ? (days >= 14 ? `${Math.round(days / 7)} weeks` : `${days} days`) : hours ? `${hours} hour${hours === 1 ? "" : "s"}${mins % 60 ? ` ${mins % 60} min` : ""}` : `${mins} min`;
+    badge.innerHTML = `<i class="ri-time-line"></i>${text}`;
+  }
+
   function syncDependents() {
+    const kind = document.querySelector(`input[name="type_ui"][value="${$("f_type").value}"]`);
+    document.querySelectorAll('input[name="type_ui"]').forEach((r) => (r.checked = r === kind));
+    syncDuration();
     $("inviteesWrap").hidden = openTo() !== "selected";
     document.querySelectorAll(".ev-choice").forEach((c) => c.classList.toggle("is-on", c.querySelector("input").checked));
     $("regBox").hidden = !reaches();
@@ -221,12 +255,14 @@
       box.innerHTML = "";
     });
     document.querySelectorAll("#eventFormCard .is-invalid").forEach((el) => el.classList.remove("is-invalid"));
+    document.querySelectorAll("#eventFormCard [data-field].has-error").forEach((el) => el.classList.remove("has-error"));
     const byStep = {};
     Object.entries(errors).forEach(([field, msg]) => {
       const key = field.split(".")[0];
       const s = STEP_OF[key] || 1;
       (byStep[s] ||= []).push(Array.isArray(msg) ? msg[0] : msg);
       $(FIELD_IDS[key] || `f_${key}`)?.classList.add("is-invalid");
+      document.querySelector(`#eventFormCard [data-field="${key}"]`)?.classList.add("has-error");
     });
     Object.entries(byStep).forEach(([s, msgs]) => {
       const box = document.querySelector(`[data-errors-for="${s}"]`);

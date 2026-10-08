@@ -191,7 +191,9 @@ const CalendarEventModal = (function () {
     });
   }
 
+  // One colour (2026-10-08): every section of the window in the brand colour.
   function panel(icon, colour, title, body) {
+    colour = "primary";
     return `
       <section class="cal-panel">
         <div class="cal-panel-head"><span class="avatar avatar-sm bg-${colour} ${textOn(colour)}"><i class="${icon}"></i></span><span class="fw-semibold">${title}</span></div>

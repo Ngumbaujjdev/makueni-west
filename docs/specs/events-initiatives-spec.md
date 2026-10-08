@@ -203,6 +203,16 @@ Menu (`ActivitiesAccessSeeder`, DatabaseSeeder phase 31):
   - The organiser records a fee paid per place from Who's coming.
 - **Export** passes `activity_id` through `report-center.js` (`data-activity-id`).
 
+### The form and the way in, round 3 (2026-10-08)
+The form follows v1-events' event wizard, in our one colour:
+- **Kind of event:** cards (`.ec-choices`) that set the hidden select.
+- **When:** Starts → Ends cards (`.ee-when`) with a duration badge that turns red if it ends before it starts.
+- **Registration:** a toggle card (`.ec-toggle`).
+- **Save bar:** stays in view on a long step.
+- **Fields:** every `.intake-form` and `.app-modal` field is tinted with a brand-colour placeholder.
+- **The list:** "Plan an event" / "Start an initiative" is the first tile of our own list, when the role can add one.
+- **Demo data:** `ChurchLifeDemoSeeder` adds conferences, a leadership meeting, a worship night, a revival week, a wedding and a harambee. The finished ones have attendance, fees, ratings and a report-back. There are no money entries, because the demo leaves budgets alone.
+
 ## Initiatives (L2)
 An initiative is an `activities` row with `kind = initiative`. It uses the same visibility, open-to rules, registrations, money and history as an event; what differs is below.
 
