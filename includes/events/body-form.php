@@ -108,6 +108,13 @@ $stepColors = [1 => 'primary', 2 => 'purple', 3 => 'warning', 4 => 'success'];
                                 <label class="form-label" for="f_venue">Venue</label>
                                 <input type="text" class="form-control" id="f_venue" name="venue" maxlength="160" placeholder="e.g. CCI Wote church grounds">
                             </div>
+                            <?php if (! $isInit && $eventsCtx['level'] === 'church' && (hasGlobalAccess() || hasPermission('church.facilities.facilities.book') || hasPermission('church.facilities.facilities.manage'))): ?>
+                            <!-- Facilities (P5): book one of our rooms for the event's times - it moves with the event. -->
+                            <div class="col-md-8" data-field="room_id">
+                                <label class="form-label" for="f_room">Book a room <span class="fw-normal">- optional, for the event's times</span></label>
+                                <select class="form-select" id="f_room" name="room_id"><option value="">No room</option></select>
+                            </div>
+                            <?php endif ?>
                             <div class="col-md-4">
                                 <label class="form-label" for="f_capacity"><?= $isInit ? 'Places for (people)' : 'Room for (people)' ?></label>
                                 <input type="number" class="form-control" id="f_capacity" name="capacity" min="1" placeholder="Optional">

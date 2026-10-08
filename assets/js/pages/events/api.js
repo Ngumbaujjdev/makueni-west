@@ -58,6 +58,8 @@ const EventsAPI = (function () {
     list: (params) => request("GET", "/activities", { params: { kind: KIND, ...params } }),
     overview: (year) => request("GET", "/activities/overview", { params: { kind: KIND, year } }),
     get: (id) => request("GET", `/activities/${id}`),
+    // Facilities (P5): our rooms, for the Book a room select.
+    rooms: () => request("GET", "/facilities/options"),
     create: (body) => request("POST", "/activities", { body: { kind: KIND, ...body } }),
     update: (id, body) => request("PUT", `/activities/${id}`, { body }),
     publish: (id) => request("POST", `/activities/${id}/publish`),

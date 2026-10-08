@@ -44,6 +44,7 @@ function ministriesPageContext(string $level, string $page): array
             'members' => $level === 'church' && $can('members.members.read'),
             'insights' => $level === 'church' && $can('ministries.insights.read'),
             'message' => $level === 'church' && $can('messages.messages.send'),
+            'book_room' => $level === 'church' && ($can('facilities.facilities.book') || $can('facilities.facilities.manage')),
         ],
     ];
 }

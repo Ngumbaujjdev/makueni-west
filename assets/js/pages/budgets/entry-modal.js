@@ -8,7 +8,7 @@
  * with a live preview ("After this, Electricity has KES 800.00 left"),
  * busy/done states, "Record another", and Change / Delete (with Undo).
  *
- *   BudgetsEntryModal.open({ budgetId, direction: "out", entry: null, onSaved })
+ *   BudgetsEntryModal.open({ budgetId, direction: "out", entry: null, onSaved, prefill: {amount, description, counterparty} })
  * ============================================================================
  */
 const BudgetsEntryModal = (function () {
@@ -169,7 +169,7 @@ const BudgetsEntryModal = (function () {
   }
 
   /** Open the window for a budget (and optionally an entry to change). */
-  async function open({ budgetId, direction = "out", entry = null, lineId = null, onSaved = null, activityId = null } = {}) {
+  async function open({ budgetId, direction = "out", entry = null, lineId = null, onSaved = null, activityId = null, prefill = null } = {}) {
     mount();
     const [detail, form] = await Promise.all([BudgetsAPI.get(budgetId), BudgetsAPI.formFor(budgetId)]);
     if (!detail.ok) {
@@ -192,7 +192,8 @@ const BudgetsEntryModal = (function () {
     // Opened from a line's page, the line is already chosen (and its side with it).
     const lineSide = lineId && (inBudget.in.some((l) => l.line_id === lineId) ? "in" : inBudget.out.some((l) => l.line_id === lineId) ? "out" : null);
     // activityId: opened from an event's page - the money is tagged with the event (docs/specs/events-initiatives-spec.md).
-    ctx = { budget: detail.data.budget, lines: inBudget, extra, entry, lineId, activityId, direction: entry?.direction || lineSide || direction, onSaved, deductions: detail.data.deductions || [] };
+    // prefill {amount, description, counterparty}: opened from another page (a repair's cost) - used once, on a new entry.
+    ctx = { budget: detail.data.budget, lines: inBudget, extra, entry, lineId, activityId, prefill, direction: entry?.direction || lineSide || direction, onSaved, deductions: detail.data.deductions || [] };
     fill(entry);
     modal.show();
   }
@@ -244,6 +245,12 @@ const BudgetsEntryModal = (function () {
     document.getElementById("entryDescription").value = entry?.description || "";
     document.getElementById("entryCounterparty").value = entry?.counterparty || "";
     document.getElementById("entryReference").value = entry?.reference || "";
+    if (!entry && ctx.prefill) {
+      if (ctx.prefill.amount) document.getElementById("entryAmount").value = B.amount(ctx.prefill.amount);
+      document.getElementById("entryDescription").value = ctx.prefill.description || "";
+      document.getElementById("entryCounterparty").value = ctx.prefill.counterparty || "";
+      ctx.prefill = null;
+    }
     preview();
     setTimeout(() => document.getElementById("entryAmount").focus(), 300);
   }
