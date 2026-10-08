@@ -90,10 +90,10 @@ const SettingsFields = (function () {
             <input class="form-control" id="testTo" type="${sms ? "tel" : "email"}" placeholder="${sms ? "0712 345 678" : "you@example.com"}">
           </div>
           <div class="col-md-4 d-grid">
-            <button type="button" class="btn btn-success" id="testSend" data-channel="${channel}"><i class="ri-send-plane-line me-1"></i>Send a test</button>
+            <button type="button" class="btn btn-primary" id="testSend" data-channel="${channel}"><i class="ri-send-plane-line me-1"></i>Send a test</button>
           </div>
         </div>
-        <div id="testResult" class="mt-3" aria-live="polite"></div>`,
+        <ul id="testResult" class="cm-results" aria-live="polite"></ul>`,
     });
   }
 
@@ -150,60 +150,80 @@ const SettingsFields = (function () {
     );
   }
 
-  /** Communication (S6b): a test email or SMS sent exactly the way this place's messages go. */
+  /**
+   * Communication (S6b): a test email or SMS sent exactly the way this place's
+   * messages go - v1-events' "Check it works": Email / SMS, the address beside
+   * Send, and a result line under it (the last three of this visit).
+   */
   function placeTestCard() {
     return card({
       id: "card-test",
       title: "Check it works",
       icon: "ri-send-plane-line",
       colour: "success",
-      sub: "Sends a test the way your real messages go - save your changes first.",
+      sub: "Sends a test the way your real messages go",
       body: `
-        <div class="row g-2 align-items-end">
-          <div class="col-md-3">
-            <label class="form-label" for="testChannel">Send a test</label>
-            <select class="form-select" id="testChannel"><option value="email">Email</option><option value="sms">SMS</option></select>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label" for="testTo" id="testToLabel">Email address</label>
-            <input class="form-control" id="testTo" type="email" placeholder="you@example.com">
-          </div>
-          <div class="col-md-3 d-grid">
-            <button type="button" class="btn btn-success" id="testSend" data-channel="place"><i class="ri-send-plane-line me-1"></i>Send a test</button>
-          </div>
+        <input type="hidden" id="testChannel" value="email">
+        <div class="pb-segment cm-test-seg mb-3" role="radiogroup" aria-label="Send a test by">
+          <input type="radio" name="testChannelUi" id="testChEmail" value="email" checked><label for="testChEmail"><i class="ri-mail-line me-1"></i>Email</label>
+          <input type="radio" name="testChannelUi" id="testChSms" value="sms"><label for="testChSms"><i class="ri-message-3-line me-1"></i>SMS</label>
         </div>
-        <div id="testResult" class="mt-3" aria-live="polite"></div>`,
+        <label class="form-label" for="testTo" id="testToLabel">Email address</label>
+        <div class="cm-inline">
+          <input class="form-control" id="testTo" type="email" placeholder="you@example.com">
+          <button type="button" class="btn btn-primary" id="testSend" data-channel="place"><i class="ri-send-plane-line me-1"></i>Send test</button>
+        </div>
+        <div class="cm-note is-primary mt-2"><i class="ri-information-line"></i><span>Save your changes first - the test uses what's saved.</span></div>
+        <ul id="testResult" class="cm-results" aria-live="polite"></ul>`,
     });
+  }
+
+  /** Your own email and phone, to fill in "Check it works". */
+  function myContact() {
+    try {
+      const u = JSON.parse(localStorage.getItem(Constants.STORAGE_KEYS.USER_DATA) || "null");
+      return { email: u?.email || "", sms: u?.phone || u?.phone_number || "" };
+    } catch (e) {
+      return { email: "", sms: "" };
+    }
   }
 
   function wireTest(root) {
     const btn = root.querySelector("#testSend");
     if (!btn) return;
     const channelSel = root.querySelector("#testChannel");
+    const out = root.querySelector("#testResult");
+    const me = myContact();
+    const to = root.querySelector("#testTo");
+    const setChannel = (ch) => {
+      const sms = ch === "sms";
+      channelSel.value = ch;
+      root.querySelector("#testToLabel").textContent = sms ? "Phone number" : "Email address";
+      to.type = sms ? "tel" : "email";
+      to.placeholder = sms ? "0712 345 678" : "you@example.com";
+      to.value = me[sms ? "sms" : "email"] || "";
+    };
     if (channelSel) {
-      UI.enhanceSelect(channelSel);
-      channelSel.addEventListener("change", () => {
-        const sms = channelSel.value === "sms";
-        root.querySelector("#testToLabel").textContent = sms ? "Phone number" : "Email address";
-        const to = root.querySelector("#testTo");
-        to.type = sms ? "tel" : "email";
-        to.placeholder = sms ? "0712 345 678" : "you@example.com";
-        to.value = "";
-      });
+      root.querySelectorAll('input[name="testChannelUi"]').forEach((r) => r.addEventListener("change", () => setChannel(r.value)));
+      setChannel("email");
+    } else if (btn.dataset.channel && !to.value) {
+      to.value = me[btn.dataset.channel === "sms" ? "sms" : "email"] || "";
     }
+    const result = (ok, message) => {
+      const time = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+      out.insertAdjacentHTML(
+        "afterbegin",
+        `<li class="cm-result ${ok ? "is-ok" : "is-bad"}"><span class="ev-tile is-sm" style="--q: var(--${ok ? "success" : "danger"}-rgb)"><i class="${ok ? "ri-check-line" : "ri-close-line"}"></i></span><span class="flex-fill">${esc(message)}</span><small>${time}</small></li>`,
+      );
+      [...out.children].slice(3).forEach((li) => li.remove());
+    };
     btn.addEventListener("click", async () => {
-      const to = root.querySelector("#testTo").value.trim();
-      const out = root.querySelector("#testResult");
-      if (!to) {
-        out.innerHTML = '<div class="soft-chip soft-danger">Enter where to send it.</div>';
-        return;
-      }
+      const where = to.value.trim();
+      if (!where) return result(false, "Enter where to send it.");
       UI.setButtonLoading(btn, "Sending…");
-      const res = channelSel ? await SettingsAPI.placeTest(channelSel.value, to) : await SettingsAPI.testSend(btn.dataset.channel, to);
+      const res = channelSel ? await SettingsAPI.placeTest(channelSel.value, where) : await SettingsAPI.testSend(btn.dataset.channel, where);
       UI.restoreButton(btn);
-      out.innerHTML = `<div class="${res.ok ? "soft-success" : "soft-danger"} rounded p-2 d-flex align-items-start gap-2">
-        <span class="avatar avatar-xs ${res.ok ? "bg-success" : "bg-danger"} text-white flex-shrink-0"><i class="${res.ok ? "ri-check-line" : "ri-close-line"}"></i></span>
-        <span>${esc(res.message)}</span></div>`;
+      result(res.ok, res.message);
     });
   }
 
@@ -323,7 +343,8 @@ const SettingsFields = (function () {
       // The rail lists only the cards on show.
       let linksReady = false;
       const links = () => [
-        ...[...root.querySelectorAll(".card[id^='card-']")].filter((el) => !el.hidden && el.id !== "card-test" && el.id !== "card-tools").map((el) => ({ id: el.id, label: el.querySelector(".card-title")?.textContent.trim() || "" })),
+        // Cards a section adds itself (extra.links, e.g. Messages) are listed once, at their own place.
+        ...[...root.querySelectorAll(".card[id^='card-']")].filter((el) => !el.hidden && el.id !== "card-test" && el.id !== "card-tools" && !(extra?.links || []).some((l) => l.id === el.id)).map((el) => ({ id: el.id, label: el.querySelector(".card-title")?.textContent.trim() || "" })),
         ...(payload.section?.test ? [{ id: "card-test", label: "Check it works" }] : []),
         ...(payload.section?.tools?.length ? [{ id: "card-tools", label: "Housekeeping" }] : []),
         ...(extra?.links || []),

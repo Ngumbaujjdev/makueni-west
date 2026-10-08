@@ -517,3 +517,17 @@ S4a (PR #170) covers email, SMS and Health; S4b covers the rest.
 - [ ] A paybill or till number that isn't 5 to 7 digits is refused, and the error names the field as the screen does.
 - [ ] The Overview checklist at a region and the diocese includes Payment details, and the rail shows a dot until they're filled in. Regional and Diocese Treasurers can change them.
 - Deferred, not built: a currency setting (the system is KES only), church payment details and receipt footer (nothing prints receipts or shows a church's payment details yet), and the church/region Communication section (nothing sends email or SMS on a place's behalf yet; every current message is an account message from the diocese's Email/SMS settings).
+
+### Communication, in the v1-events look (2026-10-08)
+The same registry form and save path (`fields.js`; every input keeps its `data-key`), arranged by `sections/communication.js`:
+- **What applies now** (v1's "ns-what"): email and SMS side by side, each showing:
+  - how it goes (through the diocese, or your own account);
+  - the From line or sender;
+  - the signature;
+  - whether it really sends (solid "Sends for real" / pale "Test inbox / log only").
+- **How we send:** two big choice cards over the `comms.mode` select, "Through the diocese" (recommended) and "Our own account". Locked shows as view only. The diocese keeps its "Lock for the places below" switch.
+- **How it looks:** the fields beside a live preview (an email header, and the phone with the sender and the signature, with the part count). The signature has a 30-character counter.
+- **Check it works** (the shared `placeTestCard`): Email / SMS segment, the address prefilled with yours, Send beside it, and a green or red result line under it (the last three of this visit).
+- **Message log tiles:** 2×2, so they're never squeezed. "Log only" is a pale pill; sent and failed are solid.
+- The rail lists a section's extra cards (Messages) once.
+
