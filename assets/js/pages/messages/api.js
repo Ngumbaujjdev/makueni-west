@@ -55,7 +55,29 @@ const MessagesAPI = (function () {
     }
   }
 
+  /**
+   * Upcoming published events to write about: ours and those shared with us,
+   * this year and next (the activities list is by year). Resolves to a list,
+   * or null when the role can't see events.
+   */
+  async function events() {
+    const y = new Date().getFullYear();
+    const calls = [y, y + 1].flatMap((year) => ["own", "invited"].map((scope) => request("GET", "/activities", { params: { kind: "event", year, scope } })));
+    const res = await Promise.all(calls);
+    if (res.every((r) => !r.ok)) return null;
+    const now = Date.now();
+    const seen = new Set();
+    return res
+      .filter((r) => r.ok)
+      .flatMap((r) => r.data || [])
+      .filter((e) => e.status === "published" && new Date(e.ends_at || e.starts_at).getTime() > now && !seen.has(e.id) && seen.add(e.id))
+      .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
+  }
+
   return {
+    events,
+    /** The real email (and signed SMS) for this text - Settings > Communication's template preview. */
+    emailPreview: (subject, body) => request("POST", "/messages/templates/preview", { body: { subject, body } }),
     options: () => request("GET", "/messages/options"),
     preview: (body) => request("POST", "/messages/preview", { body }),
     send: (body) => request("POST", "/messages", { body }),

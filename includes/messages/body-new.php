@@ -4,6 +4,9 @@
 // placeholders and SMS counter, a test send), who gets it on the right (with
 // the live counter and how it reads on a phone), then Review & send ->
 // sending -> done. Filled in by assets/js/pages/messages/new.js.
+// 2026-10-08: pills in two colours (saved messages teal, people purple), "About
+// an event" (pick one of our events - its name, date and venue go in), Schedule
+// in its own window, and how it reads in the real phone / mail-app frames.
 ?>
 <div class="card custom-card pb-composer" id="composer">
     <div class="row g-0">
@@ -20,6 +23,10 @@
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <div class="pb-section-title mb-0">The message</div>
                     <a href="<?= $messagesCtx['baseUrl'] ?>/?tab=saved" class="fs-11 pb-footer-link"><i class="ri-edit-line me-1"></i>Manage saved messages</a>
+                </div>
+                <div class="pb-event mb-3" id="eventRow" hidden>
+                    <div class="fs-12 text-muted mb-1">About an event <span class="opacity-75">- pick one and its name, date and venue go in for you.</span></div>
+                    <div class="d-flex flex-wrap align-items-center gap-2" id="eventPicked"></div>
                 </div>
                 <div class="mb-3">
                     <div class="fs-12 text-muted mb-1">Start from a saved message <span class="opacity-75">- or write your own. You can change it after.</span></div>
@@ -39,9 +46,10 @@
                     <div class="placeholder-chips mt-2">
                         <div class="text-muted fs-11 mb-1"><i class="ri-code-s-slash-line me-1"></i>Insert a placeholder - it's replaced for each person when sent:</div>
                         <div class="d-flex flex-wrap align-items-center gap-1">
-                            <button type="button" class="btn btn-light border btn-sm py-0 px-2 fs-11" data-token="{name}" title="{name} - e.g. Stephen">Their name</button>
-                            <button type="button" class="btn btn-light border btn-sm py-0 px-2 fs-11" data-token="{place}" title="{place} - their church or region">Their place</button>
-                            <button type="button" class="btn btn-light border btn-sm py-0 px-2 fs-11" data-token="{sender}" title="{sender} - who it's from">Who it's from</button>
+                            <button type="button" class="pb-token" data-token="{name}" title="{name} - e.g. Stephen"><code>{name}</code>Their name</button>
+                            <button type="button" class="pb-token" data-token="{place}" title="{place} - their church or region"><code>{place}</code>Their place</button>
+                            <button type="button" class="pb-token" data-token="{sender}" title="{sender} - who it's from"><code>{sender}</code>Who it's from</button>
+                            <span id="eventTokens" class="d-contents"></span>
                         </div>
                     </div>
                 </div>
@@ -90,24 +98,19 @@
                 <div id="counterNotes"></div>
             </div>
 
-            <div class="pb-section-title mt-4">How it reads</div>
-            <div class="nw-phone">
-                <div class="nw-phone-from" id="phoneFrom"></div>
-                <div class="nw-bubble" id="phoneBubble"></div>
+            <div class="d-flex align-items-center justify-content-between gap-2 mt-4 mb-2">
+                <div class="pb-section-title mb-0">How it reads</div>
+                <div class="pb-segment pb-reads-seg" id="readsSeg" role="radiogroup" aria-label="Show it as" hidden>
+                    <input type="radio" name="readsUi" id="readsPhone" value="phone" checked><label for="readsPhone"><i class="ri-message-2-line me-1"></i>SMS</label>
+                    <input type="radio" name="readsUi" id="readsEmail" value="email"><label for="readsEmail"><i class="ri-mail-line me-1"></i>Email</label>
+                </div>
             </div>
+            <div class="cm-pv-stage pb-reads" id="readsPhoneStage"></div>
+            <div class="cm-pv-stage pb-reads" id="readsEmailStage" hidden></div>
             <div class="nw-seg" id="phoneSeg"></div>
 
             <div class="pb-section-title mt-4">When</div>
-            <div class="pb-segment" role="radiogroup" aria-label="When">
-                <input type="radio" name="whenUi" id="whenNow" value="now" checked>
-                <label for="whenNow"><i class="ri-send-plane-line me-1"></i>Send now</label>
-                <input type="radio" name="whenUi" id="whenLater" value="later">
-                <label for="whenLater"><i class="ri-time-line me-1"></i>Schedule</label>
-            </div>
-            <div class="mt-2" id="laterWrap" hidden>
-                <label class="form-label fs-12 mb-1" for="sendAtIn">Send on</label>
-                <input type="datetime-local" class="form-control form-control-sm" id="sendAtIn">
-            </div>
+            <div class="pb-when" id="whenBox" aria-live="polite"></div>
         </div>
     </div>
 
@@ -169,6 +172,57 @@
                 <div class="modal-footer border-0 pt-0 px-4 pb-4 justify-content-center">
                     <button type="button" class="btn btn-primary" id="pbErrorBackBtn"><i class="ri-arrow-left-line me-1"></i>Back to edit</button>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- About an event: pick one of our upcoming events (2026-10-08) -->
+<div class="modal fade app-modal cm-modal" id="evPickModal" tabindex="-1" aria-labelledby="evPickTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="app-modal-icon bg-purple text-white"><i class="ri-calendar-event-line"></i></span>
+                <div class="flex-fill" style="min-width:0"><h5 class="modal-title" id="evPickTitle">Which event is it about?</h5><div class="app-modal-subtitle">Its name, date, time and venue go into the message for you</div></div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                    <span class="input-group-text"><i class="ri-search-line"></i></span>
+                    <input type="search" class="form-control" id="evPickSearch" placeholder="Search events" aria-label="Search events">
+                </div>
+                <div class="pb-ev-list" id="evPickList"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Schedule: quick picks, the event's own times, or a set day and time (2026-10-08) -->
+<div class="modal fade app-modal cm-modal" id="schedModal" tabindex="-1" aria-labelledby="schedTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="app-modal-icon bg-primary text-white"><i class="ri-time-line"></i></span>
+                <div class="flex-fill" style="min-width:0"><h5 class="modal-title" id="schedTitle">When should it go out?</h5><div class="app-modal-subtitle">From 5 minutes to 90 days ahead - it sends by itself at that time</div></div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="pb-sub">Quick picks</div>
+                <div class="ec-choices pb-sched-picks" id="schedPicks" role="radiogroup" aria-label="Quick picks"></div>
+                <div id="schedEventWrap" hidden>
+                    <div class="pb-sub mt-3" id="schedEventTitle">Around the event</div>
+                    <div class="ec-choices is-varied pb-sched-picks" id="schedEventPicks" role="radiogroup" aria-label="Around the event"></div>
+                </div>
+                <div class="pb-sub mt-3">Or pick a day and time</div>
+                <div class="row g-2">
+                    <div class="col-sm-7"><label class="form-label fs-12 mb-1" for="schedDate">Day</label><input type="date" class="form-control" id="schedDate"></div>
+                    <div class="col-sm-5"><label class="form-label fs-12 mb-1" for="schedTime">Time</label><input type="time" class="form-control" id="schedTime" step="300"></div>
+                </div>
+                <div class="pb-sched-line mt-3" id="schedLine"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light border me-auto" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="schedSave" disabled><i class="ri-time-line me-1"></i>Schedule it</button>
             </div>
         </div>
     </div>

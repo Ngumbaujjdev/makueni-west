@@ -12,6 +12,12 @@
  * picked) by role and/or their own contact; typed numbers or emails. It can be
  * opened filled in from an event ("Invite by message"), the reports below
  * ("Remind") or a saved message (?template=).
+ *
+ * 2026-10-08: pills in two colours - saved messages teal, people purple;
+ * "About an event": one of our upcoming events fills [event], [date], [time]
+ * and [venue] in (and ?event= opens with it); Schedule in its own window
+ * (quick picks, the event's own times, or a set day and time, 5 minutes to 90
+ * days ahead); how it reads in the real phone and mail-app frames.
  * ============================================================================
  */
 (function () {
@@ -42,7 +48,12 @@
     template: null,
     when: "now",
     sendAt: "",
+    event: null,
   };
+  let events = null; // upcoming events we can write about (null: the role can't see events)
+  let frames = { sender: "", signature: "", from: "", html: "", subject: "" };
+  let framesTimer = null;
+  let readsView = "phone";
   const HINTS = {
     app: ["Only in the app", "The Inbox and the bell of everyone with a login."],
     sms: ["SMS", "And in the app for those with a login."],
@@ -95,7 +106,7 @@
 
   // ================================================================ the message
   function renderTemplates() {
-    const chip = (id, label, icon) => `<button type="button" class="pb-tpl-chip${s.template === id ? " active" : ""}" data-tpl="${id ?? ""}"><i class="${icon} me-1"></i>${M.esc(label)}</button>`;
+    const chip = (id, label, icon) => `<button type="button" class="pb-tpl-chip ${id === null ? "is-plain" : "is-tpl"}${s.template === id ? " active" : ""}" data-tpl="${id ?? ""}"><i class="${icon} me-1"></i>${M.esc(label)}</button>`;
     $("tplChips").innerHTML = opts.templates.length
       ? opts.templates.map((t) => chip(t.id, t.name, M.CHANNELS[t.channel]?.icon || "ri-bookmark-line")).join("") + chip(null, "Write my own", "ri-edit-line")
       : `<span class="fs-12 text-muted">No saved messages yet - use "Save for later use" below to keep one.</span>`;
@@ -135,7 +146,7 @@
 
   // ================================================================ who gets it
   const roleChip = (value, label, count, on, group) =>
-    `<button type="button" class="pb-tpl-chip${on ? " active" : ""}" data-chip="${group}" data-value="${M.esc(value)}" aria-pressed="${on}">${M.esc(label)}${count != null ? `<b>${count}</b>` : ""}</button>`;
+    `<button type="button" class="pb-tpl-chip is-who${on ? " active" : ""}" data-chip="${group}" data-value="${M.esc(value)}" aria-pressed="${on}">${M.esc(label)}${count != null ? `<b>${count}</b>` : ""}</button>`;
 
   function renderWho() {
     const b = opts.below;
@@ -245,6 +256,7 @@
     clearTimeout(previewTimer);
     $("pbCounterSpin").classList.remove("d-none");
     renderPhone();
+    queueFrames();
     previewTimer = setTimeout(loadPreview, 450);
   }
 
@@ -283,13 +295,289 @@
       .replaceAll("{place}", opts.place.name)
       .replaceAll("{sender}", opts.place.name);
 
-  /** v1's template writer phone: the message as it lands, and how many texts it takes. */
+  // ================================================================ how it reads: the real frames
+  const F = window.MessageFrames;
+
+  /** The phone (and, for email, the mail app) as people really see it. */
   function renderPhone() {
-    $("phoneFrom").innerHTML = `<i class="${M.CHANNELS[s.channel].icon} me-1"></i>${M.esc(opts.place.name)}`;
-    $("phoneBubble").textContent = (email() || s.channel === "app") && s.subject ? `${s.subject}\n\n${sample()}` : sample();
-    const p = M.smsParts(sample());
+    if (!$("readsPhoneStage").firstElementChild) $("readsPhoneStage").innerHTML = F.phoneHtml({ sender: frames.sender || opts.place.name, time: nowTime() });
+    const stage = $("readsPhoneStage");
+    const text = (email() || s.channel === "app") && s.subject ? `${s.subject}\n\n${sample()}` : sample();
+    const signed = sms() && frames.signature ? `${text}\n- ${frames.signature}` : text;
+    stage.querySelector('[data-pv="bubble"]').textContent = signed;
+    stage.querySelector('[data-pv="sender"]').textContent = s.channel === "app" ? "In the app" : frames.sender || opts.place.name;
+    stage.querySelector('[data-pv="initials"]').innerHTML = s.channel === "app" ? '<i class="ri-notification-3-line"></i>' : F.initials(frames.sender || opts.place.name);
+    const p = M.smsParts(signed);
     $("phoneSeg").className = `nw-seg${sms() && p.parts > 1 ? " is-over" : ""}`;
     $("phoneSeg").innerHTML = sms() ? `<b>${p.characters}</b> characters · <b>${p.parts}</b> ${p.parts === 1 ? "text" : "texts"} each` : `<b>${p.characters}</b> characters`;
+    // SMS and email: a toggle; email only: the mail app.
+    $("readsSeg").hidden = s.channel !== "both";
+    const view = s.channel === "email" ? "email" : s.channel === "both" ? readsView : "phone";
+    $("readsPhoneStage").hidden = view !== "phone";
+    $("readsEmailStage").hidden = view !== "email";
+    $("phoneSeg").hidden = view !== "phone";
+  }
+
+  const nowTime = () => new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+
+  /** The real email for what's written (debounced) - and once, the sender ID and the SMS signature. */
+  function queueFrames() {
+    clearTimeout(framesTimer);
+    framesTimer = setTimeout(loadFrames, 500);
+  }
+  async function loadFrames() {
+    if (!email()) return;
+    const res = await MessagesAPI.emailPreview(s.subject || "", s.body || "");
+    if (!res.ok) return;
+    const d = res.data;
+    const m = String(d.from || "").match(/^(.*?)\s*<([^>]*)>$/);
+    if (!$("readsEmailStage").firstElementChild) {
+      $("readsEmailStage").innerHTML = F.mailHtml({ subject: d.subject, fromName: m ? m[1] : d.from, fromAddr: m ? m[2] : "", to: preview?.names?.[0] || "Stephen Mutua", time: nowTime() });
+      F.autoFit($("readsEmailStage").querySelector('[data-pv="frame"]'));
+    }
+    const stage = $("readsEmailStage");
+    stage.querySelector('[data-pv="subject"]').textContent = d.subject;
+    stage.querySelector('[data-pv="frame"]').srcdoc = d.html;
+  }
+  async function loadSender() {
+    const res = await MessagesAPI.emailPreview("", "x");
+    if (!res.ok) return;
+    frames.sender = res.data.sender || "";
+    const t = res.data.sms?.text || "";
+    frames.signature = t.startsWith("x\n- ") ? t.slice(4) : "";
+    renderPhone();
+  }
+
+  // ================================================================ about an event
+  const dayName = (d) => d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  const shortDay = (d) => d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  const clock = (d) => d.toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit", hour12: true });
+  const dateTile = (d) => `<span class="pb-ev-date"><b>${d.getDate()}</b><small>${d.toLocaleDateString("en-GB", { month: "short" })}</small></span>`;
+  function inWords(d) {
+    const mins = Math.round((d - Date.now()) / 60000);
+    if (mins < 60) return `in ${mins} minute${mins === 1 ? "" : "s"}`;
+    if (mins < 60 * 24) {
+      const h = Math.round(mins / 60);
+      return `in ${h} hour${h === 1 ? "" : "s"}`;
+    }
+    const days = Math.round((new Date(d).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000);
+    return days === 1 ? "tomorrow" : `in ${days} days`;
+  }
+  const evFacts = (ev) => {
+    const d = new Date(ev.starts_at);
+    return { title: ev.title, day: dayName(d), time: clock(d), venue: ev.venue || "" };
+  };
+
+  function renderEventRow() {
+    $("eventRow").hidden = !events;
+    if (!events) return;
+    if (!s.event) {
+      $("eventPicked").innerHTML = `<button type="button" class="pb-event-pick" id="eventPickBtn"><i class="ri-calendar-event-line"></i>Pick an event</button><span class="fs-12 text-muted">${events.length ? `${events.length} coming up` : "No upcoming events"}</span>`;
+    } else {
+      const d = new Date(s.event.starts_at);
+      $("eventPicked").innerHTML = `
+        <div class="pb-event-chip">${dateTile(d)}<span class="min-w-0"><strong>${M.esc(s.event.title)}</strong><small>${M.esc(shortDay(d))} · ${M.esc(clock(d))}${s.event.venue ? ` · ${M.esc(s.event.venue)}` : ""}</small></span>
+          <button type="button" class="pb-event-x" id="eventClear" aria-label="Not about this event"><i class="ri-close-line"></i></button></div>
+        <button type="button" class="btn btn-sm btn-link px-1" id="eventPickBtn">Change</button>`;
+    }
+    $("eventPickBtn")?.addEventListener("click", openEvents);
+    $("eventClear")?.addEventListener("click", () => {
+      s.event = null;
+      renderEventRow();
+      renderEventTokens();
+    });
+  }
+
+  function renderEventTokens() {
+    if (!s.event) {
+      $("eventTokens").innerHTML = "";
+      return;
+    }
+    const f = evFacts(s.event);
+    $("eventTokens").innerHTML = [["Event name", f.title], ["Date", f.day], ["Time", f.time], ...(f.venue ? [["Venue", f.venue]] : [])]
+      .map(([l, v]) => `<button type="button" class="pb-token is-event" data-insert="${M.esc(v)}" title="${M.esc(v)}"><i class="ri-calendar-event-line"></i>${l}</button>`)
+      .join("");
+    $("eventTokens").querySelectorAll("[data-insert]").forEach((b) => b.addEventListener("click", () => insertToken(b.dataset.insert)));
+  }
+
+  /** The event's name, day, time and venue go where the message says [event], [date], [time], [venue]. */
+  function pickEvent(ev, { fill = true } = {}) {
+    s.event = ev;
+    if (fill) {
+      const f = evFacts(ev);
+      const put = (t) => t.replace(/\[event\]/gi, f.title).replace(/\[date\]/gi, f.day).replace(/\[time\]/gi, f.time).replace(/\[venue\]/gi, f.venue || "the venue (to be confirmed)");
+      if (!s.body.trim()) {
+        s.body = `Dear {name},\n\nYou are invited to ${f.title} on ${f.day} at ${f.time}${f.venue ? `, ${f.venue}` : ""}.\n\n{sender}`;
+        if (!s.subject.trim()) s.subject = f.title;
+      } else {
+        s.body = put(s.body);
+        s.subject = put(s.subject);
+      }
+      $("subjectIn").value = s.subject;
+      $("bodyIn").value = s.body;
+      count();
+      queuePreview();
+    }
+    renderEventRow();
+    renderEventTokens();
+  }
+
+  let evModal = null;
+  function openEvents() {
+    const draw = () => {
+      const q = $("evPickSearch").value.trim().toLowerCase();
+      const list = events.filter((e) => !q || `${e.title} ${e.venue || ""} ${e.owner?.name || ""}`.toLowerCase().includes(q));
+      $("evPickList").innerHTML = list.length
+        ? list
+            .map((e) => {
+              const d = new Date(e.starts_at);
+              const from = e.relation === "own" ? "Ours" : `From ${e.owner?.name || "above"}`;
+              return `<button type="button" class="pb-ev-item${s.event?.id === e.id ? " active" : ""}" data-ev="${e.id}">${dateTile(d)}
+                <span class="pb-ev-text"><strong>${M.esc(e.title)}</strong><small>${M.esc(shortDay(d))} · ${M.esc(clock(d))}${e.venue ? ` · ${M.esc(e.venue)}` : ""}</small><small>${M.esc(e.type_label || "Event")} · ${M.esc(from)}</small></span>
+                <span class="soft-chip soft-purple">${inWords(d)}</span></button>`;
+            })
+            .join("")
+        : M.empty("ri-calendar-event-line", q ? "No event matches" : "No upcoming events", q ? "Try another word." : "Published events of yours, and those shared with you, show here.", "purple");
+    };
+    if (!evModal) {
+      evModal = new bootstrap.Modal($("evPickModal"));
+      $("evPickSearch").addEventListener("input", draw);
+      $("evPickList").addEventListener("click", (e) => {
+        const b = e.target.closest("[data-ev]");
+        if (!b) return;
+        pickEvent(events.find((x) => x.id === Number(b.dataset.ev)));
+        evModal.hide();
+      });
+    }
+    $("evPickSearch").value = "";
+    draw();
+    evModal.show();
+  }
+
+  // ================================================================ when: now, or scheduled in its own window
+  const MIN_AHEAD = 5 * 60000;
+  const MAX_AHEAD = 90 * 86400000;
+  const pad = (n) => String(n).padStart(2, "0");
+  const toLocal = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const at = (base, days, h, m = 0) => {
+    const d = new Date(base);
+    d.setDate(d.getDate() + days);
+    d.setHours(h, m, 0, 0);
+    return d;
+  };
+  const problem = (d) => {
+    if (!d || isNaN(d)) return "Pick a day and a time.";
+    const ahead = d - Date.now();
+    if (ahead < 0) return "That time has passed.";
+    if (ahead < MIN_AHEAD) return "Give it at least 5 minutes from now.";
+    if (ahead > MAX_AHEAD) return "Up to 90 days ahead.";
+    return null;
+  };
+  const nextWeekday = (wd, h) => {
+    for (let i = 0; i < 8; i++) {
+      const d = at(new Date(), i, h);
+      if (d.getDay() === wd && d - Date.now() > MIN_AHEAD) return d;
+    }
+    return at(new Date(), 7, h);
+  };
+
+  function renderWhen() {
+    if (s.when !== "later" || !s.sendAt) {
+      $("whenBox").innerHTML = `
+        <div class="pb-when-card">
+          <span class="ev-tile is-soft" style="--q: var(--primary-rgb)"><i class="ri-send-plane-line"></i></span>
+          <div class="flex-fill min-w-0"><strong>Sends straight away</strong><small>As soon as you review and confirm it.</small></div>
+          <button type="button" class="btn btn-sm btn-outline-primary text-nowrap" id="whenSchedule"><i class="ri-time-line me-1"></i>Schedule</button>
+        </div>`;
+      $("whenSchedule").addEventListener("click", openSchedule);
+      return;
+    }
+    const d = new Date(s.sendAt);
+    $("whenBox").innerHTML = `
+      <div class="pb-when-card is-later">
+        ${dateTile(d)}
+        <div class="flex-fill min-w-0"><strong>Scheduled · ${M.esc(shortDay(d))}, ${M.esc(clock(d))}</strong><small>${inWords(d)}${problem(d) ? ` · <span class="text-danger">${problem(d)}</span>` : ""}</small></div>
+        <div class="d-flex flex-wrap gap-1 justify-content-end">
+          <button type="button" class="btn btn-sm btn-light border" id="whenChange"><i class="ri-edit-line me-1"></i>Change</button>
+          <button type="button" class="btn btn-sm btn-light border" id="whenNowBtn">Send now instead</button>
+        </div>
+      </div>`;
+    $("whenChange").addEventListener("click", openSchedule);
+    $("whenNowBtn").addEventListener("click", () => {
+      s.when = "now";
+      s.sendAt = "";
+      renderWhen();
+    });
+  }
+
+  let schedModal = null;
+  function openSchedule() {
+    const tile = (d, icon, label, name) => {
+      const bad = problem(d);
+      return `<label class="ec-choice${bad ? " is-off" : ""}"${name === "ev" ? ' style="--q: var(--purple-rgb)"' : ""} title="${bad || ""}">
+        <input type="radio" name="schedPick" value="${toLocal(d)}"${bad ? " disabled" : ""}${s.sendAt === toLocal(d) ? " checked" : ""}>
+        <span class="ec-choice-icon"><i class="${icon}"></i></span>
+        <span class="min-w-0"><strong>${label}</strong><small>${bad ? M.esc(bad) : `${M.esc(shortDay(d))} · ${M.esc(clock(d))}`}</small></span>
+        <span class="ec-choice-tick"><i class="ri-check-line"></i></span></label>`;
+    };
+    const soon = new Date(Math.ceil((Date.now() + 3600000) / 300000) * 300000);
+    $("schedPicks").innerHTML = [
+      [soon, "ri-timer-line", "In an hour"],
+      [at(new Date(), 0, 18), "ri-moon-line", "This evening"],
+      [at(new Date(), 1, 8), "ri-sun-line", "Tomorrow morning"],
+      [nextWeekday(6, 9), "ri-calendar-line", "Saturday morning"],
+      [nextWeekday(0, 13), "ri-home-heart-line", "Sunday, after service"],
+    ]
+      .map(([d, i, l]) => tile(d, i, l, "q"))
+      .join("");
+    $("schedEventWrap").hidden = !s.event;
+    if (s.event) {
+      const st = new Date(s.event.starts_at);
+      $("schedEventTitle").textContent = `Around ${s.event.title}`;
+      $("schedEventPicks").innerHTML = [
+        [at(st, -7, 18), "ri-calendar-2-line", "A week before"],
+        [at(st, -1, 18), "ri-notification-3-line", "The day before"],
+        [at(st, 0, 7), "ri-alarm-line", "The morning of"],
+      ]
+        .map(([d, i, l]) => tile(d, i, l, "ev"))
+        .join("");
+    }
+    const start = s.sendAt ? new Date(s.sendAt) : at(new Date(), 1, 8);
+    $("schedDate").value = toLocal(start).slice(0, 10);
+    $("schedTime").value = toLocal(start).slice(11);
+    $("schedDate").min = toLocal(new Date()).slice(0, 10);
+    $("schedDate").max = toLocal(new Date(Date.now() + MAX_AHEAD)).slice(0, 10);
+    if (!schedModal) {
+      schedModal = new bootstrap.Modal($("schedModal"));
+      $("schedModal").addEventListener("change", (e) => {
+        if (e.target.name === "schedPick") {
+          $("schedDate").value = e.target.value.slice(0, 10);
+          $("schedTime").value = e.target.value.slice(11);
+        } else if (e.target.id === "schedDate" || e.target.id === "schedTime") {
+          $("schedModal").querySelectorAll('input[name="schedPick"]').forEach((r) => (r.checked = r.value === `${$("schedDate").value}T${$("schedTime").value}`));
+        }
+        schedLine();
+      });
+      $("schedTime").addEventListener("input", schedLine);
+      $("schedSave").addEventListener("click", () => {
+        s.when = "later";
+        s.sendAt = `${$("schedDate").value}T${$("schedTime").value}`;
+        renderWhen();
+        schedModal.hide();
+      });
+    }
+    schedLine();
+    schedModal.show();
+  }
+
+  function schedLine() {
+    const d = $("schedDate").value && $("schedTime").value ? new Date(`${$("schedDate").value}T${$("schedTime").value}`) : null;
+    const bad = problem(d);
+    $("schedSave").disabled = !!bad;
+    $("schedLine").className = `pb-sched-line${bad ? " is-bad" : ""}`;
+    $("schedLine").innerHTML = bad
+      ? `<i class="ri-error-warning-line"></i><span>${bad}</span>`
+      : `<i class="ri-time-line"></i><span>Sends <b>${M.esc(dayName(d))} at ${M.esc(clock(d))}</b> - ${inWords(d)}${preview?.people ? `, to ${M.num(preview.people)} ${preview.people === 1 ? "person" : "people"}` : ""}.</span>`;
   }
 
   // ================================================================ review -> sending -> done
@@ -301,7 +589,10 @@
   function review() {
     if (!preview) return;
     const later = s.when === "later";
-    if (later && !s.sendAt) return Toast.warning("Pick when to send it.");
+    if (later && problem(new Date(s.sendAt))) {
+      Toast.warning(`${problem(new Date(s.sendAt))} Change when it goes out.`);
+      return openSchedule();
+    }
     const p = M.smsParts(sample());
     const rows = [
       ["How", M.CHANNELS[s.channel].label],
@@ -311,7 +602,7 @@
       ...(email() ? [["Emails", M.num(preview.with_email)]] : []),
       ["In the app", M.num(preview.with_login)],
       ...(s.subject && s.channel !== "sms" ? [["Subject", s.subject]] : []),
-      ["When", later ? new Date(s.sendAt).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "Now"],
+      ["When", later ? `${shortDay(new Date(s.sendAt))}, ${clock(new Date(s.sendAt))}` : "Now"],
     ];
     $("pbSummary").innerHTML = rows.map(([k, v]) => `<div class="pb-summary-row"><span>${k}</span><span>${M.esc(v)}</span></div>`).join("");
     $("pbSummaryNotes").innerHTML = $("counterNotes").querySelector(".pb-note") ? [...$("counterNotes").querySelectorAll(".pb-note")].map((n) => n.outerHTML).join("") : "";
@@ -444,6 +735,7 @@
     $("subjectIn").addEventListener("input", () => {
       s.subject = $("subjectIn").value;
       renderPhone();
+      queueFrames();
     });
     $("bodyIn").addEventListener("input", () => {
       s.body = $("bodyIn").value;
@@ -451,13 +743,22 @@
       queuePreview();
     });
     document.querySelectorAll("[data-token]").forEach((b) => b.addEventListener("click", () => insertToken(b.dataset.token)));
-    document.querySelectorAll('input[name="whenUi"]').forEach((i) =>
+    document.querySelectorAll('input[name="readsUi"]').forEach((i) =>
       i.addEventListener("change", () => {
-        s.when = i.value;
-        $("laterWrap").hidden = s.when !== "later";
+        readsView = i.value;
+        renderPhone();
+        if (readsView === "email") loadFrames();
       }),
     );
-    $("sendAtIn").addEventListener("input", () => (s.sendAt = $("sendAtIn").value));
+    renderWhen();
+    loadSender();
+    // Our upcoming events, to write about (and ?event= from an event's "Invite by message").
+    MessagesAPI.events().then((list) => {
+      events = list;
+      const ev = list?.find((e) => e.id === Number(q.get("event")));
+      if (ev) pickEvent(ev, { fill: /\[(event|date|time|venue)\]/i.test(s.body + s.subject) });
+      else renderEventRow();
+    });
     $("testTo").value = (() => {
       try {
         const me = JSON.parse(localStorage.getItem(Constants.STORAGE_KEYS.USER_DATA) || "null");
