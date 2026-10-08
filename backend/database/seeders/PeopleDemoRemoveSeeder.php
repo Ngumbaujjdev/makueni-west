@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\CareContact;
+use App\Models\CareRecord;
 use App\Models\Person;
 use App\Models\PersonTransfer;
 use App\Models\VisitorFollowup;
@@ -12,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Takes PeopleDemoSeeder's demo people away again - only them, found by
  * their demo numbers (+254 700 000 xxx) - with their visits, follow-ups,
- * transfers and audits.
+ * pastoral care, transfers and audits.
  *
  *   php artisan db:seed --class=PeopleDemoRemoveSeeder
  */
@@ -36,7 +38,10 @@ class PeopleDemoRemoveSeeder extends Seeder
         if (! $ids) {
             return 0;
         }
+        $care = CareRecord::withTrashed()->whereIn('person_id', $ids)->pluck('id')->all();
         $children = [
+            'care_record' => $care,
+            'care_contact' => CareContact::whereIn('care_record_id', $care ?: [0])->pluck('id')->all(),
             'person_transfer' => PersonTransfer::whereIn('person_id', $ids)->pluck('id')->all(),
             'visitor_visit' => VisitorVisit::whereIn('person_id', $ids)->pluck('id')->all(),
             'visitor_followup' => VisitorFollowup::whereIn('person_id', $ids)->pluck('id')->all(),
@@ -47,6 +52,8 @@ class PeopleDemoRemoveSeeder extends Seeder
                 $q->orWhere(fn ($w) => $w->where('auditable_type', $type)->whereIn('auditable_id', $childIds ?: [0]));
             }
         })->delete();
+        CareContact::whereIn('care_record_id', $care ?: [0])->delete();
+        CareRecord::withTrashed()->whereIn('id', $care ?: [0])->forceDelete();
         PersonTransfer::whereIn('person_id', $ids)->delete();
         VisitorVisit::whereIn('person_id', $ids)->delete();
         VisitorFollowup::whereIn('person_id', $ids)->delete();

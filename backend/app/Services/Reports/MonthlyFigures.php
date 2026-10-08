@@ -38,6 +38,8 @@ final class MonthlyFigures
         return [
             'period' => ['year' => $year, 'month' => $month, 'label' => $start->format('F Y'), 'start' => $start->toDateString(), 'end' => $end->toDateString()],
             'people' => $level === 'church' ? $this->people($place, $end) : null,
+            // People & care P3: the month's pastoral visits and shared testimonies - offered to the report, never filled in.
+            'pastoral' => $level === 'church' ? app(\App\Services\People\Care::class)->monthly($place, $year, $month) : null,
             'attendance' => $level === 'church' ? $this->attendance([(int) $place->id], $start) : null,
             'money' => $this->money($place, $year, $month),
             'events' => $this->events($place, $start, $end),

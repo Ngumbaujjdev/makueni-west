@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\ModuleController;
 use App\Http\Controllers\Api\ModuleGroupController;
 use App\Http\Controllers\Api\NotificationsController;
 use App\Http\Controllers\Api\PasswordResetController;
+use App\Http\Controllers\Api\People\CareController;
 use App\Http\Controllers\Api\People\PeopleController;
 use App\Http\Controllers\Api\People\VisitorsController;
 use App\Http\Controllers\Api\PermissionController;
@@ -145,6 +146,23 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('people/{id}/restore', [PeopleController::class, 'restore'])->whereNumber('id');
     Route::post('people/{id}/anonymise', [PeopleController::class, 'anonymise'])->whereNumber('id');
     Route::post('people/{id}/transfer-out', [PeopleController::class, 'transferOut'])->whereNumber('id');
+
+    // People & care P3 - pastoral care; /care/totals is the region's and diocese's (counts only)
+    Route::get('care/options', [CareController::class, 'options']);
+    Route::get('care/overview', [CareController::class, 'overview']);
+    Route::get('care/hospital', [CareController::class, 'hospital']);
+    Route::get('care/prayer', [CareController::class, 'prayer']);
+    Route::get('care/totals', [CareController::class, 'totals']);
+    Route::post('care/bulk', [CareController::class, 'bulk']);
+    Route::get('care', [CareController::class, 'index']);
+    Route::post('care', [CareController::class, 'store']);
+    Route::get('care/{id}', [CareController::class, 'show'])->whereNumber('id');
+    Route::put('care/{id}', [CareController::class, 'update'])->whereNumber('id');
+    Route::get('care/{id}/history', [CareController::class, 'history'])->whereNumber('id');
+    Route::post('care/{id}/contacts', [CareController::class, 'contact'])->whereNumber('id');
+    Route::post('care/{id}/close', [CareController::class, 'close'])->whereNumber('id');
+    Route::post('care/{id}/discharge', [CareController::class, 'discharge'])->whereNumber('id');
+    Route::get('people/{id}/care', [CareController::class, 'person'])->whereNumber('id');
 
     // People & care P2 - visitors and their follow-up; /visitors/totals is the
     // region's and diocese's (counts only)

@@ -59,7 +59,7 @@ final class LifeFeed
             $out = [...$out, ...$this->services($place, $from, $to)];
         }
         if (in_array('ours', $layers, true) && in_array('due', $sources, true)) {
-            $out = [...$out, ...$this->due($place, $from, $to, $user), ...$this->reportsDue($place, $from, $to, $user), ...$this->followupsDue($place, $from, $to, $user)];
+            $out = [...$out, ...$this->due($place, $from, $to, $user), ...$this->reportsDue($place, $from, $to, $user), ...$this->followupsDue($place, $from, $to, $user), ...$this->careDue($place, $from, $to, $user)];
         }
 
         return $out;
@@ -325,6 +325,40 @@ final class LifeFeed
             status: 'due',
             location: null,
             description: 'Visitors waiting for a call, an SMS or a visit',
+            allDay: true,
+            tone: $day === $today->toDateString() ? 'danger' : null,
+        ))->values()->all();
+    }
+
+    /**
+     * Pastoral care's next steps (P3): one line a day - "2 pastoral visits
+     * due" - never a name. Late ones gather on today. Leaders with pastoral
+     * care only.
+     */
+    private function careDue(Territory $place, CarbonImmutable $from, CarbonImmutable $to, ?User $user): array
+    {
+        if (PlaceAccess::level($place) !== 'church' || ! PeopleAccess::canNamed($user, $place, 'pastoral')) {
+            return [];
+        }
+        $today = CarbonImmutable::now(self::TZ)->startOfDay();
+        $byDay = \App\Models\CareRecord::where('territory_id', $place->id)->where('status', 'open')->whereNotNull('next_on')->pluck('next_on')
+            ->map(fn ($d) => $d->toDateString() < $today->toDateString() ? $today->toDateString() : $d->toDateString())
+            ->filter(fn ($d) => $d >= $from->toDateString() && $d <= $to->toDateString())
+            ->countBy()->sortKeys();
+
+        return $byDay->map(fn (int $n, string $day) => $this->item(
+            key: "care-{$day}",
+            title: $n.' pastoral '.($n === 1 ? 'visit' : 'visits').' due',
+            kind: 'due',
+            start: $day,
+            end: CarbonImmutable::parse($day)->addDay()->toDateString(),
+            layer: 'ours',
+            owner: $place,
+            source: 'due',
+            url: '/church/pastoral-care/',
+            status: 'due',
+            location: null,
+            description: 'Next steps in pastoral care',
             allDay: true,
             tone: $day === $today->toDateString() ? 'danger' : null,
         ))->values()->all();

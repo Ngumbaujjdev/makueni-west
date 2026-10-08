@@ -32,7 +32,7 @@ class PeopleCareAccessSeeder extends Seeder
     public const LIVE = [
         'members' => true,
         'visitors' => true,
-        'pastoral' => false,
+        'pastoral' => true,
         'ministries' => false,
         'facilities' => false,
     ];
@@ -65,8 +65,10 @@ class PeopleCareAccessSeeder extends Seeder
             'reuse' => ['Pastoral Care'],
             'description' => 'Visits, counselling, hospital, prayer and concerns.',
             'pages' => [
-                '' => ['Pastoral care', 'Who needs care, and the care given.', ['read', 'confidential']],
-                'log.php' => ['Care log', 'Every visit, call and case, to find and follow up.', ['manage']],
+                '' => ['Pastoral care', 'Who needs care, and the care given.', ['read', 'manage', 'confidential']],
+                'log.php' => ['Care log', 'Every visit, call and case, to find and follow up.', ['log']],
+                'hospital.php' => ['Hospital', 'Who is in hospital, and when they were last visited.', ['hospital']],
+                'prayer.php' => ['Prayer', 'Prayer requests, open and answered.', ['prayer']],
             ],
         ],
         'ministries' => [

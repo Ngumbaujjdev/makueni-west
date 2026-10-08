@@ -101,6 +101,8 @@ class AppServiceProvider extends ServiceProvider
             'person_transfer' => 'App\Models\PersonTransfer',
             'visitor_visit' => 'App\Models\VisitorVisit',
             'visitor_followup' => 'App\Models\VisitorFollowup',
+            'care_record' => 'App\Models\CareRecord',
+            'care_contact' => 'App\Models\CareContact',
         ]);
 
         // Saved system settings (email server, ...) take over from .env -

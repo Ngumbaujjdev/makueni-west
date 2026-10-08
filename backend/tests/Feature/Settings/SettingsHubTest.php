@@ -48,7 +48,7 @@ class SettingsHubTest extends TestCase
             ->json('data.groups');
 
         $sections = collect($groups)->flatMap(fn ($g) => $g['sections'])->keyBy('key');
-        $this->assertSame(['overview', 'profile', 'servicetimes', 'team', 'communication', 'visitors'], $sections->keys()->all());
+        $this->assertSame(['overview', 'profile', 'servicetimes', 'team', 'communication', 'pastoral', 'visitors'], $sections->keys()->all());
         $this->assertTrue($sections['profile']['can']['update']);
         $this->assertTrue($sections['profile']['attention'], 'an empty profile needs attention');
         $this->assertSame('Our place', collect($groups)->firstWhere('key', 'our-place')['label']);
@@ -248,7 +248,7 @@ class SettingsHubTest extends TestCase
 
         $module = Module::where('name', 'Settings')->whereHas('moduleGroup', fn ($q) => $q->where('slug', 'church-settings'))->firstOrFail();
         $this->assertSame(
-            ['/church/settings/', '/church/settings/?section=profile', '/church/settings/?section=servicetimes', '/church/settings/?section=team', '/church/settings/?section=communication', '/church/settings/?section=visitors'],
+            ['/church/settings/', '/church/settings/?section=profile', '/church/settings/?section=servicetimes', '/church/settings/?section=team', '/church/settings/?section=communication', '/church/settings/?section=pastoral', '/church/settings/?section=visitors'],
             Submodule::where('module_id', $module->id)->orderBy('id')->pluck('path')->all(),
         );
         $this->assertSame(1, Permission::where('name', 'church.settings.hub.profile.update')->count());

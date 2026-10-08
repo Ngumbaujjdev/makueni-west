@@ -72,8 +72,8 @@ class Person extends Model implements Auditable
 
     /**
      * Remove their personal details (docs/specs/people-and-care-spec.md,
-     * "Leaving the register"): name, phone, area, previous church and
-     * follow-up notes. The row, its dates and its counts stay. Can't be
+     * "Leaving the register"): name, phone, area, previous church,
+     * follow-up notes and pastoral care notes. The row, its dates and its counts stay. Can't be
      * undone.
      */
     public function anonymise(?int $by = null): void
@@ -83,6 +83,11 @@ class Person extends Model implements Auditable
             'consent_contact' => false, 'assigned_to' => null, 'anonymised_at' => now(), 'updated_by' => $by,
         ])->save();
         $this->followups()->whereNotNull('note')->get()->each(fn (VisitorFollowup $f) => $f->forceFill(['note' => null])->save());
+        // Their pastoral care: the notes go; the records stay, so the counts stay true.
+        CareRecord::withTrashed()->where('person_id', $this->id)->get()->each(function (CareRecord $r) {
+            $r->forceFill(['note' => null, 'person_name' => null, 'testimony' => null, 'share_testimony' => false])->save();
+            $r->contacts()->whereNotNull('note')->get()->each(fn (CareContact $c) => $c->forceFill(['note' => null])->save());
+        });
     }
 
     public function church(): BelongsTo

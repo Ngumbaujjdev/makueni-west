@@ -229,6 +229,17 @@ return [
             'sentence' => 'How your emails and SMS go out - through the diocese, or your own account - and what they look like.',
         ],
 
+        // People & care P3 - pastoral care. Read by CareController.
+        'pastoral' => [
+            'label' => 'Pastoral care',
+            'icon' => 'ri-heart-pulse-line',
+            'colour' => 'danger',
+            'group' => 'people',
+            'levels' => ['church'],
+            'kind' => 'form',
+            'sentence' => 'Which kinds of care you record, and when someone counts as not visited.',
+        ],
+
         // People & care P2 - visitors and their follow-up. Read by VisitorsController.
         'visitors' => [
             'label' => 'Visitors',
@@ -339,6 +350,15 @@ return [
 
         // ---- Members (People & care P1) - read by PeopleController (the form's
         // required fields) and the Insights page's "Send birthday SMS".
+        'pastoral.not_contacted_days' => ['section' => 'pastoral', 'card' => 'Who needs care', 'label' => 'A member is "not contacted" after (days)', 'type' => 'number', 'rules' => ['required', 'integer', 'between:14,365'], 'default' => 60, 'levels' => ['church'], 'help' => 'Members with no care recorded for this long show in Needs care.', 'used_by' => 'Pastoral care > Needs care'],
+        'pastoral.hospital_days' => ['section' => 'pastoral', 'card' => 'Who needs care', 'label' => 'Visit someone in hospital every (days)', 'type' => 'number', 'rules' => ['required', 'integer', 'between:1,30'], 'default' => 7, 'levels' => ['church'], 'help' => 'After this long without a visit, they show in red.', 'used_by' => 'Pastoral care > Hospital'],
+        'pastoral.type.home_visit' => ['section' => 'pastoral', 'card' => 'Kinds of care we record', 'label' => 'Home visits', 'type' => 'switch', 'default' => true, 'levels' => ['church'], 'span' => 6, 'used_by' => 'Pastoral care > Record care'],
+        'pastoral.type.hospital' => ['section' => 'pastoral', 'card' => 'Kinds of care we record', 'label' => 'Hospital', 'type' => 'switch', 'default' => true, 'levels' => ['church'], 'span' => 6, 'used_by' => 'Pastoral care > Record care'],
+        'pastoral.type.counselling' => ['section' => 'pastoral', 'card' => 'Kinds of care we record', 'label' => 'Counselling', 'type' => 'switch', 'default' => true, 'levels' => ['church'], 'span' => 6, 'used_by' => 'Pastoral care > Record care'],
+        'pastoral.type.prayer' => ['section' => 'pastoral', 'card' => 'Kinds of care we record', 'label' => 'Prayer', 'type' => 'switch', 'default' => true, 'levels' => ['church'], 'span' => 6, 'used_by' => 'Pastoral care > Record care'],
+        'pastoral.type.phone_call' => ['section' => 'pastoral', 'card' => 'Kinds of care we record', 'label' => 'Phone calls', 'type' => 'switch', 'default' => true, 'levels' => ['church'], 'span' => 6, 'used_by' => 'Pastoral care > Record care'],
+        'pastoral.type.bereavement' => ['section' => 'pastoral', 'card' => 'Kinds of care we record', 'label' => 'Bereavement', 'type' => 'switch', 'default' => true, 'levels' => ['church'], 'span' => 6, 'used_by' => 'Pastoral care > Record care'],
+        'pastoral.type.concern' => ['section' => 'pastoral', 'card' => 'Kinds of care we record', 'label' => 'Concerns', 'type' => 'switch', 'default' => true, 'levels' => ['church'], 'span' => 6, 'used_by' => 'Pastoral care > Record care'],
         'visitors.followup_days' => ['section' => 'visitors', 'card' => 'Follow-up', 'label' => 'Follow up within (days)', 'type' => 'number', 'rules' => ['required', 'integer', 'between:1,30'], 'default' => 3, 'levels' => ['church'], 'help' => 'After a visit, someone is due to call or visit within this many days.', 'used_by' => 'Visitors > My follow-ups, the calendar'],
         'visitors.welcome_sms' => ['section' => 'visitors', 'card' => 'Welcome SMS', 'label' => 'Send the welcome SMS by default', 'type' => 'switch', 'default' => false, 'levels' => ['church'], 'help' => 'Only to first-timers with a phone who haven\'t asked not to be texted. It can be switched off each Sunday.', 'used_by' => 'Visitors > Record visitors'],
         'visitors.welcome_template' => ['section' => 'visitors', 'card' => 'Welcome SMS', 'label' => 'Welcome message', 'type' => 'textarea', 'rules' => ['nullable', 'string', 'max:300'], 'default' => 'Thank you for worshipping with us at {church}, {first_name}! You are welcome back any time.', 'levels' => ['church'], 'span' => 12, 'help' => '{first_name} and {church} are filled in for each person.', 'used_by' => 'Visitors > Record visitors'],
