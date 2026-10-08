@@ -1,7 +1,7 @@
 <?php
 // Messages - one set of pages per level (docs/specs/messages-spec.md). The wrapper sets
 // $messagesCtx (includes/messages/context.php); the body is includes/messages/body-{index,new,message}.php.
-$pageTitle = ['index' => 'Messages', 'new' => 'Send a message', 'message' => 'Message'][$messagesCtx['page']];
+$pageTitle = ['index' => 'Inbox', 'new' => 'Send a message', 'message' => 'Message', 'campaigns' => 'Campaigns', 'templates' => 'Templates', 'log' => 'Message log'][$messagesCtx['page']];
 $pageIcon = 'ri-chat-3-line';
 $breadcrumbs = $messagesCtx['page'] === 'index'
     ? ['Home' => $messagesCtx['homeUrl'], 'Messages' => null]

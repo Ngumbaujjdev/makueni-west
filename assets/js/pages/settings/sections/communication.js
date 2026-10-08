@@ -26,18 +26,19 @@
     diocese: { title: "Through the diocese", text: "The diocese's email and SMS. Nothing to set up.", icon: "ri-building-4-line", tag: "Recommended" },
     own: { title: "Our own account", text: "Your own email server and SMS account, under your own name.", icon: "ri-key-2-line", tag: "" },
   };
+  // Templates, Campaigns and the Log are pages of Communication > Messages now (2026-10-08); Settings keeps the setup.
   const TABS = [
     ["overview", "Overview", "ri-dashboard-3-line", "primary"],
-    ["templates", "Templates", "ri-file-list-3-line", "purple"],
-    ["campaigns", "Campaigns", "ri-broadcast-line", "success"],
     ["sending", "Sending", "ri-route-line", "warning"],
-    ["log", "Log", "ri-history-line", "pink"],
   ];
+  const MOVED = { templates: "templates.php", campaigns: "campaigns.php", log: "log.php" };
+  const messagesUrl = (file = "") => `${typeof AppConfig !== "undefined" ? AppConfig.FRONTEND_BASE_URL : ""}/${window.SETTINGS_CTX?.level || SettingsRail.data?.level || "church"}/messages/${file}`;
   const SAMPLE_SUBJECT = "Youth convention this Saturday";
   const SAMPLE_BODY = "Dear {name},\n\nThe youth convention starts this Saturday at 9am. Come with a friend - there is lunch for everyone.\n\nSee you there,\n{sender}";
 
   // The open tab survives the form being drawn again (after a save or Discard).
   let active = new URLSearchParams(window.location.search).get("tab") || "overview";
+  if (MOVED[active]) window.location.replace(messagesUrl(MOVED[active])); // an old link to a tab that moved
   if (!TABS.some(([k]) => k === active)) active = "overview";
 
   F.extras.communication = function (root, payload) {
@@ -166,8 +167,6 @@
       history.replaceState(history.state, "", url);
       if (!opened[key]) {
         opened[key] = true;
-        if (key === "campaigns") window.CommsCampaigns.mount($("cmPaneCampaigns"), { canSend: templatesOk, openTemplates: () => open("templates") }).then((n) => n !== null && n !== undefined && setFigure("campaigns", `${n} this month`));
-        if (key === "log") window.SettingsMessages?.mount($("commsMessages"));
       }
       if (key === "sending") lookPv?.redraw();
       if (scroll) root.querySelector("#cmTabs").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -198,12 +197,16 @@
         <div class="row g-3 mb-4" id="cmMonth">${UI.skeletonCards(4, "col-6 col-xl-3")}</div>
         <div class="cm-quick">
           ${[
-            ["campaigns", "ri-broadcast-line", "success", "Send a campaign", "To your people or the places below, by SMS, email or in the app", false],
-            ["templates", "ri-file-list-3-line", "purple", "Our templates", isDiocese ? "Write the ones every church and region copies" : "The diocese's ready-made messages, and ours", true],
+            [messagesUrl("new"), "ri-broadcast-line", "success", "Send a message or campaign", "To your people or the places below, by SMS, email or in the app", false],
+            [messagesUrl("templates.php"), "ri-file-list-3-line", "purple", "Templates", isDiocese ? "Write the ones every church and region copies" : "The diocese's ready-made messages, and ours", true],
             ["sending", "ri-route-line", "warning", "How we send", "Through the diocese or your own account, your name and signature", false],
-            ["log", "ri-history-line", "pink", "Every message sent", "Open one to see exactly what went out", true],
+            [messagesUrl("log.php"), "ri-history-line", "pink", "Message log", "Every email and SMS that went out", true],
           ]
-            .map(([k, icon, col, title, text, soft]) => `<button type="button" class="cm-quick-item" data-open="${k}"><span class="ev-tile${soft ? " is-soft" : ""}" ${q(col)}><i class="${icon}"></i></span><span class="flex-fill"><strong>${title}</strong><small>${text}</small></span><i class="ri-arrow-right-s-line"></i></button>`)
+            .map(([k, icon, col, title, text, soft]) => {
+              const inner = `<span class="ev-tile${soft ? " is-soft" : ""}" ${q(col)}><i class="${icon}"></i></span><span class="flex-fill"><strong>${title}</strong><small>${text}</small></span><i class="ri-arrow-right-s-line"></i>`;
+              // Sending is a tab here; the rest are pages of Communication > Messages.
+              return k === "sending" ? `<button type="button" class="cm-quick-item" data-open="${k}">${inner}</button>` : `<a class="cm-quick-item" href="${k}">${inner}</a>`;
+            })
             .join("")}
         </div>`;
     }
@@ -227,7 +230,6 @@
       if (res.ok) setFigure("log", `${m.length} this month`);
     }
 
-    let templatesOk = true;
     function after() {
       const sendingCards = [...root.children];
       root.insertAdjacentHTML(
@@ -237,10 +239,7 @@
         </div>
         <div class="cm-panes">
           <section data-cm-pane="overview" hidden>${overview()}</section>
-          <section data-cm-pane="templates" id="cmPaneTemplates" hidden><div class="row g-3">${UI.skeletonCards(3, "col-md-4")}</div></section>
-          <section data-cm-pane="campaigns" id="cmPaneCampaigns" hidden></section>
           <section data-cm-pane="sending" id="cmPaneSending" hidden></section>
-          <section data-cm-pane="log" hidden><div id="commsMessages"></div></section>
         </div>`,
       );
       sendingCards.forEach((el) => $("cmPaneSending").appendChild(el));
@@ -263,13 +262,7 @@
 
       update(readNow());
       setFigure("overview", c.email?.sends && c.sms?.sends ? "Sending for real" : "Test setup");
-      setFigure("campaigns", figures.campaigns || "Send one");
       month();
-      window.CommsTemplates.load().then((list) => {
-        templatesOk = list !== null;
-        setFigure("templates", list ? `${list.length} ready` : "For senders");
-        window.CommsTemplates.mount($("cmPaneTemplates"), { onCount: (l) => setFigure("templates", `${l.length} ready`) });
-      });
       open(active);
     }
 

@@ -75,6 +75,8 @@ const MessagesAPI = (function () {
   }
 
   return {
+    /** Any Messages call - for code shared with Settings > Communication (comms-env.js). */
+    call: (method, path, body) => request(method, path, body === undefined ? {} : { body }),
     events,
     /** The real email (and signed SMS) for this text - Settings > Communication's template preview. */
     emailPreview: (subject, body) => request("POST", "/messages/templates/preview", { body: { subject, body } }),

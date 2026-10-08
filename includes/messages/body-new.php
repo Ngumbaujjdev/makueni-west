@@ -22,7 +22,7 @@
             <div class="pb-section">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <div class="pb-section-title mb-0">The message</div>
-                    <a href="<?= $messagesCtx['baseUrl'] ?>/?tab=saved" class="fs-11 pb-footer-link"><i class="ri-edit-line me-1"></i>Manage saved messages</a>
+                    <a href="<?= $messagesCtx['baseUrl'] ?>/templates.php" class="fs-11 pb-footer-link"><i class="ri-edit-line me-1"></i>Manage templates</a>
                 </div>
                 <div class="pb-event mb-3" id="eventRow" hidden>
                     <div class="fs-12 text-muted mb-1">About an event <span class="opacity-75">- pick one and its name, date and venue go in for you.</span></div>
@@ -116,7 +116,7 @@
 
     <div class="card-footer d-flex flex-wrap justify-content-between align-items-center gap-2">
         <div class="d-flex align-items-center gap-3">
-            <a href="<?= $messagesCtx['baseUrl'] ?>/?tab=sent" class="pb-footer-link"><i class="ri-send-plane-line me-1"></i>What we sent</a>
+            <a href="<?= $messagesCtx['baseUrl'] ?>/campaigns.php" class="pb-footer-link"><i class="ri-broadcast-line me-1"></i>Campaigns</a>
             <a href="#pbTestPanel" data-bs-toggle="collapse" class="pb-footer-link" id="testToggle" role="button" aria-expanded="false" aria-controls="pbTestPanel"><i class="ri-eye-line me-1"></i>Send a test</a>
         </div>
         <div class="d-flex flex-wrap gap-2">
@@ -160,7 +160,7 @@
                 </div>
                 <div class="modal-footer border-0 pt-0 px-4 pb-4 justify-content-center">
                     <a href="#" class="btn btn-light" id="pbDoneOpen"><i class="ri-list-check-2 me-1"></i>Who it went to</a>
-                    <a href="<?= $messagesCtx['baseUrl'] ?>/?tab=sent" class="btn btn-primary">Done</a>
+                    <a href="<?= $messagesCtx['baseUrl'] ?>/campaigns.php" class="btn btn-primary">Done</a>
                 </div>
             </div>
             <div data-pb-state="error" class="d-none">
