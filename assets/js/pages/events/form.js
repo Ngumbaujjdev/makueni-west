@@ -320,7 +320,7 @@
           </div>
         </div>
       </div>
-      <ul class="ev-facts mt-3">
+      <ul class="ev-facts mt-3" style="--q: var(--${color}-rgb)">
         <li><i class="ri-time-line"></i><span>${b.starts_at && b.ends_at ? E.when(b.starts_at, b.ends_at) : "Pick the dates"}</span></li>
         ${INIT && b.frequency ? `<li><i class="ri-repeat-line"></i><span>${E.esc(E.meets({ frequency: b.frequency, frequency_label: ov.frequencies[b.frequency], meeting_day: b.meeting_day, starts_at: b.starts_at }))}</span></li>` : ""}
         <li><i class="ri-map-pin-line"></i><span>${E.esc(b.venue) || "Venue not set"}</span></li>
@@ -333,14 +333,12 @@
       ${b.description ? `<p class="mt-3 mb-0 fs-13 text-break">${E.esc(b.description).slice(0, 280)}${b.description.length > 280 ? "..." : ""}</p>` : ""}`;
   }
 
-  // Session chips change colour with the month, so a long run reads at a glance.
-  const MONTH_COLORS = ["primary", "purple", "success", "pink", "warning", "danger"];
   function sessionsPreview(b) {
     const dates = sessionDates(b);
     if (!INIT) return "";
     if (!dates.length) return `<div class="ev-sub mt-3">Sessions</div><p class="mb-0 fs-13 fw-semibold">Pick the days to see the sessions.</p>`;
     return `<div class="ev-sub mt-3">${dates.length} ${dates.length === 1 ? "session" : "sessions"}${dates.length >= 104 ? " (the most)" : ""}</div>
-      <div class="d-flex flex-wrap gap-1 mt-1">${dates.slice(0, 8).map((d) => `<span class="soft-chip soft-${MONTH_COLORS[d.getMonth() % MONTH_COLORS.length]}">${d.toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>`).join("")}${dates.length > 8 ? `<span class="badge bg-purple">+${dates.length - 8} more</span>` : ""}</div>`;
+      <div class="d-flex flex-wrap gap-1 mt-1">${dates.slice(0, 8).map((d) => `<span class="soft-chip soft-primary">${d.toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>`).join("")}${dates.length > 8 ? `<span class="badge bg-purple">+${dates.length - 8} more</span>` : ""}</div>`;
   }
 
   function renderReview() {

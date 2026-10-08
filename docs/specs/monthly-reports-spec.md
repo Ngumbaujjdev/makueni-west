@@ -158,3 +158,9 @@ This replaces "in one colour" above. Each part of the report keeps one colour:
 - **Comments:** each person keeps an avatar colour; comments from above sit in pale purple.
 - **The writing stepper** gives each step its own colour.
 
+### Calmer colours (2026-10-08)
+- **Written parts as rows:** "In the pastor's words", Pastoral visits and Outreach are plain rows, not tinted boxes. Each row has a small icon tile in the heading's colour, the heading in dark text, and the answer in body text. On a phone the heading sits above the text.
+- **Note buttons** are outlined in the section colour.
+- **Comments from above** use the same white bubble as the others.
+- **Inputs** are plain: white, grey border, grey placeholder, teal only on focus.
+

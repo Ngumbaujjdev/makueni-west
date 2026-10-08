@@ -251,15 +251,16 @@
     const ours = t.source === "ours";
     const tags = [
       `<span class="badge bg-${ch.c} list-pill"><i class="${ch.icon} me-1"></i>${ch.label}</span>`,
-      !ours ? `<span class="soft-chip soft-purple"><i class="ri-building-4-line"></i>${esc(t.owner?.name || "Diocese")}</span>` : "",
+      !ours ? `<span class="soft-chip soft-secondary"><i class="ri-building-4-line"></i>${esc(t.owner?.name || "Diocese")}</span>` : "",
       ours && t.copied_from ? `<span class="soft-chip soft-primary"><i class="ri-file-copy-line"></i>Copied from ${esc(t.copied_from.owner || "the diocese")}</span>` : "",
       ours && t.shared_below ? `<span class="soft-chip soft-warning"><i class="ri-share-forward-line"></i>Shared below</span>` : "",
       !ours && t.our_copy_id ? `<span class="soft-chip soft-success"><i class="ri-check-line"></i>You have a copy</span>` : "",
     ].join("");
     const actions = [
-      `<button type="button" class="btn btn-sm btn-primary" data-act="preview"><i class="ri-eye-line me-1"></i>Preview</button>`,
+      // One solid action a card: Preview on ours, Make our copy on a shared one.
+      `<button type="button" class="btn btn-sm ${ours || t.our_copy_id ? "btn-primary" : "btn-light border"}" data-act="preview"><i class="ri-eye-line me-1"></i>Preview</button>`,
       ours ? `<a class="btn btn-sm btn-light border" href="${composeUrl(t)}"><i class="ri-send-plane-line me-1"></i>Use</a>` : "",
-      !ours && !t.our_copy_id ? `<button type="button" class="btn btn-sm btn-success" data-act="copy"><i class="ri-file-copy-line me-1"></i>Make our copy</button>` : "",
+      !ours && !t.our_copy_id ? `<button type="button" class="btn btn-sm btn-primary" data-act="copy"><i class="ri-file-copy-line me-1"></i>Make our copy</button>` : "",
       !ours && t.our_copy_id ? `<button type="button" class="btn btn-sm btn-light border" data-act="mine"><i class="ri-arrow-right-line me-1"></i>Our copy</button>` : "",
       ours ? `<button type="button" class="btn btn-sm btn-icon btn-light border" data-act="edit" title="Edit" aria-label="Edit ${esc(t.name)}"><i class="ri-pencil-line"></i></button>` : "",
       ours && t.copied_from ? `<button type="button" class="btn btn-sm btn-icon btn-light border" data-act="reset" title="Reset to ${esc(t.copied_from.owner || "the diocese")}'s text" aria-label="Reset"><i class="ri-arrow-go-back-line"></i></button>` : "",
