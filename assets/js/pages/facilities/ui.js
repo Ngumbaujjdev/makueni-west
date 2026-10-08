@@ -337,7 +337,7 @@ const FacilitiesUI = (function () {
       icon: "ri-door-open-line",
       size: "modal-lg",
       body: `<div class="mw-form">${N.step(1, { icon: "ri-door-open-line", color: "primary", title: "Our rooms", help: "Switch off \"can be booked\" for rooms like a store or the kitchen", body: `<div class="fx-room-head"><span>Colour</span><span>Name</span><span>Holds</span><span>Bookable</span><span></span></div><div id="rmList">${o.rooms.map(row).join("")}${row(null)}</div>` })}</div>`,
-      foot: `<button type="button" class="btn btn-primary" data-bs-dismiss="modal"><i class="ri-check-line me-1"></i>Done</button>`,
+      foot: `<a class="btn btn-link me-auto px-0" href="${window.FAC_CTX.settingsUrl}"><i class="ri-settings-3-line me-1"></i>Rooms, duties and kinds - all in Settings</a><button type="button" class="btn btn-primary" data-bs-dismiss="modal"><i class="ri-check-line me-1"></i>Done</button>`,
     });
     el.addEventListener("hidden.bs.modal", () => onDone?.());
     el.querySelector("#rmList").addEventListener("click", async (e) => {
@@ -414,14 +414,14 @@ const FacilitiesUI = (function () {
             </div>`,
           })}
         </div>
-        <aside class="mw-preview"><div class="mw-sticky"><small class="mw-preview-label">In the equipment list</small><div class="card custom-card mb-0"><div class="card-body" id="eqPreview"></div></div></div></aside>
+        <aside class="mw-preview"><div class="mw-sticky"><small class="mw-preview-label">How it will look</small><div class="card custom-card mb-0 fx-prev" id="eqPreview"></div></div></aside>
       </div>`,
       foot: `${item ? '<button type="button" class="btn btn-outline-danger me-auto" data-remove><i class="ri-delete-bin-line me-1"></i>Remove</button>' : ""}<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="eqSave"><i class="ri-check-line me-1"></i>${item ? "Save changes" : "Add it"}</button>`,
     });
     UI.enhanceSelect(el.querySelector("#eqRoom"));
     const read = () => ({
       name: el.querySelector("#eqName").value.trim(),
-      category: el.querySelector('input[name="eqCat"]:checked').value,
+      category: el.querySelector('input[name="eqCat"]:checked')?.value || it.category,
       room_id: el.querySelector("#eqRoom").value ? Number(el.querySelector("#eqRoom").value) : null,
       quantity: Number(el.querySelector("#eqQty").value || 1),
       condition: el.querySelector('input[name="eqCond"]:checked').value,
@@ -433,20 +433,35 @@ const FacilitiesUI = (function () {
     });
     // Photos picked for a new item - uploaded once it is saved.
     let files = [];
+    let picUrl = null;
     el.querySelector("#eqPhotos")?.addEventListener("change", (e) => {
       files = [...e.target.files].filter((f) => /^image\//.test(f.type)).slice(0, 4);
+      picUrl = files[0] ? URL.createObjectURL(files[0]) : null;
       if (e.target.files.length > 4) Toast.warning("Up to 4 photos - the first 4 are kept.");
       el.querySelector("#eqPicked").innerHTML = files.map((f) => `<img src="${URL.createObjectURL(f)}" alt="">`).join("");
       preview();
     });
     const preview = () => {
       const b = read();
-      const c = o.categories.find((x) => x.key === b.category);
+      // A kind since removed in Settings still shows as itself.
+      const c = o.categories.find((x) => x.key === b.category) || { label: item?.category_label || "Other", icon: item?.icon || "ri-archive-line", color: item?.colour || "secondary" };
       const room = o.rooms.find((r) => r.id === b.room_id);
-      const pic = files[0] ? URL.createObjectURL(files[0]) : item?.photo?.thumb_url;
-      el.querySelector("#eqPreview").innerHTML = `<div class="d-flex align-items-center gap-3">${pic ? `<img class="fx-thumb fx-thumb-lg" src="${pic}" alt="">` : tile(c.icon, c.color)}<div class="flex-fill min-w-0"><strong class="d-block">${esc(b.name || "Your item")}</strong><small class="mb-sub">${esc(c.label)} · ${room ? esc(room.name) : "No room"}</small></div>${conditionPill(b.condition)}</div>
-        <div class="mn-facts"><div><small>How many</small><strong>${num(b.quantity)}</strong></div><div><small>Price each</small><strong>${b.value === null ? "-" : short(b.value)}</strong></div><div><small>In all</small><strong>${b.value === null ? "-" : short(b.value * b.quantity)}</strong></div></div>
-        <p class="mb-sub mt-2 mb-0">${b.supplier ? `<i class="ri-store-2-line me-1"></i>${esc(b.supplier)}` : "Where it was bought - not said"}${b.bought_on ? ` · ${day(b.bought_on, { day: "numeric", month: "short", year: "numeric" })}` : ""}</p>`;
+      const pic = picUrl || item?.photos?.[0]?.thumb_url || item?.photo?.thumb_url;
+      const count = files.length || item?.photos?.length || 0;
+      const row = (icon, label, value) => `<li><i class="${icon}"></i><span>${label}</span><strong>${value}</strong></li>`;
+      el.querySelector("#eqPreview").innerHTML = `<div class="fx-prev-media">${pic ? `<img src="${pic}" alt="">` : `<span class="fx-prev-icon bg-${c.color}"><i class="${c.icon}"></i></span>`}${count > 1 ? `<span class="fx-prev-count"><i class="ri-image-line me-1"></i>${count} photos</span>` : ""}</div>
+        <div class="fx-prev-body">
+          <div class="d-flex align-items-center justify-content-between gap-2"><strong class="fx-prev-name">${esc(b.name || "Your item")}</strong>${conditionPill(b.condition)}</div>
+          <div class="d-flex flex-wrap gap-1 mt-1"><span class="soft-chip soft-${c.color}"><i class="${c.icon}"></i>${esc(c.label)}</span><span class="soft-chip soft-primary"><i class="ri-map-pin-line"></i>${room ? esc(room.name) : "No room"}</span></div>
+          <ul class="fx-prev-rows">
+            ${row("ri-price-tag-3-line", "Asset number", item?.asset_no ? esc(item.asset_no) : '<span class="mb-sub">Given when saved</span>')}
+            ${row("ri-hashtag", "How many", num(b.quantity))}
+            ${row("ri-money-dollar-circle-line", "Price each", b.value === null ? '<span class="mb-sub">-</span>' : money(b.value))}
+            ${row("ri-calculator-line", "In all", b.value === null ? '<span class="mb-sub">-</span>' : money(b.value * b.quantity))}
+            ${row("ri-calendar-line", "Bought", b.bought_on ? day(b.bought_on, { day: "numeric", month: "short", year: "numeric" }) : '<span class="mb-sub">-</span>')}
+            ${row("ri-store-2-line", "Where", b.supplier ? esc(b.supplier) : '<span class="mb-sub">-</span>')}
+          </ul>
+        </div>`;
     };
     el.querySelector(".mw-form").addEventListener("input", preview);
     el.querySelector(".mw-form").addEventListener("change", preview);
@@ -712,24 +727,100 @@ const FacilitiesUI = (function () {
     });
   }
 
+  // ---------------------------------------------------------------- files
+  /**
+   * A receipt (or any file kept with an item) inside the app: a photo fitted
+   * to the window, a PDF in the browser's own reader. files: [{name, type,
+   * url}] (API paths), start: which one. Arrows step through several.
+   */
+  async function fileViewer(files, start = 0) {
+    let at = start;
+    const urls = {};
+    const el = N.windowEl({
+      id: "fcViewer",
+      title: files[at].name,
+      subtitle: files.length > 1 ? `${at + 1} of ${files.length}` : "Receipt",
+      icon: "ri-bill-line",
+      size: "modal-xl",
+      bodyClass: "p-0",
+      body: '<div class="fx-viewer" id="fvBody"><div class="fx-viewer-wait"><span class="spinner-border text-primary"></span></div></div>',
+      foot: `${files.length > 1 ? '<div class="me-auto d-flex gap-2"><button type="button" class="btn btn-light border" data-step="-1"><i class="ri-arrow-left-s-line me-1"></i>Previous</button><button type="button" class="btn btn-light border" data-step="1">Next<i class="ri-arrow-right-s-line ms-1"></i></button></div>' : ""}<a class="btn btn-light border" id="fvTab" target="_blank" rel="noopener"><i class="ri-external-link-line me-1"></i>Open in a new tab</a><a class="btn btn-outline-primary" id="fvDownload" download><i class="ri-download-2-line me-1"></i>Download</a><button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>`,
+    });
+    const show = async () => {
+      const f = files[at];
+      el.querySelector(".modal-title").textContent = f.name;
+      const sub = el.querySelector(".app-modal-subtitle");
+      if (sub) sub.textContent = files.length > 1 ? `${at + 1} of ${files.length}` : "Receipt";
+      const body = el.querySelector("#fvBody");
+      body.innerHTML = '<div class="fx-viewer-wait"><span class="spinner-border text-primary"></span></div>';
+      urls[at] ??= await FacilitiesAPI.fileUrl(f.url);
+      const url = urls[at];
+      if (!url) return (body.innerHTML = '<div class="fx-viewer-wait text-danger fw-semibold">Couldn\'t open it - try again.</div>');
+      body.innerHTML = f.type === "image" ? `<img src="${url}" alt="${esc(f.name)}">` : `<iframe src="${url}#toolbar=1&view=FitH" title="${esc(f.name)}"></iframe>`;
+      const dl = el.querySelector("#fvDownload");
+      dl.href = url;
+      el.querySelector("#fvTab").href = url;
+      dl.setAttribute("download", `${f.name}.${f.type === "image" ? "jpg" : "pdf"}`);
+      el.querySelectorAll("[data-step]").forEach((b) => (b.disabled = (b.dataset.step === "-1" && at === 0) || (b.dataset.step === "1" && at === files.length - 1)));
+    };
+    el.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-step]");
+      if (!b) return;
+      at = Math.max(0, Math.min(files.length - 1, at + Number(b.dataset.step)));
+      show();
+    });
+    el.addEventListener("hidden.bs.modal", () => Object.values(urls).forEach((u) => u && URL.revokeObjectURL(u)), { once: true });
+    show();
+  }
+
   // ---------------------------------------------------------------- the rota
   /** Who is on one duty at one service. */
   function rotaWindow({ date, service, duty, people = [], onDone }) {
     const picked = people.map((p) => ({ person_id: p.person_id || null, name: p.name }));
+    const team = duty.team || [];
+    const key = (p) => (p.person_id ? `p${p.person_id}` : `n${String(p.name).toLowerCase()}`);
     const el = N.windowEl({
       id: "fcModal",
       title: `${duty.label} · ${service}`,
       subtitle: day(date, { weekday: "long", day: "numeric", month: "long" }),
       icon: duty.icon,
       size: "modal-lg",
-      body: `<div class="mw-form">${N.step(1, { icon: duty.icon, color: duty.color, title: "Who is on duty", help: "From the register - or type a name for someone who isn't in it", body: '<div id="rtWho"></div>' })}</div>`,
+      body: `<div class="mw-form">
+        ${N.step(1, {
+          icon: "ri-team-line",
+          color: duty.color,
+          title: `The ${duty.label.toLowerCase()} team`,
+          help: team.length ? `Tap to put them on${duty.needed > 1 ? ` - ${duty.needed} are needed each service` : ""}` : "No team yet - set one in Settings > Facilities",
+          body: team.length ? '<div class="fx-team-pick" id="rtTeam"></div>' : `<a class="btn btn-sm btn-outline-primary" href="${window.FAC_CTX.settingsUrl}"><i class="ri-settings-3-line me-1"></i>Set up the teams</a>`,
+        })}
+        ${N.step(2, { icon: duty.icon, color: duty.color, title: "Who is on duty", help: "Anyone else - from the register, or type a name", body: '<div id="rtWho"></div>' })}
+      </div>`,
       foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="rtSave"><i class="ri-check-line me-1"></i>Save</button>`,
     });
+    const paintTeam = () => {
+      const box = el.querySelector("#rtTeam");
+      if (!box) return;
+      const on = new Set(picked.map(key));
+      box.innerHTML = team.map((p, i) => `<button type="button" class="fx-team-chip${on.has(key(p)) ? " is-on" : ""}" data-team="${i}" aria-pressed="${on.has(key(p))}"><span class="avatar avatar-xs avatar-rounded bg-${UI.colorFor(p.name)} text-white">${esc(String(p.name).split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase())}</span>${esc(p.name)}<i class="ri-${on.has(key(p)) ? "check" : "add"}-line"></i></button>`).join("");
+    };
     personPicker(el, { id: "rtWho", picked });
+    paintTeam();
+    el.querySelector("#rtTeam")?.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-team]");
+      if (!b) return;
+      const p = team[Number(b.dataset.team)];
+      const at = picked.findIndex((x) => key(x) === key(p));
+      at >= 0 ? picked.splice(at, 1) : picked.push({ person_id: p.person_id || null, name: p.name });
+      personPicker(el, { id: "rtWho", picked });
+      paintTeam();
+    });
+    // Someone picked or taken off below - the team chips follow.
+    el.querySelector("#rtWho").addEventListener("change", paintTeam);
+    el.querySelector("#rtWho").addEventListener("click", () => setTimeout(paintTeam, 0));
     el.querySelector("#rtSave").addEventListener("click", () => N.submit(el, () => FacilitiesAPI.saveRota({ on: date, service, duty: duty.key, people: picked }), (d) => (onDone?.(d), null)));
   }
 
-  return { esc, num, money, short, day, ampm, iso, todayIso, minutes, tile, roomDot, conditionPill, statusPill, CONDITION, STATUS, options, personPicker, bookWindow, bookingWindow, roomsWindow, itemWindow, lendWindow, askRow, wireAsks, recordPurchase, linkWindow, reportWindow, repairWindow, recordCost, rotaWindow };
+  return { esc, num, money, short, day, ampm, iso, todayIso, minutes, tile, roomDot, conditionPill, statusPill, CONDITION, STATUS, options, personPicker, bookWindow, bookingWindow, roomsWindow, itemWindow, lendWindow, askRow, wireAsks, recordPurchase, linkWindow, reportWindow, repairWindow, recordCost, rotaWindow, fileViewer };
 })();
 
 window.FacilitiesUI = FacilitiesUI;

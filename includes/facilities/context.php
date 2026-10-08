@@ -9,7 +9,7 @@ require_once __DIR__ . '/../session-manager.php';
 require_once __DIR__ . '/../auth-check.php';
 require_once __DIR__ . '/../permission-check.php';
 
-/** @param string $page index | bookings | equipment | item | assets | repairs | rota */
+/** @param string $page index | bookings | equipment | item | assets | reports | repairs | rota */
 function facilitiesPageContext(string $page): array
 {
     $permission = [
@@ -17,6 +17,7 @@ function facilitiesPageContext(string $page): array
         'equipment' => 'church.facilities.equipment.read',
         'item' => 'church.facilities.equipment.read',
         'assets' => 'church.facilities.assets.read',
+        'reports' => 'church.facilities.facilities.export',
         'repairs' => 'church.facilities.repairs.read',
         'rota' => 'church.facilities.rota.read',
     ][$page] ?? 'church.facilities.facilities.read';
@@ -95,6 +96,9 @@ function facilitiesPageScripts(string $page): void
     if ($page === 'repairs' || $page === 'item') {
         // "Record the cost" opens the Budgets Record money window.
         $scripts = [...$scripts, 'assets/js/pages/budgets/api.js', 'assets/js/pages/budgets/ui.js', 'assets/js/pages/budgets/entry-modal.js', 'assets/js/pages/demographics/attendance-form-shared.js'];
+    }
+    if ($page === 'reports') {
+        $scripts[] = 'assets/js/pages/demographics/reports.js';
     }
     $scripts[] = "assets/js/pages/facilities/{$page}.js";
     foreach ($scripts as $src) {

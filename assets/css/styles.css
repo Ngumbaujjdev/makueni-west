@@ -39070,6 +39070,53 @@ button.cal-side-item:focus-visible {
 }
 
 /* ==========================================================================
+   Facilities set up (2026-10-08, P5 round 3) - Settings > Facilities rows,
+   the receipt viewer, the Add window's preview and the rota's team chips.
+   ========================================================================== */
+.fs-rows { display: flex; flex-direction: column; gap: .65rem; }
+.fs-row { display: flex; align-items: flex-start; gap: .75rem; padding: .85rem; border: 1px solid var(--default-border); border-radius: .7rem; }
+.fs-row.is-off { background: rgba(var(--dark-rgb), .025); }
+.fs-row.is-off .fs-row-tile { opacity: .55; }
+.fs-row-tile { display: inline-grid; flex: 0 0 2.6rem; place-items: center; width: 2.6rem; height: 2.6rem; margin-top: 1.4rem; border-radius: .65rem; color: #fff; font-size: 1.2rem; }
+.fs-row-tile.bg-warning, .fs-row-tile.bg-secondary { color: #1d1d1f; }
+.fs-row-tools { display: flex; flex: 0 0 auto; gap: .3rem; margin-top: 1.4rem; }
+.fs-swatches { gap: .35rem; padding: .3rem 0; }
+.fs-swatches span { width: 1.6rem; height: 1.6rem; }
+.fs-team { padding: .6rem .7rem; border-radius: .6rem; background: rgba(var(--dark-rgb), .025); }
+.fs-team .pp-chips { display: flex; flex-wrap: wrap; gap: .35rem; }
+.fx-viewer { display: grid; place-items: center; height: min(75vh, 52rem); background: #2b2f36; }
+.fx-viewer img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.fx-viewer iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+.fx-viewer-wait { display: grid; place-items: center; width: 100%; height: 100%; color: #fff; }
+.fx-prev { overflow: hidden; }
+.fx-prev-media { position: relative; display: grid; place-items: center; height: 11rem; background: rgba(var(--dark-rgb), .04); }
+.fx-prev-media img { width: 100%; height: 100%; object-fit: cover; }
+.fx-prev-icon { display: inline-grid; place-items: center; width: 4.5rem; height: 4.5rem; border-radius: 1.1rem; color: #fff; font-size: 2rem; }
+.fx-prev-count { position: absolute; right: .6rem; bottom: .6rem; padding: .2rem .55rem; border-radius: 1rem; background: rgba(13, 13, 13, .65); color: #fff; font-size: .74rem; font-weight: 600; }
+.fx-prev-body { padding: .9rem 1rem 1rem; }
+.fx-prev-name { font-size: 1rem; color: var(--v2-heading); word-break: break-word; }
+.fx-prev-rows { margin: .75rem 0 0; padding: 0; list-style: none; }
+.fx-prev-rows li { display: flex; align-items: center; gap: .55rem; padding: .45rem 0; border-top: 1px dashed var(--default-border); font-size: .84rem; }
+.fx-prev-rows li > i { flex: 0 0 auto; color: rgb(var(--success-rgb)); font-size: 1rem; }
+.fx-prev-rows li > span { flex: 1 1 auto; color: var(--default-text-color); }
+.fx-prev-rows li > strong { color: var(--v2-heading); text-align: right; word-break: break-word; }
+.fx-team-pick { display: flex; flex-wrap: wrap; gap: .4rem; }
+.fx-team-chip { display: inline-flex; align-items: center; gap: .4rem; padding: .3rem .6rem .3rem .3rem; border: 1px solid var(--default-border); border-radius: 2rem; background: var(--custom-white); font-size: .82rem; font-weight: 600; color: var(--v2-heading); }
+.fx-team-chip i { color: var(--default-text-color); }
+.fx-team-chip.is-on { border-color: rgb(var(--success-rgb)); background: rgba(var(--success-rgb), .08); }
+.fx-team-chip.is-on i { color: rgb(var(--success-rgb)); }
+.fx-fill-list { margin: 0; padding: 0; list-style: none; }
+.fx-fill-list li { display: flex; align-items: center; gap: .6rem; padding: .45rem 0; border-top: 1px dashed var(--default-border); font-size: .86rem; font-weight: 600; color: var(--v2-heading); }
+.fx-fill-list li:first-child { border-top: 0; }
+.fx-fill-list small { display: block; font-size: .75rem; font-weight: 500; color: var(--default-text-color); }
+@media (max-width: 767.98px) {
+  .fs-row { flex-wrap: wrap; }
+  .fs-row-tile { margin-top: 0; }
+  .fs-row-tools { width: 100%; justify-content: flex-end; margin-top: 0; }
+  .fx-viewer { height: 70vh; }
+}
+
+/* ==========================================================================
    Settings > Profile: services online (YouTube) and the gallery (2026-10-08)
    ========================================================================== */
 .settings-yt-empty, .settings-yt-channel { display: flex; align-items: center; gap: .75rem; padding: .8rem .9rem; border-radius: .8rem; background: rgba(var(--danger-rgb), .06); color: var(--v2-heading); text-decoration: none; }
