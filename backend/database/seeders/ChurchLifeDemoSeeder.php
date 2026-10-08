@@ -311,6 +311,120 @@ class ChurchLifeDemoSeeder extends Seeder
             'open_to' => 'own', 'status' => 'published', 'published_at' => $this->at('2026-09-01 10:00'),
         ], $benson);
         $this->sessions($women, $benson, ['Praying for our families', 'Praying for the town', 'Praying for the youth'], fn ($i) => ['adults' => 14 + $i % 3]);
+
+        $this->moreEvents($diocese, $region, $church, $neighbours, $bishop, $titus, $benson);
+    }
+
+    /**
+     * More kinds of event at every level (2026-10-08): conferences, a worship
+     * night, a leadership meeting, a revival week, a wedding, a harambee - some
+     * already happened, with who came, fees paid, ratings and a report back, so
+     * an event's page has something to show. No money entries: those belong to
+     * a budget, and the demo leaves budgets alone.
+     */
+    private function moreEvents(Territory $diocese, Territory $region, Territory $church, $neighbours, User $bishop, User $titus, User $benson): void
+    {
+        $two = $neighbours->take(2)->values();
+
+        // The diocese
+        $conference = $this->activity([
+            'kind' => 'event', 'territory_id' => $diocese->id, 'title' => "Diocese Pastors' Conference 2026", 'type' => 'conference', 'audience' => 'pastors',
+            'description' => "Three days for every pastor and their spouse: the word, rest and planning the diocese's year together.",
+            'starts_at' => $this->at('2026-08-20 09:00'), 'ends_at' => $this->at('2026-08-22 15:00'), 'venue' => 'Makueni Boys High School, Wote',
+            'capacity' => 250, 'coordinator' => 'Rev. Daniel Musyoka', 'speakers' => 'Bishop Peter Kilonzo, Rev. Dr. Joseph Muli',
+            'agenda' => "Thu: arrival, opening service and the Bishop's charge\nFri: teaching - shepherding in hard times\nFri evening: spouses' session\nSat: planning 2027 by region, Holy Communion and send-off",
+            'open_to' => 'below', 'registration' => true, 'register_by' => '2026-08-10', 'fee_per_person' => 1500,
+            'planned_income' => 300000, 'planned_spend' => 260000, 'status' => 'completed', 'published_at' => $this->at('2026-07-01 10:00'),
+            'report_back' => '212 pastors and spouses came from every region. The Bishop charged us to visit every member before Christmas; each region left with its 2027 plan.',
+        ], $bishop);
+        $this->register($conference, $church, ['adults' => 2, 'leaders' => 2], $benson, ['fee_paid' => 6000, 'came_adults' => 2, 'came_leaders' => 2, 'rating' => 5, 'comment' => 'The best conference in years - the planning day was very practical.']);
+        foreach ($two as $i => $n) {
+            $this->register($conference, $n, ['adults' => 1, 'leaders' => 2 - $i], $bishop, ['fee_paid' => $i ? 1500 : 4500, 'came_adults' => 1, 'came_leaders' => 1, 'rating' => 4 + ($i ? 0 : 1) - $i, 'comment' => $i ? 'Good teaching. Food could have been better.' : 'We came back refreshed. Thank you, Bishop.']);
+        }
+
+        $prayer = $this->activity([
+            'kind' => 'event', 'territory_id' => $diocese->id, 'title' => 'Diocese Prayer Conference 2027', 'type' => 'prayer_conference', 'audience' => 'everyone',
+            'description' => 'Opening the new year in prayer and fasting - three days for every church of the diocese.',
+            'starts_at' => $this->at('2027-01-15 09:00'), 'ends_at' => $this->at('2027-01-17 13:00'), 'venue' => 'CCI Wote church grounds',
+            'capacity' => 800, 'coordinator' => 'Pst. Grace Wambua', 'speakers' => 'Bishop Peter Kilonzo',
+            'agenda' => "Fri: opening night of prayer\nSat: prayer for families, the nation and the youth\nSun: thanksgiving service",
+            'open_to' => 'below', 'registration' => true, 'register_by' => '2027-01-08', 'fee_per_person' => 300,
+            'planned_income' => 120000, 'planned_spend' => 90000, 'status' => 'published', 'published_at' => $this->at('2026-10-01 10:00'),
+        ], $bishop);
+        $this->register($prayer, $church, ['youth' => 10, 'adults' => 25, 'leaders' => 3], $benson);
+
+        $meeting = $this->activity([
+            'kind' => 'event', 'territory_id' => $diocese->id, 'title' => "Bishop's Leadership Meeting", 'type' => 'leadership_meeting', 'audience' => 'pastors',
+            'description' => 'The Bishop meets the senior pastors and regional overseers: the year so far, monthly reports, and the convention.',
+            'starts_at' => $this->at('2026-10-24 10:00'), 'ends_at' => $this->at('2026-10-24 14:00'), 'venue' => 'Diocese office, Wote',
+            'coordinator' => 'Diocese Secretary', 'agenda' => "Opening prayer\nThe year so far - each region\nMonthly reports: what we learn\nYouth Convention: final plans\nAny other business",
+            'open_to' => 'below', 'registration' => true, 'register_by' => '2026-10-20', 'status' => 'published', 'published_at' => $this->at('2026-10-03 10:00'),
+        ], $bishop);
+        $this->register($meeting, $church, ['leaders' => 1], $benson);
+        foreach ($two as $n) {
+            $this->register($meeting, $n, ['leaders' => 1], $bishop);
+        }
+
+        // The region
+        $women = $this->activity([
+            'kind' => 'event', 'territory_id' => $region->id, 'title' => "Regional Women's Conference", 'type' => 'womens', 'audience' => 'women',
+            'description' => 'A day for the women of every church in the region: worship, teaching and a shared lunch.',
+            'starts_at' => $this->at('2026-11-28 09:00'), 'ends_at' => $this->at('2026-11-28 16:00'), 'venue' => 'CCI SULTAN HAMUD',
+            'capacity' => 300, 'coordinator' => 'Mama Ruth Manoo', 'speakers' => 'Pst. Grace Wambua',
+            'open_to' => 'below', 'registration' => true, 'register_by' => '2026-11-20', 'fee_per_person' => 200,
+            'planned_income' => 40000, 'planned_spend' => 35000, 'status' => 'published', 'published_at' => $this->at('2026-10-04 10:00'),
+        ], $titus);
+        $this->register($women, $church, ['adults' => 35], $benson, ['fee_paid' => 3000]);
+        if ($two->first()) {
+            $this->register($women, $two->first(), ['adults' => 22], $titus);
+        }
+
+        $this->activity([
+            'kind' => 'event', 'territory_id' => $region->id, 'title' => "Regional Men's Conference", 'type' => 'mens', 'audience' => 'men',
+            'description' => 'Men of the region: faith at home, at work and in the church.',
+            'starts_at' => $this->at('2027-02-13 09:00'), 'ends_at' => $this->at('2027-02-13 15:00'), 'venue' => 'Sultan Hamud Stadium',
+            'coordinator' => 'Pst. Titus Kenzi', 'open_to' => 'below', 'registration' => true, 'register_by' => '2027-02-06',
+            'status' => 'published', 'published_at' => $this->at('2026-10-05 10:00'),
+        ], $titus);
+
+        $worship = $this->activity([
+            'kind' => 'event', 'territory_id' => $region->id, 'title' => 'Regional Worship Night', 'type' => 'worship_night', 'audience' => 'everyone',
+            'description' => "An evening of worship with every church's choir and praise team.",
+            'starts_at' => $this->at('2026-09-12 18:00'), 'ends_at' => $this->at('2026-09-12 22:00'), 'venue' => 'CCI SULTAN HAMUD',
+            'coordinator' => 'Pst. Titus Kenzi', 'agenda' => "18:00 Opening prayer\n18:15 Choirs, one church at a time\n20:30 Combined praise\n21:30 Word and closing prayer",
+            'open_to' => 'below', 'registration' => true, 'status' => 'completed', 'published_at' => $this->at('2026-08-20 10:00'),
+            'report_back' => 'Five choirs and about 340 people. We will make it a yearly night - next time with more seats outside.',
+        ], $titus);
+        $this->register($worship, $church, ['youth' => 40, 'adults' => 60, 'leaders' => 5], $benson, ['came_youth' => 46, 'came_adults' => 72, 'came_leaders' => 5, 'rating' => 5, 'comment' => 'Our choir loved it. Please do it again.']);
+        if ($two->first()) {
+            $this->register($worship, $two->first(), ['youth' => 25, 'adults' => 30, 'leaders' => 3], $titus, ['came_youth' => 20, 'came_adults' => 33, 'came_leaders' => 3, 'rating' => 4, 'comment' => 'Lovely night; the sound system struggled at the start.']);
+        }
+
+        // The church
+        $this->activity([
+            'kind' => 'event', 'territory_id' => $church->id, 'title' => 'Revival Week', 'type' => 'revival', 'audience' => 'everyone',
+            'description' => 'Seven evenings of preaching and prayer, Sunday to Saturday. Bring a neighbour.',
+            'starts_at' => $this->at('2026-10-25 17:30'), 'ends_at' => $this->at('2026-10-31 20:00'), 'venue' => 'CCI SULTAN HAMUD',
+            'coordinator' => 'Pst. Benson Manoo', 'speakers' => 'Evangelist Peter Mutua', 'agenda' => "Sun: the call\nMon-Fri: evening preaching and prayer\nSat: baptism and thanksgiving",
+            'open_to' => 'region', 'planned_spend' => 25000, 'status' => 'published', 'published_at' => $this->at('2026-10-06 10:00'),
+        ], $benson);
+        $this->activity([
+            'kind' => 'event', 'territory_id' => $church->id, 'title' => 'Wedding: Daniel & Mary', 'type' => 'wedding', 'audience' => 'everyone',
+            'description' => 'The wedding of Daniel Kioko and Mary Ndinda. The whole church is invited.',
+            'starts_at' => $this->at('2026-12-12 10:00'), 'ends_at' => $this->at('2026-12-12 15:00'), 'venue' => 'CCI SULTAN HAMUD',
+            'coordinator' => 'Pst. Benson Manoo', 'open_to' => 'own', 'status' => 'published', 'published_at' => $this->at('2026-10-02 10:00'),
+        ], $benson);
+        $harambee = $this->activity([
+            'kind' => 'event', 'territory_id' => $church->id, 'title' => 'Harambee for the Church Van', 'type' => 'fundraising', 'audience' => 'everyone',
+            'description' => 'Raising the money for a church van, so the elderly and the youth can get to services and outreach.',
+            'starts_at' => $this->at('2026-08-30 11:00'), 'ends_at' => $this->at('2026-08-30 16:00'), 'venue' => 'CCI SULTAN HAMUD',
+            'coordinator' => 'Church Committee', 'speakers' => 'Hon. guest of honour: the area MCA', 'open_to' => 'region', 'registration' => true,
+            'planned_income' => 200000, 'planned_spend' => 15000, 'status' => 'completed', 'published_at' => $this->at('2026-08-01 10:00'),
+            'report_back' => 'KES 236,400 raised - above the KES 200,000 target. Thank you to the churches of the region who came. The van is ordered.',
+        ], $benson);
+        if ($two->first()) {
+            $this->register($harambee, $two->first(), ['adults' => 15, 'leaders' => 2], $titus, ['came_adults' => 18, 'came_leaders' => 2, 'rating' => 5, 'comment' => 'A joyful day. Glad to stand with you.']);
+        }
     }
 
     // -------------------------------------------------------------- reports

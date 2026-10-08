@@ -3,6 +3,7 @@
 namespace Tests\Feature\Activities;
 
 use App\Models\Activity;
+use App\Models\ActivityRegistration;
 use App\Models\CalendarEvent;
 use App\Models\MessageBatch;
 use App\Models\MessageTemplate;
@@ -44,6 +45,11 @@ class ChurchLifeDemoSeederTest extends TestCase
         $this->assertGreaterThan(0, $once[2], 'monthly reports');
         $this->assertGreaterThan(0, $once[3], 'messages');
         $this->assertSame(1, MonthlyReport::where('territory_id', $this->myChurch->id)->where('month', 9)->where('status', 'seen')->count());
+        // Varied events at every level, and finished ones with something to show.
+        $conference = Activity::where('type', 'conference')->where('status', 'completed')->sole();
+        $this->assertNotEmpty($conference->report_back);
+        $this->assertTrue(ActivityRegistration::where('activity_id', $conference->id)->where('came_leaders', '>', 0)->whereNotNull('rating')->exists());
+        $this->assertGreaterThanOrEqual(5, Activity::whereIn('type', ['conference', 'prayer_conference', 'leadership_meeting', 'womens', 'mens', 'worship_night', 'revival', 'wedding'])->count());
 
         $this->seed(ChurchLifeDemoSeeder::class);
         $this->assertSame($once, $this->counts());
