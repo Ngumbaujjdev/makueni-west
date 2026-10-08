@@ -35,6 +35,7 @@
     rolesBelow: [],
     contacts: false,
     typed: "",
+    register: [],
     channel: "sms",
     subject: "",
     body: "",
@@ -55,6 +56,7 @@
     own: { roles: s.own },
     below: { scope: s.scope, levels: s.levels, group_ids: s.groups, place_ids: s.places, roles: s.rolesBelow, place_contacts: s.contacts },
     typed: s.typed.trim() ? [s.typed] : [],
+    register: { members: s.register.includes("members"), visitors: s.register.includes("visitors") },
   });
 
   // ================================================================ channel
@@ -164,13 +166,22 @@
         <div class="mb-3"></div>`
           : ""
       }
+      ${
+        opts.register
+          ? `<div class="pb-sub">Our register</div>
+        <div class="d-flex flex-wrap gap-1 mb-3">
+          ${opts.register.members != null ? roleChip("members", "Our members", opts.register.members, s.register.includes("members"), "register") : ""}
+          ${opts.register.visitors != null ? roleChip("visitors", "Visitors who said yes", opts.register.visitors, s.register.includes("visitors"), "register") : ""}
+        </div>`
+          : ""
+      }
       <div class="pb-sub">Numbers or emails typed in</div>
       <textarea class="form-control form-control-sm" id="typedIn" rows="2" placeholder="One per line, e.g. 0712 345 678 or someone@example.com">${M.esc(s.typed)}</textarea>
       <div class="fs-11 text-muted mt-1">For this message only - they aren't saved anywhere else.</div>`;
 
     $("whoBody").querySelectorAll("[data-chip]").forEach((btn) =>
       btn.addEventListener("click", () => {
-        const list = btn.dataset.chip === "own" ? "own" : "rolesBelow";
+        const list = { own: "own", register: "register" }[btn.dataset.chip] || "rolesBelow";
         const v = btn.dataset.value;
         if (v === "*") s[list] = s[list].includes("*") ? [] : ["*"];
         else s[list] = s[list].includes(v) ? s[list].filter((x) => x !== v) : [...s[list].filter((x) => x !== "*"), v];
@@ -404,9 +415,10 @@
     if (q.get("body")) s.body = q.get("body");
     // A number from a member's page or a birthday (Members, docs/specs/people-and-care-spec.md).
     if (q.get("typed")) s.typed = q.get("typed");
+    if (["members", "visitors"].includes(q.get("register"))) s.register = [q.get("register")];
     const tpl = opts.templates.find((t) => t.id === Number(q.get("template")));
     if (tpl) Object.assign(s, { template: tpl.id, channel: tpl.channel, subject: tpl.subject || "", body: tpl.body });
-    if (!s.own.length && s.scope === "none" && !opts.below) s.own = ["*"];
+    if (!s.own.length && s.scope === "none" && !opts.below && !s.register.length) s.own = ["*"];
   }
 
   document.addEventListener("DOMContentLoaded", async () => {
