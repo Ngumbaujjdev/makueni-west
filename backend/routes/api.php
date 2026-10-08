@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\ModuleGroupController;
 use App\Http\Controllers\Api\NotificationsController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\People\CareController;
+use App\Http\Controllers\Api\People\MinistryController;
 use App\Http\Controllers\Api\People\PeopleController;
 use App\Http\Controllers\Api\People\VisitorsController;
 use App\Http\Controllers\Api\PermissionController;
@@ -163,6 +164,24 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('care/{id}/close', [CareController::class, 'close'])->whereNumber('id');
     Route::post('care/{id}/discharge', [CareController::class, 'discharge'])->whereNumber('id');
     Route::get('people/{id}/care', [CareController::class, 'person'])->whereNumber('id');
+
+    // Ministries (P4) - each church's own; a ministry's leader looks after its members. Region/diocese: totals only.
+    Route::get('ministries/options', [MinistryController::class, 'options']);
+    Route::get('ministries/overview', [MinistryController::class, 'overview']);
+    Route::get('ministries/insights', [MinistryController::class, 'insights']);
+    Route::get('ministries/totals', [MinistryController::class, 'totals']);
+    Route::post('ministries', [MinistryController::class, 'store']);
+    Route::get('ministries/{id}', [MinistryController::class, 'show'])->whereNumber('id');
+    Route::put('ministries/{id}', [MinistryController::class, 'update'])->whereNumber('id');
+    Route::delete('ministries/{id}', [MinistryController::class, 'destroy'])->whereNumber('id');
+    Route::put('ministries/{id}/leaders', [MinistryController::class, 'leaders'])->whereNumber('id');
+    Route::get('ministries/{id}/members', [MinistryController::class, 'members'])->whereNumber('id');
+    Route::post('ministries/{id}/members', [MinistryController::class, 'addMembers'])->whereNumber('id');
+    Route::get('ministries/{id}/candidates', [MinistryController::class, 'candidates'])->whereNumber('id');
+    Route::post('ministries/{id}/members/remove', [MinistryController::class, 'removeMembers'])->whereNumber('id');
+    Route::get('ministries/{id}/gatherings', [MinistryController::class, 'gatherings'])->whereNumber('id');
+    Route::get('ministries/{id}/activities', [MinistryController::class, 'activities'])->whereNumber('id');
+    Route::get('ministries/{id}/history', [MinistryController::class, 'history'])->whereNumber('id');
 
     // People & care P2 - visitors and their follow-up; /visitors/totals is the
     // region's and diocese's (counts only)

@@ -568,12 +568,30 @@ The standard six are created for a church the first time its ministries are read
   - Fields: name, kind, icon, colour, meets day and time, gathering type, leaders, active.
   - The diocese section `ministries_standard` sets the starting list for new churches.
 
+### P4 as built (2026-10-08)
+- **Data:**
+  - no `ministry_notes`: events and initiatives already carry plans, and the Activities tab shows them;
+  - `ministries.standard` holds the kind for the standard six, unique per church, so two first reads at once can't make them twice and a removed one isn't made again;
+  - `colour` is one of the six palette colours that look different (`primary success purple pink warning danger`; info/teal and secondary/orange are the same teal and gold);
+  - `ministry_members` and `ministry_leaders` have their own ids and are audited, so History says who was added, taken out or made leader;
+  - a leader is **either** a church user (`user_id`, who can then look after the ministry) **or** someone in the register (`person_id`).
+- **Who serves:** members and visitors in the register (not archived, transferred out or deceased). Removing a person's details also takes them out of every ministry.
+- **The standard six** link to a church gathering type with a matching name (Youth → "Youth Service", Music → "Choir Practice", Prayer → "Kesha"...). A standard one can't be deleted - it is switched off and keeps its kind.
+- **A ministry's own leader** may add and remove its members and change when it meets - nothing else, and nothing of another ministry's.
+- **Extra routes:** `GET /ministries/options`, `DELETE /ministries/{id}` (our own only), `GET /ministries/{id}/candidates` (who can be added - the register's slim details), `POST /ministries/{id}/members/remove {person_ids[]}`, `GET /ministries/{id}/history`, `GET /ministries/insights`. `?all=1` on the overview adds the switched-off ones for those who manage.
+- **Members list:** `/people?ministry={id|none}` and `ministries[]` on each row and the person; a Ministry menu in the list strip (`PeopleKit.listTable` `selects`) and **Add to ministry** in the bulk bar (it calls `POST /ministries/{id}/members`, so `/people/bulk` is unchanged). The member page shows their ministries.
+- **Gatherings** use Attendance's own `gatheringDetail()` over twelve months - no attendance is kept twice.
+- **No settings section:** ministries are added and edited on the Ministries page (a window: name and kind, icon and colour, when it meets, its gathering, leaders, running). The standard list is `Ministry::STANDARD`.
+- **Pages:** Ministries and Insights (`church.ministries.insights.read`, given to readers) on the menu; the ministry page is off it. Region and diocese: "Church care › Ministries", counts only.
+- **Demo data:** `PeopleDemoSeeder` fills the standard six with demo members and demo-person leaders (no made-up attendance); `PeopleDemoRemoveSeeder` takes them out.
+- **Tests:** `tests/Feature/People/MinistriesTest.php` (3).
+
 ### P4 acceptance criteria
 
-- [ ] The standard six appear once per church and are not duplicated.
-- [ ] A Youth Leader who leads Youth can add and remove its members, and can't change Women's.
-- [ ] The gatherings tab returns the linked gathering type's attendance.
-- [ ] `/ministries/totals` has counts only.
+- [x] The standard six appear once per church and are not duplicated.
+- [x] A Youth Leader who leads Youth can add and remove its members, and can't change Women's.
+- [x] The gatherings tab returns the linked gathering type's attendance.
+- [x] `/ministries/totals` has counts only.
 
 ---
 

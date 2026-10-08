@@ -38557,3 +38557,52 @@ button.cal-side-item:focus-visible {
 .cr-prayer.is-answered { border-color: rgba(var(--success-rgb), .35); }
 .cr-testimony { display: flex; gap: .6rem; margin-top: .85rem; padding-top: .85rem; border-top: 1px dashed var(--default-border); font-size: .88rem; color: var(--v2-heading); }
 .cr-testimony > i { font-size: 1.1rem; color: rgb(var(--success-rgb)); }
+
+/* ==========================================================================
+   Ministries (2026-10-08, docs/specs/people-and-care-spec.md P4) - it
+   reuses the People kit (cards, pills, ticks, the bulk bar) and the event
+   cards; these are its own pieces: a ministry card (its tile, three facts,
+   leaders and an attendance sparkline), the icon and colour pickers, the
+   leader rows and the activity dates. Each ministry's own colour is its
+   tile only - the card itself stays white.
+   ========================================================================== */
+.mn-card { color: inherit; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.mn-card:hover { color: inherit; border-color: rgba(var(--primary-rgb), .35); box-shadow: 0 6px 16px rgba(15, 23, 42, .06); transform: translateY(-2px); }
+.mn-card.is-off { opacity: .8; }
+.mn-card-skel { padding: 1.1rem; border: 1px solid var(--default-border); border-radius: .85rem; }
+.mn-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin-top: 1rem; padding-top: .85rem; border-top: 1px dashed var(--default-border); }
+.mn-facts span { display: block; font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--default-text-color); }
+.mn-facts strong { display: block; font-size: 1.05rem; color: var(--v2-heading); }
+.mn-facts small { display: block; font-size: .74rem; color: var(--default-text-color); }
+.mn-card-foot { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-top: .85rem; }
+.mn-card-leaders { overflow: hidden; font-size: .8rem; font-weight: 600; color: var(--v2-heading); text-overflow: ellipsis; white-space: nowrap; }
+.mn-no-leader { font-size: 1.1rem; color: var(--default-text-color); }
+.mn-card-spark { flex: 0 0 6.5rem; }
+.mn-preview { display: flex; align-items: center; gap: .65rem; margin-bottom: .85rem; font-size: .95rem; color: var(--v2-heading); }
+.mn-icon-pick { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .85rem; }
+.mn-icon-pick label, .mn-swatches label { margin: 0; cursor: pointer; }
+.mn-icon-pick input, .mn-swatches input { position: absolute; opacity: 0; pointer-events: none; }
+.mn-icon-pick span { display: inline-grid; place-items: center; width: 2.3rem; height: 2.3rem; border: 1px solid var(--default-border); border-radius: .6rem; font-size: 1.1rem; color: var(--v2-heading); transition: border-color .15s, background-color .15s; }
+.mn-icon-pick label:hover span { border-color: rgba(var(--primary-rgb), .45); }
+.mn-icon-pick input:checked + span { border-color: rgb(var(--modal-band-rgb)); background: rgb(var(--modal-band-rgb)); color: #fff; }
+.mn-icon-pick input:focus-visible + span, .mn-swatches input:focus-visible + span { outline: 2px solid rgb(var(--primary-rgb)); outline-offset: 2px; }
+.mn-swatches { display: flex; flex-wrap: wrap; gap: .5rem; }
+.mn-swatches span { display: block; width: 1.75rem; height: 1.75rem; border: 2px solid var(--custom-white); border-radius: 50%; box-shadow: 0 0 0 1px var(--default-border); }
+.mn-swatches input:checked + span { box-shadow: 0 0 0 2px rgb(var(--modal-band-rgb)); }
+.mn-leader-row { display: grid; grid-template-columns: minmax(0, 1fr) 9.5rem auto; gap: .5rem; align-items: center; margin-bottom: .5rem; }
+.mn-filter-row { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .6rem; }
+.mn-filter-row .pp-pill { padding-block: .25rem; font-size: .76rem; }
+.mn-pick-list { max-height: 20rem; }
+.mn-group-head { margin-bottom: .5rem; font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--default-text-color); }
+.mn-acts li { gap: .8rem; }
+.mn-acts small { display: block; font-size: .76rem; color: var(--default-text-color); }
+.mn-date { display: inline-flex; flex: 0 0 2.6rem; flex-direction: column; align-items: center; justify-content: center; height: 2.6rem; border-radius: .6rem; background: rgb(var(--primary-rgb)); color: #fff; line-height: 1.05; }
+.mn-date strong { font-size: .95rem; }
+.mn-date small { font-size: .62rem; font-weight: 700; text-transform: uppercase; color: rgba(255, 255, 255, .9) !important; }
+.mn-date.is-past { background: rgba(var(--primary-rgb), .12); color: rgb(var(--primary-rgb)); }
+.mn-date.is-past small { color: rgb(var(--primary-rgb)) !important; }
+@media (max-width: 575.98px) {
+  .mn-leader-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .mn-leader-row [data-role], .mn-leader-row [data-role] + .select2 { grid-column: 1; }
+  .mn-card-spark { flex-basis: 5rem; }
+}

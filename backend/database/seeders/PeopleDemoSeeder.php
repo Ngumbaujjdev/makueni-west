@@ -5,17 +5,20 @@ namespace Database\Seeders;
 use App\Models\CareContact;
 use App\Models\CareRecord;
 use App\Models\GatheringType;
+use App\Models\Ministry;
 use App\Models\Person;
 use App\Models\PersonTransfer;
 use App\Models\Territory;
 use App\Models\VisitorFollowup;
 use App\Models\VisitorVisit;
 use App\Services\Activities\Activities;
+use App\Services\People\Ministries;
 use App\Support\PeopleAccess;
 use App\Support\PlaceAccess;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Demo members and visitors, so the People & care pages can be seen filled in
@@ -77,9 +80,11 @@ class PeopleDemoSeeder extends Seeder
 
         $this->church($main, 40, 15, self::MAIN_AREAS, $others);
         $this->care($main, 25);
+        $this->ministries($main);
         foreach ($others as $i => $church) {
             $this->church($church, mt_rand(5, 15), mt_rand(2, 6), $this->areasFor($church), collect([$main]));
             $this->care($church, mt_rand(2, 6));
+            $this->ministries($church);
         }
         $this->command?->info("   ✅ Demo people: {$main->name} (40 members, 15 visitors) and ".$others->count().' other churches');
         $this->command?->warn('   ℹ️  Demo numbers are +254 700 000 xxx and are never texted. Remove with --class=PeopleDemoRemoveSeeder');
@@ -187,6 +192,49 @@ class PeopleDemoSeeder extends Seeder
             }
             if ($open && $type === 'hospital') {
                 CareContact::create(['care_record_id' => $record->id, 'territory_id' => $church->id, 'on' => $on->addDay()->min($this->today)->toDateString(), 'type' => 'visit', 'note' => 'Visited and prayed with them.', 'done_by' => $carers[0] ?? null]);
+            }
+        }
+    }
+
+    /**
+     * Ministries (P4): the standard six, with demo members in each that fits
+     * them - Sunday school in Children, women in Women, a mix in Youth, Music
+     * and Prayer - a few in two, some in none, and a demo leader for most.
+     * No attendance is made up: each one shows the real gatherings it links to.
+     */
+    private function ministries(Territory $church): void
+    {
+        app(Ministries::class)->ensure($church);
+        $ministries = Ministry::where('territory_id', $church->id)->whereNotNull('standard')->get()->keyBy('standard');
+        $people = Person::where('territory_id', $church->id)->where('phone', 'like', '+254700000%')->where('status', 'member')->orderBy('id')->get();
+        $adults = $people->where('congregation', 'main_church')->values();
+        $plan = [
+            'children' => $people->where('congregation', 'sunday_school'),
+            'women' => $adults->where('gender', 'female')->filter(fn () => mt_rand(1, 10) <= 6),
+            'men' => $adults->where('gender', 'male')->filter(fn () => mt_rand(1, 10) <= 5),
+            'youth' => $adults->filter(fn () => mt_rand(1, 10) <= 3),
+            'music' => $adults->filter(fn () => mt_rand(1, 10) <= 2),
+            'prayer' => $adults->filter(fn () => mt_rand(1, 10) <= 2),
+        ];
+        $now = now();
+        foreach ($plan as $kind => $members) {
+            $m = $ministries[$kind] ?? null;
+            if (! $m || $members->isEmpty()) {
+                continue;
+            }
+            DB::table('ministry_members')->insertOrIgnore($members->map(fn (Person $p) => [
+                'ministry_id' => $m->id, 'person_id' => $p->id, 'joined_on' => $this->today->subDays(mt_rand(10, 400))->toDateString(), 'created_at' => $now, 'updated_at' => $now,
+            ])->values()->all());
+            if ($kind !== 'prayer') {
+                DB::table('ministry_leaders')->insert(['ministry_id' => $m->id, 'person_id' => $members->first()->id, 'role' => 'leader', 'created_at' => $now, 'updated_at' => $now]);
+            }
+            if ($members->count() > 6) {
+                DB::table('ministry_leaders')->insert(['ministry_id' => $m->id, 'person_id' => $members->get($members->keys()[1])->id, 'role' => 'assistant', 'created_at' => $now, 'updated_at' => $now]);
+            }
+            if ($kind === 'women' && $m->meets_day === null) {
+                $m->forceFill(['meets_day' => 2, 'meets_time' => '14:00'])->saveQuietly();
+            } elseif ($kind === 'youth' && $m->meets_day === null) {
+                $m->forceFill(['meets_day' => 6, 'meets_time' => '15:00'])->saveQuietly();
             }
         }
     }

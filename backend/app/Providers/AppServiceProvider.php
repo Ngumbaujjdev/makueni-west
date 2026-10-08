@@ -103,6 +103,9 @@ class AppServiceProvider extends ServiceProvider
             'visitor_followup' => 'App\Models\VisitorFollowup',
             'care_record' => 'App\Models\CareRecord',
             'care_contact' => 'App\Models\CareContact',
+            'ministry' => 'App\Models\Ministry',
+            'ministry_leader' => 'App\Models\MinistryLeader',
+            'ministry_member' => 'App\Models\MinistryMember',
         ]);
 
         // Saved system settings (email server, ...) take over from .env -
