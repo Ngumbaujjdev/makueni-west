@@ -727,10 +727,42 @@ All tables are church-scoped (`territory_type`, `territory_id`).
   - `facilities.duty_reminder` (default off)
   - `facilities.duty_reminder_time` (default 18:00)
 
+### P5 as built (2026-10-08)
+- **Data:**
+  - times are **Nairobi wall-clock times**, stored as they read (not UTC); an event's booking converts the event's UTC times;
+  - `rooms` add `colour` (the palette's six); `room_bookings` add `territory_id`;
+  - `equipment.category` is one of sound / instruments / furniture / kitchen / cleaning / IT / other;
+  - `equipment_loans` add `quantity` and `by`;
+  - `maintenance_jobs` add `priority` (normal / urgent) and `assigned_to`, and use `budget_entry_id` for the Budgets entry;
+  - `duty_rota.duty` is ushering / welcome / sound / security / cleaning;
+  - every table is audited.
+- **Access:**
+  - page reads `facilities.{bookings,equipment,repairs,rota}.read` are given to readers;
+  - `book` = book rooms (or `manage`);
+  - only the booker or a manager changes or cancels a booking; an event's booking moves with the event, not by hand;
+  - anyone who sees the facilities can report a repair; status, cost and who is on it are for those who manage.
+- **Rooms** are managed in a Rooms window on the Bookings page and the Facilities page - no settings editor. A room with bookings to come can't be removed (switch it off).
+- **Bookings:**
+  - `GET /bookings/check` gives the live clash check and that room's day for the Book window;
+  - opening hours and minimum notice come from Settings; past dates are refused, but a change that keeps the first date of a weekly booking under way is not;
+  - a weekly booking runs a year at most.
+- **Events:** a church's event form has an optional **Book a room** (`room_id`); a clash is 409 on the form; the booking moves with the event and is cancelled with it; the event's detail returns `room`.
+- **Ministries:** "Book its room" on a ministry's page opens Bookings with its weekly meeting filled in.
+- **Budgets:** `BudgetsEntryModal.open({ prefill })` fills a new entry; a repair's "Record the cost in the budget" uses the budget in use and links the saved entry (`POST /repairs/{id}/expense`, ours only).
+- **Calendar:**
+  - the `bookings` source ("Room bookings" toggle) - ours only, for those who see the facilities;
+  - the duty rota shows under "Due dates" as "Duty: N people", never a name.
+- **Duty reminders:** `facilities:duty-reminders` runs hourly; a church that switched it on gets texts after its chosen time the day before - to people with a phone in the register, never a demo number or a typed name, once a day (`duty_reminder` kind).
+- **Rota:** rows come from Settings › Service times (a Sunday service when none are set); `POST /rota/copy` copies a week onto another (the target week is replaced).
+- **Extra routes:** `GET /facilities/options`, `GET /facilities/people`, `POST /equipment/bulk` (room / condition), `GET /loans`.
+- **Pages:** Facilities, Bookings, Equipment (+ item page), Repairs, Duty rota.
+- **Demo data:** rooms (marked in their notes), the ministries' weekly meetings and one-off bookings, equipment (serial `DEMO-…`) with loans and repairs, and five weeks of the rota from demo people - removed by `PeopleDemoRemoveSeeder`.
+- **Tests:** `tests/Feature/Facilities/FacilitiesTest.php` (4).
+
 ### P5 acceptance criteria
 
-- [ ] An overlapping booking in the same room is 409 and names the clash. A different room is fine.
-- [ ] A weekly booking expands until `repeat_until`, and clashes are checked on every date.
-- [ ] Only the booker or a facilities manager can cancel.
-- [ ] Bookings show on the calendar under `sources[]=bookings` for our church only.
-- [ ] Another church is refused every facilities route.
+- [x] An overlapping booking in the same room is 409 and names the clash. A different room is fine.
+- [x] A weekly booking expands until `repeat_until`, and clashes are checked on every date.
+- [x] Only the booker or a facilities manager can cancel.
+- [x] Bookings show on the calendar under `sources[]=bookings` for our church only.
+- [x] Another church is refused every facilities route.
