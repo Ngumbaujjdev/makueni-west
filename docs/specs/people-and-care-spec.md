@@ -123,11 +123,11 @@ The modules replace the empty placeholder pages under `church/{member-management
 
 ### Data model
 
-**`people`.** Territory-scoped like `Activity`: `territory_type` and `territory_id`, always a church.
+**`people`.** Territory-scoped like `Activity`: a `territory_id` that is always a church. (As built, there is no `territory_type` column - the church is the only level.)
 
 | Column | Type | Notes |
 |---|---|---|
-| id, territory_type, territory_id | | the church |
+| id, territory_id | | the church |
 | first_name, last_name | string(80) | required |
 | other_names | string(80) null | |
 | gender | enum male/female null | |
@@ -190,6 +190,7 @@ Visitor columns are added in P2.
 | POST | /people/transfer-in | members.manage | a person body plus `{other_church_id?|other_church_name?, on}`. Creates a member with `how_joined=transfer` |
 | GET | /people/insights | members.read | age/gender pyramid, by ministry (P4), joins vs leaves per month, birthdays this month (names), not contacted in N days (P3) |
 | GET | /people/export | members.export | xlsx through the reports pipeline (`members.directory`) |
+| GET | /people/register-counts | members.read | the register in Demographics' words (total, male, female, youth, new and baptised this month) - the hint beside the Demographics form |
 | GET | /people/totals | members.below | per church below: `{church, keeps_register, active, new_this_month, transfers_in, transfers_out, baptised}`. Counts only |
 
 **Age bands:** Children 0-12, Youth 13-35, Adults 36-59, Seniors 60+. These are the Demographics bands.
@@ -223,10 +224,21 @@ Visitor columns are added in P2.
 |---|---|---|
 | `members.require_dob` | bool | off |
 | `members.require_national_id` | bool | off |
-| `members.birthday_sms` | bool | off |
-| `members.birthday_template` | text | "Happy birthday {first_name}! From your family at {church}." |
+| `members.birthday_template` | text | "Happy birthday {first_name}! We thank God for you. From your family at {church}." |
 
-`members.require_dob` and `members.require_national_id` are lockable.
+`members.require_dob` and `members.require_national_id` are lockable. As built there is no automatic birthday SMS: Insights lists the month's birthdays, each with a button that opens the Messages composer with the number and this text filled in.
+
+### P1 as built (2026-10-08)
+- **Menu pages:**
+  - Members (`/church/members/`, holding `read` and `export`);
+  - Add member (`new.php`, `manage`);
+  - Transfers (`transfers.php`) and Insights (`insights.php`), each with its own read permission (`church.members.transfers.read`, `church.members.insights.read`), granted to everyone who reads the register. The menu shows a page through its permission.
+- **Off the menu:** the member page (`member.php?id=`).
+- **Region and diocese:** "Church care › Members" (`/{level}/people/members.php`).
+- **Export:** the `members.directory` report (PDF/Excel) through the report centre, church scope, with the export permission.
+- **Messages:** the composer takes a `typed=` number (Send SMS from a member, a birthday). "Members" as a Messages audience moves to P2, together with visitor SMS.
+- **Audits:** they keep the encrypted fields as "(private)" (`Person::transformAudit`). The History tab says "changed notes", never the value.
+- **Tests:** `tests/Feature/People/MembersTest.php` (6) and `FoundationTest.php` (2).
 
 ### P1 acceptance criteria
 
