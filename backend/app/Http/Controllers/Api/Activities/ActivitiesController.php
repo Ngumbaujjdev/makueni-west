@@ -6,11 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Activity;
 use App\Models\ActivityRegistration;
 use App\Models\ActivitySession;
+use App\Models\Room;
+use App\Models\RoomBooking;
 use App\Models\Territory;
 use App\Models\User;
 use App\Services\Activities\Activities;
 use App\Services\Activities\Sessions;
 use App\Services\Budgets\BudgetBook;
+use App\Services\Facilities\Facilities;
 use App\Support\ActivityAccess;
 use App\Support\PlaceAccess;
 use Illuminate\Http\JsonResponse;
@@ -118,9 +121,20 @@ class ActivitiesController extends Controller
             return $this->forbidden($kind === 'initiative' ? "Your role can't add initiatives here." : "Your role can't add events here.");
         }
         [$fields, $invitees] = $this->validated($request, $place);
+        // A room for a church's event (Facilities, P5): checked before anything is saved.
+        $roomId = $this->roomFor($request, $place, $kind);
+        if ($roomId instanceof JsonResponse) {
+            return $roomId;
+        }
+        if ($roomId && ($clash = app(Facilities::class)->clash($place, $roomId, [Facilities::activitySlot($fields['starts_at'], $fields['ends_at'])]))) {
+            return $this->roomTaken($clash);
+        }
         $activity = Activity::create($fields + ['territory_id' => $place->id, 'status' => 'draft', 'created_by' => $request->user()->id, 'updated_by' => $request->user()->id]);
         $activity->invitees()->sync($invitees);
         Sessions::sync($activity, $request->user()->id);
+        if ($roomId) {
+            app(Facilities::class)->roomForActivity($place, $activity, $roomId, $request->user());
+        }
 
         return $this->ok($this->detail($activity->fresh(['territory', 'invitees', 'registrations']), $place, 'own', $request->user()), 'Saved as a draft.', 201);
     }
@@ -136,7 +150,19 @@ class ActivitiesController extends Controller
             return $this->unprocessable('status', "A completed or cancelled {$activity->kind} can't be changed.");
         }
         [$fields, $invitees] = $this->validated($request, $place, $activity);
+        // Its room (Facilities, P5) moves with it - checked before anything is saved.
+        $booked = RoomBooking::where('activity_id', $activity->id)->where('status', 'booked')->first();
+        $roomId = $request->exists('room_id') ? $this->roomFor($request, $place, $activity->kind) : $booked?->room_id;
+        if ($roomId instanceof JsonResponse) {
+            return $roomId;
+        }
+        if ($roomId && ($clash = app(Facilities::class)->clash($place, $roomId, [Facilities::activitySlot($fields['starts_at'], $fields['ends_at'])], $booked?->id))) {
+            return $this->roomTaken($clash);
+        }
         $activity->fill($fields + ['updated_by' => $request->user()->id])->save();
+        if ($request->exists('room_id') || $booked) {
+            app(Facilities::class)->roomForActivity($place, $activity, $roomId, $request->user());
+        }
         $activity->invitees()->sync($invitees);
         $this->refreshFees($activity);
         if ($activity->wasChanged(['starts_at', 'ends_at', 'frequency', 'meeting_day'])) {
@@ -191,6 +217,7 @@ class ActivitiesController extends Controller
         }
         $was = $activity->status;
         $activity->forceFill(['status' => 'cancelled', 'updated_by' => $request->user()->id])->save();
+        app(Facilities::class)->roomForActivity($place, $activity, null, $request->user());
         if ($was === 'published') {
             $this->activities->notifyCancelled($activity->fresh('territory'));
         }
@@ -528,6 +555,24 @@ class ActivitiesController extends Controller
 
     // ------------------------------------------------------------------ helpers
 
+    /** The room asked for a church's event (P5): its id, null for none, or the error. */
+    private function roomFor(Request $request, Territory $place, string $kind): int|JsonResponse|null
+    {
+        if (! $request->filled('room_id') || $kind !== 'event' || PlaceAccess::level($place) !== 'church') {
+            return null;
+        }
+        $room = Room::where('territory_id', $place->id)->where('active', true)->where('bookable', true)->find((int) $request->input('room_id'));
+
+        return $room ? $room->id : $this->unprocessable('room_id', 'Pick one of our rooms that can be booked.');
+    }
+
+    private function roomTaken(array $clash): JsonResponse
+    {
+        $message = Facilities::clashMessage($clash);
+
+        return response()->json(['success' => false, 'status' => 409, 'message' => $message, 'errors' => ['room_id' => [$message]], 'data' => ['clash' => $clash]], 409);
+    }
+
     /** @return array{0: array, 1: int[]} the activity fields, and the invitee ids */
     private function validated(Request $request, Territory $place, ?Activity $activity = null): array
     {
@@ -672,6 +717,7 @@ class ActivitiesController extends Controller
             'starts_at' => $a->starts_at->toIso8601String(),
             'ends_at' => $a->ends_at->toIso8601String(),
             'venue' => $a->venue,
+            'room' => ($b = RoomBooking::with('room')->where('activity_id', $a->id)->where('status', 'booked')->first()) && $b->room ? ['id' => $b->room->id, 'name' => $b->room->name] : null,
             'capacity' => $a->capacity,
             'coordinator' => $a->coordinator,
             'speakers' => $a->speakers,

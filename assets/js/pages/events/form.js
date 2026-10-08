@@ -20,11 +20,11 @@
   const editId = Number(new URLSearchParams(window.location.search).get("id")) || null;
   const STEP_OF = {
     title: 1, type: 1, audience: 1, starts_at: 1, ends_at: 1, description: 1, frequency: 1, meeting_day: 1, meeting_time: 1, certificate: 1,
-    venue: 2, capacity: 2, coordinator: 2, speakers: 2, agenda: 2, open_to: 2, invitees: 2,
+    venue: 2, room_id: 2, capacity: 2, coordinator: 2, speakers: 2, agenda: 2, open_to: 2, invitees: 2,
     registration: 3, register_by: 3, fee_per_person: 3, planned_income: 3, planned_spend: 3,
   };
   const OPEN_ICONS = { own: "ri-home-heart-line", region: "ri-map-2-line", below: "ri-community-line", selected: "ri-checkbox-multiple-line" };
-  const FIELD_IDS = { fee_per_person: "f_fee", starts_at: "f_start_date", ends_at: "f_end_date" };
+  const FIELD_IDS = { fee_per_person: "f_fee", starts_at: "f_start_date", ends_at: "f_end_date", room_id: "f_room" };
 
   let ov = null; // overview: types, audiences, open_to, invitable
   let event = null; // the event being edited
@@ -181,6 +181,8 @@
       ends_at: instant("f_end_date", "f_end_time", "23:59"),
       description: $("f_description").value.trim() || null,
       venue: $("f_venue").value.trim() || null,
+      // Only sent where the Book a room select is shown (a church's event): none cancels its booking.
+      room_id: $("f_room") ? ($("f_room").value ? Number($("f_room").value) : null) : undefined,
       capacity: n("f_capacity"),
       coordinator: $("f_coordinator").value.trim() || null,
       speakers: $("f_speakers").value.trim() || null,
@@ -398,6 +400,17 @@
     renderPreview();
   }
 
+  /** Our rooms in the Book a room select (Facilities, P5) - only where it's shown. */
+  async function rooms() {
+    const sel = $("f_room");
+    if (!sel) return;
+    const res = await EventsAPI.rooms();
+    if (!res.ok) return (sel.closest("[data-field]").hidden = true);
+    sel.innerHTML = `<option value="">No room</option>${res.data.rooms.filter((r) => r.active && r.bookable).map((r) => `<option value="${r.id}" data-color="${r.colour}">${E.esc(r.name)}${r.capacity ? ` · holds ${r.capacity}` : ""}</option>`).join("")}`;
+    UI.enhanceSelect(sel);
+    setValue("f_room", event?.room?.id || "");
+  }
+
   async function init() {
     const [o, e] = await Promise.all([EventsAPI.overview(new Date().getFullYear()), editId ? EventsAPI.get(editId) : Promise.resolve(null)]);
     if (!o.ok) {
@@ -431,6 +444,7 @@
     fillOptions();
     fill(event);
     renderPreview();
+    rooms();
 
     const form = $("eventFormCard");
     form.addEventListener("input", markDirty);

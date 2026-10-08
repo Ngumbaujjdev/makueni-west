@@ -16,7 +16,8 @@ use Illuminate\Support\Facades\DB;
  * Takes PeopleDemoSeeder's demo people away again - only them, found by
  * their demo numbers (+254 700 000 xxx) - with their visits, follow-ups,
  * pastoral care, places in ministries, transfers and audits - and the
- * attendance, demo gathering types and events it added for the ministries.
+ * attendance, demo gathering types and events it added for the ministries,
+ * and its rooms, bookings, equipment, loans, repairs and duty rota.
  *
  *   php artisan db:seed --class=PeopleDemoRemoveSeeder
  */
@@ -44,7 +45,16 @@ class PeopleDemoRemoveSeeder extends Seeder
             DB::table('gathering_types')->whereIn('id', $types)->delete();
         }
         Activity::withTrashed()->where('description', PeopleDemoSeeder::DEMO_ACTIVITY)->get()->each->forceDelete();
+        // Facilities (P5): the demo's rooms and equipment, with their bookings, loans and repairs.
+        $rooms = DB::table('rooms')->where('notes', PeopleDemoSeeder::DEMO_ROOM)->pluck('id')->all();
+        $items = DB::table('equipment')->where('serial', 'like', PeopleDemoSeeder::DEMO_SERIAL.'%')->pluck('id')->all();
+        DB::table('maintenance_jobs')->where(fn ($q) => $q->whereIn('equipment_id', $items ?: [0])->orWhereIn('room_id', $rooms ?: [0]))->delete();
+        DB::table('equipment_loans')->whereIn('equipment_id', $items ?: [0])->delete();
+        DB::table('equipment')->whereIn('id', $items ?: [0])->delete();
+        DB::table('room_bookings')->whereIn('room_id', $rooms ?: [0])->delete();
+        DB::table('rooms')->whereIn('id', $rooms ?: [0])->delete();
         $ids = self::ids();
+        DB::table('duty_rota')->whereIn('person_id', $ids ?: [0])->delete();
         if (! $ids) {
             return 0;
         }

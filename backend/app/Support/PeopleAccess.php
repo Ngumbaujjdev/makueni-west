@@ -56,11 +56,16 @@ final class PeopleAccess
             'read' => 'facilities.facilities.read',
             'manage' => 'facilities.facilities.manage',
             'book' => 'facilities.facilities.book',
+            // The Bookings, Equipment, Repairs and Duty rota pages' own read permissions (menu).
+            'bookings' => 'facilities.bookings.read',
+            'equipment' => 'facilities.equipment.read',
+            'repairs' => 'facilities.repairs.read',
+            'rota' => 'facilities.rota.read',
         ],
     ];
 
     /** A module's own pages' read permissions, given to everyone who reads the module (the menu shows a page through its permission). */
-    public const PAGE_READS = ['transfers', 'insights', 'log', 'hospital', 'prayer'];
+    public const PAGE_READS = ['transfers', 'insights', 'log', 'hospital', 'prayer', 'bookings', 'equipment', 'repairs', 'rota'];
 
     /** Abilities that only make sense at the church (the rest of the map is church-only too, bar "below"). */
     public const BELOW_LEVELS = ['region', 'diocese'];

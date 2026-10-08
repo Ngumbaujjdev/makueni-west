@@ -251,6 +251,17 @@ return [
             'sentence' => 'How soon to follow up, the welcome SMS, and how long visitors\' details are kept.',
         ],
 
+        // People & care P5 - rooms, loans and the duty rota. Read by App\Services\Facilities\Facilities.
+        'facilities' => [
+            'label' => 'Facilities',
+            'icon' => 'ri-building-2-line',
+            'colour' => 'warning',
+            'group' => 'people',
+            'levels' => ['church'],
+            'kind' => 'form',
+            'sentence' => 'When rooms can be booked, how long things are lent for, and the duty reminders.',
+        ],
+
         // S5 - how to pay a region or the diocese. Read by Contributions ("How to
         // send it", for the places below). Churches get theirs with the first
         // page that shows a church's payment details.
@@ -361,6 +372,12 @@ return [
         'pastoral.type.concern' => ['section' => 'pastoral', 'card' => 'Kinds of care we record', 'label' => 'Concerns', 'type' => 'switch', 'default' => true, 'levels' => ['church'], 'span' => 6, 'used_by' => 'Pastoral care > Record care'],
         'visitors.followup_days' => ['section' => 'visitors', 'card' => 'Follow-up', 'label' => 'Follow up within (days)', 'type' => 'number', 'rules' => ['required', 'integer', 'between:1,30'], 'default' => 3, 'levels' => ['church'], 'help' => 'After a visit, someone is due to call or visit within this many days.', 'used_by' => 'Visitors > My follow-ups, the calendar'],
         'visitors.welcome_sms' => ['section' => 'visitors', 'card' => 'Welcome SMS', 'label' => 'Send the welcome SMS by default', 'type' => 'switch', 'default' => false, 'levels' => ['church'], 'help' => 'Only to first-timers with a phone who haven\'t asked not to be texted. It can be switched off each Sunday.', 'used_by' => 'Visitors > Record visitors'],
+        'facilities.open_from' => ['section' => 'facilities', 'card' => 'Booking rooms', 'label' => 'Rooms can be booked from', 'type' => 'time', 'rules' => ['required', 'date_format:H:i'], 'default' => '06:00', 'levels' => ['church'], 'span' => 6, 'help' => 'The earliest a booking may start.', 'used_by' => 'Facilities > Bookings'],
+        'facilities.open_to' => ['section' => 'facilities', 'card' => 'Booking rooms', 'label' => 'Until', 'type' => 'time', 'rules' => ['required', 'date_format:H:i'], 'default' => '22:00', 'levels' => ['church'], 'span' => 6, 'help' => 'The latest a booking may end.', 'used_by' => 'Facilities > Bookings'],
+        'facilities.min_notice_hours' => ['section' => 'facilities', 'card' => 'Booking rooms', 'label' => 'Book at least this many hours ahead', 'type' => 'number', 'rules' => ['required', 'integer', 'between:0,336'], 'default' => 0, 'levels' => ['church'], 'span' => 6, 'help' => '0 lets a room be booked for later today.', 'used_by' => 'Facilities > Bookings'],
+        'facilities.loan_days' => ['section' => 'facilities', 'card' => 'Lending equipment', 'label' => 'Things are lent for (days)', 'type' => 'number', 'rules' => ['required', 'integer', 'between:1,365'], 'default' => 14, 'levels' => ['church'], 'span' => 6, 'help' => 'When a loan is due back, unless another date is picked.', 'used_by' => 'Facilities > Equipment'],
+        'facilities.duty_reminder' => ['section' => 'facilities', 'card' => 'Duty reminders', 'label' => 'Text the people on duty the day before', 'type' => 'switch', 'default' => false, 'levels' => ['church'], 'span' => 6, 'help' => 'Only people with a phone in the register; demo numbers are never texted.', 'used_by' => 'Facilities > Duty rota'],
+        'facilities.duty_reminder_time' => ['section' => 'facilities', 'card' => 'Duty reminders', 'label' => 'Send them at', 'type' => 'time', 'rules' => ['required', 'date_format:H:i'], 'default' => '18:00', 'levels' => ['church'], 'span' => 6, 'help' => 'The day before the service.', 'used_by' => 'Facilities > Duty rota'],
         'visitors.welcome_template' => ['section' => 'visitors', 'card' => 'Welcome SMS', 'label' => 'Welcome message', 'type' => 'textarea', 'rules' => ['nullable', 'string', 'max:300'], 'default' => 'Thank you for worshipping with us at {church}, {first_name}! You are welcome back any time.', 'levels' => ['church'], 'span' => 12, 'help' => '{first_name} and {church} are filled in for each person.', 'used_by' => 'Visitors > Record visitors'],
         'people.retention_visitor_months' => ['section' => 'visitors', 'card' => 'Keeping visitors\' details', 'label' => 'Remove a visitor\'s details after', 'type' => 'select', 'options' => ['0' => 'Never', '6' => '6 months without a visit', '12' => '12 months without a visit', '24' => '2 years without a visit'], 'rules' => ['required'], 'default' => '0', 'levels' => ['church', 'diocese'], 'lockable' => true, 'help' => 'Names, phone numbers and areas are cleared; the counts stay. Members are never touched.', 'used_by' => 'A nightly clean-up'],
 

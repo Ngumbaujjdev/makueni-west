@@ -38871,6 +38871,141 @@ button.cal-side-item:focus-visible {
 }
 
 /* ==========================================================================
+   Facilities (2026-10-08, docs/specs/people-and-care-spec.md P5) - it reuses
+   the People kit (cards, pills, ticks, the bulk bar, .pp-fact), the
+   Ministries windows (.mw-*), the visitors board (.vs-board) and the
+   calendar's clean look; these are its own pieces: rooms in their colours,
+   the Book window's day timeline (green when free, red on a clash), the
+   agenda, duty tiles, the loans list and the rota grid. "fx-" so nothing
+   meets FullCalendar's own "fc-" classes.
+   ========================================================================== */
+/* Rooms */
+.fx-room { display: inline-flex; align-items: center; gap: .35rem; font-weight: 600; color: var(--v2-heading); }
+.fx-room i, .fx-room-swatch { display: inline-block; flex: 0 0 .7rem; width: .7rem; height: .7rem; border-radius: 50%; }
+.fx-rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr)); gap: .5rem; }
+.fx-rooms label { margin: 0; cursor: pointer; }
+.fx-rooms input { position: absolute; opacity: 0; pointer-events: none; }
+.fx-rooms span { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .1rem .55rem; padding: .65rem .75rem; border: 1px solid var(--default-border); border-radius: .75rem; transition: border-color .15s, box-shadow .15s; }
+.fx-rooms span strong { font-size: .86rem; color: var(--v2-heading); }
+.fx-rooms span small { grid-column: 2; font-size: .74rem; color: var(--default-text-color); }
+.fx-rooms label:hover span { border-color: rgba(var(--primary-rgb), .45); }
+.fx-rooms input:checked + span { border-color: rgb(var(--modal-band-rgb)); box-shadow: 0 0 0 1px rgb(var(--modal-band-rgb)); }
+.fx-rooms input:focus-visible + span { outline: 2px solid rgb(var(--primary-rgb)); outline-offset: 2px; }
+.fx-room-head, .fx-room-row { display: grid; grid-template-columns: 11.5rem minmax(0, 1fr) 6rem 4.5rem 5rem; gap: .6rem; align-items: center; }
+.fx-room-head { margin-bottom: .4rem; font-size: .68rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--default-text-color); }
+.fx-room-row { padding: .45rem 0; border-top: 1px dashed var(--default-border); }
+.fx-room-row .mn-swatches span { width: 1.4rem; height: 1.4rem; }
+.fx-room-row .mn-swatches { gap: .3rem; }
+
+/* The Book window's day */
+.fx-day { position: relative; height: 22rem; padding-left: 3.4rem; border: 1px solid var(--default-border); border-radius: .75rem; background: var(--custom-white); }
+.fx-day-grid { position: absolute; inset: .5rem .5rem .5rem 3.4rem; }
+.fx-day-hour { position: absolute; left: -3.1rem; width: 2.8rem; font-size: .68rem; font-weight: 600; text-align: right; color: var(--default-text-color); transform: translateY(-50%); }
+.fx-day-hour::after { content: ""; position: absolute; top: 50%; left: 3.1rem; width: calc(100vw); max-width: 13rem; border-top: 1px dashed var(--default-border); }
+.fx-day-block { position: absolute; left: 0; right: 0; z-index: 1; overflow: hidden; padding: .2rem .45rem; border-radius: .45rem; background: rgba(var(--secondary-rgb), .18); font-size: .72rem; line-height: 1.25; color: var(--v2-heading); }
+.fx-day-block strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fx-day-block small { color: var(--default-text-color); }
+.fx-day-block.is-new { z-index: 2; background: rgb(var(--success-rgb)); color: #fff; box-shadow: 0 4px 10px rgba(15, 23, 42, .15); }
+.fx-day-block.is-new small { color: rgba(255, 255, 255, .9); }
+.fx-day-block.is-new.is-clash { background: rgb(var(--danger-rgb)); }
+.fx-verdict { margin-top: .75rem; }
+.fx-verdict-box { display: flex; gap: .6rem; padding: .7rem .8rem; border-radius: .75rem; }
+.fx-verdict-box i { font-size: 1.25rem; }
+.fx-verdict-box strong { display: block; font-size: .86rem; }
+.fx-verdict-box small { display: block; font-size: .76rem; }
+.fx-verdict-box.is-free { background: rgba(var(--success-rgb), .1); color: rgb(var(--success-rgb)); }
+.fx-verdict-box.is-clash { background: rgba(var(--danger-rgb), .1); color: rgb(var(--danger-rgb)); }
+.fx-verdict-box strong, .fx-verdict-box small { color: inherit; }
+
+/* The calendar of bookings */
+.fx-book { max-width: 100%; overflow: hidden; }
+.fx-book .fc-timegrid-slot { height: 2rem; }
+.fx-book .fc-timegrid-event { border-radius: .45rem; }
+.fx-bk { overflow: hidden; padding: .1rem .2rem; line-height: 1.2; }
+.fx-bk strong { display: block; overflow: hidden; font-size: .76rem; text-overflow: ellipsis; white-space: nowrap; }
+.fx-bk small { font-size: .68rem; opacity: .9; }
+
+/* The agenda and the rooms on the Facilities page */
+.fx-agenda-day + .fx-agenda-day { margin-top: 1rem; }
+.fx-agenda-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .35rem; font-size: .8rem; color: var(--default-text-color); }
+.fx-agenda-head strong { font-size: .9rem; color: var(--v2-heading); }
+.fx-agenda-list { margin: 0; padding: 0; list-style: none; }
+.fx-agenda-list li { display: flex; align-items: center; gap: .75rem; padding: .55rem .6rem; border-radius: .6rem; cursor: pointer; transition: background .15s; }
+.fx-agenda-list li:hover, .fx-agenda-list li:focus-visible { background: rgba(var(--primary-rgb), .05); }
+.fx-agenda-list li + li { border-top: 1px dashed var(--default-border); }
+.fx-agenda-list strong { display: block; overflow: hidden; font-size: .86rem; color: var(--v2-heading); text-overflow: ellipsis; white-space: nowrap; }
+.fx-agenda-list small { display: block; font-size: .75rem; color: var(--default-text-color); }
+.fx-agenda-time { flex: 0 0 4.4rem; font-size: .8rem; font-weight: 700; color: var(--v2-heading); }
+.fx-agenda-time small { font-weight: 500; }
+.fx-agenda-bar { flex: 0 0 .25rem; align-self: stretch; border-radius: 1rem; }
+.fx-room-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: .6rem; }
+.fx-room-tile { display: flex; align-items: center; gap: .65rem; padding: .7rem .8rem; border: 1px solid var(--default-border); border-radius: .75rem; color: inherit; transition: border-color .15s; }
+.fx-room-tile:hover { border-color: rgba(var(--primary-rgb), .45); color: inherit; }
+.fx-room-tile strong { display: block; font-size: .86rem; color: var(--v2-heading); }
+.fx-room-tile small { display: block; font-size: .74rem; color: var(--default-text-color); }
+.fx-room-count { margin-left: auto; font-size: 1.1rem; font-weight: 800; line-height: 1; text-align: center; color: var(--default-text-color); }
+.fx-room-count small { display: block; font-size: .64rem; font-weight: 600; }
+.fx-room-count.is-busy { color: rgb(var(--primary-rgb)); }
+
+/* Duty */
+.fx-duty-service + .fx-duty-service { margin-top: .9rem; padding-top: .9rem; border-top: 1px dashed var(--default-border); }
+.fx-duty-service-head { display: flex; align-items: center; gap: .4rem; margin-bottom: .55rem; font-size: .86rem; font-weight: 700; color: var(--v2-heading); }
+.fx-duty-row { display: flex; align-items: flex-start; gap: .6rem; padding: .35rem 0; }
+.fx-duty-row small { display: block; font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--default-text-color); }
+.fx-duty-people { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .15rem; }
+.fx-person { display: inline-flex; align-items: center; gap: .3rem; padding: .1rem .5rem .1rem .15rem; border: 1px solid var(--default-border); border-radius: 1rem; font-size: .76rem; font-weight: 600; color: var(--v2-heading); white-space: nowrap; }
+.fx-person .avatar { width: 1.3rem; height: 1.3rem; font-size: .62rem; }
+.fx-nobody { font-size: .78rem; color: var(--default-text-color); }
+
+/* Needs attention */
+.fx-attn-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.fx-attn-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; font-size: .86rem; color: var(--v2-heading); }
+.fx-attn .mb-mini-list li { gap: .5rem; }
+
+/* Loans */
+.fx-loans { display: grid; grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr)); gap: .6rem; }
+.fx-loan { display: flex; align-items: center; gap: .65rem; padding: .65rem .75rem; border: 1px solid var(--default-border); border-radius: .75rem; }
+.fx-loan strong, .fx-loan a { display: block; font-size: .86rem; color: var(--v2-heading); }
+.fx-loan small { display: block; font-size: .75rem; color: var(--default-text-color); }
+.fx-loan.is-late { border-color: rgba(var(--danger-rgb), .45); background: rgba(var(--danger-rgb), .03); }
+.fx-loan.is-back { opacity: .75; }
+
+/* The repairs board */
+.fx-board { grid-auto-columns: minmax(17rem, 1fr); }
+.fx-job { cursor: pointer; }
+.fx-job.is-fixed { cursor: default; }
+.fx-job-title { font-size: .88rem; color: var(--v2-heading); }
+.fx-job-detail { display: -webkit-box; margin: .3rem 0 0; overflow: hidden; font-size: .78rem; color: var(--default-text-color); -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+/* The rota grid */
+.fx-rota { min-width: 52rem; }
+.fx-rota > thead > tr > th { padding: .7rem .6rem; white-space: nowrap; }
+.fx-rota-duty { display: inline-flex; align-items: center; gap: .4rem; }
+.fx-rota-week th { padding: .55rem .9rem !important; background: rgba(var(--primary-rgb), .05); font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: rgb(var(--primary-rgb)); }
+.fx-rota > tbody > tr > td, .fx-rota > tbody > tr > th { padding: .4rem; vertical-align: top; border-top: 1px dashed var(--default-border); }
+.fx-rota-service { width: 11rem; padding-left: .9rem !important; }
+.fx-rota-service strong { display: block; font-size: .86rem; color: var(--v2-heading); }
+.fx-rota-service small { display: block; font-size: .74rem; font-weight: 500; color: var(--default-text-color); }
+.fx-rota-service .badge { margin-top: .25rem; }
+.fx-rota tr.is-next > * { background: rgba(var(--primary-rgb), .05); }
+.fx-rota tr.is-past { opacity: .6; }
+.fx-rota-cell { display: flex; flex-wrap: wrap; align-content: flex-start; gap: .25rem; width: 100%; min-height: 2.6rem; padding: .35rem; border: 1px dashed transparent; border-radius: .55rem; background: none; text-align: left; transition: border-color .15s, background .15s; }
+.fx-rota-cell:not(:disabled):hover { border-color: rgba(var(--primary-rgb), .45); background: rgba(var(--primary-rgb), .04); }
+.fx-rota-cell:disabled { cursor: default; }
+.fx-rota-add { display: inline-grid; place-items: center; width: 1.7rem; height: 1.7rem; border: 1px dashed var(--default-border); border-radius: 50%; color: var(--default-text-color); }
+@media (max-width: 1199.98px) {
+  .fx-attn-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 575.98px) {
+  .fx-room-head { display: none; }
+  .fx-room-row { grid-template-columns: minmax(0, 1fr) 5rem auto; }
+  .fx-room-row .mn-swatches { grid-column: 1 / -1; }
+  .fx-day { height: 18rem; }
+  .fx-loans { grid-template-columns: minmax(0, 1fr); }
+  .fx-agenda-list .soft-chip { display: none; }
+}
+
+/* ==========================================================================
    Settings > Profile: services online (YouTube) and the gallery (2026-10-08)
    ========================================================================== */
 .settings-yt-empty, .settings-yt-channel { display: flex; align-items: center; gap: .75rem; padding: .8rem .9rem; border-radius: .8rem; background: rgba(var(--danger-rgb), .06); color: var(--v2-heading); text-decoration: none; }
