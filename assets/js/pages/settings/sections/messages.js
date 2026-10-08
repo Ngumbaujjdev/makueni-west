@@ -81,7 +81,7 @@ const SettingsMessages = (function () {
           <div id="msgFilterToolbar"></div>
           <div class="table-responsive">
             <table class="table align-middle mb-0 msg-table" id="msgTable">
-              <thead><tr>${cols.map((c, i) => `<th${i === 2 ? ' class="all"' : ""}>${c}</th>`).join("")}</tr></thead>
+              <thead><tr>${cols.map((c, i) => `<th${i === 2 || i === cols.length - 1 ? ' class="all"' : ""}>${c}</th>`).join("")}</tr></thead>
               <tbody>${rows.length ? rows.map((r) => row(r, showPlace)).join("") : UI.renderTableEmpty(cols.length, "No messages sent yet", "ri-mail-send-line")}</tbody>
             </table>
           </div>`,
@@ -119,8 +119,8 @@ const SettingsMessages = (function () {
     if (el) return el;
     document.body.insertAdjacentHTML(
       "beforeend",
-      `<div class="modal fade app-modal" id="msgModal" tabindex="-1" aria-labelledby="msgModalTitle">
-        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
+      `<div class="modal fade app-modal cm-modal" id="msgModal" tabindex="-1" aria-labelledby="msgModalTitle">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable modal-fullscreen-md-down">
           <div class="modal-content">
             <div class="modal-header">
               <span class="app-modal-icon bg-primary" id="msgModalIcon"><i class="ri-mail-line"></i></span>
@@ -165,24 +165,57 @@ const SettingsMessages = (function () {
       ...(KINDS[m.kind] ? [["Kind", KINDS[m.kind]]] : []),
       ...(m.provider_ref ? [["Reference", m.provider_ref]] : []),
     ];
+    // The message as it landed: SMS on a phone, email in a mail app (the same frames as Templates).
+    const P = window.CommsPreview;
     let content = "";
     if (!m.body) {
       content = `<div class="alert alert-primary mb-0 d-flex gap-2"><i class="ri-information-line fs-18"></i><span>${esc(m.body_note || "No copy of the text was kept.")}</span></div>`;
-    } else if (email && m.body_type === "html") {
-      content = `<iframe class="msg-frame" sandbox title="Email preview" srcdoc="${esc(m.body)}"></iframe>`;
-    } else {
-      const len = m.body.length;
+    } else if (email && m.body_type === "html" && P) {
+      const fm = String(m.from || "").match(/^(.*?)\s*<([^>]*)>$/);
       content = `
-        <div class="msg-phone">
-          <div class="msg-phone-sender">${esc(m.from || "SMS")}</div>
-          <div class="msg-bubble">${esc(m.body)}</div>
-          <div class="fs-12 mt-2">${len} characters · ${Math.max(1, Math.ceil(len / 160))} SMS</div>
+        <div class="cm-pv">
+          <div class="cm-pv-bar justify-content-end">
+            <div class="pb-segment cm-pv-width" role="radiogroup" aria-label="Email on">
+              <input type="radio" name="msgPvWidth" id="msgPvDesk" value="desktop" checked><label for="msgPvDesk"><i class="ri-computer-line me-1"></i>Desktop</label>
+              <input type="radio" name="msgPvWidth" id="msgPvMob" value="mobile"><label for="msgPvMob"><i class="ri-smartphone-line me-1"></i>Mobile</label>
+            </div>
+          </div>
+          <div class="cm-pv-stage" data-stage="email">${P.mailHtml({ subject: m.subject || "", fromName: fm ? fm[1] : m.from || "", fromAddr: fm ? fm[2] : "", to: m.to, time: t.time })}</div>
         </div>`;
+    } else if (P) {
+      const p = window.CommsTemplates?.smsParts ? CommsTemplates.smsParts(m.body) : { characters: m.body.length, parts: Math.max(1, Math.ceil(m.body.length / 160)) };
+      content = `
+        <div class="cm-pv">
+          <div class="cm-pv-stage" data-stage="phone">
+            ${P.phoneHtml({ sender: m.from || "", text: m.body, time: t.time, day: new Date(m.at).toDateString() === new Date().toDateString() ? "Today" : t.day })}
+            <div class="nw-seg${p.parts > 1 ? " is-over" : ""}">${window.CommsTemplates?.segLine ? CommsTemplates.segLine(p) : `${p.characters} characters · ${p.parts} SMS`}</div>
+          </div>
+        </div>`;
+    } else {
+      content = `<iframe class="msg-frame" sandbox title="Email preview" srcdoc="${esc(m.body)}"></iframe>`;
     }
     el.querySelector("#msgModalBody").innerHTML = `
-      <div class="msg-facts">${facts.map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("")}</div>
-      ${m.error ? `<div class="alert alert-danger d-flex gap-2 mt-3 mb-0"><i class="ri-error-warning-line fs-18"></i><span><b>Why it failed:</b> ${esc(m.error)}</span></div>` : ""}
-      <div class="mt-3">${content}</div>`;
+      <div class="row g-4">
+        <div class="col-lg-5">
+          <dl class="cm-facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
+          ${m.error ? `<div class="alert alert-danger d-flex gap-2 mt-3 mb-0"><i class="ri-error-warning-line fs-18"></i><span><b>Why it failed:</b> ${esc(m.error)}</span></div>` : ""}
+        </div>
+        <div class="col-lg-7">${content}</div>
+      </div>`;
+    const frame = el.querySelector('[data-pv="frame"]');
+    if (frame) {
+      // Fit to the email once it has loaded - and again as the window settles.
+      const fit = () => P.fitFrame(frame);
+      frame.addEventListener("load", () => [0, 200, 600].forEach((ms) => setTimeout(fit, ms)));
+      el.addEventListener("shown.bs.modal", fit, { once: true });
+      frame.srcdoc = m.body;
+      el.querySelectorAll('input[name="msgPvWidth"]').forEach((r) =>
+        r.addEventListener("change", () => {
+          el.querySelector('[data-stage="email"]').classList.toggle("is-mobile", r.value === "mobile");
+          requestAnimationFrame(() => P.fitFrame(frame));
+        }),
+      );
+    }
     if (m.can_resend) {
       el.querySelector("#msgModalFoot").insertAdjacentHTML("beforeend", '<button type="button" class="btn btn-primary" id="msgResend"><i class="ri-restart-line me-1"></i>Send again</button>');
       el.querySelector("#msgResend").addEventListener("click", async (e) => {
