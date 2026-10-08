@@ -5,17 +5,24 @@ namespace Database\Seeders;
 use App\Models\Activity;
 use App\Models\CareContact;
 use App\Models\CareRecord;
+use App\Models\DutyRota;
+use App\Models\Equipment;
+use App\Models\EquipmentLoan;
 use App\Models\FiscalMonth;
 use App\Models\FiscalYear;
 use App\Models\GatheringCategory;
 use App\Models\GatheringType;
+use App\Models\MaintenanceJob;
 use App\Models\Ministry;
 use App\Models\Person;
 use App\Models\PersonTransfer;
+use App\Models\Room;
+use App\Models\RoomBooking;
 use App\Models\Territory;
 use App\Models\VisitorFollowup;
 use App\Models\VisitorVisit;
 use App\Services\Activities\Activities;
+use App\Services\Facilities\Facilities;
 use App\Services\People\Ministries;
 use App\Support\PeopleAccess;
 use App\Support\PlaceAccess;
@@ -86,10 +93,12 @@ class PeopleDemoSeeder extends Seeder
         $this->church($main, 40, 15, self::MAIN_AREAS, $others);
         $this->care($main, 25);
         $this->ministries($main, true);
+        $this->facilities($main, true);
         foreach ($others as $i => $church) {
             $this->church($church, mt_rand(5, 15), mt_rand(2, 6), $this->areasFor($church), collect([$main]));
             $this->care($church, mt_rand(2, 6));
             $this->ministries($church);
+            $this->facilities($church);
         }
         $this->command?->info("   ✅ Demo people: {$main->name} (40 members, 15 visitors) and ".$others->count().' other churches');
         $this->command?->warn('   ℹ️  Demo numbers are +254 700 000 xxx and are never texted. Remove with --class=PeopleDemoRemoveSeeder');
@@ -277,6 +286,109 @@ class PeopleDemoSeeder extends Seeder
                         'starts_at' => $start, 'ends_at' => $start->addHours(4), 'venue' => 'Church grounds', 'open_to' => 'own', 'registration' => false,
                         'status' => $start->isPast() ? 'completed' : 'published', 'published_at' => $now,
                     ]);
+                }
+            }
+        }
+    }
+
+    /** Marks the demo's rooms and equipment, so PeopleDemoRemoveSeeder takes them (and their bookings, loans and repairs) away. */
+    public const DEMO_ROOM = 'Demo room (PeopleDemoSeeder).';
+
+    /** Demo equipment carries a serial "DEMO-0001"... - plausible on the page, and how it is found again. */
+    public const DEMO_SERIAL = 'DEMO-';
+
+    /**
+     * Facilities (P5): rooms, the ministries' weekly meetings booked in them
+     * and a few one-off bookings, equipment in every condition with two loans
+     * out (one late), repairs on every column of the board, and four weeks
+     * of the duty rota from the demo people.
+     */
+    private function facilities(Territory $church, bool $main = false): void
+    {
+        $by = app(Activities::class)->leadersWith([$church->id], PeopleAccess::permission('facilities', 'manage'))->first()?->id;
+        $roomPlan = $main
+            ? [['Main sanctuary', 400, 'primary', true], ['Fellowship hall', 150, 'success', true], ['Youth room', 60, 'purple', true], ['Church office', 10, 'warning', true], ['Kitchen', 8, 'pink', false]]
+            : [['Main sanctuary', 200, 'primary', true], ['Church hall', 80, 'success', true]];
+        $rooms = collect($roomPlan)->mapWithKeys(fn ($r, $i) => [$r[0] => Room::create(['territory_id' => $church->id, 'name' => $r[0], 'capacity' => $r[1], 'colour' => $r[2], 'bookable' => $r[3], 'notes' => self::DEMO_ROOM, 'order' => $i])]);
+        $hall = $rooms['Fellowship hall'] ?? $rooms['Church hall'];
+        $youth = $rooms['Youth room'] ?? $hall;
+        $sanctuary = $rooms['Main sanctuary'];
+        $monday = $this->today->startOfWeek(CarbonImmutable::MONDAY);
+
+        // The ministries meet in their rooms every week - from a month ago, for three months.
+        $where = ['youth' => $youth, 'women' => $hall, 'men' => $hall, 'children' => $youth, 'music' => $sanctuary, 'prayer' => $sanctuary];
+        foreach (Ministry::where('territory_id', $church->id)->whereNotNull('standard')->whereNotNull('meets_day')->get() as $m) {
+            $first = $monday->subWeeks(4)->addDays(($m->meets_day + 6) % 7);
+            $start = CarbonImmutable::parse($first->toDateString().' '.substr($m->meets_time ?: '10:00', 0, 5), 'Africa/Nairobi');
+            RoomBooking::create([
+                'territory_id' => $church->id, 'room_id' => ($where[$m->standard] ?? $hall)->id, 'starts_at' => $start->format('Y-m-d H:i:s'),
+                'ends_at' => $start->addHours(2)->format('Y-m-d H:i:s'), 'purpose' => $m->name, 'ministry_id' => $m->id, 'booked_by' => $by,
+                'repeat' => 'weekly', 'repeat_until' => $monday->addWeeks(8)->toDateString(), 'status' => 'booked',
+            ]);
+        }
+        if ($main) {
+            foreach ([
+                [$rooms['Church office'], 3, '10:00', 2, 'Church committee meeting'], [$sanctuary, 5, '10:00', 2, 'Wedding rehearsal - Mutua & Nzioka'],
+                [$hall, 9, '09:00', 6, 'Leaders training'], [$rooms['Church office'], 1, '14:00', 1, 'Counselling session'], [$hall, -4, '10:00', 4, 'Women\'s fellowship day prep'],
+                [$sanctuary, 12, '11:00', 3, 'Funeral service - planning'], [$rooms['Church office'], -2, '09:00', 1, 'Finance committee'],
+            ] as [$room, $day, $time, $hours, $what]) {
+                $start = CarbonImmutable::parse($monday->addDays($day)->toDateString()." {$time}", 'Africa/Nairobi');
+                RoomBooking::create(['territory_id' => $church->id, 'room_id' => $room->id, 'starts_at' => $start->format('Y-m-d H:i:s'), 'ends_at' => $start->addHours($hours)->format('Y-m-d H:i:s'), 'purpose' => $what, 'booked_by' => $by, 'repeat' => 'none', 'status' => 'booked']);
+            }
+        }
+
+        // Equipment, in every condition.
+        $kit = $main ? [
+            ['Mixer (16 channel)', 'sound', $sanctuary, 1, 'good', 85000], ['Wireless microphone', 'sound', $sanctuary, 4, 'good', 12000], ['Main speakers', 'sound', $sanctuary, 2, 'fair', 60000],
+            ['Microphone stands', 'sound', $sanctuary, 6, 'good', 2500], ['Projector', 'it', $hall, 1, 'fair', 45000], ['Laptop', 'it', $rooms['Church office'], 1, 'good', 70000],
+            ['Keyboard', 'instruments', $sanctuary, 1, 'good', 55000], ['Drum set', 'instruments', $sanctuary, 1, 'fair', 90000], ['Acoustic guitar', 'instruments', $youth, 2, 'good', 15000],
+            ['Plastic chairs', 'furniture', $hall, 200, 'good', 600], ['Folding tables', 'furniture', $hall, 20, 'fair', 4500], ['Pulpit', 'furniture', $sanctuary, 1, 'good', 25000],
+            ['Tent (10x20)', 'other', $hall, 2, 'poor', 40000], ['Generator', 'other', null, 1, 'broken', 120000], ['Water dispenser', 'kitchen', $rooms['Kitchen'], 1, 'good', 18000],
+            ['Cooking pots', 'kitchen', $rooms['Kitchen'], 6, 'fair', 3500], ['Gas cooker', 'kitchen', $rooms['Kitchen'], 1, 'poor', 30000], ['Brooms and mops', 'cleaning', null, 10, 'good', 400],
+            ['Vacuum cleaner', 'cleaning', $hall, 1, 'broken', 22000], ['Extension cables', 'other', $rooms['Church office'], 5, 'good', 1500], ['Communion set', 'other', $sanctuary, 1, 'good', 15000],
+        ] : [
+            ['Speakers', 'sound', $sanctuary, 2, 'good', 40000], ['Wireless microphone', 'sound', $sanctuary, 2, 'fair', 12000], ['Plastic chairs', 'furniture', $hall, 80, 'good', 600],
+            ['Keyboard', 'instruments', $sanctuary, 1, 'poor', 45000], ['Tent', 'other', $hall, 1, 'broken', 30000],
+        ];
+        $items = collect($kit)->mapWithKeys(fn ($k) => [$k[0] => Equipment::create([
+            'territory_id' => $church->id, 'name' => $k[0], 'category' => $k[1], 'room_id' => $k[2]?->id, 'quantity' => $k[3], 'condition' => $k[4],
+            'value' => $k[5], 'bought_on' => $this->today->subDays(mt_rand(120, 1500))->toDateString(), 'serial' => self::DEMO_SERIAL.str_pad((string) mt_rand(1, 9999), 4, '0', STR_PAD_LEFT),
+        ])]);
+        $people = Person::where('territory_id', $church->id)->where('phone', 'like', '+254700000%')->where('status', 'member')->where('congregation', 'main_church')->orderBy('id')->get();
+        if ($main && $people->count() > 2) {
+            EquipmentLoan::create(['equipment_id' => $items['Tent (10x20)']->id, 'to_person_id' => $people[0]->id, 'to_name' => $people[0]->name, 'quantity' => 1, 'out_on' => $this->today->subDays(20)->toDateString(), 'due_on' => $this->today->subDays(6)->toDateString(), 'note' => 'For a family gathering', 'by' => $by]);
+            EquipmentLoan::create(['equipment_id' => $items['Projector']->id, 'to_name' => 'Youth outreach team', 'quantity' => 1, 'out_on' => $this->today->subDays(2)->toDateString(), 'due_on' => $this->today->addDays(5)->toDateString(), 'note' => 'Film night at Kasikeu', 'by' => $by]);
+        }
+
+        // Repairs on every column of the board.
+        $jobs = $main ? [
+            ['Generator will not start', $items['Generator'], null, 'urgent', 'reported', null, 3], ['Gas cooker leaks', $items['Gas cooker'], null, 'urgent', 'reported', null, 1],
+            ['Vacuum cleaner motor burnt', $items['Vacuum cleaner'], null, 'normal', 'in_progress', null, 9], ['Roof leaks over the stage', null, $hall, 'normal', 'in_progress', null, 15],
+            ['Speaker crackles on the left', $items['Main speakers'], null, 'normal', 'done', 2500, 25], ['Office window pane broken', null, $rooms['Church office'], 'normal', 'done', 4000, 40],
+        ] : [['Tent torn at one corner', $items['Tent'], null, 'normal', 'reported', null, 4]];
+        foreach ($jobs as [$title, $item, $room, $priority, $status, $cost, $ago]) {
+            $j = MaintenanceJob::create(['territory_id' => $church->id, 'equipment_id' => $item?->id, 'room_id' => $room?->id, 'title' => $title, 'priority' => $priority, 'status' => $status, 'cost' => $cost, 'reported_by' => $by, 'assigned_to' => $status === 'reported' ? null : $by, 'done_on' => $status === 'done' ? $this->today->subDays(max(1, $ago - 7))->toDateString() : null]);
+            $j->forceFill(['created_at' => $this->today->subDays($ago)])->saveQuietly();
+        }
+
+        // The duty rota: last week and four weeks to come, from the demo people.
+        if ($people->count() >= 4) {
+            $services = app(Facilities::class)->services($church);
+            $need = ['ushering' => 2, 'welcome' => 2, 'sound' => 1, 'security' => 1, 'cleaning' => 2];
+            $n = 0;
+            for ($d = $monday->subWeek(); $d->lt($monday->addWeeks(4)); $d = $d->addDay()) {
+                foreach ($services as $si => $s) {
+                    if ((int) $s['day'] !== $d->dayOfWeek) {
+                        continue;
+                    }
+                    foreach ($need as $duty => $count) {
+                        if ($si > 0 && ! in_array($duty, ['ushering', 'sound'], true)) {
+                            continue; // the smaller services need fewer hands
+                        }
+                        for ($k = 0; $k < ($si > 0 ? 1 : $count); $k++) {
+                            DutyRota::create(['territory_id' => $church->id, 'on' => $d->toDateString(), 'service' => $s['name'], 'duty' => $duty, 'person_id' => $people[$n++ % $people->count()]->id]);
+                        }
+                    }
                 }
             }
         }

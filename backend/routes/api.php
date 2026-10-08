@@ -12,6 +12,11 @@ use App\Http\Controllers\Api\Calendar\CalendarController;
 use App\Http\Controllers\Api\Calendar\CciCalendarController;
 use App\Http\Controllers\Api\DemographicsController;
 use App\Http\Controllers\Api\DemographicsReportController;
+use App\Http\Controllers\Api\Facilities\BookingsController;
+use App\Http\Controllers\Api\Facilities\EquipmentController;
+use App\Http\Controllers\Api\Facilities\FacilitiesController;
+use App\Http\Controllers\Api\Facilities\RepairsController;
+use App\Http\Controllers\Api\Facilities\RotaController;
 use App\Http\Controllers\Api\FiscalYearController;
 use App\Http\Controllers\Api\GatheringCategoryController;
 use App\Http\Controllers\Api\GatheringTypeController;
@@ -182,6 +187,35 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('ministries/{id}/gatherings', [MinistryController::class, 'gatherings'])->whereNumber('id');
     Route::get('ministries/{id}/activities', [MinistryController::class, 'activities'])->whereNumber('id');
     Route::get('ministries/{id}/history', [MinistryController::class, 'history'])->whereNumber('id');
+
+    // Facilities (P5) - each church's own rooms, bookings, equipment, repairs and duty rota.
+    Route::get('facilities/overview', [FacilitiesController::class, 'overview']);
+    Route::get('facilities/options', [FacilitiesController::class, 'options']);
+    Route::get('facilities/people', [FacilitiesController::class, 'people']);
+    Route::post('rooms', [BookingsController::class, 'saveRoom']);
+    Route::put('rooms/{id}', [BookingsController::class, 'saveRoom'])->whereNumber('id');
+    Route::delete('rooms/{id}', [BookingsController::class, 'destroyRoom'])->whereNumber('id');
+    Route::get('bookings', [BookingsController::class, 'index']);
+    Route::get('bookings/check', [BookingsController::class, 'check']);
+    Route::post('bookings', [BookingsController::class, 'store']);
+    Route::put('bookings/{id}', [BookingsController::class, 'update'])->whereNumber('id');
+    Route::delete('bookings/{id}', [BookingsController::class, 'destroy'])->whereNumber('id');
+    Route::get('equipment', [EquipmentController::class, 'index']);
+    Route::post('equipment', [EquipmentController::class, 'store']);
+    Route::post('equipment/bulk', [EquipmentController::class, 'bulk']);
+    Route::get('equipment/{id}', [EquipmentController::class, 'show'])->whereNumber('id');
+    Route::put('equipment/{id}', [EquipmentController::class, 'update'])->whereNumber('id');
+    Route::delete('equipment/{id}', [EquipmentController::class, 'destroy'])->whereNumber('id');
+    Route::post('equipment/{id}/loans', [EquipmentController::class, 'lend'])->whereNumber('id');
+    Route::get('loans', [EquipmentController::class, 'loans']);
+    Route::post('loans/{id}/return', [EquipmentController::class, 'giveBack'])->whereNumber('id');
+    Route::get('repairs', [RepairsController::class, 'index']);
+    Route::post('repairs', [RepairsController::class, 'store']);
+    Route::put('repairs/{id}', [RepairsController::class, 'update'])->whereNumber('id');
+    Route::post('repairs/{id}/expense', [RepairsController::class, 'expense'])->whereNumber('id');
+    Route::get('rota', [RotaController::class, 'index']);
+    Route::put('rota', [RotaController::class, 'update']);
+    Route::post('rota/copy', [RotaController::class, 'copy']);
 
     // People & care P2 - visitors and their follow-up; /visitors/totals is the
     // region's and diocese's (counts only)

@@ -70,3 +70,6 @@ Artisan::command('people:retention', function (\App\Services\Settings\Settings $
 })->purpose("Remove visitors' details after the months each church chose");
 
 Schedule::command('people:retention')->dailyAt('02:30')->timezone('Africa/Nairobi');
+
+// Facilities (P5): the day before a service, text the people on duty - each church at its own time (off by default).
+Schedule::command('facilities:duty-reminders')->hourlyAt(0)->timezone('Africa/Nairobi');
