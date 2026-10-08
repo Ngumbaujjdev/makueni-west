@@ -258,7 +258,7 @@ final class Visitors
         $order = array_keys(Person::STAGES);
         $reached = fn (string $stage) => $firstTimers->filter(fn ($p) => array_search($p->stage, $order, true) >= array_search($stage, $order, true))->count();
         $months = collect(range(1, 12))->map(fn ($m) => CarbonImmutable::create($year, $m, 1, 0, 0, 0, People::TZ));
-        $count = fn ($q, string $col) => $q->whereYear($col, $year)->selectRaw("month({$col}) as m, count(*) as n")->groupBy('m')->pluck('n', 'm');
+        $count = fn ($q, string $col) => $q->whereYear($col, $year)->selectRaw("month(`{$col}`) as m, count(*) as n")->groupBy('m')->pluck('n', 'm');
         $first = $count(VisitorVisit::where('territory_id', $church->id)->where('first_time', true), 'on');
         $back = $count(VisitorVisit::where('territory_id', $church->id)->where('first_time', false), 'on');
         $joined = $count($this->base($church)->where('stage', 'member'), 'became_member_on');

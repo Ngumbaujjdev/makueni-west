@@ -178,6 +178,11 @@ class VisitorsTest extends TestCase
         $this->assertSame(1, $this->getJson('/api/visitors/overview')->json('data.became_members'));
         $this->assertSame(['Ruth Kioko'], array_column($this->getJson('/api/visitors')->json('data.items'), 'name'), 'on the board for a while as a member');
         $this->postJson("/api/visitors/{$ruth->id}/become-member")->assertStatus(422);
+
+        $i = $this->getJson('/api/visitors/insights')->assertOk()->json('data');
+        $this->assertSame(1, $i['first_timers']);
+        $this->assertSame([1, 1], [collect($i['funnel'])->firstWhere('key', 'member')['count'], array_sum($i['joined_series'])]);
+        $this->assertSame(1, array_sum($i['first_series']));
     }
 
     public function test_names_stay_home_and_the_region_sees_counts(): void
