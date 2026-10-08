@@ -1,5 +1,5 @@
 <?php
-// One event: header with its actions, then tabs - filled in by assets/js/pages/events/event.js.
+// One event: a hero (date, title, countdown, actions, and a strip of four figures), then tabs - filled in by assets/js/pages/events/event.js.
 // What the viewer may do (edit, register, record money...) comes from the API's `can`.
 ?>
 <div id="eventPage">
@@ -11,8 +11,6 @@
             </div>
         </div>
     </div>
-
-    <div class="row" id="statCardsRow"></div>
 
     <div class="nav section-tabs" id="evTabs" role="tablist" aria-label="Event" hidden></div>
 
