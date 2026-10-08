@@ -115,7 +115,14 @@ The placeholders' unbuilt sub-pages are switched off.
 ### L5b as built
 - **Pages:** `includes/messages/` (`context.php`, `page.php`, `body-{index,new,message}.php`) with wrappers `{church,region,diocese}/messages/{index,new,message}.php`; scripts in `assets/js/pages/messages/` (`api.js`, `ui.js`, `index.js`, `new.js`, `message.js`).
 - **Messages page:** section tabs **Inbox** (everyone), **Sent** and **Saved messages** (those who send). The Inbox reads in place, chat-style, with a reply box; `?open=` opens one (the bell links there).
-- **Messages page: our own inbox** (2026-10-08). It replaced the copy of the template's chat, which the owner found dated. It is built in the Demographics look:
+- **The Inbox as a chat (2026-10-08, later the same day).** The owner asked for the template's chat.html layout again, so the Inbox is now its three columns, rebuilt on today's rules (solid and pale colour, photos, no muted text) rather than the earlier straight copy:
+  - **Left (`.chat-info`):** Messages with the unread count, search, All / Diocese / Region / Church tabs with counts, and Unread / Earlier rows with the sender's photo (or initials, or the place's logo), the place, time, subject, snippet and a replies chip.
+  - **Middle (`.main-chat-area`):** the message as their bubble (subject, text, signature) and your replies as solid teal bubbles with a sent tick, grouped under day labels; the reply box grows as you type, with saved messages as one-tap chips; Ctrl/Cmd+Enter sends.
+  - **Right (`.chat-user-details`):** the sender (photo, name, position), their place (logo, level, phone, email, YouTube), "From them lately" and the place's photos (Settings > Profile > Gallery) in a lightbox. It floats in from the info button below 1400px.
+  - **Phone:** the list fills the screen; a message opens over it with Back.
+  - **API:** `GET /messages/inbox` items add `by_photo_url` and `by_position`, and the response adds `places` - each sending place once: `logo_url`, `phone`, `email`, `youtube_url` and its first 6 `photos`.
+  - Campaigns and Templates are their own pages in the Communication module; the section tabs above the inbox are gone.
+- **Messages page: our own inbox** (2026-10-08, earlier; replaced by the chat above). It replaced the first copy of the template's chat, which the owner found dated. It was built in the Demographics look:
   - **Section tabs** with live figures: Inbox (unread or count), Sent (this month), Saved.
   - **One card** sized to the screen:
     - **The list:** search, "from" chips for the Inbox, Unread / Earlier groups. Rows show a solid icon tile, the sender and time, the subject (one line) and a snippet (two lines, clamped), so long text never breaks the layout.
