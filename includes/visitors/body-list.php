@@ -1,6 +1,9 @@
 <div class="page-toolbar">
     <div class="page-toolbar-sub d-flex flex-wrap align-items-center gap-2"><span id="placeLine"><?= htmlspecialchars($visitorsCtx['place']['name'] ?: 'Our church') ?></span><span class="soft-chip soft-success"><i class="ri-lock-2-line"></i>Private to our church</span></div>
     <div class="page-toolbar-controls">
+        <?php if ($visitorsCtx['can']['export']): ?>
+        <button type="button" class="btn btn-outline-primary" data-report-key="visitors.list" data-module="visitors" data-lock="1"><i class="ri-download-2-line me-1"></i>Export</button>
+        <?php endif ?>
         <?php if ($visitorsCtx['can']['insights']): ?>
         <a class="btn btn-outline-primary" href="<?= $visitorsCtx['baseUrl'] ?>/insights"><i class="ri-pie-chart-2-line me-1"></i>Insights</a>
         <?php endif ?>

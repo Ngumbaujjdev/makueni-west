@@ -64,6 +64,7 @@ final class ReportRegistry
         \App\Reports\Monthly\MonthlyReportExport::class,
         \App\Reports\Monthly\MonthlyStatusReport::class,
         \App\Reports\People\MembersDirectoryReport::class,
+        \App\Reports\People\VisitorsListReport::class,
     ];
 
     /** @return Report[] */

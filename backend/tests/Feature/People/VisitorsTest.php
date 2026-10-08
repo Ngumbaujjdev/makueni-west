@@ -6,10 +6,14 @@ use App\Models\GatheringCategory;
 use App\Models\GatheringType;
 use App\Models\MessageLog;
 use App\Models\Person;
+use App\Models\ReportRun;
 use App\Models\VisitorVisit;
+use App\Reports\People\VisitorsListReport;
+use App\Reports\ReportContext;
 use App\Services\Settings\Settings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\Feature\Financial\BuildsBudgetWorld;
 use Tests\TestCase;
@@ -287,5 +291,30 @@ class VisitorsTest extends TestCase
         $this->postJson('/api/visitors/bulk', ['ids' => $ids, 'action' => 'archive'])->assertOk()->assertJsonPath('data.done', 0);
         Sanctum::actingAs($this->reader);
         $this->postJson('/api/visitors/bulk', ['ids' => $ids, 'action' => 'archive'])->assertForbidden();
+    }
+
+    public function test_the_visitors_export_needs_its_own_permission_and_lists_only_our_visitors(): void
+    {
+        Storage::fake('local');
+        $exporter = $this->userWithRole('exporter', 'Church Administrator', 'church', $this->myChurch->id, ['church.visitors.visitors.read', 'church.visitors.visitors.export']);
+        Sanctum::actingAs($this->senior);
+        $this->sunday([['name' => 'Ruth Mwende', 'phone' => '0712000111', 'area' => 'Kasikeu']])->assertCreated();
+        Sanctum::actingAs($this->otherPastor);
+        $this->sunday([['name' => 'Another Church Visitor']])->assertCreated();
+
+        $body = ['report_key' => 'visitors.list', 'format' => 'xlsx', 'territory_id' => $this->myChurch->id];
+        Sanctum::actingAs($this->elder);
+        $this->postJson('/api/reports', $body)->assertForbidden();
+
+        Sanctum::actingAs($exporter);
+        $uuid = $this->postJson('/api/reports', $body)->assertStatus(202)->json('data.uuid');
+        $run = ReportRun::where('uuid', $uuid)->firstOrFail();
+        $this->assertSame(ReportRun::STATUS_READY, $run->status, (string) $run->error);
+        $this->assertStringStartsWith('MWD-VIS-', $run->verification_code);
+
+        $section = (new VisitorsListReport)->build(new ReportContext($this->myChurch, $exporter))->sections[0];
+        $this->assertSame(['Name', 'Phone', 'Area', 'First visit', 'Visits', 'Last visit', 'Stage', 'Follows up'], array_map(fn ($c) => $c->header, $section->columns));
+        $this->assertSame(['Ruth Mwende'], array_column($section->rows, 0));
+        $this->assertSame(['+254712000111', 'Kasikeu', 1, 'New'], [$section->rows[0][1], $section->rows[0][2], $section->rows[0][4], $section->rows[0][6]]);
     }
 }

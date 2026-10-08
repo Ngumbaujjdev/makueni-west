@@ -55,7 +55,7 @@ class PeopleCareAccessSeeder extends Seeder
             'reuse' => ['Visitor Management', 'Visitors'],
             'description' => 'Visitors and their follow-up, until they belong.',
             'pages' => [
-                '' => ['Visitors', 'Visitors and where each one is in their follow-up.', ['read']],
+                '' => ['Visitors', 'Visitors and where each one is in their follow-up.', ['read', 'export']],
                 'new.php' => ['Record visitors', "Add this Sunday's visitors quickly.", ['manage']],
                 'insights.php' => ['Insights', 'How visitors heard of us, and how many stay.', ['insights']],
             ],
@@ -102,9 +102,9 @@ class PeopleCareAccessSeeder extends Seeder
     /** Role => module => abilities (PeopleAccess::ABILITIES keys), per level. */
     private const GRANTS = [
         'church' => [
-            'Senior Pastor' => ['members' => ['read', 'manage', 'export'], 'visitors' => ['read', 'manage'], 'pastoral' => ['read', 'manage', 'confidential'], 'ministries' => ['read', 'manage'], 'facilities' => ['read', 'manage', 'book']],
+            'Senior Pastor' => ['members' => ['read', 'manage', 'export'], 'visitors' => ['read', 'manage', 'export'], 'pastoral' => ['read', 'manage', 'confidential'], 'ministries' => ['read', 'manage'], 'facilities' => ['read', 'manage', 'book']],
             'Associate Pastor' => ['members' => ['read', 'manage'], 'visitors' => ['read', 'manage'], 'pastoral' => ['read', 'manage'], 'ministries' => ['read', 'manage'], 'facilities' => ['read', 'manage', 'book']],
-            'Church Administrator' => ['members' => ['read', 'manage', 'export'], 'visitors' => ['read', 'manage'], 'ministries' => ['read', 'manage'], 'facilities' => ['read', 'manage', 'book']],
+            'Church Administrator' => ['members' => ['read', 'manage', 'export'], 'visitors' => ['read', 'manage', 'export'], 'ministries' => ['read', 'manage'], 'facilities' => ['read', 'manage', 'book']],
             'Church Secretary' => ['members' => ['read', 'manage'], 'visitors' => ['read', 'manage'], 'ministries' => ['read'], 'facilities' => ['read', 'book']],
             'Elder' => ['members' => ['read'], 'visitors' => ['read', 'manage'], 'pastoral' => ['read', 'manage'], 'ministries' => ['read'], 'facilities' => ['read', 'book']],
             'Deacon' => ['members' => ['read'], 'visitors' => ['read', 'manage'], 'pastoral' => ['read'], 'ministries' => ['read'], 'facilities' => ['read', 'book']],

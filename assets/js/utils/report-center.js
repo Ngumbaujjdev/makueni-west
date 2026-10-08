@@ -539,6 +539,10 @@ const ReportCenter = (function () {
     } else if (report.inputs.includes("budget")) {
       $("rpPeriodTitle").textContent = report.inputs.includes("line") ? "Budget line" : "Budget";
       wrap.innerHTML = `<span class="soft-chip soft-purple rp-period-chip"><i class="ri-wallet-3-line"></i>${esc(state.lockedTitle || "The budget you're viewing")}</span>`;
+    } else if (!report.inputs.length) {
+      // A list as it stands today (the member directory, the visitors) - no period to pick.
+      $("rpPeriodTitle").textContent = "Covers";
+      wrap.innerHTML = `<span class="soft-chip soft-primary rp-period-chip"><i class="ri-calendar-check-line"></i>Everyone, as at today</span>`;
     } else {
       $("rpPeriodTitle").textContent = "Submission";
       wrap.innerHTML = `<span class="soft-chip soft-primary rp-period-chip"><i class="ri-file-list-3-line"></i>${esc(state.params.submission_label || "The submission you're viewing")}</span>`;
@@ -589,6 +593,7 @@ const ReportCenter = (function () {
     }
     if (report.inputs.includes("years")) return state.params.years === "all" ? "All time" : `Last ${state.params.years} year${state.params.years === "1" ? "" : "s"}`;
     if (report.inputs.includes("budget")) return state.lockedTitle || "This budget";
+    if (!report.inputs.length) return "As at today";
     return state.params.submission_label || "This submission";
   }
 
