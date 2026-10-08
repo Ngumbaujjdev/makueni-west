@@ -75,6 +75,12 @@ function messagesPageScripts(string $page): void
         'templates' => ['assets/js/pages/messages/comms-env.js', 'assets/js/pages/settings/sections/templates.js'],
         'log' => ['assets/js/pages/messages/comms-env.js', 'assets/js/pages/settings/sections/templates.js', 'assets/js/pages/settings/sections/messages.js'],
     ][$page] ?? [];
+    // Chat in real time on the Inbox (assets/js/utils/realtime.js): Echo and pusher-js from the CDN.
+    if ($page === 'index') {
+        echo '<script src="https://cdn.jsdelivr.net/npm/pusher-js@8.4.0/dist/web/pusher.min.js"></script>' . "\n";
+        echo '<script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>' . "\n";
+        $shared[] = 'assets/js/utils/realtime.js';
+    }
     foreach (['assets/js/pages/demographics/ui-helpers.js', 'assets/js/utils/message-frames.js', 'assets/js/pages/messages/api.js', 'assets/js/pages/messages/ui.js', ...$shared, "assets/js/pages/messages/{$page}.js"] as $src) {
         echo '<script src="' . $v($src) . '"></script>' . "\n";
     }
