@@ -51,7 +51,7 @@ function visitorsPageContext(string $level, string $page): array
 function visitorsPageStyles(string $page): void
 {
     $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
-    $css = ['assets/libs/select2/select2.min.css', 'assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css', 'assets/data-tables/responsive/2.3.0/css/responsive.bootstrap.min.css'];
+    $css = ['assets/libs/select2/select2.min.css', 'assets/libs/flatpickr/flatpickr.min.css', 'assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css', 'assets/data-tables/responsive/2.3.0/css/responsive.bootstrap.min.css'];
     if ($page === 'list') {
         $css[] = 'assets/libs/dragula/dragula.min.css';
     }
@@ -73,7 +73,7 @@ function visitorsPageScripts(string $page): void
     }
     echo '<script src="' . $v('assets/js/utils/toast.js') . '"></script>' . "\n";
     echo '<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>' . "\n";
-    $libs = ['assets/libs/select2/select2.min.js', 'assets/data-tables/1.12.1/js/jquery.dataTables.min.js', 'assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js', 'assets/data-tables/responsive/2.3.0/js/dataTables.responsive.min.js'];
+    $libs = ['assets/libs/select2/select2.min.js', 'assets/libs/flatpickr/flatpickr.min.js', 'assets/data-tables/1.12.1/js/jquery.dataTables.min.js', 'assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js', 'assets/data-tables/responsive/2.3.0/js/dataTables.responsive.min.js'];
     if ($page === 'list') {
         $libs[] = 'assets/libs/dragula/dragula.min.js';
     }
@@ -81,7 +81,7 @@ function visitorsPageScripts(string $page): void
         echo '<script src="' . SITE_URL . "/{$src}\"></script>\n";
     }
     // Members' look (avatars, dates, empty states) is shared; the Visitors API and look sit on top.
-    foreach (['assets/js/pages/demographics/api-handler.js', 'assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/members/api.js', 'assets/js/pages/members/ui.js', 'assets/js/pages/members/list-kit.js', ...($page === 'visitor' ? ['assets/js/pages/care/api.js', 'assets/js/pages/care/ui.js'] : []), 'assets/js/pages/visitors/api.js', 'assets/js/pages/visitors/ui.js', "assets/js/pages/visitors/{$page}.js"] as $src) {
+    foreach (['assets/js/utils/date-field.js', 'assets/js/pages/demographics/api-handler.js', 'assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/members/api.js', 'assets/js/pages/members/ui.js', 'assets/js/pages/members/list-kit.js', ...($page === 'visitor' ? ['assets/js/pages/care/api.js', 'assets/js/pages/care/ui.js'] : []), 'assets/js/pages/visitors/api.js', 'assets/js/pages/visitors/ui.js', "assets/js/pages/visitors/{$page}.js"] as $src) {
         echo '<script src="' . $v($src) . '"></script>' . "\n";
     }
 }

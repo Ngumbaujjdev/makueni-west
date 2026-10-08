@@ -66,8 +66,8 @@
       el.innerHTML = MembersUI.empty("ri-bar-chart-2-line", "No care recorded yet", "Record a visit, a call or a prayer, and the months show here.");
       return;
     }
-    new ApexCharts(el, {
-      chart: { type: "bar", height: 300, stacked: true, toolbar: { show: false }, fontFamily: "inherit" },
+    typeChartObj = new ApexCharts(el, {
+      chart: { type: "bar", height: chartHeight, stacked: true, toolbar: { show: false }, fontFamily: "inherit" },
       plotOptions: { bar: { columnWidth: "45%", borderRadius: 3 } },
       series: series.map((t) => ({ name: t.label, data: t.data })),
       colors: series.map((t) => UI.cssColor(C.TYPES[t.key]?.color || "primary")),
@@ -76,8 +76,28 @@
       dataLabels: { enabled: false },
       legend: { position: "bottom" },
       grid: { borderColor: "rgba(var(--dark-rgb), .06)" },
-    }).render();
+    });
+    typeChartObj.render().then(fitChart);
   }
+
+  // The chart grows to the height of the cards beside it, so no empty space opens under it.
+  let typeChartObj = null;
+  let chartHeight = 300;
+  function fitChart() {
+    if (!typeChartObj) return;
+    const side = $("careSide").querySelectorAll(".card");
+    const wide = window.matchMedia("(min-width: 1200px)").matches;
+    const gap = wide && side.length ? side[side.length - 1].getBoundingClientRect().bottom - $("typeCard").getBoundingClientRect().bottom : 0;
+    const h = wide ? Math.max(300, Math.round(chartHeight + gap)) : 300;
+    if (Math.abs(h - chartHeight) < 3) return;
+    chartHeight = h;
+    typeChartObj.updateOptions({ chart: { height: h } }, false, false);
+  }
+  let fitTimer = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(fitTimer);
+    fitTimer = setTimeout(fitChart, 200);
+  });
 
   function leaders(o) {
     if (!o.by_leader.length) {
@@ -93,9 +113,36 @@
   async function latest() {
     const res = await CareAPI.list({});
     const items = res.ok ? res.data.items.slice(0, 6) : [];
+    // The YNEX dashboard's Recent Activity: a dot in the kind's colour, a dashed line down to the next.
     $("latest").innerHTML = items.length
-      ? `<ul class="mb-mini-list">${items.map((r) => `<li>${C.typeTile(r.type, "sm")}<div class="flex-fill min-w-0"><a class="fw-semibold mb-link" href="${CTX.baseUrl}/case?id=${r.id}">${C.esc(r.who)}</a><small>${C.esc(C.TYPES[r.type]?.label || "")} · ${C.day(r.on)}</small></div>${r.confidential ? '<i class="ri-lock-2-line text-muted" title="Confidential"></i>' : ""}</li>`).join("")}</ul>`
+      ? `<ul class="list-unstyled mb-0 crm-recent-activity budget-timeline cr-activity">${items
+          .map((r) => {
+            const t = C.TYPES[r.type] || C.TYPES.concern;
+            const sub = r.hospital || (r.author ? `By ${r.author}` : "");
+            return `<li class="crm-recent-activity-content" style="--tl-rgb: var(--${t.color}-rgb)">
+              <div class="d-flex align-items-top">
+                <div class="me-3"><span class="avatar avatar-xs avatar-rounded cr-activity-dot"><i class="${t.icon}"></i></span></div>
+                <div class="crm-timeline-content">
+                  <a class="fw-semibold mb-link" href="${CTX.baseUrl}/case?id=${r.id}">${C.esc(r.who)}</a>
+                  <span class="cr-activity-kind">${C.esc(t.label)}</span>${r.priority === "high" ? '<span class="cr-activity-urgent">Urgent</span>' : ""}${r.confidential ? '<i class="ri-lock-2-line cr-activity-lock" title="Confidential"></i>' : ""}
+                  ${sub ? `<span class="d-block cr-activity-sub">${C.esc(sub)}</span>` : ""}
+                </div>
+                <div class="ms-2 flex-shrink-0 text-end"><span class="cr-activity-when">${ago(r.on)}</span></div>
+              </div>
+            </li>`;
+          })
+          .join("")}</ul>`
       : '<p class="mb-0 fw-semibold">Nothing recorded yet.</p>';
+    fitChart();
+  }
+
+  /** "Today", "2 days ago", "26 Sept". */
+  function ago(iso) {
+    const days = Math.round((new Date(`${C.todayIso()}T12:00:00`) - new Date(`${iso}T12:00:00`)) / 86400000);
+    if (days <= 0) return "Today";
+    if (days === 1) return "Yesterday";
+    if (days < 7) return `${days} days ago`;
+    return new Date(`${iso}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   }
 
   async function load() {
