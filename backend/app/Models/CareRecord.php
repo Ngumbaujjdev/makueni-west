@@ -25,7 +25,7 @@ class CareRecord extends Model implements Auditable
         'counselling' => ['Counselling', 'ri-chat-heart-line', 'purple'],
         'prayer' => ['Prayer', 'ri-hand-heart-line', 'pink'],
         'phone_call' => ['Phone call', 'ri-phone-line', 'primary'],
-        'bereavement' => ['Bereavement', 'ri-candle-line', 'secondary'],
+        'bereavement' => ['Bereavement', 'ri-heart-2-line', 'secondary'],
         'concern' => ['Concern', 'ri-error-warning-line', 'warning'],
     ];
 

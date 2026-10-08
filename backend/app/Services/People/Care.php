@@ -164,7 +164,10 @@ final class Care
             ->orderByRaw('next_on is null')->orderBy('next_on')->get()
             ->map(fn ($r) => ['why' => $r->next_on ? 'next_step' : 'high'] + $this->row($r, $user, $church));
         $days = (int) ($this->settings->get('pastoral.not_contacted_days', $church) ?: 60);
-        $cared = CareRecord::where('territory_id', $church->id)->whereNotNull('person_id')->where('on', '>=', $today->subDays($days)->toDateString())->pluck('person_id')->unique()->all();
+        // Cared for lately, or with a case still open - not "nobody has visited".
+        $cared = CareRecord::where('territory_id', $church->id)->whereNotNull('person_id')
+            ->where(fn ($w) => $w->where('on', '>=', $today->subDays($days)->toDateString())->orWhere('status', 'open'))
+            ->pluck('person_id')->unique()->all();
         $lonely = Person::where('territory_id', $church->id)->listed()->members()->where(fn ($w) => $w->whereNull('congregation')->orWhere('congregation', 'main_church'))
             ->whereNotIn('id', $cared ?: [0])->orderBy('joined_on')->limit(max(0, $limit - $open->count()))->get()
             ->map(fn (Person $p) => ['why' => 'not_contacted', 'id' => null, 'who' => $p->name, 'initials' => $p->initials, 'person' => ['id' => $p->id, 'kind' => 'member', 'area' => $p->area], 'type' => null, 'next_on' => null, 'due' => false]);
