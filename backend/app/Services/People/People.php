@@ -30,7 +30,7 @@ final class People
         return CarbonImmutable::now(self::TZ)->startOfDay();
     }
 
-    /** The list, filtered: status[], gender, congregation, area, baptised, joined_year, q (name, phone or area), archived. */
+    /** The list, filtered: status[], gender, congregation, area, baptised, joined_year, ministry (an id, or "none"), q (name, phone or area), archived. */
     public function query(Territory $church, array $f): Builder
     {
         $q = Person::query()->where('territory_id', $church->id)->whereNull('anonymised_at');
@@ -48,6 +48,11 @@ final class People
         }
         if (isset($f['baptised']) && $f['baptised'] !== '') {
             filter_var($f['baptised'], FILTER_VALIDATE_BOOLEAN) ? $q->whereNotNull('baptised_on') : $q->whereNull('baptised_on');
+        }
+        if (! empty($f['ministry'])) {
+            $f['ministry'] === 'none'
+                ? $q->whereDoesntHave('ministries', fn ($m) => $m->where('ministries.active', true))
+                : $q->whereHas('ministries', fn ($m) => $m->where('ministries.id', (int) $f['ministry']));
         }
         if (! empty($f['joined_year'])) {
             $q->whereYear('joined_on', (int) $f['joined_year']);
@@ -100,8 +105,15 @@ final class People
             'joined_on' => $p->joined_on?->toDateString(),
             'baptised' => (bool) $p->baptised_on,
             'archived' => (bool) $p->archived_at,
-            'ministries' => [],
+            'ministries' => $p->relationLoaded('ministries') ? self::ministryChips($p) : [],
         ];
+    }
+
+    /** The active ministries someone serves in, as chips. */
+    public static function ministryChips(Person $p): array
+    {
+        return $p->ministries->where('active', true)->sortBy('order')
+            ->map(fn ($m) => ['id' => $m->id, 'name' => $m->name, 'icon' => $m->icon_name, 'colour' => $m->colour_name])->values()->all();
     }
 
     /** Possible duplicates: the same phone, or the same first and last name. */

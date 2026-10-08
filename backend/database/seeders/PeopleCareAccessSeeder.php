@@ -33,7 +33,7 @@ class PeopleCareAccessSeeder extends Seeder
         'members' => true,
         'visitors' => true,
         'pastoral' => true,
-        'ministries' => false,
+        'ministries' => true,
         'facilities' => false,
     ];
 
@@ -77,6 +77,7 @@ class PeopleCareAccessSeeder extends Seeder
             'description' => 'Youth, women, men, children, music, prayer and our own ministries.',
             'pages' => [
                 '' => ['Ministries', 'Our ministries, their leaders, members and gatherings.', ['read', 'manage']],
+                'insights.php' => ['Insights', "Who serves where, and who isn't in a ministry yet.", ['insights']],
             ],
         ],
         'facilities' => [

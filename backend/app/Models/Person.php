@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Contracts\Auditable;
@@ -73,7 +74,7 @@ class Person extends Model implements Auditable
     /**
      * Remove their personal details (docs/specs/people-and-care-spec.md,
      * "Leaving the register"): name, phone, area, previous church,
-     * follow-up notes and pastoral care notes. The row, its dates and its counts stay. Can't be
+     * follow-up notes, pastoral care notes and their place in ministries. The row, its dates and its counts stay. Can't be
      * undone.
      */
     public function anonymise(?int $by = null): void
@@ -88,11 +89,20 @@ class Person extends Model implements Auditable
             $r->forceFill(['note' => null, 'person_name' => null, 'testimony' => null, 'share_testimony' => false])->save();
             $r->contacts()->whereNotNull('note')->get()->each(fn (CareContact $c) => $c->forceFill(['note' => null])->save());
         });
+        // Out of every ministry - its counts no longer include a person who left the register.
+        MinistryMember::where('person_id', $this->id)->get()->each(fn (MinistryMember $m) => $m->delete());
+        MinistryLeader::where('person_id', $this->id)->get()->each(fn (MinistryLeader $l) => $l->delete());
     }
 
     public function church(): BelongsTo
     {
         return $this->belongsTo(Territory::class, 'territory_id');
+    }
+
+    /** The ministries they serve in (P4). */
+    public function ministries(): BelongsToMany
+    {
+        return $this->belongsToMany(Ministry::class, 'ministry_members')->withPivot('joined_on')->whereNull('ministries.deleted_at');
     }
 
     public function transfers(): HasMany

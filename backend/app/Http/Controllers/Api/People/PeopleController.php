@@ -38,7 +38,7 @@ class PeopleController extends Controller
         return $this->ok($this->people->overview($church) + ['can' => $this->can($request->user(), $church)]);
     }
 
-    /** GET /people?status[]=&gender=&congregation=&area=&baptised=&joined_year=&q=&archived= */
+    /** GET /people?status[]=&gender=&congregation=&area=&baptised=&joined_year=&ministry=&q=&archived= */
     public function index(Request $request): JsonResponse
     {
         $church = $this->church($request);
@@ -52,10 +52,11 @@ class PeopleController extends Controller
             'area' => ['nullable', 'string', 'max:80'],
             'baptised' => ['nullable', 'in:0,1,true,false'],
             'joined_year' => ['nullable', 'integer', 'between:1900,2100'],
+            'ministry' => ['nullable', 'regex:/^(none|\d+)$/'],
             'q' => ['nullable', 'string', 'max:80'],
             'archived' => ['nullable', 'boolean'],
         ]);
-        $rows = $this->people->query($church, $f)->orderBy('first_name')->orderBy('last_name')->limit(5000)->get();
+        $rows = $this->people->query($church, $f)->with('ministries')->orderBy('first_name')->orderBy('last_name')->limit(5000)->get();
 
         return $this->ok(['items' => $rows->map(fn ($p) => $this->people->row($p))->values(), 'total' => $rows->count()]);
     }
@@ -338,7 +339,7 @@ class PeopleController extends Controller
             'came_as_visitor' => (bool) $p->stage,
             'archived' => (bool) $p->archived_at, 'anonymised' => (bool) $p->anonymised_at,
             'created_at' => $p->created_at?->toIso8601String(),
-            'journey' => $journey, 'ministries' => [], 'care' => null,
+            'journey' => $journey, 'ministries' => People::ministryChips($p), 'care' => null,
             'can' => $this->can($request->user(), $p->church ?? Territory::find($p->territory_id)),
         ];
     }

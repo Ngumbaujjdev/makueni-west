@@ -47,6 +47,8 @@ final class PeopleAccess
         'ministries' => [
             'read' => 'ministries.ministries.read',
             'manage' => 'ministries.ministries.manage',
+            // The Insights page's own read permission (menu).
+            'insights' => 'ministries.insights.read',
             'below' => 'ministries.below.read',
         ],
         'facilities' => [
