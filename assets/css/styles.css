@@ -37070,29 +37070,83 @@ a.mr-tile:hover {
    Messages (2026-10-05) - the Inbox, the composer, a sent message
    (docs/specs/messages-spec.md)
    ========================================================================== */
-/* The Inbox is the template's chat page. Its panels are sized to the screen
-   (100vh less the header); our sub-tab bar sits above them too, so its
-   height (--secondary-nav-h, set by secondary-nav.js) comes off as well. */
-.main-chart-wrapper .chat-info,
-.main-chart-wrapper .main-chat-area,
-.main-chart-wrapper .chat-user-details {
-  height: calc(100vh - 8rem - var(--secondary-nav-h, 0px));
+/* Messages: our own inbox (2026-10-08) - the list and the reading pane in
+   one card, sized to the screen less the header, page header and tabs; on a
+   phone the list fills the screen and a message opens over it (.is-reading). */
+.mi-inbox { display: grid; grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr); height: calc(100vh - 19.5rem - var(--secondary-nav-h, 0px)); min-height: 32rem; overflow: hidden; }
+.mi-inbox .min-w-0 { min-width: 0; }
+.mi-list-col { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--default-border); }
+.mi-list-tools { padding: 1rem; border-bottom: 1px solid var(--default-border); }
+.mi-list-tools .input-group-text { background: rgba(var(--primary-rgb), .05); border-color: rgba(var(--primary-rgb), .25); color: var(--primary-color); }
+.mi-list-tools .form-control { background: rgba(var(--primary-rgb), .05); border-color: rgba(var(--primary-rgb), .25); }
+.mi-list-tools .form-control::placeholder { color: rgba(var(--primary-rgb), .75); }
+.mi-list-tools .soft-chip { border: 0; cursor: pointer; }
+.mi-list-tools .soft-chip.is-on { background: var(--primary-color); color: #fff; }
+.mi-list { flex: 1; overflow-y: auto; padding: .25rem 0 .5rem; }
+.mi-group { display: flex; align-items: center; gap: .5rem; padding: .85rem 1rem .4rem; font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--default-text-color); }
+.mi-row { display: flex; gap: .75rem; width: 100%; padding: .75rem 1rem; text-align: start; background: transparent; border: 0; border-inline-start: 3px solid transparent; transition: background .12s; }
+.mi-row:hover { background: rgba(var(--primary-rgb), .04); }
+.mi-row.is-active { background: rgba(var(--primary-rgb), .08); border-inline-start-color: var(--primary-color); }
+.mi-row.is-unread .mi-row-who, .mi-row.is-unread .mi-row-subject { font-weight: 700; }
+.mi-row-icon { flex-shrink: 0; }
+.mi-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .1rem; }
+.mi-row-top { display: flex; align-items: baseline; gap: .5rem; }
+.mi-row-who { flex: 1; min-width: 0; overflow: hidden; font-size: .85rem; font-weight: 600; color: var(--default-text-color); white-space: nowrap; text-overflow: ellipsis; }
+.mi-row-time { font-size: .72rem; color: var(--text-muted); white-space: nowrap; }
+.mi-row-subject { overflow: hidden; font-size: .82rem; color: var(--default-text-color); white-space: nowrap; text-overflow: ellipsis; }
+.mi-row-snippet { display: -webkit-box; overflow: hidden; font-size: .78rem; color: var(--text-muted); -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.mi-row-extra { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .25rem; }
+.mi-dot { display: inline-block; width: .5rem; height: .5rem; margin-inline-end: .4rem; border-radius: 50%; background: var(--primary-color); vertical-align: middle; }
+.mi-row-skel { display: flex; gap: .75rem; padding: .85rem 1rem; }
+.mi-row-skel .skel-tile { width: 2.5rem; height: 2.5rem; border-radius: 50%; }
+.mi-pane-col { display: flex; min-width: 0; min-height: 0; }
+.mi-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.mi-pane-head { padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--default-border); }
+.mi-back { display: none; margin-bottom: .75rem; }
+.mi-subject { margin: 0 0 .2rem; font-size: 1.1rem; font-weight: 700; overflow-wrap: anywhere; }
+.mi-who { font-size: .85rem; color: var(--default-text-color); }
+.mi-actions { display: flex; flex-shrink: 0; gap: .4rem; }
+.mi-pane-body { flex: 1; overflow-y: auto; padding: 1.5rem; }
+.mi-letter { max-width: 42rem; padding: 1.25rem 1.5rem; font-size: .92rem; line-height: 1.7; color: var(--default-text-color); background: rgba(var(--primary-rgb), .03); border: 1px solid rgba(var(--primary-rgb), .15); border-radius: .8rem; overflow-wrap: anywhere; }
+.mi-letter p { margin-bottom: .8rem; }
+.mi-letter p:last-of-type { margin-bottom: 0; }
+.mi-letter footer { margin-top: 1rem; font-weight: 600; color: var(--primary-color); }
+.mi-thread-title { display: flex; align-items: center; gap: .5rem; max-width: 42rem; margin: 1.5rem 0 .75rem; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.mi-thread { position: relative; max-width: 42rem; margin: 0; padding: 0 0 0 .25rem; list-style: none; }
+.mi-thread::before { content: ""; position: absolute; top: .5rem; bottom: .5rem; left: 1.05rem; width: 2px; background: rgba(var(--primary-rgb), .15); }
+.mi-thread-item { position: relative; display: flex; gap: .75rem; margin-bottom: 1rem; }
+.mi-thread-item .avatar { position: relative; z-index: 1; flex-shrink: 0; }
+.mi-thread-body { flex: 1; min-width: 0; padding: .6rem .85rem; background: var(--custom-white); border: 1px solid var(--default-border); border-radius: .7rem; }
+.mi-thread-item.is-mine .mi-thread-body { background: rgba(var(--primary-rgb), .06); border-color: rgba(var(--primary-rgb), .2); }
+.mi-thread-meta { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .2rem; font-size: .75rem; color: var(--text-muted); }
+.mi-thread-meta strong { color: var(--default-text-color); }
+.mi-thread-text { font-size: .86rem; overflow-wrap: anywhere; }
+.mi-thread-text p { margin: 0 0 .4rem; }
+.mi-thread-text p:last-child { margin: 0; }
+.mi-note { margin: .75rem 0 0; font-size: .82rem; color: var(--text-muted); }
+.mi-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: .5rem; max-width: 42rem; }
+.mi-person { display: flex; align-items: center; gap: .6rem; min-width: 0; padding: .5rem .7rem; font-size: .82rem; border: 1px solid var(--default-border); border-radius: .6rem; }
+.mi-person small { color: var(--text-muted); }
+.mi-reply { padding: .9rem 1.5rem 1rem; background: rgba(var(--primary-rgb), .03); border-top: 1px solid var(--default-border); }
+.mi-reply .form-control { background: var(--custom-white); border-color: rgba(var(--primary-rgb), .25); resize: vertical; }
+.mi-reply .form-control::placeholder { color: rgba(var(--primary-rgb), .75); }
+.mi-reply .form-control:focus { border-color: var(--primary-color); box-shadow: 0 0 0 .2rem rgba(var(--primary-rgb), .15); }
+.mi-reply-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin-top: .6rem; }
+.mi-reply-foot .soft-chip { border: 0; cursor: pointer; }
+.mi-pane-empty, .mi-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1rem; text-align: center; }
+@media (max-width: 991.98px) {
+  .mi-inbox { display: block; height: auto; min-height: 0; }
+  .mi-list-col { border-right: 0; }
+  .mi-pane-col { display: none; }
+  .mi-inbox.is-reading .mi-list-col { display: none; }
+  .mi-inbox.is-reading .mi-pane-col { display: flex; }
+  .mi-back { display: inline-flex; }
+  .mi-pane-head > .d-flex { flex-wrap: wrap; }
+  .mi-actions { width: 100%; }
+  .mi-pane-head, .mi-reply { padding-left: 1rem; padding-right: 1rem; }
+  .mi-pane-body { padding: 1rem; }
 }
-.main-chart-wrapper .chat-users-tab,
-.main-chart-wrapper .chat-groups-tab,
-.main-chart-wrapper .chat-calls-tab {
-  max-height: calc(100vh - 21rem - var(--secondary-nav-h, 0px));
-}
-.main-chart-wrapper .chat-content {
-  max-height: calc(100vh - 17rem - var(--secondary-nav-h, 0px));
-}
-@media (max-width: 354px) {
-  .main-chart-wrapper .chat-users-tab,
-  .main-chart-wrapper .chat-groups-tab,
-  .main-chart-wrapper .chat-calls-tab {
-    max-height: calc(100vh - 22rem - var(--secondary-nav-h, 0px));
-  }
-}
+
 /* --------------------------------------------------------------------------
    Send a message: v1-events' "Send campaign" composer (its campaign modal's
    pb-* layout and its template writer's phone preview), as a page card.
@@ -37100,8 +37154,12 @@ a.mr-tile:hover {
    gradients (its progress bar and certificate box had them).
    -------------------------------------------------------------------------- */
 .pb-composer { overflow: hidden; }
+/* Fields tinted in the brand colour, with coloured placeholders (2026-10-08). */
+.pb-composer .form-control, .pb-composer .form-select { background-color: rgba(var(--primary-rgb), .04); border-color: rgba(var(--primary-rgb), .25); }
+.pb-composer .form-control::placeholder { color: rgba(var(--primary-rgb), .75); }
+.pb-composer .form-control:focus, .pb-composer .form-select:focus { border-color: var(--primary-color); box-shadow: 0 0 0 .2rem rgba(var(--primary-rgb), .15); }
 .pb-compose { padding: 1.5rem; }
-.pb-aside { background: rgb(var(--light-rgb)); border-left: 1px solid var(--input-border); padding: 1.5rem; }
+.pb-aside { background: rgba(var(--primary-rgb), .04); border-left: 1px solid rgba(var(--primary-rgb), .15); padding: 1.5rem; }
 @media (max-width: 991.98px) { .pb-aside { border-left: 0; border-top: 1px solid var(--input-border); } }
 .pb-section + .pb-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed var(--input-border); }
 .pb-section-title { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: .75rem; }
@@ -37145,8 +37203,7 @@ a.mr-tile:hover {
 /* Live counter */
 .pb-counter { background: var(--custom-white); border: 1px solid var(--input-border); border-radius: 12px; padding: 1rem; }
 .pb-counter-num { font-size: 26px; font-weight: 800; line-height: 1; color: var(--primary-color); }
-.pb-counter-num.is-sms { color: rgb(var(--success-rgb)); }
-.pb-counter-num.is-email { color: rgb(var(--purple-rgb)); }
+/* One colour: every count is the brand colour. */
 .pb-note { font-size: 11.5px; display: flex; gap: .4rem; align-items: flex-start; margin-top: .45rem; }
 .pb-footer-link { font-size: 12.5px; color: var(--default-text-color); text-decoration: none; }
 .pb-footer-link:hover { color: var(--primary-color); }
