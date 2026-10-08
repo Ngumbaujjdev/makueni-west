@@ -75,7 +75,7 @@ final class Audience
             }
             $people = $this->register($place, $key);
             $out = $out->merge($people);
-            $parts[] = ($key === 'members' ? 'Our members' : 'Our visitors who said yes to contact').($people->isEmpty() ? ' (nobody yet)' : '');
+            $parts[] = ($key === 'members' ? 'Our members' : 'Our visitors').($people->isEmpty() ? ' (nobody yet)' : '');
         }
 
         // Typed in.
@@ -143,19 +143,20 @@ final class Audience
             ])->values();
     }
 
-    /** A church's members (with a phone or email), or its visitors who said yes to being contacted (with a phone). */
+    /** A church's members (with a phone), or its visitors who didn't ask not to be texted (with a phone). */
     public function register(Territory $church, string $who): Collection
     {
         $q = Person::where('territory_id', $church->id)->listed();
         $who === 'members'
-            ? $q->where('status', 'member')->where(fn ($w) => $w->whereNotNull('phone')->orWhereNotNull('email'))
+            ? $q->where('status', 'member')->whereNotNull('phone')
             : $q->where('status', 'visitor')->where('consent_contact', true)->whereNotNull('phone');
 
-        return $q->orderBy('first_name')->get()->map(fn (Person $p) => [
+        // Demo people (PeopleDemoSeeder) are never texted.
+        return $q->orderBy('first_name')->get()->reject(fn (Person $p) => Phone::isDemo($p->phone))->map(fn (Person $p) => [
             'user_id' => null,
             'name' => $p->name,
             'phone' => Phone::kenyaMobile($p->phone),
-            'email' => $who === 'members' && filter_var($p->email, FILTER_VALIDATE_EMAIL) ? $p->email : null,
+            'email' => null,
             'place_id' => (int) $church->id,
             'role' => $who === 'members' ? 'Member' : 'Visitor',
         ])->values();

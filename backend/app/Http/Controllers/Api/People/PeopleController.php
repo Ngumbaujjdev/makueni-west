@@ -10,16 +10,13 @@ use App\Models\User;
 use App\Notifications\PlaceNotification;
 use App\Services\Activities\Activities;
 use App\Services\People\People;
-use App\Services\Settings\Settings;
 use App\Support\PeopleAccess;
 use App\Support\Phone;
 use App\Support\PlaceAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use Symfony\Component\HttpFoundation\Response;
 
 /**
  * The church's private member register (docs/specs/people-and-care-spec.md,
@@ -41,7 +38,7 @@ class PeopleController extends Controller
         return $this->ok($this->people->overview($church) + ['can' => $this->can($request->user(), $church)]);
     }
 
-    /** GET /people?status[]=&gender=&age_band=&baptised=&joined_year=&q=&archived= */
+    /** GET /people?status[]=&gender=&congregation=&area=&baptised=&joined_year=&q=&archived= */
     public function index(Request $request): JsonResponse
     {
         $church = $this->church($request);
@@ -51,7 +48,8 @@ class PeopleController extends Controller
         $f = $request->validate([
             'status' => ['nullable', 'array'], 'status.*' => [Rule::in(array_keys(Person::STATUSES))],
             'gender' => ['nullable', Rule::in(['male', 'female'])],
-            'age_band' => ['nullable', Rule::in(array_keys(Person::AGE_BANDS))],
+            'congregation' => ['nullable', Rule::in(array_keys(Person::CONGREGATIONS))],
+            'area' => ['nullable', 'string', 'max:80'],
             'baptised' => ['nullable', 'in:0,1,true,false'],
             'joined_year' => ['nullable', 'integer', 'between:1900,2100'],
             'q' => ['nullable', 'string', 'max:80'],
@@ -118,59 +116,6 @@ class PeopleController extends Controller
         $person->fill($data + ['updated_by' => $request->user()->id])->save();
 
         return $this->ok($this->detail($request, $person->fresh()), 'Saved.');
-    }
-
-    /** POST /people/{id}/photo - png, jpg or webp up to 2 MB, kept private and re-encoded as webp. */
-    public function uploadPhoto(Request $request, int $id): JsonResponse
-    {
-        [$church, $person, $error] = $this->person($request, $id, 'manage');
-        if ($error) {
-            return $error;
-        }
-        $request->validate(['photo' => ['required', 'file', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048']], ['photo.max' => 'The photo must be 2 MB or smaller.']);
-        $image = @imagecreatefromstring((string) file_get_contents($request->file('photo')->getRealPath()));
-        if (! $image) {
-            throw ValidationException::withMessages(['photo' => "That file couldn't be read as a picture."]);
-        }
-        $image = $this->square($image, 400);
-        ob_start();
-        imagewebp($image, null, 82);
-        $bytes = ob_get_clean();
-        imagedestroy($image);
-        $path = "people/{$church->id}/{$person->id}.webp";
-        Storage::disk('local')->put($path, $bytes);
-        $person->forceFill(['photo_path' => $path, 'updated_by' => $request->user()->id])->save();
-
-        return $this->ok($this->detail($request, $person->fresh()), 'Photo saved.');
-    }
-
-    /** GET /people/{id}/photo - only the church's own leaders. */
-    public function photo(Request $request, int $id): JsonResponse|Response
-    {
-        [$church, $person, $error] = $this->person($request, $id);
-        if ($error) {
-            return $error;
-        }
-        if (! $person->photo_path || ! Storage::disk('local')->exists($person->photo_path)) {
-            return response()->json(['success' => false, 'status' => 404, 'message' => 'No photo.'], 404);
-        }
-
-        return response(Storage::disk('local')->get($person->photo_path), 200, ['Content-Type' => 'image/webp', 'Cache-Control' => 'private, max-age=300']);
-    }
-
-    /** DELETE /people/{id}/photo */
-    public function removePhoto(Request $request, int $id): JsonResponse
-    {
-        [$church, $person, $error] = $this->person($request, $id, 'manage');
-        if ($error) {
-            return $error;
-        }
-        if ($person->photo_path) {
-            Storage::disk('local')->delete($person->photo_path);
-            $person->forceFill(['photo_path' => null, 'updated_by' => $request->user()->id])->save();
-        }
-
-        return $this->ok($this->detail($request, $person->fresh()), 'Photo removed.');
     }
 
     /** POST /people/{id}/archive and /restore - hidden from the lists, or back again. */
@@ -290,10 +235,7 @@ class PeopleController extends Controller
             return $church;
         }
 
-        return $this->ok($this->people->insights($church) + [
-            'birthday_template' => app(Settings::class)->get('members.birthday_template', $church),
-            'church_name' => $church->name,
-        ]);
+        return $this->ok($this->people->insights($church));
     }
 
     /** GET /people/register-counts - the hint beside the Demographics form ("From your register: N"). */
@@ -324,26 +266,22 @@ class PeopleController extends Controller
     /** The person as the profile shows them (decrypted - only ever sent to their own church). */
     private function detail(Request $request, Person $p): array
     {
-        $today = $this->people->today();
-        $age = $p->ageOn($today);
         $p->loadMissing('transfers.otherChurch');
         $journey = collect([
+            $p->first_visit_on ? ['on' => $p->first_visit_on->toDateString(), 'kind' => 'visited', 'label' => 'First visited'] : null,
             $p->saved_on ? ['on' => $p->saved_on->toDateString(), 'kind' => 'saved', 'label' => 'Saved'] : null,
             $p->baptised_on ? ['on' => $p->baptised_on->toDateString(), 'kind' => 'baptised', 'label' => 'Baptised'] : null,
-            $p->first_visit_on ? ['on' => $p->first_visit_on->toDateString(), 'kind' => 'visited', 'label' => 'First visited'] : null,
             $p->joined_on ? ['on' => $p->joined_on->toDateString(), 'kind' => 'joined', 'label' => 'Joined '.($p->church?->name ?? 'the church').($p->how_joined ? ' ('.strtolower(Person::HOW_JOINED[$p->how_joined]).')' : '')] : null,
             ...$p->transfers->map(fn ($t) => ['on' => $t->on->toDateString(), 'kind' => "transfer_{$t->direction}", 'label' => $t->direction === 'in' ? "Moved here from {$t->other_name}" : "Moved to {$t->other_name}"])->all(),
         ])->filter()->sortBy('on')->values();
 
         return [
             'id' => $p->id, 'name' => $p->name, 'initials' => $p->initials,
-            'first_name' => $p->first_name, 'last_name' => $p->last_name, 'other_names' => $p->other_names,
-            'gender' => $p->gender, 'date_of_birth' => $p->date_of_birth?->toDateString(), 'age' => $age, 'age_band' => Person::bandFor($age),
-            'phone' => $p->phone, 'email' => $p->email, 'address' => $p->address, 'national_id' => $p->national_id,
-            'marital_status' => $p->marital_status, 'occupation' => $p->occupation, 'has_photo' => (bool) $p->photo_path,
+            'first_name' => $p->first_name, 'last_name' => $p->last_name, 'gender' => $p->gender,
+            'phone' => $p->phone, 'area' => $p->area, 'congregation' => $p->congregation,
             'status' => $p->status, 'joined_on' => $p->joined_on?->toDateString(), 'how_joined' => $p->how_joined, 'previous_church' => $p->previous_church,
             'saved_on' => $p->saved_on?->toDateString(), 'baptised_on' => $p->baptised_on?->toDateString(),
-            'next_of_kin_name' => $p->next_of_kin_name, 'next_of_kin_phone' => $p->next_of_kin_phone, 'notes' => $p->notes,
+            'came_as_visitor' => (bool) $p->stage,
             'archived' => (bool) $p->archived_at, 'anonymised' => (bool) $p->anonymised_at,
             'created_at' => $p->created_at?->toIso8601String(),
             'journey' => $journey, 'ministries' => [], 'care' => null,
@@ -359,52 +297,44 @@ class PeopleController extends Controller
         ];
     }
 
-    /** The field rules; date of birth and national ID become required when the church (or diocese, locked) says so. */
+    /** The field rules: name, phone, area, gender and Sunday school or main church - and the church-life dates, added later. */
     private function validated(Request $request, Territory $church, ?Person $person = null): array
     {
-        $settings = app(Settings::class);
-        $dobRequired = (bool) $settings->get('members.require_dob', $church);
-        $idRequired = (bool) $settings->get('members.require_national_id', $church);
         $today = $this->people->today()->toDateString();
         $data = $request->validate([
-            'first_name' => ['required', 'string', 'max:80'],
-            'last_name' => ['required', 'string', 'max:80'],
-            'other_names' => ['nullable', 'string', 'max:80'],
+            'first_name' => [...($person ? ['sometimes'] : []), 'required', 'string', 'max:80'],
+            'last_name' => ['nullable', 'string', 'max:80'],
             'gender' => ['nullable', Rule::in(['male', 'female'])],
-            'date_of_birth' => [$dobRequired ? 'required' : 'nullable', 'date', "before_or_equal:{$today}", 'after:1900-01-01'],
             'phone' => ['nullable', 'string', 'max:30'],
-            'email' => ['nullable', 'email', 'max:160'],
-            'address' => ['nullable', 'string', 'max:500'],
-            'national_id' => [$idRequired ? 'required' : 'nullable', 'string', 'max:30'],
-            'marital_status' => ['nullable', Rule::in(array_keys(Person::MARITAL))],
-            'occupation' => ['nullable', 'string', 'max:120'],
+            'area' => ['nullable', 'string', 'max:80'],
+            'congregation' => ['nullable', Rule::in(array_keys(Person::CONGREGATIONS))],
             'status' => ['nullable', Rule::in(array_keys(Person::STATUSES))],
             'joined_on' => ['nullable', 'date', "before_or_equal:{$today}"],
             'how_joined' => ['nullable', Rule::in(array_keys(Person::HOW_JOINED))],
             'previous_church' => ['nullable', 'string', 'max:160'],
             'saved_on' => ['nullable', 'date', "before_or_equal:{$today}"],
             'baptised_on' => ['nullable', 'date', "before_or_equal:{$today}"],
-            'next_of_kin_name' => ['nullable', 'string', 'max:120'],
-            'next_of_kin_phone' => ['nullable', 'string', 'max:30'],
-            'notes' => ['nullable', 'string', 'max:5000'],
-        ], [
-            'date_of_birth.before_or_equal' => "The date of birth can't be in the future.",
-            'date_of_birth.required' => 'Your church asks for a date of birth.',
-            'national_id.required' => 'Your church asks for a national ID.',
-        ]);
-        foreach (['phone', 'next_of_kin_phone'] as $field) {
-            if (! empty($data[$field])) {
-                $normal = Phone::kenyaMobile($data[$field]);
-                if (! $normal) {
-                    throw ValidationException::withMessages([$field => 'That phone number doesn\'t look right - use a Kenyan mobile, e.g. 0712 345 678.']);
-                }
-                $data[$field] = $normal;
+        ], ['first_name.required' => 'Enter their name.']);
+        if (! empty($data['phone'])) {
+            $normal = Phone::kenyaMobile($data['phone']);
+            if (! $normal) {
+                throw ValidationException::withMessages(['phone' => 'That phone number doesn\'t look right - use a Kenyan mobile, e.g. 0712 345 678.']);
             }
+            $data['phone'] = $normal;
         }
-        $data['first_name'] = trim($data['first_name']);
-        $data['last_name'] = trim($data['last_name']);
+        if (isset($data['first_name'])) {
+            $data['first_name'] = trim($data['first_name']);
+        }
+        if (array_key_exists('last_name', $data)) {
+            $data['last_name'] = trim((string) $data['last_name']);
+        }
+        if (array_key_exists('area', $data)) {
+            $data['area'] = ($a = trim((string) $data['area'])) === '' ? null : mb_convert_case($a, MB_CASE_TITLE);
+        }
         if (! $person) {
             $data['status'] ??= 'member';
+            $data['last_name'] ??= '';
+            $data['consent_contact'] = ! empty($data['phone']);
         } else {
             $data = array_filter($data, fn ($v, $k) => $request->exists($k), ARRAY_FILTER_USE_BOTH);
         }
@@ -492,19 +422,6 @@ class PeopleController extends Controller
         $person = Person::with('church')->where('territory_id', $church->id)->find($id);
 
         return $person ? [$church, $person, null] : [$church, null, response()->json(['success' => false, 'status' => 404, 'message' => 'That person isn\'t in your register.'], 404)];
-    }
-
-    /** Centre-crop to a square and scale down. */
-    private function square(\GdImage $image, int $size): \GdImage
-    {
-        $w = imagesx($image);
-        $h = imagesy($image);
-        $side = min($w, $h);
-        $out = imagecreatetruecolor($size, $size);
-        imagecopyresampled($out, $image, 0, 0, (int) (($w - $side) / 2), (int) (($h - $side) / 2), $size, $size, $side, $side);
-        imagedestroy($image);
-
-        return $out;
     }
 
     private function ok(mixed $data, string $message = 'OK', int $status = 200): JsonResponse

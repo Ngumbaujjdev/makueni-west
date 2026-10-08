@@ -131,9 +131,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('people/{id}', [PeopleController::class, 'show'])->whereNumber('id');
     Route::put('people/{id}', [PeopleController::class, 'update'])->whereNumber('id');
     Route::get('people/{id}/history', [PeopleController::class, 'history'])->whereNumber('id');
-    Route::get('people/{id}/photo', [PeopleController::class, 'photo'])->whereNumber('id');
-    Route::post('people/{id}/photo', [PeopleController::class, 'uploadPhoto'])->whereNumber('id');
-    Route::delete('people/{id}/photo', [PeopleController::class, 'removePhoto'])->whereNumber('id');
     Route::post('people/{id}/archive', [PeopleController::class, 'archive'])->whereNumber('id');
     Route::post('people/{id}/restore', [PeopleController::class, 'restore'])->whereNumber('id');
     Route::post('people/{id}/anonymise', [PeopleController::class, 'anonymise'])->whereNumber('id');

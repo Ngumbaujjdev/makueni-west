@@ -30,7 +30,7 @@ final class People
         return CarbonImmutable::now(self::TZ)->startOfDay();
     }
 
-    /** The list, filtered: status[], gender, age_band, baptised, joined_year, q (name or phone), archived. */
+    /** The list, filtered: status[], gender, congregation, area, baptised, joined_year, q (name, phone or area), archived. */
     public function query(Territory $church, array $f): Builder
     {
         $q = Person::query()->where('territory_id', $church->id)->whereNull('anonymised_at');
@@ -40,12 +40,11 @@ final class People
         if (! empty($f['gender'])) {
             $q->where('gender', $f['gender']);
         }
-        if (! empty($f['age_band']) && isset(Person::AGE_BANDS[$f['age_band']])) {
-            [$from, $to] = Person::AGE_BANDS[$f['age_band']];
-            $today = $this->today();
-            $q->whereNotNull('date_of_birth')
-                ->whereDate('date_of_birth', '<=', $today->subYears($from)->toDateString())
-                ->whereDate('date_of_birth', '>', $today->subYears($to + 1)->toDateString());
+        if (! empty($f['congregation'])) {
+            $q->where('congregation', $f['congregation']);
+        }
+        if (! empty($f['area'])) {
+            $q->where('area', $f['area']);
         }
         if (isset($f['baptised']) && $f['baptised'] !== '') {
             filter_var($f['baptised'], FILTER_VALIDATE_BOOLEAN) ? $q->whereNotNull('baptised_on') : $q->whereNull('baptised_on');
@@ -57,7 +56,7 @@ final class People
             $phone = self::phoneLike($term);
             $q->where(function ($w) use ($term, $phone) {
                 $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $term).'%';
-                $w->where('first_name', 'like', $like)->orWhere('last_name', 'like', $like)->orWhere('other_names', 'like', $like)
+                $w->where('first_name', 'like', $like)->orWhere('last_name', 'like', $like)->orWhere('area', 'like', $like)
                     ->orWhereRaw("CONCAT(first_name, ' ', last_name) like ?", [$like]);
                 if ($phone) {
                     $w->orWhere('phone', 'like', $phone);
@@ -89,20 +88,17 @@ final class People
     /** One row of the list. */
     public function row(Person $p): array
     {
-        $age = $p->ageOn($this->today());
-
         return [
             'id' => $p->id,
             'name' => $p->name,
             'initials' => $p->initials,
             'phone' => $p->phone,
+            'area' => $p->area,
             'gender' => $p->gender,
-            'age' => $age,
-            'age_band' => Person::bandFor($age),
+            'congregation' => $p->congregation,
             'status' => $p->status,
             'joined_on' => $p->joined_on?->toDateString(),
             'baptised' => (bool) $p->baptised_on,
-            'has_photo' => (bool) $p->photo_path,
             'archived' => (bool) $p->archived_at,
             'ministries' => [],
         ];
@@ -153,7 +149,7 @@ final class People
             'baptised' => $baptised,
             'baptised_share' => $active ? round($baptised / $active * 100) : 0,
             'leaving_this_year' => $leftIn($today->startOfYear(), $today),
-            'birthdays_this_month' => (clone $members)->whereNotNull('date_of_birth')->whereMonth('date_of_birth', $today->month)->count(),
+            'sunday_school' => (clone $members)->where('congregation', 'sunday_school')->count(),
             'archived' => Person::where('territory_id', $church->id)->whereNotNull('archived_at')->whereNull('anonymised_at')->count(),
             'months' => $months->map(fn ($m) => $m->format('M'))->all(),
             'joins' => $months->map(fn ($m) => $joinedIn($m))->all(),
@@ -170,33 +166,43 @@ final class People
         return $months->map(fn (CarbonImmutable $m) => $dates->filter(fn ($d) => ! $d || $d->toDateString() <= $m->endOfMonth()->toDateString())->count())->all();
     }
 
-    /** Insights: the age and gender pyramid, birthdays this month, and the register beside the last Demographics count. */
+    /** Insights: Sunday school and main church by gender, where members live, and the register beside the last Demographics count. */
     public function insights(Territory $church): array
     {
-        $today = $this->today();
-        $members = Person::where('territory_id', $church->id)->listed()->members()->get();
-        $pyramid = collect(Person::AGE_BANDS)->map(fn ($band, $key) => [
-            'key' => $key, 'label' => $band[2],
-            'male' => $members->filter(fn ($p) => $p->gender === 'male' && Person::bandFor($p->ageOn($today)) === $key)->count(),
-            'female' => $members->filter(fn ($p) => $p->gender === 'female' && Person::bandFor($p->ageOn($today)) === $key)->count(),
-        ])->values()->all();
-        $birthdays = $members->filter(fn ($p) => $p->date_of_birth && $p->date_of_birth->month === $today->month)
-            ->sortBy(fn ($p) => $p->date_of_birth->day)
-            ->map(fn ($p) => ['id' => $p->id, 'name' => $p->name, 'initials' => $p->initials, 'day' => $p->date_of_birth->day, 'turns' => $today->year - $p->date_of_birth->year, 'phone' => $p->phone])
-            ->values()->all();
+        $members = Person::where('territory_id', $church->id)->listed()->members()->get(['id', 'gender', 'congregation', 'area']);
+        $groups = collect(Person::CONGREGATIONS + ['' => 'Not set'])->map(fn ($label, $key) => [
+            'key' => $key ?: null, 'label' => $label,
+            'male' => $members->filter(fn ($p) => (string) $p->congregation === (string) $key && $p->gender === 'male')->count(),
+            'female' => $members->filter(fn ($p) => (string) $p->congregation === (string) $key && $p->gender === 'female')->count(),
+            'unknown' => $members->filter(fn ($p) => (string) $p->congregation === (string) $key && ! $p->gender)->count(),
+        ])->values()->filter(fn ($g) => $g['key'] || $g['male'] + $g['female'] + $g['unknown'])->values();
         $last = ChurchDemographic::where('territory_id', $church->id)->orderByDesc('id')->first();
 
         return [
-            'pyramid' => $pyramid,
-            'no_birth_date' => $members->whereNull('date_of_birth')->count(),
+            'groups' => $groups->all(),
             'gender' => ['male' => $members->where('gender', 'male')->count(), 'female' => $members->where('gender', 'female')->count(), 'unknown' => $members->whereNull('gender')->count()],
-            'birthdays' => $birthdays,
+            'areas' => $this->areas($members),
             'register' => $this->registerCounts($church),
             'demographics' => $last ? [
                 'total' => (int) $last->total_members, 'male' => (int) $last->male_count, 'female' => (int) $last->female_count,
-                'youth' => (int) $last->youth_count, 'recorded_at' => $last->created_at?->toDateString(),
+                'sunday_school' => (int) $last->sunday_school_male_count + (int) $last->sunday_school_female_count,
+                'recorded_at' => $last->created_at?->toDateString(),
             ] : null,
         ];
+    }
+
+    /** Where people live: the top areas and how many in each ("Not given" last). */
+    public function areas(Collection $people, int $top = 8): array
+    {
+        $by = $people->groupBy(fn ($p) => $p->area ?: '')->map->count()->sortDesc();
+        $named = $by->except([''])->take($top)->map(fn ($n, $area) => ['area' => $area, 'count' => $n])->values();
+        $rest = $by->except([''])->slice($top)->sum();
+
+        return array_values(array_filter([
+            ...$named->all(),
+            $rest ? ['area' => 'Other areas', 'count' => $rest] : null,
+            ($by[''] ?? 0) ? ['area' => 'Not given', 'count' => $by['']] : null,
+        ]));
     }
 
     /** The register's counts in Demographics' words - shown beside its form as a hint, never filled in. */
@@ -204,13 +210,14 @@ final class People
     {
         $today = $this->today();
         $members = Person::where('territory_id', $church->id)->listed()->members()->get();
+        $school = $members->where('congregation', 'sunday_school');
 
         return [
             'total' => $members->count(),
             'male' => $members->where('gender', 'male')->count(),
             'female' => $members->where('gender', 'female')->count(),
-            'youth' => $members->filter(fn ($p) => Person::bandFor($p->ageOn($today)) === 'youth')->count(),
-            'seniors' => $members->filter(fn ($p) => Person::bandFor($p->ageOn($today)) === 'seniors')->count(),
+            'sunday_school_male' => $school->where('gender', 'male')->count(),
+            'sunday_school_female' => $school->where('gender', 'female')->count(),
             'new_this_month' => $members->filter(fn ($p) => $p->joined_on && $p->joined_on->format('Y-m') === $today->format('Y-m'))->count(),
             'baptised_this_month' => $members->filter(fn ($p) => $p->baptised_on && $p->baptised_on->format('Y-m') === $today->format('Y-m'))->count(),
         ];
@@ -228,6 +235,7 @@ final class People
         $any = $count($base());
         $new = $count($base()->where('status', '!=', 'visitor')->whereBetween('joined_on', [$today->startOfMonth()->toDateString(), $today->toDateString()]));
         $baptised = $count($base()->whereNull('archived_at')->where('status', 'member')->whereNotNull('baptised_on'));
+        $school = $count($base()->whereNull('archived_at')->where('status', 'member')->where('congregation', 'sunday_school'));
         $transfers = fn (string $dir) => $count(PersonTransfer::query()->whereIn('territory_id', $ids)->where('direction', $dir)->whereYear('on', $today->year));
         $in = $transfers('in');
         $out = $transfers('out');
@@ -238,6 +246,7 @@ final class People
             'active' => (int) ($active[$c->id] ?? 0),
             'new_this_month' => (int) ($new[$c->id] ?? 0),
             'baptised' => (int) ($baptised[$c->id] ?? 0),
+            'sunday_school' => (int) ($school[$c->id] ?? 0),
             'transfers_in' => (int) ($in[$c->id] ?? 0),
             'transfers_out' => (int) ($out[$c->id] ?? 0),
         ])->values();
@@ -248,6 +257,7 @@ final class People
             'active' => $rows->sum('active'),
             'new_this_month' => $rows->sum('new_this_month'),
             'baptised' => $rows->sum('baptised'),
+            'sunday_school' => $rows->sum('sunday_school'),
             'transfers_in' => $rows->sum('transfers_in'),
             'transfers_out' => $rows->sum('transfers_out'),
             'rows' => $rows->all(),
@@ -269,11 +279,10 @@ final class People
             ->latest('id')->limit(200)->get();
         $users = User::whereIn('id', $audits->pluck('user_id')->filter()->unique())->get()->keyBy('id');
         $labels = [
-            'first_name' => 'first name', 'last_name' => 'last name', 'other_names' => 'other names', 'date_of_birth' => 'date of birth',
-            'national_id' => 'national ID', 'marital_status' => 'marital status', 'joined_on' => 'date joined', 'how_joined' => 'how they joined',
-            'previous_church' => 'previous church', 'saved_on' => 'salvation date', 'baptised_on' => 'baptism date',
-            'next_of_kin_name' => "next of kin's name", 'next_of_kin_phone' => "next of kin's phone",
-            'how_heard' => 'how they heard', 'consent_contact' => 'contact consent', 'wants_visit' => 'wants a visit', 'assigned_to' => 'who follows them up',
+            'first_name' => 'first name', 'last_name' => 'last name', 'congregation' => 'Sunday school or main church',
+            'joined_on' => 'date joined', 'how_joined' => 'how they joined', 'previous_church' => 'previous church',
+            'saved_on' => 'salvation date', 'baptised_on' => 'baptism date',
+            'consent_contact' => '"don\'t text them"', 'assigned_to' => 'who follows them up',
             'first_visit_on' => 'first visit', 'last_visit_on' => 'last visit', 'visit_count' => 'visits', 'became_member_on' => 'date they became a member',
         ];
         $quiet = ['updated_by', 'anonymised_at', 'archived_at', 'last_visit_on', 'visit_count'];

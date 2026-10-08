@@ -5,17 +5,16 @@ namespace Tests\Feature\People;
 use App\Models\Person;
 use App\Models\PersonTransfer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\Feature\Financial\BuildsBudgetWorld;
 use Tests\TestCase;
 
 /**
  * People & care, P1 (docs/specs/people-and-care-spec.md): the church's
- * private member register - names stay with the church, the region and
- * diocese see counts, private fields are encrypted and never audited.
+ * private member register - a name, phone, area, gender and Sunday school or
+ * main church, nothing more; names stay with the church, the region and
+ * diocese see counts.
  */
 class MembersTest extends TestCase
 {
@@ -48,30 +47,24 @@ class MembersTest extends TestCase
         return Person::create($over + ['territory_id' => $this->myChurch->id, 'first_name' => 'Mary', 'last_name' => 'Mutua', 'status' => 'member', 'joined_on' => '2024-01-10']);
     }
 
-    public function test_the_pastor_keeps_the_register_and_private_fields_are_encrypted_and_never_audited(): void
+    public function test_the_pastor_keeps_a_short_register_and_nothing_more_is_stored(): void
     {
         config(['audit.console' => true]); // auditing is off for console runs - switch it on, as in a web request
         Sanctum::actingAs($this->senior);
         $id = $this->postJson('/api/people', [
-            'first_name' => 'Mary', 'last_name' => 'Mutua', 'gender' => 'female', 'date_of_birth' => '2000-05-02', 'phone' => '0712 345 678',
-            'address' => 'Kima village', 'national_id' => 'ID99887766', 'notes' => 'Prays for the sick', 'next_of_kin_phone' => '0722000111',
-            'joined_on' => '2020-03-01', 'how_joined' => 'conversion', 'baptised_on' => '2020-06-01',
-        ])->assertCreated()->assertJsonPath('data.phone', '+254712345678')->json('data.id');
+            'first_name' => 'Mary', 'last_name' => 'Mutua', 'gender' => 'female', 'phone' => '0712 345 678', 'area' => 'kasikeu', 'congregation' => 'main_church',
+            'national_id' => 'ID99887766', 'date_of_birth' => '2000-05-02', 'address' => 'Kima village',
+        ])->assertCreated()->assertJsonPath('data.phone', '+254712345678')->assertJsonPath('data.area', 'Kasikeu')->json('data.id');
 
-        $raw = DB::table('people')->find($id);
-        foreach (['address' => 'Kima village', 'national_id' => 'ID99887766', 'notes' => 'Prays for the sick'] as $field => $plain) {
-            $this->assertNotSame($plain, $raw->{$field}, "{$field} is encrypted at rest");
+        $data = $this->getJson("/api/people/{$id}")->assertOk()->json('data');
+        foreach (['national_id', 'date_of_birth', 'address', 'email', 'notes', 'has_photo'] as $gone) {
+            $this->assertArrayNotHasKey($gone, $data, "{$gone} is no longer kept");
         }
-        $this->getJson("/api/people/{$id}")->assertOk()->assertJsonPath('data.national_id', 'ID99887766')->assertJsonPath('data.age_band', 'youth');
+        $this->assertStringNotContainsString('ID99887766', json_encode(DB::table('people')->find($id)));
+        $this->assertSame('main_church', $data['congregation']);
 
-        $this->putJson("/api/people/{$id}", ['first_name' => 'Mary', 'last_name' => 'Mutua', 'notes' => 'Leads the prayer group'])->assertOk();
-        $audits = DB::table('audits')->where('auditable_type', 'person')->where('auditable_id', $id)->get();
-        $this->assertGreaterThanOrEqual(2, $audits->count());
-        foreach ($audits as $audit) {
-            $this->assertStringNotContainsString('Prays for the sick', (string) $audit->new_values.$audit->old_values);
-            $this->assertStringNotContainsString('ID99887766', (string) $audit->new_values.$audit->old_values);
-        }
-        $this->assertStringContainsString('changed notes', collect($this->getJson("/api/people/{$id}/history")->json('data'))->pluck('sentence')->implode('|'));
+        $this->putJson("/api/people/{$id}", ['area' => 'Mbuvo', 'baptised_on' => '2021-03-01'])->assertOk()->assertJsonPath('data.area', 'Mbuvo');
+        $this->assertStringContainsString('changed area, baptism date', collect($this->getJson("/api/people/{$id}/history")->json('data'))->pluck('sentence')->implode('|'));
 
         $this->postJson("/api/people/{$id}/archive")->assertOk()->assertJsonPath('data.archived', true);
         $this->assertSame(0, $this->getJson('/api/people')->json('data.total'));
@@ -79,7 +72,7 @@ class MembersTest extends TestCase
 
         $this->postJson("/api/people/{$id}/anonymise")->assertStatus(422);
         $this->postJson("/api/people/{$id}/anonymise", ['confirm' => 'REMOVE'])->assertOk()
-            ->assertJsonPath('data.name', 'Removed person')->assertJsonPath('data.phone', null)->assertJsonPath('data.national_id', null);
+            ->assertJsonPath('data.name', 'Removed person')->assertJsonPath('data.phone', null)->assertJsonPath('data.area', null);
         $this->assertNotNull(Person::find($id), 'the row stays, so counts stay true');
     }
 
@@ -95,14 +88,13 @@ class MembersTest extends TestCase
         $this->getJson('/api/people')->assertForbidden();
         $this->getJson("/api/people?territory_id={$this->myChurch->id}")->assertForbidden();
         $this->getJson("/api/people/{$mary->id}?territory_id={$this->myChurch->id}")->assertForbidden();
-        $this->getJson("/api/people/{$mary->id}/photo?territory_id={$this->myChurch->id}")->assertForbidden();
         $totals = $this->getJson('/api/people/totals')->assertOk()->json('data');
         $this->assertSame(1, $totals['active']);
         $row = collect($totals['rows'])->firstWhere('church.id', $this->myChurch->id);
         $this->assertSame(1, $row['active']);
         $this->assertTrue($row['keeps_register']);
         $json = json_encode($totals);
-        foreach (['Mary', 'Mutua', '712345678', '"phone"', '"email"', '"address"', '"notes"'] as $needle) {
+        foreach (['Mary', 'Mutua', '712345678', '"phone"', '"area"', '"email"', '"notes"'] as $needle) {
             $this->assertStringNotContainsString($needle, $json);
         }
 
@@ -124,8 +116,8 @@ class MembersTest extends TestCase
 
     public function test_a_known_phone_needs_confirming_and_the_filters_find_the_right_people(): void
     {
-        $this->person(['phone' => '+254712345678', 'gender' => 'female', 'date_of_birth' => now()->subYears(20)->toDateString(), 'baptised_on' => '2022-01-01']);
-        $this->person(['first_name' => 'John', 'last_name' => 'Kioko', 'gender' => 'male', 'date_of_birth' => now()->subYears(70)->toDateString(), 'status' => 'inactive']);
+        $this->person(['phone' => '+254712345678', 'gender' => 'female', 'area' => 'Kasikeu', 'congregation' => 'main_church', 'baptised_on' => '2022-01-01']);
+        $this->person(['first_name' => 'John', 'last_name' => 'Kioko', 'gender' => 'male', 'area' => 'Mbuvo', 'congregation' => 'sunday_school', 'status' => 'inactive']);
         Sanctum::actingAs($this->senior);
 
         $this->postJson('/api/people', ['first_name' => 'Ann', 'last_name' => 'Mwende', 'phone' => '0712345678'])
@@ -135,11 +127,11 @@ class MembersTest extends TestCase
 
         $this->assertSame(['Ann Mwende', 'John Kioko', 'Mary Mutua'], array_column($this->getJson('/api/people')->json('data.items'), 'name'));
         $this->assertSame(['John Kioko'], array_column($this->getJson('/api/people?status[]=inactive')->json('data.items'), 'name'));
-        $this->assertSame(['Mary Mutua'], array_column($this->getJson('/api/people?age_band=youth')->json('data.items'), 'name'));
-        $this->assertSame(['John Kioko'], array_column($this->getJson('/api/people?age_band=seniors')->json('data.items'), 'name'));
+        $this->assertSame(['John Kioko'], array_column($this->getJson('/api/people?congregation=sunday_school')->json('data.items'), 'name'));
+        $this->assertSame(['Mary Mutua'], array_column($this->getJson('/api/people?area=Kasikeu')->json('data.items'), 'name'));
+        $this->assertSame(['John Kioko'], array_column($this->getJson('/api/people?q=mbuv')->json('data.items'), 'name'), 'search finds the area');
         $this->assertSame(['Mary Mutua'], array_column($this->getJson('/api/people?baptised=1')->json('data.items'), 'name'));
-        $this->assertSame(['John Kioko'], array_column($this->getJson('/api/people?q=kio')->json('data.items'), 'name'));
-        $this->assertSame(['Mary Mutua'], array_column($this->getJson('/api/people?q=0712345678&status[]=member&gender=female')->json('data.items'), 'name'));
+        $this->assertSame(['Ann Mwende', 'Mary Mutua'], array_column($this->getJson('/api/people?q=0712')->json('data.items'), 'name'), 'part of a phone');
     }
 
     public function test_a_transfer_out_marks_them_and_tells_the_receiving_church_only_when_asked(): void
@@ -170,28 +162,27 @@ class MembersTest extends TestCase
         $this->assertSame([1, 2], [$row['transfers_in'], $row['transfers_out']]);
     }
 
-    public function test_the_overview_insights_and_photo(): void
+    public function test_the_overview_insights_and_the_demographics_hint(): void
     {
-        Storage::fake('local');
-        $this->person(['gender' => 'female', 'date_of_birth' => now()->subYears(25)->toDateString(), 'joined_on' => now()->toDateString(), 'baptised_on' => '2021-01-01']);
-        $this->person(['first_name' => 'Paul', 'gender' => 'male', 'date_of_birth' => now()->subYears(40)->setMonth(now()->month)->toDateString()]);
+        $this->person(['gender' => 'female', 'area' => 'Kasikeu', 'congregation' => 'main_church', 'joined_on' => now()->toDateString(), 'baptised_on' => '2021-01-01']);
+        $this->person(['first_name' => 'Paul', 'gender' => 'male', 'area' => 'Kasikeu', 'congregation' => 'sunday_school']);
+        $this->person(['first_name' => 'Joy', 'gender' => 'female', 'congregation' => 'sunday_school']);
         Sanctum::actingAs($this->senior);
 
         $o = $this->getJson('/api/people/overview')->assertOk()->json('data');
-        $this->assertSame([2, 1, 1, 50], [$o['active'], $o['new_this_month'], $o['baptised'], $o['baptised_share']]);
+        $this->assertSame([3, 1, 1, 2], [$o['active'], $o['new_this_month'], $o['baptised'], $o['sunday_school']]);
         $this->assertCount(12, $o['joins']);
         $this->assertTrue($o['can']['export']);
 
         $i = $this->getJson('/api/people/insights')->assertOk()->json('data');
-        $youth = collect($i['pyramid'])->firstWhere('key', 'youth');
-        $this->assertSame([0, 1], [$youth['male'], $youth['female']]);
-        $this->assertContains('Paul Mutua', array_column($i['birthdays'], 'name'));
-        $this->assertSame(2, $this->getJson('/api/people/register-counts')->json('data.total'));
+        $school = collect($i['groups'])->firstWhere('key', 'sunday_school');
+        $this->assertSame([1, 1], [$school['male'], $school['female']]);
+        $this->assertSame([['area' => 'Kasikeu', 'count' => 2], ['area' => 'Not given', 'count' => 1]], $i['areas']);
 
-        $mary = Person::where('first_name', 'Mary')->first();
-        $this->postJson("/api/people/{$mary->id}/photo", ['photo' => UploadedFile::fake()->image('mary.jpg', 800, 600)])->assertOk()->assertJsonPath('data.has_photo', true);
-        $this->get("/api/people/{$mary->id}/photo")->assertOk()->assertHeader('Content-Type', 'image/webp');
-        $this->postJson("/api/people/{$mary->id}/photo", ['photo' => UploadedFile::fake()->create('notes.pdf', 10, 'application/pdf')])->assertStatus(422);
-        $this->deleteJson("/api/people/{$mary->id}/photo")->assertOk()->assertJsonPath('data.has_photo', false);
+        $r = $this->getJson('/api/people/register-counts')->json('data');
+        $this->assertSame([3, 1, 2, 1, 1], [$r['total'], $r['male'], $r['female'], $r['sunday_school_male'], $r['sunday_school_female']]);
+
+        Sanctum::actingAs($this->regionLeader);
+        $this->assertSame(2, $this->getJson('/api/people/totals')->json('data.sunday_school'));
     }
 }

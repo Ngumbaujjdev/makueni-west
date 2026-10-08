@@ -34,7 +34,7 @@ final class MembersDirectoryReport extends Report
 
     public function description(): string
     {
-        return 'Everyone in our register: name, phone, age, status, joined and baptised. Private to our church.';
+        return 'Everyone in our register: name, phone, area, gender, Sunday school or main church, status and joined. Private to our church.';
     }
 
     public function module(): string
@@ -77,8 +77,8 @@ final class MembersDirectoryReport extends Report
             ->orderBy('first_name')->orderBy('last_name')->get();
         $statuses = Person::STATUSES;
         $rows = $members->map(fn (Person $p) => [
-            $p->name, $p->phone ?: '-', $p->gender ? ucfirst($p->gender) : '-', $p->ageOn($today) ?? '-',
-            $statuses[$p->status] ?? $p->status, $p->joined_on?->format('j M Y') ?? '-', $p->baptised_on ? 'Yes' : 'No',
+            $p->name, $p->phone ?: '-', $p->area ?: '-', $p->gender ? ucfirst($p->gender) : '-', Person::CONGREGATIONS[$p->congregation] ?? '-',
+            $statuses[$p->status] ?? $p->status, $p->joined_on?->format('j M Y') ?? '-',
         ])->values()->all();
         $active = $members->where('status', 'member')->count();
 
@@ -89,13 +89,13 @@ final class MembersDirectoryReport extends Report
             scopeLabel: $context->scopeLabel(),
             tiles: [
                 ['label' => 'Members', 'value' => (string) $active, 'tone' => 'primary'],
-                ['label' => 'Baptised', 'value' => (string) $members->where('status', 'member')->whereNotNull('baptised_on')->count(), 'tone' => 'success'],
+                ['label' => 'Sunday school', 'value' => (string) $members->where('status', 'member')->where('congregation', 'sunday_school')->count(), 'tone' => 'success'],
                 ['label' => 'Others listed', 'value' => (string) ($members->count() - $active), 'tone' => 'purple'],
             ],
             meta: ['As at' => $today->format('j M Y'), 'Prepared by' => $context->preparedBy(), 'Private' => 'For our church only - do not share outside the church'],
             sections: [new ReportSection('Members', [
-                ReportColumn::text('Name', true), ReportColumn::text('Phone'), ReportColumn::text('Gender'), ReportColumn::text('Age'),
-                ReportColumn::text('Status'), ReportColumn::text('Joined'), ReportColumn::text('Baptised'),
+                ReportColumn::text('Name', true), ReportColumn::text('Phone'), ReportColumn::text('Area'), ReportColumn::text('Gender'),
+                ReportColumn::text('Group'), ReportColumn::text('Status'), ReportColumn::text('Joined'),
             ], $rows, $rows ? null : 'No one in the register yet.')],
             insights: [],
         );

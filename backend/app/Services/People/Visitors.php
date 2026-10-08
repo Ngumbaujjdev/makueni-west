@@ -40,19 +40,18 @@ final class Visitors
         return max(1, (int) ($this->settings->get('visitors.followup_days', $church) ?: 3));
     }
 
-    /** The "How did you hear about us?" choices, one per line in Settings. */
-    public function howHeard(Territory $church): array
+    /** The areas our people already come from - suggestions for the Area box. */
+    public function knownAreas(Territory $church): array
     {
-        $lines = preg_split('/\r\n|\r|\n|,/', (string) $this->settings->get('visitors.how_heard', $church)) ?: [];
-
-        return array_values(array_unique(array_filter(array_map(fn ($l) => mb_substr(trim($l), 0, 60), $lines), fn ($l) => $l !== '')));
+        return Person::where('territory_id', $church->id)->whereNull('anonymised_at')->whereNotNull('area')
+            ->selectRaw('area, count(*) as n')->groupBy('area')->orderByDesc('n')->limit(40)->pluck('area')->all();
     }
 
     /** What the Sunday form and the visitor page pick from. */
     public function options(Territory $church): array
     {
         return [
-            'how_heard' => $this->howHeard($church),
+            'areas' => $this->knownAreas($church),
             'followup_days' => $this->followupDays($church),
             'welcome_sms' => (bool) $this->settings->get('visitors.welcome_sms', $church),
             'welcome_template' => (string) $this->settings->get('visitors.welcome_template', $church),
@@ -79,7 +78,7 @@ final class Visitors
     }
 
     /**
-     * The list and board: stage[], how_heard, assigned (user id, "me" or
+     * The list and board: stage[], area, assigned (user id, "me" or
      * "none"), month (of the first visit), q (name or phone), due, archived.
      * With no stage picked: everyone still visiting, and those who became
      * members in the last 90 days.
@@ -95,8 +94,8 @@ final class Visitors
             $since = $this->today()->subDays(self::MEMBER_DAYS)->toDateString();
             $q->where(fn ($w) => $w->where('status', 'visitor')->orWhere(fn ($m) => $m->where('stage', 'member')->where('became_member_on', '>=', $since)));
         }
-        if (! empty($f['how_heard'])) {
-            $q->where('how_heard', $f['how_heard']);
+        if (! empty($f['area'])) {
+            $q->where('area', $f['area']);
         }
         $assigned = $f['assigned'] ?? null;
         if ($assigned === 'me') {
@@ -114,7 +113,7 @@ final class Visitors
             $phone = People::phoneLike($term);
             $q->where(function ($w) use ($term, $phone) {
                 $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $term).'%';
-                $w->where('first_name', 'like', $like)->orWhere('last_name', 'like', $like)->orWhereRaw("CONCAT(first_name, ' ', last_name) like ?", [$like]);
+                $w->where('first_name', 'like', $like)->orWhere('last_name', 'like', $like)->orWhere('area', 'like', $like)->orWhereRaw("CONCAT(first_name, ' ', last_name) like ?", [$like]);
                 if ($phone) {
                     $w->orWhere('phone', 'like', $phone);
                 }
@@ -167,9 +166,8 @@ final class Visitors
             'first_visit_on' => $p->first_visit_on?->toDateString(),
             'last_visit_on' => $p->last_visit_on?->toDateString(),
             'became_member_on' => $p->became_member_on?->toDateString(),
-            'how_heard' => $p->how_heard,
+            'area' => $p->area,
             'consent' => (bool) $p->consent_contact,
-            'wants_visit' => (bool) $p->wants_visit,
             'assigned' => $p->assignee ? ['id' => $p->assignee->id, 'name' => trim("{$p->assignee->firstname} {$p->assignee->lastname}")] : null,
             'due_on' => $due?->toDateString(),
             'overdue' => $due ? $due->lt($today) : false,
@@ -270,8 +268,7 @@ final class Visitors
         return [
             'year' => $year,
             'first_timers' => $firstTimers->count(),
-            'how_heard' => $firstTimers->groupBy(fn ($p) => $p->how_heard ?: 'Not asked')->map->count()->sortDesc()
-                ->map(fn ($n, $label) => ['label' => $label, 'count' => $n])->values()->all(),
+            'areas' => $this->people->areas($firstTimers),
             'funnel' => [
                 ['key' => 'new', 'label' => 'First visit', 'count' => $firstTimers->count()],
                 ['key' => 'contacted', 'label' => 'Followed up', 'count' => $reached('contacted')],

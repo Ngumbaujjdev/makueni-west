@@ -46,6 +46,15 @@ final class Phone
         return "That doesn't look like a phone number - use the form +254 712 345 678.";
     }
 
+    /**
+     * The demo people's numbers (+254 700 000 xxx, PeopleDemoSeeder) - never
+     * texted, so a send from a dev or demo copy can't reach a stranger.
+     */
+    public static function isDemo(?string $phone): bool
+    {
+        return str_starts_with((string) self::kenyaMobile($phone), '+254700000');
+    }
+
     /** The last 9 digits - "+254 712 345 678" and "0712345678" share one key (users.phone_key, unique). */
     public static function key(?string $phone): ?string
     {
