@@ -38606,3 +38606,80 @@ button.cal-side-item:focus-visible {
   .mn-leader-row [data-role], .mn-leader-row [data-role] + .select2 { grid-column: 1; }
   .mn-card-spark { flex-basis: 5rem; }
 }
+
+/* ==========================================================================
+   People & care polish (2026-10-08)
+   Date fields that read "8 Oct 2026", window headings in a second colour,
+   Record care, the care overview's Recent activity, and the hospital card.
+   ========================================================================== */
+/* Date fields (assets/js/utils/date-field.js) */
+.date-field { position: relative; }
+.date-field .flatpickr-wrapper { display: block; width: 100%; }
+.date-field-icon { position: absolute; top: 50%; left: .45rem; z-index: 2; display: inline-grid; place-items: center; width: 1.65rem; height: 1.65rem; border-radius: .45rem; background: rgba(var(--purple-rgb), .12); color: rgb(var(--purple-rgb)); font-size: .85rem; transform: translateY(-50%); pointer-events: none; }
+.date-field .flatpickr-wrapper + .date-field-icon, .date-field .flatpickr-wrapper ~ .date-field-icon { top: 1.25rem; }
+.date-field .form-control { padding-left: 2.6rem; cursor: pointer; }
+.date-field .form-control[readonly] { background-color: var(--custom-white); }
+.date-field-quick { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .5rem; }
+.date-chip { padding: .2rem .7rem; border: 1px solid rgba(var(--primary-rgb), .25); border-radius: 1rem; background: rgba(var(--primary-rgb), .06); color: var(--primary-color); font-size: .76rem; font-weight: 600; line-height: 1.4; transition: background .15s, border-color .15s; }
+.date-chip:hover { background: rgba(var(--primary-rgb), .12); }
+.date-chip.is-on { border-color: var(--primary-color); background: var(--primary-color); color: #fff; }
+/* In the calendar, the picked day is solid; today is only outlined. */
+.flatpickr-day.today:not(.selected) { border-color: var(--primary-color); background: transparent; color: var(--primary-color); }
+.flatpickr-day.today:not(.selected):hover { background: rgba(var(--primary-rgb), .1); }
+
+/* Window section headings: teal, purple, pink, gold down the window (danger windows stay red) */
+.app-modal:not(.is-danger) .app-modal-part:nth-of-type(4n + 2) > .app-modal-part-head i { background: rgba(var(--purple-rgb), .12); color: rgb(var(--purple-rgb)); }
+.app-modal:not(.is-danger) .app-modal-part:nth-of-type(4n + 3) > .app-modal-part-head i { background: rgba(var(--pink-rgb), .12); color: rgb(var(--pink-rgb)); }
+.app-modal:not(.is-danger) .app-modal-part:nth-of-type(4n + 4) > .app-modal-part-head i { background: rgba(var(--secondary-rgb), .25); color: var(--v2-heading); }
+
+/* Record care */
+.cr-urgent { display: flex; align-items: center; gap: .7rem; margin: 0; padding: .55rem .75rem; border: 1px solid var(--input-border); border-radius: .6rem; background: var(--custom-white); cursor: pointer; transition: border-color .15s, background .15s; }
+.cr-urgent:hover { border-color: rgba(var(--danger-rgb), .45); }
+.cr-urgent-icon { display: inline-grid; flex: 0 0 2rem; place-items: center; width: 2rem; height: 2rem; border-radius: .55rem; background: rgba(var(--danger-rgb), .1); color: rgb(var(--danger-rgb)); font-size: 1rem; }
+.cr-urgent strong { display: block; font-size: .86rem; color: var(--v2-heading); }
+.cr-urgent small { display: block; font-size: .75rem; color: var(--default-text-color); }
+.cr-urgent .form-check-input { margin: 0; cursor: pointer; }
+.cr-urgent.is-on { border-color: rgb(var(--danger-rgb)); background: rgba(var(--danger-rgb), .05); }
+.cr-urgent.is-on .cr-urgent-icon { background: rgb(var(--danger-rgb)); color: #fff; }
+.cr-foot-urgent { display: inline-flex; align-items: center; gap: .3rem; padding: .25rem .65rem; border-radius: 1rem; background: rgba(var(--danger-rgb), .1); color: rgb(var(--danger-rgb)); font-size: .78rem; font-weight: 700; }
+.cr-foot-urgent[hidden] { display: none; }
+.cr-field-note { display: flex; gap: .4rem; padding-top: .55rem; font-size: .8rem; line-height: 1.45; color: var(--default-text-color); }
+.cr-field-note i { color: rgb(var(--purple-rgb)); }
+.app-modal .select2-container .select2-selection--multiple { min-height: calc(2.5rem + 2px); }
+/* Each kind keeps a pale tint of its colour before it's picked, so the window isn't grey. */
+.cr-kinds.is-varied .ec-choice-icon { background: rgba(var(--q), .12); color: rgb(var(--q)); }
+.cr-kinds.is-varied .ec-choice.is-dark .ec-choice-icon { background: rgba(var(--q), .22); color: var(--v2-heading); }
+@media (max-width: 575.98px) {
+  .cr-kinds { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cr-kinds .ec-choice { padding: .55rem 1.9rem .55rem .55rem; gap: .5rem; }
+}
+
+/* Care overview: Recent activity (the YNEX dashboard timeline) */
+.cr-activity .crm-recent-activity-content { padding-block-end: 1.15rem; }
+.cr-activity .cr-activity-dot { background: rgba(var(--tl-rgb), .15); color: rgb(var(--tl-rgb)); }
+.cr-activity .cr-activity-dot i { font-size: .78rem; }
+.cr-activity-kind { display: inline-block; margin-left: .3rem; padding: .05rem .5rem; border-radius: 1rem; background: rgba(var(--tl-rgb), .12); font-size: .72rem; font-weight: 600; color: var(--v2-heading); }
+.cr-activity-urgent { display: inline-block; margin-left: .25rem; padding: .05rem .45rem; border-radius: 1rem; background: rgb(var(--danger-rgb)); font-size: .68rem; font-weight: 700; color: #fff; }
+.cr-activity-lock { margin-left: .3rem; font-size: .85rem; color: rgb(var(--purple-rgb)); }
+.cr-activity-sub { margin-top: .1rem; font-size: .76rem; color: var(--default-text-color); }
+.cr-activity .crm-timeline-content { flex: 1 1 auto; }
+.cr-activity-when { display: block; font-size: .72rem; font-weight: 600; color: var(--default-text-color); white-space: nowrap; }
+
+/* In hospital */
+.cr-hosp-boxes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; margin-top: 1rem; }
+.cr-hosp-box { display: flex; align-items: flex-start; gap: .6rem; padding: .7rem; border-radius: .7rem; background: rgba(var(--q), .07); }
+.cr-hosp-box-icon { display: inline-grid; flex: 0 0 1.9rem; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: .5rem; background: rgba(var(--q), .15); color: rgb(var(--q)); font-size: .95rem; }
+.cr-hosp-box.is-solid .cr-hosp-box-icon { background: rgb(var(--q)); color: #fff; }
+.cr-hosp-box > div span { display: block; font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--default-text-color); }
+.cr-hosp-box > div strong { display: block; font-size: .9rem; color: var(--v2-heading); }
+.cr-hosp-box > div small { display: block; font-size: .74rem; color: var(--default-text-color); }
+.cr-hosp.is-late .cr-hosp-box.is-solid small { color: rgb(var(--danger-rgb)); font-weight: 600; }
+.cr-hosp-target { display: flex; align-items: center; gap: .6rem; margin-top: .85rem; }
+.cr-hosp-target-bar { flex: 1; height: .4rem; overflow: hidden; border-radius: 1rem; background: rgba(var(--success-rgb), .15); }
+.cr-hosp-target-bar i { display: block; height: 100%; border-radius: inherit; background: rgb(var(--success-rgb)); }
+.cr-hosp-target.is-late .cr-hosp-target-bar { background: rgba(var(--danger-rgb), .15); }
+.cr-hosp-target.is-late .cr-hosp-target-bar i { background: rgb(var(--danger-rgb)); }
+.cr-hosp-target small { font-size: .72rem; font-weight: 600; color: var(--default-text-color); white-space: nowrap; }
+@media (max-width: 575.98px) {
+  .cr-hosp-boxes { grid-template-columns: minmax(0, 1fr); }
+}

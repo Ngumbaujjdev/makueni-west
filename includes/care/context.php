@@ -48,7 +48,7 @@ function carePageContext(string $level, string $page): array
 function carePageStyles(): void
 {
     $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
-    foreach (['assets/libs/select2/select2.min.css', 'assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css', 'assets/data-tables/responsive/2.3.0/css/responsive.bootstrap.min.css'] as $css) {
+    foreach (['assets/libs/select2/select2.min.css', 'assets/libs/flatpickr/flatpickr.min.css', 'assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css', 'assets/data-tables/responsive/2.3.0/css/responsive.bootstrap.min.css'] as $css) {
         echo '<link rel="stylesheet" href="' . SITE_URL . "/{$css}\" />\n";
     }
     echo '<link href="' . $v('assets/css/styles.min.css') . '" rel="stylesheet" />' . "\n";
@@ -72,10 +72,10 @@ function carePageScripts(string $page): void
     }
     echo '<script src="' . $v('assets/js/utils/toast.js') . '"></script>' . "\n";
     echo '<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>' . "\n";
-    foreach (['assets/libs/select2/select2.min.js', 'assets/data-tables/1.12.1/js/jquery.dataTables.min.js', 'assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js', 'assets/data-tables/responsive/2.3.0/js/dataTables.responsive.min.js'] as $src) {
+    foreach (['assets/libs/select2/select2.min.js', 'assets/libs/flatpickr/flatpickr.min.js', 'assets/data-tables/1.12.1/js/jquery.dataTables.min.js', 'assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js', 'assets/data-tables/responsive/2.3.0/js/dataTables.responsive.min.js'] as $src) {
         echo '<script src="' . SITE_URL . "/{$src}\"></script>\n";
     }
-    foreach (['assets/js/pages/demographics/api-handler.js', 'assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/members/api.js', 'assets/js/pages/members/ui.js', 'assets/js/pages/members/list-kit.js', ...careScripts(), "assets/js/pages/care/{$page}.js"] as $src) {
+    foreach (['assets/js/utils/date-field.js', 'assets/js/pages/demographics/api-handler.js', 'assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/members/api.js', 'assets/js/pages/members/ui.js', 'assets/js/pages/members/list-kit.js', ...careScripts(), "assets/js/pages/care/{$page}.js"] as $src) {
         echo '<script src="' . $v($src) . '"></script>' . "\n";
     }
 }

@@ -25,18 +25,18 @@
 
 <div class="row g-4">
     <div class="col-xl-8">
-        <div class="card custom-card">
+        <div class="card custom-card" id="typeCard">
             <div class="card-header"><div><div class="card-title">Care by kind</div><span class="card-subtitle-text">The last twelve months</span></div></div>
             <div class="card-body"><div id="typeChart" class="skel-chart" style="min-height:300px"></div></div>
         </div>
     </div>
-    <div class="col-xl-4">
+    <div class="col-xl-4" id="careSide">
         <div class="card custom-card">
             <div class="card-header"><div><div class="card-title">Who gave care</div><span class="card-subtitle-text">This year</span></div></div>
             <div class="card-body" id="leaders"><span class="skel skel-line"></span></div>
         </div>
         <div class="card custom-card">
-            <div class="card-header justify-content-between"><div class="card-title">Latest</div><a class="btn btn-sm btn-outline-primary" href="<?= $careCtx['baseUrl'] ?>/log">See all</a></div>
+            <div class="card-header justify-content-between"><div><div class="card-title">Recent activity</div><span class="card-subtitle-text">The latest care recorded</span></div><a class="btn btn-sm btn-outline-primary" href="<?= $careCtx['baseUrl'] ?>/log">See all</a></div>
             <div class="card-body" id="latest"><span class="skel skel-line"></span></div>
         </div>
     </div>

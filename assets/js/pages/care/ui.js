@@ -44,12 +44,6 @@ const CareUI = (function () {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   };
-  const addDays = (n) => {
-    const d = new Date();
-    d.setDate(d.getDate() + n);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  };
-  const nextSunday = () => addDays((7 - new Date().getDay()) % 7 || 7);
   /** "Due today", "2 days late", "Due Fri 10 Oct". */
   function dueChip(iso) {
     if (!iso) return "";
@@ -64,9 +58,8 @@ const CareUI = (function () {
     icon: "ri-calendar-event-line",
     title: "Next step",
     hint: "Optional",
-    body: `<div class="d-flex flex-wrap gap-2 align-items-center"><input type="date" class="form-control vs-date" id="${id}" min="${todayIso()}" aria-label="Next step">
-      <button type="button" class="btn btn-sm btn-light border" data-next="${addDays(3)}">In 3 days</button><button type="button" class="btn btn-sm btn-light border" data-next="${nextSunday()}">Next Sunday</button><button type="button" class="btn btn-sm btn-light border" data-next="${addDays(14)}">In 2 weeks</button></div>
-      <div class="form-text">When someone should go again - it shows in Needs care and on the calendar.</div>`,
+    body: `<div class="row g-3"><div class="col-md-6"><input type="date" class="form-control" id="${id}" min="${todayIso()}" aria-label="Next step" data-quick="in3,nextSunday,in14"></div>
+      <div class="col-md-6"><p class="cr-field-note mb-0"><i class="ri-information-line"></i>When someone should go again - it shows in Needs care and on the calendar.</p></div></div>`,
   });
 
   // ---------------------------------------------------------------- a window
@@ -84,7 +77,8 @@ const CareUI = (function () {
     );
     const el = document.getElementById(id);
     el.addEventListener("hidden.bs.modal", () => el.remove());
-    el.querySelectorAll("[data-next]").forEach((b) => b.addEventListener("click", () => (el.querySelector('input[type="date"][id$="Next"]').value = b.dataset.next)));
+    // Dates read "8 Oct 2026", with the one-tap chips each field asks for (data-quick).
+    if (typeof DateField !== "undefined") el.querySelectorAll('input[type="date"]').forEach((i) => DateField.enhance(i, { quick: (i.dataset.quick || "").split(",").filter(Boolean) }));
     bootstrap.Modal.getOrCreateInstance(el).show();
     return el;
   }
@@ -116,7 +110,11 @@ const CareUI = (function () {
     const types = o.types.length ? o.types : Object.entries(TYPES).map(([key, t]) => ({ key, ...t }));
     if (!types.some((t) => t.key === type)) type = types[0].key;
     let picked = person;
-    const choice = (t) => `<label class="ec-choice"><input type="radio" name="crType" value="${t.key}"${t.key === type ? " checked" : ""}><span class="ec-choice-icon"><i class="${t.icon}"></i></span><strong>${esc(t.label)}</strong><span class="ec-choice-tick"><i class="ri-check-line"></i></span></label>`;
+    // Each kind in its own colour - the same colours as the chart and the lists.
+    const choice = (t) => {
+      const c = TYPES[t.key]?.color || t.color || "primary";
+      return `<label class="ec-choice${c === "secondary" || c === "warning" ? " is-dark" : ""}" style="--q: var(--${c}-rgb)"><input type="radio" name="crType" value="${t.key}"${t.key === type ? " checked" : ""}><span class="ec-choice-icon"><i class="${t.icon}"></i></span><strong>${esc(t.label)}</strong><span class="ec-choice-tick"><i class="ri-check-line"></i></span></label>`;
+    };
     const el = windowEl({
       title: "Record care",
       subtitle: person ? person.name : "A visit, a call, counselling, prayer...",
@@ -131,16 +129,16 @@ const CareUI = (function () {
             : `<div class="pp-picker-search"><i class="ri-search-line"></i><input type="search" class="form-control" id="crSearch" placeholder="Search the register - name, phone or area" autocomplete="off" aria-label="Search the register"></div>
                <div class="pp-picker-list" id="crFound"></div>
                <div class="pp-chips" id="crPicked"></div>
-               <div class="mt-2"><label class="form-label fs-12 mb-1" for="crName">Not in our register? Type their name</label><input class="form-control" id="crName" maxlength="120" placeholder="e.g. Mama Mwende (a neighbour)"></div>`,
+               <div class="mt-3"><label class="form-label" for="crName">Not in our register? Type their name</label><input class="form-control" id="crName" maxlength="120" placeholder="e.g. Mama Mwende (a neighbour)"></div>`,
         },
         {
           icon: "ri-heart-pulse-line",
           title: "What",
-          body: `<div class="ec-choices mb-3" role="radiogroup" aria-label="Kind of care">${types.map(choice).join("")}</div>
-            <div class="row g-3">
-              <div class="col-md-4"><label class="form-label" for="crOn">When</label><input type="date" class="form-control" id="crOn" value="${todayIso()}" max="${todayIso()}"></div>
-              <div class="col-md-8" id="crHospitalWrap"><label class="form-label" for="crHospital">Hospital</label><input class="form-control" id="crHospital" maxlength="120" placeholder="e.g. Makueni County Referral"></div>
-              <div class="col-12"><div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" role="switch" id="crUrgent"><label class="form-check-label" for="crUrgent">Urgent - put it at the top of Needs care</label></div></div>
+          body: `<div class="ec-choices is-varied cr-kinds mb-3" role="radiogroup" aria-label="Kind of care">${types.map(choice).join("")}</div>
+            <div class="row g-3 align-items-start">
+              <div class="col-md-6"><label class="form-label" for="crOn">When</label><input type="date" class="form-control" id="crOn" value="${todayIso()}" max="${todayIso()}" data-quick="today,yesterday,lastSunday"></div>
+              <div class="col-md-6"><span class="form-label d-block">Priority</span><label class="cr-urgent" for="crUrgent"><span class="cr-urgent-icon"><i class="ri-alarm-warning-line"></i></span><span class="flex-fill min-w-0"><strong>Urgent</strong><small>Put it at the top of Needs care</small></span><span class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" role="switch" id="crUrgent"></span></label></div>
+              <div class="col-12" id="crHospitalWrap"><label class="form-label" for="crHospital">Which hospital</label><input class="form-control" id="crHospital" maxlength="120" placeholder="e.g. Makueni County Referral"></div>
             </div>`,
         },
         { icon: "ri-team-line", title: "Who went", hint: "You're added", body: `<select class="form-select" id="crCarers" multiple aria-label="Who went">${(o.carers || []).filter((c) => c.id !== userId).map((c) => `<option value="${c.id}" data-color="${UI.colorFor(c.name)}">${esc(c.name)}</option>`).join("")}</select>` },
@@ -153,9 +151,13 @@ const CareUI = (function () {
         },
         nextStepPart("crNext"),
       ]),
-      foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="crSave"><i class="ri-check-line me-1"></i>Record it</button>`,
+      foot: `<span class="me-auto cr-foot-urgent" id="crUrgentChip" hidden><i class="ri-alarm-warning-line"></i>Urgent</span><button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="crSave"><i class="ri-check-line me-1"></i>Record it</button>`,
     });
     UI.enhanceSelect(el.querySelector("#crCarers"), { placeholder: "Anyone else who went", closeOnSelect: false });
+    el.querySelector("#crUrgent").addEventListener("change", (e) => {
+      el.querySelector("#crUrgentChip").hidden = !e.target.checked;
+      e.target.closest(".cr-urgent").classList.toggle("is-on", e.target.checked);
+    });
     const sync = () => {
       const t = el.querySelector('input[name="crType"]:checked').value;
       el.querySelector("#crHospitalWrap").hidden = t !== "hospital";
@@ -239,7 +241,7 @@ const CareUI = (function () {
           icon: "ri-heart-pulse-line",
           title: "What happened",
           body: `<div class="ec-choices mb-3">${Object.entries(CONTACTS).map(([k, t]) => choice(k, t)).join("")}</div>
-            <div class="row g-3"><div class="col-md-5"><label class="form-label" for="ctOn">When</label><input type="date" class="form-control" id="ctOn" value="${todayIso()}" max="${todayIso()}"></div></div>`,
+            <div class="row g-3"><div class="col-md-6"><label class="form-label" for="ctOn">When</label><input type="date" class="form-control" id="ctOn" value="${todayIso()}" max="${todayIso()}" data-quick="today,yesterday"></div></div>`,
         },
         { icon: "ri-sticky-note-line", title: "Note", hint: record.confidential ? "Confidential" : "Optional", body: '<textarea class="form-control" id="ctNote" rows="3" maxlength="2000" aria-label="Note" placeholder="How they are, what they need"></textarea>' },
         nextStepPart("ctNext"),
@@ -277,7 +279,7 @@ const CareUI = (function () {
       title: "Home from hospital",
       subtitle: `${record.who} · ${record.hospital || "Hospital"}`,
       icon: "ri-home-heart-line",
-      body: PeopleKit.parts([{ icon: "ri-calendar-check-line", title: "When they went home", body: `<input type="date" class="form-control vs-date" id="dcOn" value="${todayIso()}" max="${todayIso()}" aria-label="When they went home">` }]),
+      body: PeopleKit.parts([{ icon: "ri-calendar-check-line", title: "When they went home", body: `<div class="row"><div class="col-md-7"><input type="date" class="form-control" id="dcOn" value="${todayIso()}" max="${todayIso()}" aria-label="When they went home" data-quick="today,yesterday"></div></div>` }]),
       foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="dcGo"><i class="ri-check-line me-1"></i>They're home</button>`,
     });
     el.querySelector("#dcGo").addEventListener("click", (e) => submit(el, e.currentTarget, () => CareAPI.discharge(record.id, { on: el.querySelector("#dcOn").value }), onDone));
