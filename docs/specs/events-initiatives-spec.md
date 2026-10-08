@@ -289,6 +289,13 @@ The L1b routes take `kind=initiative`. The permission checks follow the activity
 - **"In a year"** for an initiative means it runs during any part of that year (`Activity::scopeInYear`), so a programme that started last year still shows.
 - **Reports:** `activity.summary` covers both kinds (a Sessions section and "Finished" for initiatives); `initiative.year` (module `initiatives`) is the Initiatives page's Export.
 - **Wording:** money is "Income" and "Expenses" everywhere on these pages and reports.
+- **Form colours (2026-10-08):**
+  - each kind card takes its kind's colour (`EventsUI.typeColor`, the same colour as on the list cards): pale until picked, solid once picked;
+  - each step has its own colour: teal, purple, gold, green;
+  - Starts / First day is green and Ends / Last day is pink;
+  - registration turns green when on;
+  - the preview's fact rows get coloured tiles, and session chips change colour by month;
+  - inputs and buttons stay teal.
 
 ### Pages (L2)
 The Events pages, shared, with the kind set by the wrapper (`{L}/initiatives/{index,new,initiative}.php`):
