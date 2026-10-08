@@ -99,6 +99,16 @@ class Person extends Model implements Auditable
         return $this->belongsTo(Territory::class, 'territory_id');
     }
 
+    protected static function booted(): void
+    {
+        // A Sunday-school child is always in "Children & Sunday school" (P4) - in when they join it, out when they leave.
+        static::saved(function (Person $p) {
+            if ($p->wasRecentlyCreated || $p->wasChanged(['congregation', 'status', 'archived_at', 'anonymised_at', 'territory_id'])) {
+                app(\App\Services\People\Ministries::class)->syncSundaySchool($p);
+            }
+        });
+    }
+
     /** The ministries they serve in (P4). */
     public function ministries(): BelongsToMany
     {

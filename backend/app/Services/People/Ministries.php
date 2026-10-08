@@ -4,9 +4,11 @@ namespace App\Services\People;
 
 use App\Models\Activity;
 use App\Models\ChurchAttendanceRecord;
+use App\Models\ChurchDemographic;
 use App\Models\GatheringType;
 use App\Models\Ministry;
 use App\Models\MinistryLeader;
+use App\Models\MinistryMember;
 use App\Models\Person;
 use App\Models\Territory;
 use App\Models\User;
@@ -55,6 +57,8 @@ final class Ministries
     public function ensure(Territory $church): void
     {
         if (Ministry::withTrashed()->where('territory_id', $church->id)->whereNotNull('standard')->exists()) {
+            $this->backfillSundaySchool($church);
+
             return;
         }
         $types = GatheringType::active()->forTerritory($church->id)->orderBy('display_order')->get(['id', 'name']);
@@ -69,6 +73,74 @@ final class Ministries
             ];
         }
         DB::table('ministries')->insertOrIgnore($rows);
+        $this->backfillSundaySchool($church);
+    }
+
+    /** Whether the register keeps this person in "Children & Sunday school": a Sunday-school child still with us. */
+    private function inSundaySchool(Person $p): bool
+    {
+        return $p->congregation === 'sunday_school' && in_array($p->status, self::SERVING, true) && ! $p->archived_at && ! $p->anonymised_at && ! $p->trashed();
+    }
+
+    /** One person's place in "Children & Sunday school", kept in step with their congregation (audited). */
+    public function syncSundaySchool(Person $p): void
+    {
+        $m = Ministry::where('territory_id', $p->territory_id)->where('standard', 'children')->first();
+        // Other churches' auto places go when someone moves church.
+        MinistryMember::where('person_id', $p->id)->where('auto', true)->whereHas('ministry', fn ($q) => $q->where('territory_id', '!=', $p->territory_id))->get()->each->delete();
+        if (! $m) {
+            return; // made with the standard six - back-filled then
+        }
+        $row = MinistryMember::where('ministry_id', $m->id)->where('person_id', $p->id)->first();
+        if ($this->inSundaySchool($p)) {
+            $row ? ($row->auto ?: $row->update(['auto' => true])) : MinistryMember::create(['ministry_id' => $m->id, 'person_id' => $p->id, 'joined_on' => $this->today()->toDateString(), 'auto' => true]);
+        } elseif ($row?->auto) {
+            $row->delete();
+        }
+    }
+
+    /** Every Sunday-school child in "Children & Sunday school", and none who left it - for a church whose ministries are read. */
+    public function backfillSundaySchool(Territory $church): void
+    {
+        $m = Ministry::where('territory_id', $church->id)->where('standard', 'children')->first();
+        if (! $m) {
+            return;
+        }
+        $children = Person::where('territory_id', $church->id)->where('congregation', 'sunday_school')->whereIn('status', self::SERVING)->listed()->pluck('id');
+        $now = now();
+        DB::table('ministry_members')->insertOrIgnore($children->map(fn ($id) => [
+            'ministry_id' => $m->id, 'person_id' => $id, 'joined_on' => $this->today()->toDateString(), 'auto' => true, 'created_at' => $now, 'updated_at' => $now,
+        ])->all());
+        DB::table('ministry_members')->where('ministry_id', $m->id)->whereIn('person_id', $children->all() ?: [0])->update(['auto' => true]);
+        DB::table('ministry_members')->where('ministry_id', $m->id)->where('auto', true)->whereNotIn('person_id', $children->all() ?: [0])->delete();
+    }
+
+    /**
+     * The church's own monthly figure for this kind of ministry, from the
+     * latest approved Demographics report - youth, women's and men's
+     * fellowship, Sunday school - or null (music and prayer have none).
+     */
+    public function demographic(Territory $church, Ministry $m): ?array
+    {
+        $fields = ['youth' => [['youth_count'], 'youth', 'youth'], 'women' => [['womens_fellowship_count'], "in women's fellowship", 'womens_fellowship'],
+            'men' => [['mens_fellowship_count'], "in men's fellowship", 'mens_fellowship'], 'children' => [['sunday_school_male_count', 'sunday_school_female_count'], 'in Sunday school', 'sunday_school']];
+        if (! isset($fields[$m->kind])) {
+            return null;
+        }
+        [$cols, $label, $metric] = $fields[$m->kind];
+        $row = ChurchDemographic::query()->where('church_demographics.territory_type', 'church')->where('church_demographics.territory_id', $church->id)->where('church_demographics.status', 'approved')
+            ->join('fiscal_years', 'fiscal_years.id', '=', 'church_demographics.fiscal_year_id')
+            ->leftJoin('fiscal_months', 'fiscal_months.id', '=', 'church_demographics.fiscal_month_id')
+            ->orderByDesc('fiscal_years.year')->orderByRaw('fiscal_months.number is null')->orderByDesc('fiscal_months.number')->orderByDesc('church_demographics.id')
+            ->first(['church_demographics.*', 'fiscal_years.year as fy', 'fiscal_months.number as fm']);
+        if (! $row) {
+            return null;
+        }
+
+        return [
+            'value' => (int) collect($cols)->sum(fn ($c) => (int) $row->{$c}), 'label' => $label, 'metric' => $metric,
+            'period' => $row->fm ? date('M Y', mktime(0, 0, 0, (int) $row->fm, 1, (int) $row->fy)) : (string) $row->fy,
+        ];
     }
 
     /** The church's leaders who may be named a ministry's leader: everyone there who reads ministries. */
@@ -213,7 +285,7 @@ final class Ministries
             ->map(fn ($mm) => [
                 'id' => $mm->person->id, 'name' => $mm->person->name, 'initials' => $mm->person->initials, 'phone' => $mm->person->phone,
                 'area' => $mm->person->area, 'gender' => $mm->person->gender, 'congregation' => $mm->person->congregation,
-                'kind' => $mm->person->status === 'visitor' ? 'visitor' : 'member', 'joined_on' => $mm->joined_on?->toDateString(),
+                'kind' => $mm->person->status === 'visitor' ? 'visitor' : 'member', 'joined_on' => $mm->joined_on?->toDateString(), 'auto' => (bool) $mm->auto,
             ])->sortBy('name')->values()->all();
     }
 
@@ -256,7 +328,7 @@ final class Ministries
         $this->ensure($church);
         $today = $this->today();
         $months = collect(range(5, 0))->map(fn ($i) => $today->startOfMonth()->subMonthsNoOverflow($i))->all();
-        $ministries = Ministry::where('territory_id', $church->id)->where('active', true)->with('gatheringType')->orderBy('order')->orderBy('name')->get();
+        $ministries = Ministry::where('territory_id', $church->id)->where('active', true)->with(['gatheringType', 'leaders.user', 'leaders.person'])->orderBy('order')->orderBy('name')->get();
         $links = DB::table('ministry_members')->join('people', 'people.id', '=', 'ministry_members.person_id')
             ->whereIn('ministry_members.ministry_id', $ministries->pluck('id')->all() ?: [0])
             ->whereIn('people.status', self::SERVING)->whereNull('people.archived_at')->whereNull('people.anonymised_at')->whereNull('people.deleted_at')
@@ -273,12 +345,19 @@ final class Ministries
             'not_serving' => $none->count(),
             'not_serving_people' => $none->take(60)->map(fn (Person $p) => ['id' => $p->id, 'name' => $p->name, 'initials' => $p->initials, 'area' => $p->area, 'congregation' => $p->congregation])->all(),
             'months' => array_map(fn ($m) => $m->format('M'), $months),
-            'ministries' => $ministries->map(function (Ministry $m) use ($links, $records) {
+            'ministries' => $ministries->map(function (Ministry $m) use ($links, $records, $months) {
                 $mine = $links->where('ministry_id', $m->id);
                 $att = $m->gathering_type_id ? $records->where('gathering_type_id', $m->gathering_type_id) : collect();
+                $avg = fn (Collection $rows) => $rows->isEmpty() ? null : (int) round($rows->avg(fn ($r) => AttendanceData::total($r)));
+                $split = $months[3]->toDateString();
+                $lead = $m->leaders->firstWhere('role', 'leader') ?? $m->leaders->first();
 
                 return [
                     'id' => $m->id, 'name' => $m->name, 'icon' => $m->icon_name, 'colour' => $m->colour_name,
+                    'leader' => $lead?->name,
+                    'series' => array_map(fn ($month) => $avg($att->filter(fn ($r) => $r->service_date->format('Y-m') === $month->format('Y-m'))) ?? 0, $months),
+                    'recent_average' => $avg($att->filter(fn ($r) => $r->service_date->toDateString() >= $split)),
+                    'earlier_average' => $avg($att->filter(fn ($r) => $r->service_date->toDateString() < $split)),
                     'members' => $mine->count(),
                     'male' => $mine->where('gender', 'male')->count(), 'female' => $mine->where('gender', 'female')->count(),
                     'sunday_school' => $mine->where('congregation', 'sunday_school')->count(),

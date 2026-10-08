@@ -2,8 +2,12 @@
 
 namespace Database\Seeders;
 
+use App\Models\Activity;
 use App\Models\CareContact;
 use App\Models\CareRecord;
+use App\Models\FiscalMonth;
+use App\Models\FiscalYear;
+use App\Models\GatheringCategory;
 use App\Models\GatheringType;
 use App\Models\Ministry;
 use App\Models\Person;
@@ -19,6 +23,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Demo members and visitors, so the People & care pages can be seen filled in
@@ -80,7 +85,7 @@ class PeopleDemoSeeder extends Seeder
 
         $this->church($main, 40, 15, self::MAIN_AREAS, $others);
         $this->care($main, 25);
-        $this->ministries($main);
+        $this->ministries($main, true);
         foreach ($others as $i => $church) {
             $this->church($church, mt_rand(5, 15), mt_rand(2, 6), $this->areasFor($church), collect([$main]));
             $this->care($church, mt_rand(2, 6));
@@ -196,46 +201,115 @@ class PeopleDemoSeeder extends Seeder
         }
     }
 
+    /** Marks what the demo adds outside the register, so PeopleDemoRemoveSeeder finds it again. */
+    public const DEMO_NOTE = 'Demo attendance';
+
+    public const DEMO_ACTIVITY = 'Demo activity (PeopleDemoSeeder).';
+
+    /** kind => [the gathering it meets as, the day, the time, how many come for each member, events for it [title, type, audience]] */
+    private const MINISTRY_PLAN = [
+        'youth' => ['Youth Service', 6, '15:00', 1.6, [['Youth kesha', 'youth_kesha', 'youth'], ['Youth sports day', 'special_service', 'youth']]],
+        'women' => ["Women's Fellowship", 2, '14:00', 1.3, [["Women's fellowship day", 'special_service', 'women']]],
+        'men' => ["Men's Fellowship", 0, '14:30', 1.2, [["Men's breakfast", 'special_service', 'men']]],
+        'children' => ['Sunday School', 0, '09:00', 1.4, [["Children's fun day", 'special_service', 'children']]],
+        'music' => ['Choir Practice', 4, '17:00', 1.1, []],
+        'prayer' => ['Prayer Meeting', 3, '18:00', 2.2, [['Prayer and fasting week', 'prayer_meeting', 'everyone']]],
+    ];
+
     /**
-     * Ministries (P4): the standard six, with demo members in each that fits
-     * them - Sunday school in Children, women in Women, a mix in Youth, Music
-     * and Prayer - a few in two, some in none, and a demo leader for most.
-     * No attendance is made up: each one shows the real gatherings it links to.
+     * Ministries (P4): the standard six, each with a day it meets, demo
+     * members (Sunday school children are put in by the register itself),
+     * two demo leaders, its gathering - a demo type when the church has none -
+     * six months of weekly attendance, and an event or two for it. Everything
+     * outside the register is marked (DEMO_NOTE, demo- slugs, DEMO_ACTIVITY)
+     * and taken away by PeopleDemoRemoveSeeder.
      */
-    private function ministries(Territory $church): void
+    private function ministries(Territory $church, bool $main = false): void
     {
         app(Ministries::class)->ensure($church);
         $ministries = Ministry::where('territory_id', $church->id)->whereNotNull('standard')->get()->keyBy('standard');
         $people = Person::where('territory_id', $church->id)->where('phone', 'like', '+254700000%')->where('status', 'member')->orderBy('id')->get();
         $adults = $people->where('congregation', 'main_church')->values();
         $plan = [
-            'children' => $people->where('congregation', 'sunday_school'),
-            'women' => $adults->where('gender', 'female')->filter(fn () => mt_rand(1, 10) <= 6),
-            'men' => $adults->where('gender', 'male')->filter(fn () => mt_rand(1, 10) <= 5),
-            'youth' => $adults->filter(fn () => mt_rand(1, 10) <= 3),
-            'music' => $adults->filter(fn () => mt_rand(1, 10) <= 2),
-            'prayer' => $adults->filter(fn () => mt_rand(1, 10) <= 2),
+            'women' => $adults->where('gender', 'female')->filter(fn () => mt_rand(1, 10) <= 7),
+            'men' => $adults->where('gender', 'male')->filter(fn () => mt_rand(1, 10) <= 6),
+            'youth' => $adults->filter(fn () => mt_rand(1, 10) <= 4),
+            'music' => $adults->filter(fn () => mt_rand(1, 10) <= 3),
+            'prayer' => $adults->filter(fn () => mt_rand(1, 10) <= 3),
         ];
         $now = now();
-        foreach ($plan as $kind => $members) {
+        $category = GatheringCategory::where('slug', 'ministry_gathering')->value('id');
+        foreach (self::MINISTRY_PLAN as $kind => [$gathering, $day, $time, $per, $events]) {
             $m = $ministries[$kind] ?? null;
-            if (! $m || $members->isEmpty()) {
+            if (! $m) {
                 continue;
             }
-            DB::table('ministry_members')->insertOrIgnore($members->map(fn (Person $p) => [
-                'ministry_id' => $m->id, 'person_id' => $p->id, 'joined_on' => $this->today->subDays(mt_rand(10, 400))->toDateString(), 'created_at' => $now, 'updated_at' => $now,
-            ])->values()->all());
-            if ($kind !== 'prayer') {
-                DB::table('ministry_leaders')->insert(['ministry_id' => $m->id, 'person_id' => $members->first()->id, 'role' => 'leader', 'created_at' => $now, 'updated_at' => $now]);
+            $members = $kind === 'children' ? $people->where('congregation', 'sunday_school') : ($plan[$kind] ?? collect());
+            if ($kind !== 'children' && $members->isNotEmpty()) {
+                DB::table('ministry_members')->insertOrIgnore($members->map(fn (Person $p) => [
+                    'ministry_id' => $m->id, 'person_id' => $p->id, 'joined_on' => $this->today->subDays(mt_rand(10, 500))->toDateString(), 'created_at' => $now, 'updated_at' => $now,
+                ])->values()->all());
             }
-            if ($members->count() > 6) {
-                DB::table('ministry_leaders')->insert(['ministry_id' => $m->id, 'person_id' => $members->get($members->keys()[1])->id, 'role' => 'assistant', 'created_at' => $now, 'updated_at' => $now]);
+            $lead = $members->values();
+            foreach ([['leader', 0], ['assistant', 1]] as [$role, $i]) {
+                $who = $kind === 'children' ? $adults->get(($m->id + $i) % max(1, $adults->count())) : $lead->get($i);
+                if ($who) {
+                    DB::table('ministry_leaders')->insert(['ministry_id' => $m->id, 'person_id' => $who->id, 'role' => $role, 'created_at' => $now, 'updated_at' => $now]);
+                }
             }
-            if ($kind === 'women' && $m->meets_day === null) {
-                $m->forceFill(['meets_day' => 2, 'meets_time' => '14:00'])->saveQuietly();
-            } elseif ($kind === 'youth' && $m->meets_day === null) {
-                $m->forceFill(['meets_day' => 6, 'meets_time' => '15:00'])->saveQuietly();
+            // Its gathering: the church's own type when it has one, or a demo one.
+            $type = $m->gathering_type_id ? GatheringType::find($m->gathering_type_id) : null;
+            if (! $type && $category) {
+                $type = GatheringType::firstOrCreate(
+                    ['territory_id' => $church->id, 'slug' => 'demo-'.Str::slug($gathering)],
+                    ['gathering_category_id' => $category, 'name' => $gathering, 'icon' => Ministry::KINDS[$kind][1], 'display_order' => 90, 'is_active' => true],
+                );
             }
+            $m->forceFill(['gathering_type_id' => $type?->id, 'meets_day' => $m->meets_day ?? $day, 'meets_time' => $m->meets_time ?? $time])->saveQuietly();
+            if ($type) {
+                $this->attendance($church, $type, $kind, $day, max(6, (int) round(max(1, $members->count()) * $per * ($main ? 1 : 0.8))));
+            }
+            if ($main || $kind === 'youth') {
+                foreach ($events as $n => [$title, $eventType, $audience]) {
+                    $start = $this->today->addDays($n % 2 === 0 ? mt_rand(5, 40) : -mt_rand(10, 80))->setTime(14, 0);
+                    Activity::create([
+                        'kind' => 'event', 'territory_id' => $church->id, 'title' => $title, 'description' => self::DEMO_ACTIVITY, 'type' => $eventType, 'audience' => $audience,
+                        'starts_at' => $start, 'ends_at' => $start->addHours(4), 'venue' => 'Church grounds', 'open_to' => 'own', 'registration' => false,
+                        'status' => $start->isPast() ? 'completed' : 'published', 'published_at' => $now,
+                    ]);
+                }
+            }
+        }
+    }
+
+    /** Weekly attendance for a ministry's gathering over the last six months - around its size, now and then missed. */
+    private function attendance(Territory $church, GatheringType $type, string $kind, int $day, int $size): void
+    {
+        $years = FiscalYear::pluck('id', 'year');
+        $months = FiscalMonth::pluck('id', 'number');
+        $first = $this->today->subMonthsNoOverflow(6)->startOfMonth();
+        $date = $first->addDays(($day - $first->dayOfWeek + 7) % 7);
+        $rows = [];
+        for ($w = 0; $date->lte($this->today); $w++, $date = $date->addWeek()) {
+            $year = $years[$date->year] ?? null;
+            $month = $months[$date->month] ?? null;
+            if (! $year || ! $month || mt_rand(1, 10) === 1) {
+                continue; // no fiscal year set up, or it didn't meet that week
+            }
+            $total = max(3, (int) round($size * (0.8 + $w * 0.012) * mt_rand(85, 115) / 100));
+            [$adults, $youth, $boys, $girls] = match ($kind) {
+                'youth' => [(int) round($total * 0.1), $total - (int) round($total * 0.1), 0, 0],
+                'children' => [(int) round($total * 0.1), 0, intdiv($total - (int) round($total * 0.1), 2), $total - (int) round($total * 0.1) - intdiv($total - (int) round($total * 0.1), 2)],
+                default => [$total - (int) round($total * 0.15), (int) round($total * 0.15), 0, 0],
+            };
+            $rows[] = [
+                'territory_type' => 'church', 'territory_id' => $church->id, 'service_date' => $date->toDateString(), 'fiscal_year_id' => $year, 'fiscal_month_id' => $month,
+                'gathering_category_id' => $type->gathering_category_id, 'gathering_type_id' => $type->id, 'adults_count' => $adults, 'youth_count' => $youth,
+                'children_male_count' => $boys, 'children_female_count' => $girls, 'notes' => self::DEMO_NOTE, 'created_at' => now(), 'updated_at' => now(),
+            ];
+        }
+        if ($rows) {
+            DB::table('church_attendance_records')->insert($rows);
         }
     }
 

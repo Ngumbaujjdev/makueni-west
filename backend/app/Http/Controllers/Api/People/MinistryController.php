@@ -158,9 +158,12 @@ class MinistryController extends Controller
     /** GET /ministries/{id}/members */
     public function members(Request $request, int $id): JsonResponse
     {
-        [, $m, $error] = $this->ministry($request, $id);
+        [$church, $m, $error] = $this->ministry($request, $id);
         if ($error) {
             return $error;
+        }
+        if ($m->standard === 'children') {
+            $this->ministries->backfillSundaySchool($church);
         }
 
         return $this->ok($this->ministries->members($m));
@@ -215,9 +218,12 @@ class MinistryController extends Controller
         }
         $d = $request->validate(['person_ids' => ['required', 'array', 'min:1', 'max:500'], 'person_ids.*' => ['integer']]);
         $rows = MinistryMember::where('ministry_id', $m->id)->whereIn('person_id', $d['person_ids'])->get();
-        $rows->each(fn (MinistryMember $mm) => $mm->delete());
+        // Sunday-school children stay while they're in Sunday school - the register keeps them.
+        [$kept, $out] = $rows->partition(fn (MinistryMember $mm) => $mm->auto);
+        $out->each(fn (MinistryMember $mm) => $mm->delete());
+        $message = "{$out->count()} taken out of {$m->name}.".($kept->isNotEmpty() ? " {$kept->count()} stayed - they're in Sunday school; change that on their page." : '');
 
-        return $this->ok(['removed' => $rows->count()], "{$rows->count()} taken out of {$m->name}.");
+        return $this->ok(['removed' => $out->count(), 'kept' => $kept->count()], $message);
     }
 
     /** GET /ministries/{id}/gatherings - its linked gathering's attendance over twelve months. */
@@ -309,6 +315,7 @@ class MinistryController extends Controller
         $count = (int) ($this->ministries->memberCounts([$m->id])[$m->id] ?? 0);
 
         return $this->ministries->row($m, $count) + [
+            'demographic' => $this->ministries->demographic($church, $m),
             'can' => $this->can($request->user(), $church) + ['roster' => $this->ministries->canRoster($m, $request->user(), $church), 'mine' => $this->ministries->isLeader($m, $request->user())],
         ];
     }
