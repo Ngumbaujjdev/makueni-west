@@ -7,12 +7,15 @@ use App\Models\Activity;
 use App\Models\ActivitySession;
 use App\Models\Budget;
 use App\Models\MonthlyReport;
+use App\Models\Person;
 use App\Models\Territory;
 use App\Models\User;
 use App\Reports\Budget\BudgetRollup;
 use App\Services\Activities\Activities;
+use App\Services\People\Visitors;
 use App\Services\Reports\MonthlyReports;
 use App\Support\ActivityAccess;
+use App\Support\PeopleAccess;
 use App\Support\PlaceAccess;
 use App\Support\ReportsAccess;
 use Carbon\CarbonImmutable;
@@ -56,7 +59,7 @@ final class LifeFeed
             $out = [...$out, ...$this->services($place, $from, $to)];
         }
         if (in_array('ours', $layers, true) && in_array('due', $sources, true)) {
-            $out = [...$out, ...$this->due($place, $from, $to, $user), ...$this->reportsDue($place, $from, $to, $user)];
+            $out = [...$out, ...$this->due($place, $from, $to, $user), ...$this->reportsDue($place, $from, $to, $user), ...$this->followupsDue($place, $from, $to, $user)];
         }
 
         return $out;
@@ -286,6 +289,45 @@ final class LifeFeed
         }
 
         return $out;
+    }
+
+    /**
+     * Visitor follow-ups due (P2 of docs/specs/people-and-care-spec.md): one
+     * line a day - "3 visitor follow-ups due" - never a name on the calendar.
+     * Only for leaders who can follow visitors up.
+     */
+    private function followupsDue(Territory $place, CarbonImmutable $from, CarbonImmutable $to, ?User $user): array
+    {
+        if (PlaceAccess::level($place) !== 'church' || ! PeopleAccess::canNamed($user, $place, 'visitors', 'manage')) {
+            return [];
+        }
+        $visitors = app(Visitors::class);
+        $open = $visitors->base($place)->where('status', 'visitor')->whereNull('archived_at')->get();
+        $latest = $visitors->latestFollowups($open);
+        $days = $visitors->followupDays($place);
+        $today = CarbonImmutable::now(self::TZ)->startOfDay();
+        $byDay = $open->map(fn (Person $p) => $visitors->dueOn($p, $latest->get($p->id), $days))->filter()
+            // Late ones gather on today, so they don't hide in the past.
+            ->map(fn (CarbonImmutable $d) => $d->lt($today) ? $today->toDateString() : $d->toDateString())
+            ->filter(fn ($d) => $d >= $from->toDateString() && $d <= $to->toDateString())
+            ->countBy()->sortKeys();
+
+        return $byDay->map(fn (int $n, string $day) => $this->item(
+            key: "followups-{$day}",
+            title: $n.' visitor '.($n === 1 ? 'follow-up' : 'follow-ups').' due',
+            kind: 'due',
+            start: $day,
+            end: CarbonImmutable::parse($day)->addDay()->toDateString(),
+            layer: 'ours',
+            owner: $place,
+            source: 'due',
+            url: '/church/visitors/?due=1',
+            status: 'due',
+            location: null,
+            description: 'Visitors waiting for a call, an SMS or a visit',
+            allDay: true,
+            tone: $day === $today->toDateString() ? 'danger' : null,
+        ))->values()->all();
     }
 
     private function layerFor(Activity $a, Territory $place, array $layerOf): string

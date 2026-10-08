@@ -31,6 +31,7 @@ final class PeopleAccess
         'visitors' => [
             'read' => 'visitors.visitors.read',
             'manage' => 'visitors.visitors.manage',
+            'insights' => 'visitors.insights.read',
             'below' => 'visitors.below.read',
         ],
         'pastoral' => [
@@ -50,6 +51,9 @@ final class PeopleAccess
             'book' => 'facilities.facilities.book',
         ],
     ];
+
+    /** A module's own pages' read permissions, given to everyone who reads the module (the menu shows a page through its permission). */
+    public const PAGE_READS = ['transfers', 'insights'];
 
     /** Abilities that only make sense at the church (the rest of the map is church-only too, bar "below"). */
     public const BELOW_LEVELS = ['region', 'diocese'];

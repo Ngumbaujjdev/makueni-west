@@ -83,6 +83,8 @@ class FoundationTest extends TestCase
         $this->assertTrue($senior->hasPermissionTo('church.members.members.export'));
         $this->assertTrue($senior->hasPermissionTo('church.members.transfers.read'), 'readers get the Transfers page');
         $this->assertSame(1, Submodule::where('path', '/church/members/insights.php')->count());
+        $this->assertTrue($senior->hasPermissionTo('church.visitors.insights.read'), 'visitor readers get its Insights page');
+        $this->assertSame(1, Submodule::where('path', '/church/visitors/insights.php')->count());
         $this->assertTrue($senior->hasPermissionTo('church.pastoral.care.confidential'));
         $this->assertTrue($bishop->fresh()->hasPermissionTo('diocese.visitors.below.read'));
         $this->assertSame('church', Permission::where('name', 'church.members.members.read')->value('territory_scope'));

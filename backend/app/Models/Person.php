@@ -12,7 +12,7 @@ use OwenIt\Auditing\Contracts\Auditable;
 
 /**
  * Someone in a church's private register (docs/specs/people-and-care-spec.md):
- * a member, or (from P2) a visitor. Only the church's own leaders ever see
+ * a member, or a visitor (P2). Only the church's own leaders ever see
  * them - the region and diocese get counts. ID, address, notes and next of
  * kin's phone are encrypted, and never written into the audit trail.
  */
@@ -28,6 +28,12 @@ class Person extends Model implements Auditable
 
     public const MARITAL = ['single' => 'Single', 'married' => 'Married', 'widowed' => 'Widowed', 'divorced' => 'Divorced', 'other' => 'Other'];
 
+    /** A visitor's follow-up stage (P2); "member" once they joined. */
+    public const STAGES = ['new' => 'New', 'contacted' => 'Contacted', 'returning' => 'Returning', 'regular' => 'Regular', 'member' => 'Became a member'];
+
+    /** Visits that make a visitor "regular". */
+    public const REGULAR_AFTER = 4;
+
     /** The Demographics age bands (docs/specs/demographics-module-spec.md). */
     public const AGE_BANDS = ['children' => [0, 12, 'Children'], 'youth' => [13, 35, 'Youth'], 'adults' => [36, 59, 'Adults'], 'seniors' => [60, 200, 'Seniors']];
 
@@ -38,6 +44,7 @@ class Person extends Model implements Auditable
         'territory_id', 'first_name', 'last_name', 'other_names', 'gender', 'date_of_birth', 'phone', 'email', 'address', 'national_id',
         'marital_status', 'occupation', 'photo_path', 'status', 'joined_on', 'how_joined', 'previous_church', 'saved_on', 'baptised_on',
         'next_of_kin_name', 'next_of_kin_phone', 'notes', 'archived_at', 'anonymised_at', 'created_by', 'updated_by',
+        'first_visit_on', 'last_visit_on', 'visit_count', 'how_heard', 'consent_contact', 'wants_visit', 'stage', 'assigned_to', 'became_member_on',
     ];
 
     protected $casts = [
@@ -47,6 +54,12 @@ class Person extends Model implements Auditable
         'baptised_on' => 'date',
         'archived_at' => 'datetime',
         'anonymised_at' => 'datetime',
+        'first_visit_on' => 'date',
+        'last_visit_on' => 'date',
+        'became_member_on' => 'date',
+        'visit_count' => 'integer',
+        'consent_contact' => 'boolean',
+        'wants_visit' => 'boolean',
         'address' => 'encrypted',
         'national_id' => 'encrypted',
         'notes' => 'encrypted',
@@ -58,7 +71,13 @@ class Person extends Model implements Auditable
     /** The audit trail never holds the encrypted values - only that they changed. */
     public function transformAudit(array $data): array
     {
-        foreach (self::SECRET as $field) {
+        return self::maskSecrets($data, self::SECRET);
+    }
+
+    /** An audit's private fields as "(private)" - for the people models' transformAudit. */
+    public static function maskSecrets(array $data, array $fields): array
+    {
+        foreach ($fields as $field) {
             foreach (['old_values', 'new_values'] as $side) {
                 if (array_key_exists($field, $data[$side] ?? [])) {
                     $data[$side][$field] = $data[$side][$field] === null || $data[$side][$field] === '' ? null : '(private)';
@@ -69,6 +88,27 @@ class Person extends Model implements Auditable
         return $data;
     }
 
+    /**
+     * Remove their personal details (docs/specs/people-and-care-spec.md,
+     * "Leaving the register"): names, contacts, ID, notes, photo, next of
+     * kin, prayer requests and follow-up notes. The row, its dates and its
+     * counts stay. Can't be undone.
+     */
+    public function anonymise(?int $by = null): void
+    {
+        if ($this->photo_path) {
+            \Illuminate\Support\Facades\Storage::disk('local')->delete($this->photo_path);
+        }
+        $this->forceFill([
+            'first_name' => 'Removed', 'last_name' => 'person', 'other_names' => null, 'date_of_birth' => null, 'phone' => null, 'email' => null,
+            'address' => null, 'national_id' => null, 'occupation' => null, 'photo_path' => null, 'previous_church' => null,
+            'next_of_kin_name' => null, 'next_of_kin_phone' => null, 'notes' => null, 'consent_contact' => false, 'assigned_to' => null,
+            'anonymised_at' => now(), 'updated_by' => $by,
+        ])->save();
+        $this->visits()->whereNotNull('prayer_request')->get()->each(fn (VisitorVisit $v) => $v->forceFill(['prayer_request' => null])->save());
+        $this->followups()->whereNotNull('note')->get()->each(fn (VisitorFollowup $f) => $f->forceFill(['note' => null])->save());
+    }
+
     public function church(): BelongsTo
     {
         return $this->belongsTo(Territory::class, 'territory_id');
@@ -77,6 +117,21 @@ class Person extends Model implements Auditable
     public function transfers(): HasMany
     {
         return $this->hasMany(PersonTransfer::class)->orderByDesc('on')->orderByDesc('id');
+    }
+
+    public function visits(): HasMany
+    {
+        return $this->hasMany(VisitorVisit::class)->orderByDesc('on')->orderByDesc('id');
+    }
+
+    public function followups(): HasMany
+    {
+        return $this->hasMany(VisitorFollowup::class)->orderByDesc('done_on')->orderByDesc('id');
+    }
+
+    public function assignee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
     }
 
     /** In the register's lists: not archived, not removed. */

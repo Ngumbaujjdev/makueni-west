@@ -14,6 +14,7 @@ use App\Services\Activities\Activities;
 use App\Services\Messages\Audience;
 use App\Services\Messages\Broadcaster;
 use App\Support\MessagesAccess;
+use App\Support\PeopleAccess;
 use App\Support\PlaceAccess;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -76,6 +77,11 @@ class MessagesController extends Controller
             'place' => ['id' => $place->id, 'name' => $place->name, 'type' => $level],
             'own_roles' => $rolesAt([(int) $place->id]),
             'below' => $below ?: null,
+            // A church's own register, for the leaders who may read it.
+            'register' => $level === 'church' ? array_filter([
+                'members' => PeopleAccess::canNamed($request->user(), $place, 'members') ? $this->audience->register($place, 'members')->count() : null,
+                'visitors' => PeopleAccess::canNamed($request->user(), $place, 'visitors') ? $this->audience->register($place, 'visitors')->count() : null,
+            ], fn ($n) => $n !== null) ?: null : null,
             'channels' => MessageBatch::CHANNELS,
             // Ours, and the shared ones from above we haven't made our own copy of.
             'templates' => TemplatesController::forComposer($place),
@@ -90,7 +96,7 @@ class MessagesController extends Controller
             return $place;
         }
         $data = $request->validate(['audience' => ['required', 'array'], 'channel' => ['nullable', Rule::in(array_keys(MessageBatch::CHANNELS))], 'body' => ['nullable', 'string', 'max:10000']]);
-        $r = $this->audience->resolve($place, $data['audience']);
+        $r = $this->audience->resolve($place, $data['audience'], $request->user());
         $people = collect($r['recipients']);
         $sample = Broadcaster::fill((string) ($data['body'] ?? ''), $people->first()['name'] ?? null, null, $place->name);
 
@@ -127,7 +133,7 @@ class MessagesController extends Controller
         if ($sendAt && ($sendAt->lt(now()->addMinutes(5)) || $sendAt->gt(now()->addDays(90)))) {
             throw ValidationException::withMessages(['send_at' => ['Schedule it from 5 minutes to 90 days ahead.']]);
         }
-        $r = $this->audience->resolve($place, $data['audience']);
+        $r = $this->audience->resolve($place, $data['audience'], $request->user());
         if ($r['invalid']) {
             throw ValidationException::withMessages(['audience' => ['These aren\'t phone numbers or emails: '.implode(', ', $r['invalid'])]]);
         }
