@@ -60,12 +60,17 @@ final class Health
         $place = $this->settings->systemPlace();
         $driver = $this->settings->get('sms.driver', $place);
         $last = MessageLog::latestFor('sms');
-        if ($driver !== 'africastalking') {
-            return $this->tile('sms', 'SMS', 'ri-message-3-line', 'check', 'Log only', 'Messages are written to the log, not sent. Add your Africa\'s Talking details to send real SMS.', ['test-sms'], 'sms');
+        if (! in_array($driver, ['africastalking', 'textsms'], true)) {
+            return $this->tile('sms', 'SMS', 'ri-message-3-line', 'check', 'Log only', 'Messages are written to the log, not sent. Choose TextSMS or add your Africa\'s Talking details to send real SMS.', ['test-sms'], 'sms');
         }
-        $sender = $this->settings->get('sms.sender_id', $place) ?: 'default sender';
-        $balance = $withBalance ? $this->sms->balance() : null;
-        $detail = "Africa's Talking".($this->settings->get('sms.sandbox', $place) ? ' (sandbox)' : '')." · {$sender}".($balance ? " · balance {$balance}" : '');
+        if ($driver === 'textsms') {
+            $sender = $this->settings->get('sms.sender_id', $place) ?: config('services.textsms.shortcode') ?: 'default sender';
+            $detail = "TextSMS · {$sender}";
+        } else {
+            $sender = $this->settings->get('sms.sender_id', $place) ?: 'default sender';
+            $balance = $withBalance ? $this->sms->balance() : null;
+            $detail = "Africa's Talking".($this->settings->get('sms.sandbox', $place) ? ' (sandbox)' : '')." · {$sender}".($balance ? " · balance {$balance}" : '');
+        }
         if ($last && $last->status === 'failed') {
             return $this->tile('sms', 'SMS', 'ri-message-3-line', 'check', 'Last one failed', "{$detail}. Last SMS to {$last->to} failed: {$last->error}", ['test-sms'], 'sms');
         }

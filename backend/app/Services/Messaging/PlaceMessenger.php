@@ -49,7 +49,7 @@ final class PlaceMessenger
                 : ['via' => 'diocese', 'from_address' => config('mail.from.address'), 'server' => null, 'sends' => config('mail.default') !== 'log'],
             'sms' => $ownSms
                 ? ['via' => 'own', 'sender_id' => $get('comms.sms.sender_id'), 'sends' => true]
-                : ['via' => 'diocese', 'sender_id' => $diocese['sender_id'], 'sends' => $diocese['driver'] === 'africastalking'],
+                : ['via' => 'diocese', 'sender_id' => $diocese['sender_id'], 'sends' => Sms::sendsForReal($diocese)],
             // "own" chosen but not filled in yet: that channel still goes through the diocese.
             'own_incomplete' => $mode === 'own' ? array_values(array_filter(['email' => ! $ownMail ? 'email' : null, 'sms' => ! $ownSms ? 'sms' : null])) : [],
         ];

@@ -32,13 +32,21 @@ final class Sms
     {
         $place = $this->settings->systemPlace();
 
+        $driver = $this->settings->get('sms.driver', $place) ?: 'log';
+
         return [
-            'driver' => $this->settings->get('sms.driver', $place) ?: 'log',
+            'driver' => $driver,
             'username' => (string) $this->settings->get('sms.username', $place),
             'api_key' => (string) $this->settings->get('sms.api_key', $place),
-            'sender_id' => $this->settings->get('sms.sender_id', $place) ?: null,
+            'sender_id' => $this->settings->get('sms.sender_id', $place) ?: ($driver === 'textsms' ? config('services.textsms.shortcode') : null),
             'sandbox' => (bool) $this->settings->get('sms.sandbox', $place),
         ];
+    }
+
+    /** Whether this account really sends (rather than writing to the log). */
+    public static function sendsForReal(array $account): bool
+    {
+        return in_array($account['driver'] ?? 'log', ['africastalking', 'textsms'], true);
     }
 
     /**
@@ -54,6 +62,10 @@ final class Sms
         $number = self::kenya($to);
         if (! $number) {
             return $this->record($to, 'failed', null, "That doesn't look like a phone number.", $log);
+        }
+
+        if (($account['driver'] ?? 'log') === 'textsms') {
+            return $this->sendTextSms($number, $message, $log);
         }
 
         if (($account['driver'] ?? 'log') !== 'africastalking') {
@@ -87,6 +99,45 @@ final class Sms
         $error = $recipient['status'] ?? $res->json('SMSMessageData.Message') ?? trim(substr($res->body(), 0, 200)) ?: "HTTP {$res->status()}";
 
         return $this->record($number, 'failed', null, "Africa's Talking said: {$error}", $log);
+    }
+
+    /**
+     * TextSMS (textsms.co.ke), with the account from the server's .env
+     * (config services.textsms) - the same call as the makueni sibling app:
+     * POST JSON {apikey, partnerID, mobile, message, shortcode}.
+     */
+    private function sendTextSms(string $number, string $message, array $log): array
+    {
+        $c = config('services.textsms');
+        if (empty($c['api_key']) || empty($c['partner_id']) || empty($c['shortcode'])) {
+            return $this->record($number, 'failed', null, "TextSMS isn't set up on the server (TEXTSMS_API_KEY, TEXTSMS_PARTNER_ID and TEXTSMS_SHORTCODE).", $log);
+        }
+
+        try {
+            $res = Http::acceptJson()->asJson()->timeout(15)->post($c['url'], [
+                'apikey' => $c['api_key'],
+                'partnerID' => (string) $c['partner_id'],
+                'mobile' => ltrim($number, '+'),
+                'message' => $message,
+                'shortcode' => $c['shortcode'],
+                'pass_type' => 'plain',
+            ]);
+        } catch (\Throwable $e) {
+            return $this->record($number, 'failed', null, "Couldn't reach TextSMS: ".$e->getMessage(), $log);
+        }
+
+        // TextSMS spells it "respose-code" in its replies.
+        $r = $res->json('responses.0') ?? [];
+        $code = (int) ($r['respose-code'] ?? $r['response-code'] ?? 0);
+        if ($res->successful() && $code === 200) {
+            return $this->record($number, 'sent', isset($r['messageid']) ? (string) $r['messageid'] : null, null, $log);
+        }
+        $r = $r ?: ($res->json() ?? []);
+        $error = $r['response-description'] ?? trim(substr($res->body(), 0, 200)) ?: "HTTP {$res->status()}";
+        // 1006: the key or partner ID in .env is wrong (or was regenerated in the TextSMS dashboard).
+        $hint = (int) ($r['response-code'] ?? $r['respose-code'] ?? 0) === 1006 ? ' - check TEXTSMS_API_KEY and TEXTSMS_PARTNER_ID in the server\'s .env' : '';
+
+        return $this->record($number, 'failed', null, "TextSMS said: {$error}{$hint}", $log);
     }
 
     /** The account balance (Health), or null when not set up or unreachable. */
