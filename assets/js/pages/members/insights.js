@@ -2,9 +2,9 @@
  * ============================================================================
  * MEMBERS - insights (insights.php)
  * ============================================================================
- * The age-and-gender pyramid, joining and leaving over the year, the gender
- * donut, this month's birthdays (with a birthday SMS through Messages), and
- * the register beside the last Demographics count.
+ * Sunday school and main church by gender, joining and leaving over the
+ * year, the gender donut, where members live, and the register beside the
+ * last Demographics count.
  * ============================================================================
  */
 (function () {
@@ -15,27 +15,25 @@
   const CTX = window.MEMBERS_CTX;
   const $ = (id) => document.getElementById(id);
 
-  function pyramid(i) {
-    const el = $("pyramidChart");
+  function groups(i) {
+    const el = $("groupChart");
     el.classList.remove("skel-chart");
-    const total = i.pyramid.reduce((a, b) => a + b.male + b.female, 0);
-    $("pyramidChips").innerHTML = `${i.no_birth_date ? `<span class="soft-chip soft-warning"><i class="ri-question-line"></i>${M.num(i.no_birth_date)} without a date of birth</span>` : ""}`;
-    if (!total) {
-      el.innerHTML = M.empty("ri-bar-chart-horizontal-line", "No ages yet", "Add members' dates of birth, and the age bands show here.");
+    if (!i.groups.some((g) => g.male + g.female + g.unknown)) {
+      el.innerHTML = M.empty("ri-bar-chart-horizontal-line", "No members yet", "Add members, and Sunday school and the main church show here.");
       return;
     }
-    const labels = i.pyramid.map((b) => b.label);
+    const series = [
+      { name: "Men and boys", data: i.groups.map((g) => g.male) },
+      { name: "Women and girls", data: i.groups.map((g) => g.female) },
+    ];
+    if (i.groups.some((g) => g.unknown)) series.push({ name: "Not given", data: i.groups.map((g) => g.unknown) });
     new ApexCharts(el, {
-      chart: { type: "bar", height: 280, stacked: true, toolbar: { show: false }, fontFamily: "inherit" },
-      plotOptions: { bar: { horizontal: true, barHeight: "62%", borderRadius: 4 } },
-      colors: [UI.cssColor("primary"), UI.cssColor("pink")],
-      series: [
-        { name: "Men", data: i.pyramid.map((b) => -b.male) },
-        { name: "Women", data: i.pyramid.map((b) => b.female) },
-      ],
-      xaxis: { categories: labels, labels: { formatter: (v) => (Number.isInteger(+v) ? Math.abs(v) : "") } },
-      tooltip: { y: { formatter: (v) => `${Math.abs(v)} ${Math.abs(v) === 1 ? "person" : "people"}` } },
-      dataLabels: { enabled: true, formatter: (v) => (v ? Math.abs(v) : "") },
+      chart: { type: "bar", height: 260, stacked: true, toolbar: { show: false }, fontFamily: "inherit" },
+      plotOptions: { bar: { horizontal: true, barHeight: "55%", borderRadius: 4 } },
+      colors: [UI.cssColor("primary"), UI.cssColor("pink"), UI.cssColor("secondary")],
+      series,
+      xaxis: { categories: i.groups.map((g) => g.label), labels: { formatter: (v) => (Number.isInteger(+v) ? v : "") } },
+      dataLabels: { enabled: true, formatter: (v) => v || "" },
       legend: { position: "top" },
       grid: { borderColor: "rgba(var(--dark-rgb), .08)" },
     }).render();
@@ -62,20 +60,15 @@
     UI.renderRingDonut("genderDonut", { labels: ["Men", "Women", "Not given"], series: [g.male, g.female, g.unknown], colors: [UI.cssColor("primary"), UI.cssColor("pink"), UI.cssColor("secondary")], centerLabel: "Members" });
   }
 
-  function birthdays(i) {
-    $("birthdayCount").innerHTML = i.birthdays.length ? `<span class="soft-chip soft-pink"><i class="ri-cake-2-line"></i>${i.birthdays.length}</span>` : "";
-    if (!i.birthdays.length) {
-      $("birthdays").innerHTML = '<p class="mb-0 fw-semibold">No birthdays this month - or no dates of birth yet.</p>';
+  function areas(i) {
+    if (!i.areas.length) {
+      $("areaList").innerHTML = '<p class="mb-0 fw-semibold">No areas yet - add where members live on their page.</p>';
       return;
     }
-    const today = new Date().getDate();
-    $("birthdays").innerHTML = `<ul class="mb-mini-list">${i.birthdays
-      .map((b) => {
-        const text = (i.birthday_template || "").replace(/\{first_name\}/g, b.name.split(" ")[0]).replace(/\{church\}/g, i.church_name || "");
-        const sms = b.phone ? `<a class="btn btn-sm btn-outline-primary ms-auto" href="${CTX.messagesUrl}?channel=sms&typed=${encodeURIComponent(b.phone)}&body=${encodeURIComponent(text)}" title="Send a birthday SMS"><i class="ri-chat-heart-line"></i></a>` : "";
-        return `<li><span class="avatar avatar-sm avatar-rounded bg-${M.colorFor(b.id)} ${M.textOn(M.colorFor(b.id))}">${M.esc(b.initials)}</span><div><a class="fw-semibold mb-link" href="${CTX.baseUrl}/member?id=${b.id}">${M.esc(b.name)}</a><small>${b.day === today ? "Today" : `On the ${b.day}${["th", "st", "nd", "rd"][b.day % 10 > 3 || Math.floor(b.day / 10) === 1 ? 0 : b.day % 10]}`} · turns ${b.turns}</small></div>${sms}</li>`;
-      })
-      .join("")}</ul>`;
+    const top = Math.max(...i.areas.map((a) => a.count));
+    $("areaList").innerHTML = `<div class="mb-areas">${i.areas
+      .map((a) => `<div class="mb-area-row"><span class="mb-area-name">${M.esc(a.area)}</span><span class="mb-area-bar"><i style="width:${Math.max(4, Math.round((a.count / top) * 100))}%"></i></span><strong>${M.num(a.count)}</strong></div>`)
+      .join("")}</div>`;
   }
 
   function registerVsDemo(i) {
@@ -85,7 +78,7 @@
       ["Members", r.total, d?.total],
       ["Men", r.male, d?.male],
       ["Women", r.female, d?.female],
-      ["Youth (13-35)", r.youth, d?.youth],
+      ["Sunday school", r.sunday_school_male + r.sunday_school_female, d?.sunday_school],
     ];
     $("registerVsDemo").innerHTML = `
       <div class="mb-compare">
@@ -101,10 +94,10 @@
       document.querySelector(".row.g-4").innerHTML = `<div class="col-12">${M.errorBox((ins.ok ? ov : ins).message)}</div>`;
       return;
     }
-    pyramid(ins.data);
+    groups(ins.data);
     flow(ov.data);
     gender(ins.data);
-    birthdays(ins.data);
+    areas(ins.data);
     registerVsDemo(ins.data);
   }
 

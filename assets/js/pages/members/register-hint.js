@@ -2,7 +2,8 @@
  * ============================================================================
  * MEMBERS - the register's hint on the Demographics form
  * ============================================================================
- * Beside Total members, Male, Female, Youth, New members and Baptisms, a line
+ * Beside Total members, Male, Female, Sunday school boys and girls, New
+ * members and Baptisms, a line
  * "From your register: N · Use" (docs/specs/people-and-care-spec.md, P1).
  * Demographics stays the church's own count: the hint never fills a box in
  * by itself - "Use" copies the number when the pastor wants it. Shows
@@ -12,7 +13,7 @@
 (function () {
   "use strict";
 
-  const FIELDS = { total_members: "total", male_count: "male", female_count: "female", youth_count: "youth", new_members_count: "new_this_month", baptisms_count: "baptised_this_month" };
+  const FIELDS = { total_members: "total", male_count: "male", female_count: "female", sunday_school_male_count: "sunday_school_male", sunday_school_female_count: "sunday_school_female", new_members_count: "new_this_month", baptisms_count: "baptised_this_month" };
 
   async function init() {
     if (typeof AppConfig === "undefined" || !document.getElementById("total_members")) return;

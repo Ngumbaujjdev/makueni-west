@@ -3,10 +3,11 @@
  * VISITORS - one visitor's page (visitor.php?id=)
  * ============================================================================
  * The hero (stage, first visit, visits, who follows them up, and what you
- * can do), then Follow-up (the timeline and the next step), Visits (with
- * prayer requests), Details and History. Windows: log a follow-up, send an
- * SMS (only with their yes), record a visit, assign, edit, became a member,
- * and remove personal details. The tab is kept in the URL (?tab=).
+ * can do), then Follow-up (the timeline and the next step), Visits, Details
+ * (name, phone, area - all we keep) and History. Windows: log a follow-up,
+ * send an SMS (not if they asked not to be texted), record a visit, assign,
+ * edit, became a member, and remove personal details. The tab is kept in
+ * the URL (?tab=).
  * ============================================================================
  */
 (function () {
@@ -34,11 +35,11 @@
     const chips = [
       p.first_visit_on ? `<span class="soft-chip soft-primary"><i class="ri-calendar-event-line"></i>First came ${M.day(p.first_visit_on)}</span>` : "",
       `<span class="soft-chip soft-success"><i class="ri-repeat-line"></i>${p.visits} ${p.visits === 1 ? "visit" : "visits"}</span>`,
-      p.how_heard ? `<span class="soft-chip soft-purple"><i class="ri-broadcast-line"></i>${M.esc(p.how_heard)}</span>` : "",
+      p.area ? `<span class="soft-chip soft-purple"><i class="ri-map-pin-line"></i>${M.esc(p.area)}</span>` : "",
     ].join("");
     const meta = [
       p.phone ? `<span><i class="ri-phone-line"></i>${M.esc(p.phone)}</span>` : "",
-      `<span><i class="${p.consent ? "ri-shield-check-line" : "ri-forbid-line"}"></i>${p.consent ? "Happy to be contacted" : "Didn't say yes to contact"}</span>`,
+      p.phone ? `<span><i class="${p.consent ? "ri-chat-check-line" : "ri-chat-off-line"}"></i>${p.consent ? "Can be texted" : "Asked not to be texted"}</span>` : "",
       `<span><i class="ri-user-follow-line"></i>${p.assigned ? `${M.esc(p.assigned.name)} follows up` : "Nobody follows up yet"}</span>`,
     ].join("");
     const work = canWork();
@@ -57,7 +58,7 @@
           </ul>
         </div>`
       : "";
-    const sms = isVisitor() && work ? (p.can.sms ? '<button type="button" class="btn btn-outline-primary" data-act="sms"><i class="ri-chat-3-line me-1"></i>Send SMS</button>' : `<span class="d-inline-block" tabindex="0" title="${p.phone ? `${M.esc(first())} didn't say yes to being contacted` : "No phone number"}"><button type="button" class="btn btn-outline-primary" disabled><i class="ri-chat-off-line me-1"></i>Send SMS</button></span>`) : "";
+    const sms = isVisitor() && work ? (p.can.sms ? '<button type="button" class="btn btn-outline-primary" data-act="sms"><i class="ri-chat-3-line me-1"></i>Send SMS</button>' : `<span class="d-inline-block" tabindex="0" title="${!p.phone ? "No phone number" : p.demo ? "A demo number - never texted" : `${M.esc(first())} asked not to be texted`}"><button type="button" class="btn btn-outline-primary" disabled><i class="ri-chat-off-line me-1"></i>Send SMS</button></span>`) : "";
     $("vsHero").innerHTML = `
       <div class="card-body">
         <div class="ev-hero-row">
@@ -168,8 +169,7 @@
                   (v) => `<li class="mr-row">
                     <div class="mr-row-head"><span class="ev-tile is-sm is-soft" style="--q: var(--${v.first_time ? "pink" : "success"}-rgb)"><i class="${v.first_time ? "ri-star-smile-line" : "ri-repeat-line"}"></i></span>${M.day(v.on)}</div>
                     <div class="mr-row-body">
-                      <div class="d-flex flex-wrap gap-1 mb-1">${v.first_time ? '<span class="badge bg-pink text-white">First time</span>' : ""}${v.gathering ? `<span class="soft-chip soft-primary"><i class="ri-community-line"></i>${M.esc(v.gathering)}</span>` : ""}${v.wants_visit ? '<span class="soft-chip soft-success"><i class="ri-home-heart-line"></i>Wants a visit</span>' : ""}</div>
-                      ${v.prayer_request ? `<div class="vs-prayer"><i class="ri-hand-heart-line"></i><span>${M.esc(v.prayer_request)}</span></div>` : '<span class="mb-sub">No prayer request</span>'}
+                      <div class="d-flex flex-wrap gap-1">${v.first_time ? '<span class="badge bg-pink text-white">First time</span>' : ""}${v.gathering ? `<span class="soft-chip soft-primary"><i class="ri-community-line"></i>${M.esc(v.gathering)}</span>` : '<span class="mb-sub">At church</span>'}</div>
                     </div>
                   </li>`,
                 )
@@ -187,13 +187,10 @@
       <div class="card custom-card">
         <div class="card-header justify-content-between"><div class="card-title">Details</div><div class="d-flex gap-2 align-items-center">${V.privateChip()}${canWork() ? '<button type="button" class="btn btn-sm btn-outline-primary" data-act="edit"><i class="ri-edit-line me-1"></i>Edit</button>' : ""}</div></div>
         <div class="card-body"><ul class="mr-rows">${[
+          row("ri-user-3-line", "Name", M.esc(p.name)),
           row("ri-phone-line", "Phone", p.phone ? M.esc(p.phone) : notGiven),
-          row("ri-mail-line", "Email", p.email ? M.esc(p.email) : notGiven),
-          row("ri-user-3-line", "Gender", p.gender ? (p.gender === "male" ? "Male" : "Female") : notGiven),
-          row("ri-broadcast-line", "Heard about us through", p.how_heard ? M.esc(p.how_heard) : notGiven),
-          row("ri-shield-check-line", "Contact", p.consent ? "Happy to be called or texted" : "Didn't say yes - the system won't text them"),
-          row("ri-home-heart-line", "A visit", p.wants_visit ? "Would like a visit" : "Didn't ask for one"),
-          row("ri-sticky-note-line", "Notes", p.notes ? M.esc(p.notes) : notGiven),
+          row("ri-map-pin-line", "Area", p.area ? M.esc(p.area) : notGiven),
+          row("ri-chat-3-line", "Texting", !p.phone ? "No phone" : p.demo ? "A demo number - never texted" : p.consent ? "Can be texted" : "Asked not to be texted - the system won't text them"),
         ].join("")}</ul></div>
       </div>`;
     renderSide();
@@ -280,7 +277,7 @@
       color: "info",
       body: `<label class="form-label" for="smsText">Message</label><textarea class="form-control" id="smsText" rows="4" maxlength="640">Hi ${M.esc(first())}, </textarea>
         <div class="d-flex justify-content-between form-text"><span>Your church's SMS signature is added at the end.</span><span id="smsCount"></span></div>
-        <p class="mb-sub mt-2 mb-0"><i class="ri-shield-check-line me-1"></i>${M.esc(first())} said yes to being contacted. The SMS is logged as a follow-up.</p>`,
+        <p class="mb-sub mt-2 mb-0"><i class="ri-chat-check-line me-1"></i>The SMS is logged as a follow-up.</p>`,
       foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="smsSend"><i class="ri-send-plane-line me-1"></i>Send</button>`,
     });
     const count = () => {
@@ -310,13 +307,11 @@
       body: `<div class="row g-3">
         <div class="col-md-6"><label class="form-label" for="viOn">Date</label><input type="date" class="form-control" id="viOn" value="${V.todayIso()}" max="${V.todayIso()}"></div>
         <div class="col-md-6"><label class="form-label" for="viG">Gathering <span class="fw-normal">(optional)</span></label><select class="form-select" id="viG"><option value="">Not linked to one</option>${g.map((x) => `<option value="${x.id}">${M.esc(x.name)}</option>`).join("")}</select></div>
-        <div class="col-12"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="viWants"><label class="form-check-label" for="viWants">They'd like a visit</label></div></div>
-        <div class="col-12"><label class="form-label" for="viPrayer">Prayer request <span class="fw-normal">(optional)</span></label><textarea class="form-control" id="viPrayer" rows="2" maxlength="2000"></textarea></div>
       </div>`,
       foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="viSave"><i class="ri-check-line me-1"></i>Record visit</button>`,
     });
     UI.enhanceSelect($("viG"), { search: false });
-    $("viSave").addEventListener("click", (e) => save(e.currentTarget, () => VisitorsAPI.visit(id, { on: $("viOn").value, gathering_type_id: $("viG").value || null, wants_visit: $("viWants").checked, prayer_request: $("viPrayer").value.trim() || null }), el));
+    $("viSave").addEventListener("click", (e) => save(e.currentTarget, () => VisitorsAPI.visit(id, { on: $("viOn").value, gathering_type_id: $("viG").value || null }), el));
   }
 
   function assign() {
@@ -336,44 +331,22 @@
 
   function edit() {
     const p = state.p;
-    const heard = [...new Set([...(state.options?.how_heard || []), ...(p.how_heard ? [p.how_heard] : [])])];
     const el = V.modal({
       title: "Edit details",
       subtitle: p.name,
       icon: "ri-edit-line",
       color: "primary",
-      size: "modal-lg",
       body: `<div class="row g-3">
         <div class="col-md-6"><label class="form-label" for="edFirst">First name</label><input class="form-control" id="edFirst" maxlength="80" value="${M.esc(p.first_name)}"></div>
         <div class="col-md-6"><label class="form-label" for="edLast">Last name</label><input class="form-control" id="edLast" maxlength="80" value="${M.esc(p.last_name)}"></div>
         <div class="col-md-6"><label class="form-label" for="edPhone">Phone</label><input class="form-control" id="edPhone" inputmode="tel" maxlength="30" value="${M.esc(p.phone || "")}"></div>
-        <div class="col-md-6"><label class="form-label" for="edEmail">Email</label><input type="email" class="form-control" id="edEmail" maxlength="160" value="${M.esc(p.email || "")}"></div>
-        <div class="col-md-6"><label class="form-label" for="edGender">Gender</label><select class="form-select" id="edGender"><option value="">Not given</option><option value="male"${p.gender === "male" ? " selected" : ""}>Male</option><option value="female"${p.gender === "female" ? " selected" : ""}>Female</option></select></div>
-        <div class="col-md-6"><label class="form-label" for="edHeard">How they heard</label><select class="form-select" id="edHeard"><option value="">Not asked</option>${heard.map((h) => `<option${h === p.how_heard ? " selected" : ""}>${M.esc(h)}</option>`).join("")}</select></div>
-        <div class="col-md-6"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="edConsent"${p.consent ? " checked" : ""}><label class="form-check-label" for="edConsent">Happy to be called or texted</label></div></div>
-        <div class="col-md-6"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="edWants"${p.wants_visit ? " checked" : ""}><label class="form-check-label" for="edWants">Would like a visit</label></div></div>
-        <div class="col-12"><label class="form-label" for="edNotes">Notes <span class="fw-normal">(only your church's leaders see them)</span></label><textarea class="form-control" id="edNotes" rows="3" maxlength="5000">${M.esc(p.notes || "")}</textarea></div>
+        <div class="col-md-6"><label class="form-label" for="edArea">Area</label><input class="form-control" id="edArea" maxlength="80" list="edAreas" value="${M.esc(p.area || "")}"><datalist id="edAreas">${(state.options?.areas || []).map((a) => `<option value="${M.esc(a)}">`).join("")}</datalist></div>
+        <div class="col-12"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="edNoText"${p.consent ? "" : " checked"}><label class="form-check-label" for="edNoText">Don't text them - they asked not to be contacted</label></div></div>
       </div>`,
       foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="edSave"><i class="ri-check-line me-1"></i>Save</button>`,
     });
-    ["edGender", "edHeard"].forEach((x) => UI.enhanceSelect($(x), { search: false }));
     $("edSave").addEventListener("click", (e) =>
-      save(
-        e.currentTarget,
-        () =>
-          VisitorsAPI.update(id, {
-            first_name: $("edFirst").value.trim(),
-            last_name: $("edLast").value.trim(),
-            phone: $("edPhone").value.trim() || null,
-            email: $("edEmail").value.trim() || null,
-            gender: $("edGender").value || null,
-            how_heard: $("edHeard").value || null,
-            consent_contact: $("edConsent").checked,
-            wants_visit: $("edWants").checked,
-            notes: $("edNotes").value.trim() || null,
-          }),
-        el,
-      ),
+      save(e.currentTarget, () => VisitorsAPI.update(id, { first_name: $("edFirst").value.trim(), last_name: $("edLast").value.trim(), phone: $("edPhone").value.trim() || null, area: $("edArea").value.trim() || null, consent_contact: !$("edNoText").checked }), el),
     );
   }
 
@@ -383,7 +356,7 @@
       subtitle: state.p.name,
       icon: "ri-user-unfollow-line",
       color: "danger",
-      body: `<p class="fw-semibold">This clears their name, phone, email, notes, prayer requests and follow-up notes. Their visits still count in the totals. <strong>It can't be undone.</strong></p>
+      body: `<p class="fw-semibold">This clears their name, phone, area and follow-up notes. Their visits still count in the totals. <strong>It can't be undone.</strong></p>
         <label class="form-label" for="anConfirm">Type <strong>REMOVE</strong> to confirm</label><input class="form-control" id="anConfirm" autocomplete="off">`,
       foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Keep them</button><button type="button" class="btn btn-danger" id="anGo" disabled><i class="ri-user-unfollow-line me-1"></i>Remove their details</button>`,
     });

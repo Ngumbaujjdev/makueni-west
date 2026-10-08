@@ -4,7 +4,7 @@
  * ============================================================================
  * For a year: the cards (first-timers, came back, became members, days to
  * the first follow-up), the road from first visit to member, each month,
- * how they heard of us, and the follow-up done. The year is kept in the URL.
+ * where they come from (areas), and the follow-up done. The year is kept in the URL.
  * ============================================================================
  */
 (function () {
@@ -73,16 +73,15 @@
     });
   }
 
-  function heard(i) {
-    const el = $("heardDonut");
-    el.classList.remove("skel-chart");
-    el.innerHTML = "";
-    if (!i.how_heard.length) {
-      el.innerHTML = M.empty("ri-broadcast-line", "Nobody asked yet", "Ask first-timers how they heard of us when you record them.");
+  function areas(i) {
+    if (!i.areas.length) {
+      $("areaList").innerHTML = M.empty("ri-map-pin-line", "No areas yet", "Write where visitors live when you record them.");
       return;
     }
-    const names = ["primary", "pink", "success", "purple", "info", "warning", "secondary"];
-    UI.renderRingDonut("heardDonut", { labels: i.how_heard.map((h) => h.label), series: i.how_heard.map((h) => h.count), colors: i.how_heard.map((_, n) => UI.cssColor(names[n % names.length])), centerLabel: "First-timers" });
+    const top = Math.max(...i.areas.map((a) => a.count));
+    $("areaList").innerHTML = `<div class="mb-areas">${i.areas
+      .map((a) => `<div class="mb-area-row"><span class="mb-area-name">${M.esc(a.area)}</span><span class="mb-area-bar"><i style="width:${Math.max(4, Math.round((a.count / top) * 100))}%"></i></span><strong>${M.num(a.count)}</strong></div>`)
+      .join("")}</div>`;
   }
 
   function followups(i) {
@@ -109,7 +108,7 @@
     cards(res.data);
     funnel(res.data);
     months(res.data);
-    heard(res.data);
+    areas(res.data);
     followups(res.data);
   }
 

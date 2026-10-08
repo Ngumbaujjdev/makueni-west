@@ -6,7 +6,8 @@
  * members), "My follow-ups" (due this week or late, late in red), then our
  * visitors as a board - New, Contacted, Returning, Regular, Became a member;
  * drag a card to move them along (the YNEX kanban) - or as a list. One
- * filter bar serves both, kept in the URL with the view (?view=list).
+ * filter strip (search, stage, follow-up - like our other tables) serves
+ * both, kept in the URL with the view (?view=list).
  * ============================================================================
  */
 (function () {
@@ -28,11 +29,10 @@
     drake: null,
   };
 
-  // The calendar's "follow-ups due" link and a notification's "?assigned=me" become filter values.
+  // The calendar's "follow-ups due" link becomes a filter value ("?assigned=me" just opens the page).
   (function translateLinks() {
     const q = new URLSearchParams(window.location.search);
     if (q.get("due")) q.set("fDue", "due");
-    if (q.get("assigned") === "me" && CTX.userId) q.set("fWho", String(CTX.userId));
     if (!q.has("due") && !q.has("assigned")) return;
     q.delete("due");
     q.delete("assigned");
@@ -82,32 +82,28 @@
   // -------------------------------------------------------------- the list
   function rowHtml(p) {
     const due = V.due(p.due_on);
-    const heard = p.how_heard || "";
-    return `<tr class="mb-row" data-id="${p.id}" data-href="${CTX.baseUrl}/visitor?id=${p.id}">
-      <td data-search="${M.esc(`${p.name} ${p.phone || ""}`)}">
+    const href = `${CTX.baseUrl}/visitor?id=${p.id}`;
+    return `<tr class="mb-row" data-id="${p.id}" data-href="${href}">
+      <td data-search="${M.esc(`${p.name} ${p.phone || ""} ${p.area || ""}`)}">
         <div class="d-flex align-items-center gap-2">
           ${M.avatar(p, "sm")}
-          <div class="min-w-0"><a class="fw-semibold mb-link" href="${CTX.baseUrl}/visitor?id=${p.id}">${M.esc(p.name)}</a><div class="mb-sub">${M.esc(p.phone || "No phone")}</div></div>
+          <div class="min-w-0"><a class="fw-semibold mb-link" href="${href}">${M.esc(p.name)}</a><div class="mb-sub">${M.esc(p.phone || "No phone")}</div></div>
         </div>
       </td>
       <td data-search="${p.stage}">${V.stagePill(p.stage)}</td>
-      <td data-order="${p.visits}">${M.num(p.visits)}</td>
-      <td data-order="${p.first_visit_on || ""}">${M.day(p.first_visit_on)}</td>
-      <td data-order="${p.last_visit_on || ""}">${M.day(p.last_visit_on)}</td>
-      <td data-search="${M.esc(heard || "none")}">${heard ? M.esc(heard) : '<span class="mb-sub">Not asked</span>'}</td>
+      <td>${p.area ? M.esc(p.area) : '<span class="mb-sub">Not given</span>'}</td>
+      <td class="d-none d-md-table-cell" data-order="${p.visits}">${M.num(p.visits)}</td>
+      <td class="d-none d-lg-table-cell" data-order="${p.last_visit_on || ""}">${M.day(p.last_visit_on)}</td>
       <td data-search="${due.key}" data-order="${p.due_on || "9999"}">${p.due_on ? V.dueChip(p.due_on) : '<span class="mb-sub">Nothing due</span>'}</td>
-      <td data-search="${p.assigned ? p.assigned.id : "none"}">${p.assigned ? M.esc(p.assigned.name) : '<span class="mb-sub">Nobody yet</span>'}</td>
+      <td class="d-none d-lg-table-cell">${p.assigned ? M.esc(p.assigned.name) : '<span class="mb-sub">Nobody yet</span>'}</td>
+      <td class="text-end"><a href="${href}" class="btn btn-sm btn-primary-light">Open<i class="ri-arrow-right-line ms-1"></i></a></td>
     </tr>`;
   }
 
   function filters() {
-    const o = state.options;
-    const leaders = (o?.leaders || []).filter((l) => l.id !== CTX.userId);
     return [
-      { id: "fStage", label: "Any stage", options: Object.entries(V.STAGES).map(([value, s]) => ({ value, label: s.label, color: s.color })), columnIndex: 1, exact: true },
-      { id: "fDue", label: "Any follow-up", options: [{ value: "due", label: "Due or late", color: "danger" }, { value: "later", label: "Coming up", color: "warning" }, { value: "none", label: "Nothing due", color: "secondary" }], columnIndex: 6, exact: true },
-      { id: "fWho", label: "Anyone following up", options: [...(CTX.userId ? [{ value: String(CTX.userId), label: "Me", color: "primary" }] : []), { value: "none", label: "Nobody yet", color: "secondary" }, ...leaders.map((l) => ({ value: String(l.id), label: l.name, color: "purple" }))], columnIndex: 7, exact: true },
-      { id: "fHeard", label: "Heard through anything", options: [...(o?.how_heard || []).map((h) => ({ value: h, label: h, color: "info" })), { value: "none", label: "Not asked", color: "secondary" }], columnIndex: 5, exact: true },
+      { id: "fStage", label: "All stages", options: Object.entries(V.STAGES).map(([value, s]) => ({ value, label: s.label, color: s.color })), columnIndex: 1, exact: true },
+      { id: "fDue", label: "Any follow-up", options: [{ value: "due", label: "Due or late", color: "danger" }, { value: "later", label: "Coming up", color: "warning" }, { value: "none", label: "Nothing due", color: "secondary" }], columnIndex: 5, exact: true },
     ];
   }
 
@@ -116,7 +112,7 @@
 
   function card(p) {
     const visits = p.visits > 1 ? `<span class="soft-chip soft-primary"><i class="ri-repeat-line"></i>${V.ordinal(p.visits)} visit</span>` : "";
-    const wants = p.wants_visit && p.status === "visitor" ? '<span class="soft-chip soft-pink"><i class="ri-home-heart-line"></i>Wants a visit</span>' : "";
+    const area = p.area ? `<span class="soft-chip soft-success"><i class="ri-map-pin-line"></i>${M.esc(p.area)}</span>` : "";
     const who = p.assigned
       ? `<span class="avatar avatar-xs avatar-rounded bg-${UI.colorFor(p.assigned.name)} text-white" title="${M.esc(p.assigned.name)} follows up">${M.esc(
           p.assigned.name
@@ -134,7 +130,7 @@
             ${M.avatar(p, "sm")}
             <div class="min-w-0 flex-fill"><a class="fw-semibold mb-link vs-card-name" href="${CTX.baseUrl}/visitor?id=${p.id}">${M.esc(p.name)}</a><div class="mb-sub">${M.esc(p.phone || "No phone")}</div></div>
           </div>
-          ${visits || wants || p.due_on ? `<div class="kanban-content d-flex flex-wrap gap-1">${p.due_on ? V.dueChip(p.due_on) : ""}${visits}${wants}</div>` : ""}
+          ${visits || area || p.due_on ? `<div class="kanban-content d-flex flex-wrap gap-1">${p.due_on ? V.dueChip(p.due_on) : ""}${area}${visits}</div>` : ""}
         </div>
         <div class="vs-card-foot"><span class="mb-sub">${foot}</span>${p.status === "visitor" ? who : ""}</div>
       </div>
@@ -228,7 +224,7 @@
     state.table?.destroy?.();
     state.table = null;
     const f = filters();
-    UI.renderFilterToolbar("visitorFilters", { searchPlaceholder: "Search by name or phone...", filters: f });
+    UI.renderFilterToolbar("visitorFilters", { searchPlaceholder: "Search by name, phone or area...", filters: f });
     if (!state.items.length) {
       $("visitorFilters").hidden = true;
       const none =
@@ -245,7 +241,7 @@
     }
     $("visitorFilters").hidden = false;
     $("visitorRows").innerHTML = state.items.map(rowHtml).join("");
-    state.table = UI.initListDataTable("visitorTable", { hideDefaultSearch: true, order: [[4, "desc"]], pageLength: 25 });
+    state.table = UI.initListDataTable("visitorTable", { hideDefaultSearch: true, order: [[4, "desc"]], nonSortableColumns: [7], noun: "visitors", pageLength: 25 });
     f.forEach((x) => UI.enhanceSelect($(x.id), { search: false }));
     UI.wireFilterToolbar("visitorFilters", state.table, f, { noun: "visitors" });
     // The board follows the same filters.

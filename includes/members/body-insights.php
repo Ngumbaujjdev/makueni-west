@@ -5,11 +5,8 @@
 <div class="row g-4">
     <div class="col-xl-8">
         <div class="card custom-card">
-            <div class="card-header justify-content-between flex-wrap gap-2">
-                <div><div class="card-title">Ages and gender</div><span class="card-subtitle-text">Members in each age band - men to the left, women to the right</span></div>
-                <div id="pyramidChips" class="d-flex flex-wrap gap-1"></div>
-            </div>
-            <div class="card-body"><div id="pyramidChart" class="skel-chart" style="min-height:280px"></div></div>
+            <div class="card-header"><div><div class="card-title">Sunday school and main church</div><span class="card-subtitle-text">Members in each part of the church, men and women</span></div></div>
+            <div class="card-body"><div id="groupChart" class="skel-chart" style="min-height:260px"></div></div>
         </div>
         <div class="card custom-card">
             <div class="card-header"><div><div class="card-title">Joining and leaving</div><span class="card-subtitle-text">The last twelve months</span></div></div>
@@ -22,8 +19,8 @@
             <div class="card-body"><div id="genderDonut" class="skel-chart" style="min-height:220px"></div></div>
         </div>
         <div class="card custom-card">
-            <div class="card-header justify-content-between"><div class="card-title">Birthdays this month</div><span id="birthdayCount"></span></div>
-            <div class="card-body" id="birthdays"><span class="skel skel-line"></span><span class="skel skel-line mt-2" style="width:70%"></span></div>
+            <div class="card-header"><div><div class="card-title">Where our members live</div><span class="card-subtitle-text">The areas with the most members</span></div></div>
+            <div class="card-body" id="areaList"><span class="skel skel-line"></span><span class="skel skel-line mt-2" style="width:70%"></span></div>
         </div>
         <div class="card custom-card">
             <div class="card-header"><div><div class="card-title">The register and Demographics</div><span class="card-subtitle-text">Your register beside the last count you recorded</span></div></div>

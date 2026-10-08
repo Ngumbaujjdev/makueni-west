@@ -17,27 +17,26 @@
     <div class="card-header justify-content-between flex-wrap gap-2">
         <div>
             <div class="card-title">Our members</div>
-            <span class="card-subtitle-text">Find anyone by name or phone, then open their page</span>
+            <span class="card-subtitle-text">Find anyone by name, phone or area, then open their page</span>
         </div>
         <div class="btn-group" role="group" aria-label="Which list" id="listSwitch">
             <button type="button" class="btn btn-sm btn-primary" data-list="current">In the register</button>
             <button type="button" class="btn btn-sm btn-outline-primary" data-list="archived">Archived</button>
         </div>
     </div>
-    <div class="card-body pb-0"><div id="memberFilters"></div></div>
-    <div class="card-body" id="memberTableWrap">
+    <div class="card-body p-0" id="memberTableWrap">
+        <div id="memberFilters" class="list-filterbar-wrap"></div>
         <div class="table-responsive">
-            <table class="table text-nowrap table-hover mb-0" id="memberTable">
+            <table class="table table-hover mb-0" id="memberTable">
                 <thead>
                     <tr>
                         <th>Name</th>
-                        <th>Age</th>
-                        <th>Gender</th>
+                        <th>Area</th>
+                        <th>Part of</th>
+                        <th class="d-none d-md-table-cell">Gender</th>
                         <th>Status</th>
-                        <th>Joined</th>
-                        <th>Baptised</th>
-                        <th class="d-none">Band</th>
-                        <th class="d-none">Year</th>
+                        <th class="d-none d-lg-table-cell">Joined</th>
+                        <th class="text-end">Action</th>
                     </tr>
                 </thead>
                 <tbody id="memberRows"></tbody>
