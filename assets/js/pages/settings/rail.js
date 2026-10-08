@@ -155,9 +155,11 @@ const SettingsRail = (function () {
     const sub = document.querySelector(`#settingsRail .settings-rail-sub[data-sub-for="${CSS.escape(key)}"]`);
     if (!sub) return;
     sub.innerHTML = (links || []).map((l) => `<a href="#${esc(l.id)}" data-target="${esc(l.id)}">${esc(l.label)}</a>`).join("");
-    sub.querySelectorAll("a").forEach((a) =>
+    sub.querySelectorAll("a").forEach((a, i) =>
       a.addEventListener("click", (e) => {
         e.preventDefault();
+        // A link can open something itself (e.g. a Communication tab) instead of scrolling to a card.
+        if (links[i].open) return links[i].open();
         document.getElementById(a.dataset.target)?.scrollIntoView({ behavior: "smooth", block: "start" });
       }),
     );
