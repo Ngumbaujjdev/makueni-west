@@ -109,7 +109,7 @@
   async function load() {
     const res = await MessagesAPI.get(id);
     if (!res.ok) {
-      $("messagePage").innerHTML = `<div class="card custom-card"><div class="card-body">${M.empty("ri-chat-off-line", "This message isn't one you can see", M.esc(res.message), "danger")}<div class="text-center mt-3"><a class="btn btn-primary" href="${CTX.baseUrl}/?tab=sent">Back to Sent</a></div></div></div>`;
+      $("messagePage").innerHTML = `<div class="card custom-card"><div class="card-body">${M.empty("ri-chat-off-line", "This message isn't one you can see", M.esc(res.message), "danger")}<div class="text-center mt-3"><a class="btn btn-primary" href="${CTX.baseUrl}/campaigns.php">Back to Campaigns</a></div></div></div>`;
       return;
     }
     b = res.data;
@@ -119,7 +119,7 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     if (!id) {
-      window.location.href = `${CTX.baseUrl}/?tab=sent`;
+      window.location.href = `${CTX.baseUrl}/campaigns.php`;
       return;
     }
     const flash = sessionStorage.getItem("mwd-messages-flash");

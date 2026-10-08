@@ -228,5 +228,22 @@ class MessagesTest extends TestCase
             $this->assertTrue((bool) $send->is_active);
             $this->assertSame($send->id, Permission::where('name', "{$level}.messages.messages.send")->value('submodule_id'));
         }
+
+        // Its own "Communication" group, after Programs, with the five pages - each opened by its permission.
+        foreach (['church', 'region', 'diocese'] as $level) {
+            $group = ModuleGroup::where('slug', "{$level}-communication")->sole();
+            $this->assertSame(['Communication', $level], [$group->name, $group->territory_scope]);
+            $this->assertGreaterThan(ModuleGroup::where('slug', "{$level}-programs")->value('order'), $group->order);
+            $module = Submodule::where('path', "/{$level}/messages/")->sole()->module;
+            $this->assertSame([$group->id, 'Messages'], [$module->module_group_id, $module->name]);
+            $this->assertSame(['Campaigns', 'Inbox', 'Message log', 'Send a message', 'Templates'], Submodule::where('module_id', $module->id)->where('is_active', true)->orderBy('title')->pluck('title')->all());
+            foreach (['campaigns.read' => 'campaigns.php', 'templates.manage' => 'templates.php', 'log.read' => 'log.php'] as $perm => $file) {
+                $this->assertSame(Submodule::where('path', "/{$level}/messages/{$file}")->value('id'), Permission::where('name', "{$level}.messages.{$perm}")->value('submodule_id'));
+            }
+            $this->assertSame(1, Module::where('name', 'Messages')->whereIn('module_group_id', ModuleGroup::where('territory_scope', $level)->pluck('id'))->count());
+        }
+        $this->assertTrue($senior->fresh()->hasPermissionTo('church.messages.log.read'));
+        $this->assertTrue($senior->fresh()->hasPermissionTo('church.messages.templates.manage'));
+        $this->assertFalse($deacon->fresh()->hasPermissionTo('church.messages.log.read'));
     }
 }

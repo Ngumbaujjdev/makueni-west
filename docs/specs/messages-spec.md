@@ -160,6 +160,28 @@ The placeholders' unbuilt sub-pages are switched off.
 - **The branded email** keeps single line breaks inside a paragraph (`nl2br`), so "God bless,⏎{sender}" lands on two lines.
 - **The demo seeder** adds 4 shared diocese templates: Monthly report reminder, Event invitation, Welcome to the church and Prayer request.
 
+### The Communication group (2026-10-08)
+- **The sidebar** has a **COMMUNICATION** group at each level (`{level}-communication`, after Programs). It holds the **Messages** module with five pages, each opened by its own permission (`MessagesAccessSeeder`):
+
+  | Page | Path | Permission |
+  |---|---|---|
+  | Inbox | `/messages/` | `inbox.read` |
+  | Send a message | `new.php` | `messages.send` |
+  | Campaigns | `campaigns.php` | `campaigns.read` |
+  | Templates | `templates.php` | `templates.manage` |
+  | Message log | `log.php` | `log.read` |
+
+  - **Grants:** senders get all five. Anyone who reads messages also gets Campaigns and the log, and anyone who sends gets Templates.
+  - **The seeder** finds the module by its Inbox page, so moving it never makes a second one.
+- **Campaigns:**
+  - **Figures:** this month's sent, people reached, replies, and failed or scheduled.
+  - **The table:** everything we sent this year (or last), filtered by channel, status and dates. Each row opens the message; Cancel (scheduled) and Retry (failed) work in place.
+- **Templates and Message log** are Settings > Communication's own code (`settings/sections/templates.js` and `messages.js`), run on the Messages pages by `assets/js/pages/messages/comms-env.js`. That file gives them the place, the level, a card and an API pointed at the Messages endpoints.
+  - **The log** is `GET messages/log`, `messages/log/{id}` and `POST messages/log/{id}/resend` (`Api\Messages\LogController`). It extends the Settings log controller and swaps only the check: Messages read, and send for resend. The scope is the same: own, below or all.
+- **Old links forward:**
+  - the Inbox keeps Inbox only, with Campaigns and Templates linked in its strip; `?tab=sent` and `?tab=saved` forward to the new pages;
+  - Settings > Communication is setup only (Overview | Sending), and its old `&tab=templates`, `campaigns` and `log` links forward too.
+
 ### Send a message, livelier (2026-10-08)
 - **Pills in two colours:**
   - **Teal:** saved messages, pale with the chosen one solid.

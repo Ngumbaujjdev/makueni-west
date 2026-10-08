@@ -34,7 +34,7 @@ class MessagesController extends SettingsController
         if ($place instanceof JsonResponse) {
             return $place;
         }
-        if ($deny = $this->deny($request, $place, self::SECTION)) {
+        if ($deny = $this->gate($request, $place)) {
             return $deny;
         }
         $scope = $this->scope($place);
@@ -45,7 +45,7 @@ class MessagesController extends SettingsController
 
         $places = Territory::whereIn('id', $rows->pluck('territory_id')->filter()->unique())->get(['id', 'name', 'territory_type'])->keyBy('id');
         $people = User::whereIn('id', $rows->pluck('sent_by')->filter()->unique())->get(['id', 'firstname', 'lastname'])->keyBy('id');
-        $canResend = SettingsAccess::can($request->user(), $place, self::SECTION, 'update');
+        $canResend = $this->mayResend($request, $place);
 
         return $this->ok([
             'rows' => $rows->map(fn (MessageLog $m) => $this->row($m, $places, $people, $canResend))->values(),
@@ -63,7 +63,7 @@ class MessagesController extends SettingsController
         if ($place instanceof JsonResponse) {
             return $place;
         }
-        if ($deny = $this->deny($request, $place, self::SECTION)) {
+        if ($deny = $this->gate($request, $place)) {
             return $deny;
         }
         $m = $this->query($this->scope($place))->find($id);
@@ -73,7 +73,7 @@ class MessagesController extends SettingsController
         $places = Territory::whereKey($m->territory_id)->get(['id', 'name', 'territory_type'])->keyBy('id');
         $people = User::whereKey($m->sent_by)->get(['id', 'firstname', 'lastname'])->keyBy('id');
 
-        return $this->ok($this->row($m, $places, $people, SettingsAccess::can($request->user(), $place, self::SECTION, 'update')) + [
+        return $this->ok($this->row($m, $places, $people, $this->mayResend($request, $place)) + [
             'reply_to' => $m->reply_to,
             'body' => $m->body,
             'body_type' => $m->body_type,
@@ -92,7 +92,7 @@ class MessagesController extends SettingsController
         if ($place instanceof JsonResponse) {
             return $place;
         }
-        if ($deny = $this->deny($request, $place, self::SECTION, 'update')) {
+        if ($deny = $this->gate($request, $place, true)) {
             return $deny;
         }
         $m = $this->query($this->scope($place))->find($id);
@@ -112,6 +112,17 @@ class MessagesController extends SettingsController
         return $result['ok']
             ? $this->ok($result, $result['status'] === 'logged' ? 'Written to the log again - nothing is really sent yet.' : 'Sent again.')
             : response()->json(['success' => false, 'status' => 422, 'message' => "It failed again: {$result['error']}"], 422);
+    }
+
+    /** null when allowed, else the 403 - here Settings > Communication (Messages > Message log overrides it). */
+    protected function gate(Request $request, Territory $place, bool $resend = false): ?JsonResponse
+    {
+        return $this->deny($request, $place, self::SECTION, $resend ? 'update' : 'read');
+    }
+
+    protected function mayResend(Request $request, Territory $place): bool
+    {
+        return SettingsAccess::can($request->user(), $place, self::SECTION, 'update');
     }
 
     /** The places whose messages this place can see: null = all (the diocese). */

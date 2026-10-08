@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\DemographicsReportController;
 use App\Http\Controllers\Api\FiscalYearController;
 use App\Http\Controllers\Api\GatheringCategoryController;
 use App\Http\Controllers\Api\GatheringTypeController;
+use App\Http\Controllers\Api\Messages\LogController as MessageLogController;
 use App\Http\Controllers\Api\Messages\MessagesController;
 use App\Http\Controllers\Api\Messages\TemplatesController as MessageTemplatesController;
 use App\Http\Controllers\Api\ModuleController;
@@ -99,6 +100,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('messages/templates/{id}', [MessageTemplatesController::class, 'destroy'])->whereNumber('id');
     Route::post('messages/templates/{id}/copy', [MessageTemplatesController::class, 'copy'])->whereNumber('id');
     Route::post('messages/templates/{id}/reset', [MessageTemplatesController::class, 'reset'])->whereNumber('id');
+    // Communication > Messages > Message log: every email and SMS sent (the Settings log, for Messages users)
+    Route::get('messages/log', [MessageLogController::class, 'index']);
+    Route::get('messages/log/{id}', [MessageLogController::class, 'show'])->whereNumber('id');
+    Route::post('messages/log/{id}/resend', [MessageLogController::class, 'resend'])->whereNumber('id')->middleware('throttle:10,1');
     Route::get('messages/{id}', [MessagesController::class, 'show'])->whereNumber('id');
     Route::post('messages/{id}/cancel', [MessagesController::class, 'cancel'])->whereNumber('id');
     Route::post('messages/{id}/retry', [MessagesController::class, 'retry'])->whereNumber('id');

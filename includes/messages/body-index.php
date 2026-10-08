@@ -16,16 +16,20 @@ $canRead = $messagesCtx['can']['read'];
     </div>
 </div>
 
+<?php // The old Sent and Saved tabs are their own pages now (Communication > Messages): Campaigns and Templates. ?>
 <div class="nav section-tabs" id="msgTabs" role="tablist" aria-label="Messages">
+    <button class="nav-link section-tab active" data-tab="inbox" type="button" role="tab" aria-selected="true">
+        <span class="section-tab-icon bg-primary"><i class="ri-inbox-line"></i></span>
+        <span class="section-tab-text"><strong>Inbox</strong><small data-tab-figure="inbox">&nbsp;</small></span>
+    </button>
     <?php foreach (array_filter([
-        ['inbox', 'ri-inbox-line', 'primary', 'Inbox', true],
-        ['sent', 'ri-send-plane-line', 'success', 'Sent', $canRead],
-        ['saved', 'ri-bookmark-line', 'purple', 'Saved', $canSend],
-    ], fn ($t) => $t[4]) as $i => [$key, $icon, $color, $label]): ?>
-    <button class="nav-link section-tab<?= $key === 'inbox' ? ' active' : '' ?>" data-tab="<?= $key ?>" type="button" role="tab" aria-selected="<?= $key === 'inbox' ? 'true' : 'false' ?>">
+        ['sent', 'campaigns.php', 'ri-broadcast-line', 'success', 'Campaigns', $canRead],
+        ['saved', 'templates.php', 'ri-file-list-3-line', 'purple', 'Templates', $canSend],
+    ], fn ($t) => $t[5]) as [$key, $file, $icon, $color, $label]): ?>
+    <a class="nav-link section-tab" href="<?= $messagesCtx['baseUrl'] ?>/<?= $file ?>">
         <span class="section-tab-icon bg-<?= $color ?>"><i class="<?= $icon ?>"></i></span>
         <span class="section-tab-text"><strong><?= $label ?></strong><small data-tab-figure="<?= $key ?>">&nbsp;</small></span>
-    </button>
+    </a>
     <?php endforeach ?>
 </div>
 
