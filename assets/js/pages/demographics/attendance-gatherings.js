@@ -92,6 +92,19 @@ const AttendanceGatherings = (function () {
         if (select.value) document.getElementById("recordsCard").scrollIntoView({ behavior: "smooth", block: "start" });
       },
     });
+    linkMinistries();
+  }
+
+  /** Under each gathering a ministry meets as, a chip to that ministry (Ministries, P4) - outside the card's own button. */
+  function linkMinistries() {
+    if (typeof MinistryLinks === "undefined") return;
+    MinistryLinks.byType().then((byType) => {
+      document.querySelectorAll("#gatheringCards .gathering-card-wrap").forEach((wrap) => {
+        const type = (wrap.querySelector(".gathering-card-view")?.getAttribute("href") || "").match(/[?&]type=(\d+)/)?.[1];
+        const m = type && byType.get(type);
+        if (m && !wrap.querySelector(".mn-link-chip")) wrap.insertAdjacentHTML("beforeend", MinistryLinks.chip(m, `${m.name} · ${m.members} serve`));
+      });
+    });
   }
 
   function renderTable() {

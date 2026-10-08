@@ -102,6 +102,13 @@ const AttendanceGathering = (function () {
       ${UI.pill(label, color)}
       ${g.is_active ? "" : UI.pill("Inactive", "danger")}
       <span>${s.times_ever} ${s.times_ever === 1 ? "meeting" : "meetings"} recorded in all</span>`;
+    // The ministry that meets as this gathering (Ministries, P4).
+    if (g.type_id && typeof MinistryLinks !== "undefined") {
+      MinistryLinks.byType().then((byType) => {
+        const m = byType.get(String(g.type_id));
+        if (m) document.getElementById("gatheringSub").insertAdjacentHTML("beforeend", MinistryLinks.chip(m, `Ministry: ${m.name} · ${m.members} serve - open it`));
+      });
+    }
     const back = document.getElementById("gatheringBack");
     back.href = `${base()}/${isEvent ? "events" : "ministries"}`;
     back.innerHTML = `<i class="ri-arrow-left-line me-1"></i>${isEvent ? "Special Events" : "Ministry Gatherings"}`;

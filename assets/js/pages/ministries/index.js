@@ -34,7 +34,7 @@
       $("minGrid").innerHTML = `<div class="col-12">${MembersUI.empty("ri-team-line", "No ministries running", "Add one, or switch one back on.", CTX.can.manage ? '<button type="button" class="btn btn-primary" data-first><i class="ri-add-line me-1"></i>Add ministry</button>' : "")}</div>`;
       return;
     }
-    $("minGrid").innerHTML = o.items.map((m) => N.card(m, { baseUrl: CTX.baseUrl, months: o.months })).join("");
+    $("minGrid").innerHTML = o.items.map((m) => N.card(m, { baseUrl: CTX.baseUrl, months: o.months, membersTotal: o.members_total })).join("");
     UI.mountSparklines($("minGrid"));
   }
 
@@ -50,7 +50,7 @@
   }
 
   function add() {
-    N.ministryWindow({ onDone: (m) => (window.location.href = `${CTX.baseUrl}/ministry?id=${m.id}`) });
+    N.ministryWindow({ onDone: () => load() });
   }
 
   function init() {

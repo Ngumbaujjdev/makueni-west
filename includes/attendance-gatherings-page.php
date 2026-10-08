@@ -149,6 +149,7 @@ if (!isset($gatheringPage)) {
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js<?= assetVersion('assets/js/pages/demographics/api-handler.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js<?= assetVersion('assets/js/pages/demographics/ui-helpers.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-form-shared.js<?= assetVersion('assets/js/pages/demographics/attendance-form-shared.js') ?>"></script>
+    <?php if ($gatheringPage['slug'] === 'ministry_gathering') { require_once __DIR__ . '/ministries/links.php'; ministryLinkScripts(); } ?>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-gatherings.js<?= assetVersion('assets/js/pages/demographics/attendance-gatherings.js') ?>"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => window.AttendanceGatherings.init());

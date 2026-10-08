@@ -46,9 +46,27 @@
           ${can.manage ? '<button type="button" class="btn btn-outline-primary" data-act="edit"><i class="ri-edit-line me-1"></i>Edit</button>' : can.mine ? '<button type="button" class="btn btn-outline-primary" data-act="meets"><i class="ri-repeat-line me-1"></i>When it meets</button>' : ""}
         </div>
       </div>
+      <div class="pp-facts mn-hero-facts">${facts(m)}</div>
     </div>`;
+    UI.mountSparklines($("mnHero"));
     $("tabMembers").textContent = `${N.num(m.members)} ${m.members === 1 ? "member" : "members"}`;
     $("tabGatherings").textContent = m.gathering_type ? m.gathering_type.name : "Not linked yet";
+  }
+
+  /** The hero's facts: who serves, the church's own monthly figure, its attendance and its last gathering. */
+  function facts(m) {
+    const fact = (icon, color, label, value, sub = "", solid = false) =>
+      `<div class="pp-fact" style="--q: var(--${color}-rgb)"><span class="pp-fact-icon${solid ? " is-solid" : ""}"><i class="${icon}"></i></span><div class="min-w-0"><span>${label}</span><strong>${value}${sub ? `<small>${sub}</small>` : ""}</strong></div></div>`;
+    const avg = N.average(m.attendance_series);
+    const d = m.demographic;
+    return [
+      fact("ri-group-line", "primary", "Serve in it", N.num(m.members), "In our register", true),
+      d
+        ? fact("ri-file-chart-line", "purple", `Monthly report · ${N.esc(d.period)}`, `${N.num(d.value)} ${N.esc(d.label)}`, `<a class="mb-link" href="${CTX.siteUrl}/church/demographics-growth/metric?key=${d.metric}">See the trend<i class="ri-arrow-right-up-line ms-1"></i></a>`)
+        : fact("ri-file-chart-line", "purple", "Monthly report", "-", m.kind === "music" || m.kind === "prayer" ? "Not counted in the report" : "No report yet"),
+      fact("ri-bar-chart-box-line", "success", "Average · 6 months", avg === null ? "-" : N.num(avg), m.gathering_type ? `${N.num(m.gatherings_six_months)} gatherings` : "Not linked to a gathering"),
+      fact("ri-time-line", "pink", "Last gathered", m.last_gathering ? N.day(m.last_gathering) : "-", m.next_meeting ? `Next: ${N.nextLabel(m.next_meeting)}` : ""),
+    ].join("");
   }
 
   // -------------------------------------------------------------- members
@@ -61,7 +79,7 @@
         <div class="d-flex align-items-center gap-2">${M.avatar(p, "sm")}<div class="min-w-0">${name}<div class="mb-sub">${N.esc(p.phone || "No phone")}</div></div></div>
       </td>
       <td data-order="${N.esc((p.area || "~").toLowerCase())}">${p.area ? N.esc(p.area) : '<span class="mb-sub">Not given</span>'}</td>
-      <td>${p.kind === "visitor" ? '<span class="soft-chip soft-purple"><i class="ri-user-heart-line"></i>Visitor</span>' : p.congregation ? M.groupChip(p.congregation) : '<span class="mb-sub">Not set</span>'}</td>
+      <td>${p.kind === "visitor" ? '<span class="soft-chip soft-purple"><i class="ri-user-heart-line"></i>Visitor</span>' : p.congregation ? M.groupChip(p.congregation) : '<span class="mb-sub">Not set</span>'}${p.auto ? ' <span class="soft-chip soft-success" title="Sunday-school children are always in it - change it on their page"><i class="ri-links-line"></i>From the register</span>' : ""}</td>
       <td class="d-none d-md-table-cell">${p.gender ? (p.gender === "male" ? "Male" : "Female") : "-"}</td>
       <td class="d-none d-lg-table-cell" data-order="${p.joined_on || ""}">${M.day(p.joined_on)}</td>
       <td class="text-end">${CTX.can.members ? `<a href="${href}" class="btn btn-sm btn-primary-light">Open<i class="ri-arrow-right-line ms-1"></i></a>` : ""}</td>
@@ -84,7 +102,7 @@
             icon: "ri-user-unfollow-line",
             danger: true,
             go: '<i class="ri-user-unfollow-line me-1"></i>Take them out',
-            body: K.parts([{ icon: "ri-information-line", title: "What happens", body: `<p class="mb-0">They leave ${N.esc(state.m.name)} only - they stay in the register and in any other ministry.</p>` }]),
+            body: K.parts([{ icon: "ri-information-line", title: "What happens", body: `<p class="mb-0">They leave ${N.esc(state.m.name)} only - they stay in the register and in any other ministry.${ids.some((x) => byId.get(x)?.auto) ? " Sunday-school children stay: the register keeps them in - change it on their page." : ""}</p>` }]),
             run: async () => {
               const res = await MinistriesAPI.removeMembers(id, ids);
               if (res.ok) refresh(true);
@@ -177,7 +195,7 @@
       { icon: "ri-trophy-line", label: "Highest", sub: s.peak ? N.day(s.peak.date) : "Not yet", value: s.peak ? N.num(s.peak.total) : "-", color: "purple" },
       { icon: "ri-time-line", label: "Last met", sub: s.last ? "" : "Not recorded yet", value: s.last ? N.day(s.last) : "-", color: "pink" },
     ]);
-    const rows = [...(d.meetings || d.rows || [])].reverse();
+    const rows = [...(d.meetings || d.rows || [])].sort((a, b) => (a.date < b.date ? 1 : -1));
     if (!s.times) {
       $("gaBody").innerHTML = `<div class="card custom-card"><div class="card-body">${M.empty(
         "ri-bar-chart-box-line",
@@ -187,17 +205,16 @@
       )}</div></div>`;
       return;
     }
-    $("gaBody").innerHTML = `<div class="row g-4">
-      <div class="col-xl-7"><div class="card custom-card">
+    $("gaBody").innerHTML = `<div class="row mn-fill-row">
+      <div class="col-xl-7 d-flex"><div class="card custom-card flex-fill">
         <div class="card-header justify-content-between flex-wrap gap-2"><div><div class="card-title">Each month</div><span class="card-subtitle-text">The average each time it met</span></div><a class="btn btn-sm btn-outline-primary" href="${CTX.attendanceUrl}/gathering?type=${state.m.gathering_type.id}"><i class="ri-external-link-line me-1"></i>In Attendance</a></div>
         <div class="card-body"><div id="gaChart" style="min-height:280px"></div></div>
       </div></div>
-      <div class="col-xl-5"><div class="card custom-card">
-        <div class="card-header"><div class="card-title">Each time</div></div>
-        <div class="card-body p-0"><div class="table-responsive"><table class="table text-nowrap mb-0"><thead><tr><th>Date</th><th>Adults</th><th>Youth</th><th>Children</th><th>Total</th></tr></thead><tbody>${
+      <div class="col-xl-5 d-flex"><div class="card custom-card flex-fill">
+        <div class="card-header justify-content-between"><div><div class="card-title">Each time</div><span class="card-subtitle-text">Newest first</span></div><span class="badge bg-primary">${N.num(rows.length)}</span></div>
+        <div class="card-body p-0 mn-fill-body"><div class="table-responsive"><table class="table text-nowrap mb-0"><thead><tr><th>Date</th><th>Adults</th><th>Youth</th><th>Children</th><th>Total</th></tr></thead><tbody>${
           rows.length
             ? rows
-                .slice(0, 24)
                 .map((r) => `<tr><td>${N.day(r.date)}</td><td>${N.num(r.adults_count)}</td><td>${N.num(r.youth_count)}</td><td>${N.num(r.children_male_count + r.children_female_count)}</td><td class="fw-semibold">${N.num(r.total)}</td></tr>`)
                 .join("")
             : `<tr><td colspan="5"><p class="mb-0 p-2 fw-semibold">Nothing recorded in the last twelve months.</p></td></tr>`
