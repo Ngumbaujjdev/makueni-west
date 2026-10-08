@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\BudgetPeriodController;
 use App\Http\Controllers\Api\BudgetTypeController;
 use App\Http\Controllers\Api\Calendar\CalendarController;
 use App\Http\Controllers\Api\Calendar\CciCalendarController;
+use App\Http\Controllers\Api\Chat\ChatController;
 use App\Http\Controllers\Api\DemographicsController;
 use App\Http\Controllers\Api\DemographicsReportController;
 use App\Http\Controllers\Api\Facilities\BookingsController;
@@ -96,10 +97,28 @@ Route::get('places/{territory}/gallery', [SettingsGalleryController::class, 'gal
 Route::get('users/{user}/photo', [ProfilePhotoController::class, 'show'])->whereNumber('user');
 // An equipment photo (P5 round 2), through the signed link EquipmentPhoto::present gives the item's page.
 Route::get('equipment-photos/{photo}/{size?}', [EquipmentController::class, 'photo'])->whereNumber('photo')->whereIn('size', ['thumb'])->middleware('signed')->name('equipment.photo');
+// A chat group's photo is public the same way.
+Route::get('chat/groups/{id}/photo', [ChatController::class, 'photo'])->whereNumber('id');
 
 Route::middleware(['auth:sanctum'])->group(function () {
 
     // Events (and initiatives) of church, region and diocese (docs/specs/events-initiatives-spec.md)
+    // Chat - contacts, one-to-one chats and groups (docs/specs/messages-spec.md, L6)
+    Route::prefix('chat')->group(function () {
+        Route::get('contacts', [ChatController::class, 'contacts']);
+        Route::get('chats', [ChatController::class, 'index']);
+        Route::get('chats/{id}', [ChatController::class, 'show'])->whereNumber('id');
+        Route::get('chats/{id}/messages', [ChatController::class, 'messages'])->whereNumber('id');
+        Route::post('chats/{id}/messages', [ChatController::class, 'send'])->whereNumber('id')->middleware('throttle:60,1');
+        Route::post('chats/{id}/read', [ChatController::class, 'read'])->whereNumber('id');
+        Route::post('direct', [ChatController::class, 'direct']);
+        Route::post('groups', [ChatController::class, 'storeGroup'])->middleware('throttle:20,1');
+        Route::patch('groups/{id}', [ChatController::class, 'updateGroup'])->whereNumber('id');
+        Route::post('groups/{id}/photo', [ChatController::class, 'groupPhoto'])->whereNumber('id');
+        Route::post('groups/{id}/members', [ChatController::class, 'addMembers'])->whereNumber('id');
+        Route::delete('groups/{id}/members/{user}', [ChatController::class, 'removeMember'])->whereNumber(['id', 'user']);
+    });
+
     // Messages (docs/specs/messages-spec.md)
     Route::get('messages/options', [MessagesController::class, 'options']);
     Route::post('messages/preview', [MessagesController::class, 'preview']);

@@ -39184,3 +39184,14 @@ button.cal-side-item:focus-visible {
   .mi-chat-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .mi-chat-chips .soft-chip { flex: none; }
 }
+
+/* ==========================================================================
+   Sparklines (2026-10-08): the shape and its shading only. The template's
+   global ".apexcharts-xaxis line, .apexcharts-grid line" rule paints the
+   lines ApexCharts hides in sparkline mode grey - an x and y axis on every
+   small card. Not on a sparkline.
+   ========================================================================== */
+[data-spark] .apexcharts-xaxis line,
+[data-spark] .apexcharts-yaxis line,
+[data-spark] .apexcharts-grid line,
+[data-spark] .apexcharts-grid-borders line { stroke: transparent !important; }
