@@ -160,6 +160,23 @@ The placeholders' unbuilt sub-pages are switched off.
 - **The branded email** keeps single line breaks inside a paragraph (`nl2br`), so "God bless,⏎{sender}" lands on two lines.
 - **The demo seeder** adds 4 shared diocese templates: Monthly report reminder, Event invitation, Welcome to the church and Prayer request.
 
+### L5c, round 2 (2026-10-08): a real email, a real phone, our logo, templates in a table
+- **The email** (`emails/place-message.blade.php`) uses esoma-server's master layout in our brand:
+  - **Header:** a white row with the lockup, which copies esoma-client's "logo | Academy": the CCI mark, a thin divider, then the place's name over a small line ("CHURCH · MAKUENI WEST DIOCESE"; at the diocese, "CHRISTIAN CHURCH INTERNATIONAL").
+  - **Title band:** dark, with the heading and an optional small pill ("Test", "Your account").
+  - **Body:** the message, a facts box and a teal button.
+  - **Footers:** one on a pale band inside the card, then "Christian Church International · Makueni West Diocese" under it.
+  - **No stripes or border-tops.** It switches to phone sizes below 620px.
+  - **`App\Support\Messaging\EmailBrand::for($place)`** gives the lockup (`logo`, `name` = the display name or the place's name, `sub`, `reply_to`). Every sender passes it: broadcasts, sign-in details, the Settings test and the template preview and test.
+- **The previews look like the real thing:**
+  - **As an SMS:** a phone with a status bar, the Messages header (the sender ID and initials), "Today", the grey incoming bubble, the time and the input bar.
+  - **As an email:** a mail app (subject; sender with our logo, address and "to Stephen Mutua"; time) around the real email. Mobile puts that mail app inside the phone.
+- **Templates are a table** (v1-events' template list):
+  - Columns: Template (icon, name, first line), Channel, From, Length, Updated, and actions (Preview plus a ⋯ menu: Use in a campaign, Make our copy, Open our copy, Edit, Reset, Remove).
+  - The shared filter bar has Channel and From filters.
+  - On a phone, rows stack as label/value pairs.
+  - `initListDataTable` takes `responsive: false` for this table.
+
 ## Acceptance Criteria
 
 ### L5a: backend
