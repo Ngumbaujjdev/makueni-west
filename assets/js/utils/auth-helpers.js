@@ -288,7 +288,17 @@ async function refreshModules(token, currentRole) {
       localStorage.setItem(cacheKey, JSON.stringify(modulesCache));
 
       // Also store as "current modules" for easy access
+      const before = localStorage.getItem("mwd_current_modules");
       localStorage.setItem("mwd_current_modules", JSON.stringify(modulesCache));
+
+      // Tell the page when the menu itself changed (a role gained or lost a
+      // page, e.g. "New event"), so the sub-tab bar redraws now rather than
+      // on the next page load. The sidebar reloads itself after a refresh.
+      let changed = true;
+      try {
+        changed = JSON.stringify(JSON.parse(before || "null")?.module_groups) !== JSON.stringify(module_groups);
+      } catch (e) {}
+      if (changed) window.dispatchEvent(new CustomEvent("mwd:modules-updated"));
 
       const roleInfo = isGlobalAdmin 
         ? 'Global Administrator (ALL modules)' 

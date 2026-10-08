@@ -177,6 +177,22 @@
     applyFilters();
   }
 
+  /** In place of a skeleton when a call fails: what went wrong, and Try again. */
+  function failed(title, message, retry) {
+    const id = `retry${Math.random().toString(36).slice(2, 8)}`;
+    setTimeout(() => document.getElementById(id)?.addEventListener("click", retry), 0);
+    return E.empty("ri-error-warning-line", title, E.esc(message), `<button type="button" class="btn btn-primary" id="${id}"><i class="ri-refresh-line me-1"></i>Try again</button>`);
+  }
+
+  /** The API's live answer decides "+ New" - the session can be older than a role change. */
+  function applyCan(can) {
+    if (!can) return;
+    const changed = CTX.can.manage !== !!can.manage;
+    CTX.can.manage = !!can.manage;
+    document.getElementById("newEventBtn")?.classList.toggle("d-none", !CTX.can.manage);
+    if (changed && !state.items.length && state.scope === "own" && document.querySelector("#eventsGrid .ev-empty")) renderGrid();
+  }
+
   function gridSkeleton() {
     document.getElementById("eventsGrid").innerHTML = Array.from(
       { length: 3 },
@@ -189,22 +205,46 @@
     gridSkeleton();
     const res = await EventsAPI.list({ scope: state.scope, year: state.year });
     if (token !== loadToken) return;
+    const grid = document.getElementById("eventsGrid");
     if (!res.ok) {
-      document.getElementById("eventsGrid").innerHTML = E.empty("ri-error-warning-line", `Couldn't load the ${N.many}`, E.esc(res.message));
+      grid.innerHTML = failed(`Couldn't load the ${N.many}`, res.message, loadList);
       return;
     }
-    state.items = res.data || [];
-    renderGrid();
+    try {
+      state.items = res.data || [];
+      renderGrid();
+    } catch (e) {
+      console.error(e);
+      grid.innerHTML = failed(`Couldn't show the ${N.many}`, "Something on this page went wrong.", loadList);
+    }
   }
 
+  let overviewToken = 0;
   async function loadOverview() {
+    const token = ++overviewToken;
     const res = await EventsAPI.overview(state.year);
+    if (token !== overviewToken) return;
+    const row = document.getElementById("statCardsRow");
+    const chart = document.getElementById("heroChart");
     if (!res.ok) {
-      Toast.error(res.message);
+      row.innerHTML = `<div class="col-12"><div class="card custom-card"><div class="card-body"><div class="row">${failed("Couldn't load the figures", res.message, () => {
+        row.innerHTML = UI.skeletonCards(4);
+        loadOverview();
+      })}</div></div></div></div>`;
+      chart.classList.remove("skel-chart");
+      chart.innerHTML = "";
       return;
     }
     state.overview = res.data;
-    renderOverview(res.data);
+    applyCan(res.data.can);
+    try {
+      renderOverview(res.data);
+    } catch (e) {
+      console.error(e);
+      row.innerHTML = `<div class="col-12"><div class="card custom-card"><div class="card-body"><div class="row">${failed("Couldn't show the figures", "Something on this page went wrong.", loadOverview)}</div></div></div></div>`;
+      chart.classList.remove("skel-chart");
+      chart.innerHTML = "";
+    }
   }
 
   function initTabs() {
