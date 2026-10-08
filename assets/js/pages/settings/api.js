@@ -93,6 +93,15 @@ const SettingsAPI = (function () {
     message: (id) => request("GET", `/settings/messages/${id}`),
     resendMessage: (id) => request("POST", `/settings/messages/${id}/resend`),
     maintenance: (tool) => request("POST", `/settings/maintenance/${encodeURIComponent(tool)}`),
+    // Communication's templates and campaigns (the Messages API, docs/specs/messages-spec.md)
+    templates: () => request("GET", "/messages/templates"),
+    saveTemplate: (id, body) => request(id ? "PUT" : "POST", id ? `/messages/templates/${id}` : "/messages/templates", body),
+    deleteTemplate: (id) => request("DELETE", `/messages/templates/${id}`),
+    copyTemplate: (id) => request("POST", `/messages/templates/${id}/copy`),
+    resetTemplate: (id) => request("POST", `/messages/templates/${id}/reset`),
+    previewTemplate: (subject, body) => request("POST", "/messages/templates/preview", { subject, body }),
+    testTemplate: (channel, subject, body) => request("POST", "/messages/templates/test", { channel, subject, body }),
+    campaigns: () => request("GET", "/messages/sent"),
     audit: () => request("GET", "/settings/audit"),
     access: () => request("GET", "/settings/access"),
   };

@@ -16,7 +16,7 @@
             </td></tr>
             <tr><td style="padding:8px 28px 4px;font-size:15px;line-height:1.6;">
                 @foreach ($lines as $line)
-                    <p style="margin:0 0 12px;">{{ $line }}</p>
+                    <p style="margin:0 0 12px;">{!! nl2br(e($line), false) !!}</p>
                 @endforeach
             </td></tr>
             @if (! empty($details))

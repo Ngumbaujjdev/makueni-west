@@ -342,7 +342,7 @@ const SettingsFields = (function () {
       };
       // The rail lists only the cards on show.
       let linksReady = false;
-      const links = () => [
+      const links = () => extra?.onlyLinks ? extra.links : [
         // Cards a section adds itself (extra.links, e.g. Messages) are listed once, at their own place.
         ...[...root.querySelectorAll(".card[id^='card-']")].filter((el) => !el.hidden && el.id !== "card-test" && el.id !== "card-tools" && !(extra?.links || []).some((l) => l.id === el.id)).map((el) => ({ id: el.id, label: el.querySelector(".card-title")?.textContent.trim() || "" })),
         ...(payload.section?.test ? [{ id: "card-test", label: "Check it works" }] : []),
