@@ -44,7 +44,7 @@ class ChurchLifeDemoSeeder extends Seeder
 
     private const TZ = 'Africa/Nairobi';
 
-    private const TEMPLATES = ['Sunday reminder', 'Meeting reminder', 'Report reminder'];
+    private const TEMPLATES = ['Sunday reminder', 'Meeting reminder', 'Report reminder', 'Monthly report reminder', 'Event invitation', 'Welcome to the church', 'Prayer request'];
 
     private const NOTIFICATION_TITLES = [
         'You are invited: Diocese Youth Convention 2026',
@@ -547,6 +547,16 @@ class ChurchLifeDemoSeeder extends Seeder
             ['Report reminder', 'app', 'Your monthly report', 'Dear {name}, a reminder that this month\'s report is due on the 5th. Thank you - {sender}'],
         ] as [$name, $channel, $subject, $body]) {
             MessageTemplate::create(['territory_id' => $church->id, 'name' => $name, 'channel' => $channel, 'subject' => $subject, 'body' => $body]);
+        }
+
+        // The diocese's templates, shared with every church and region - each copies them, its name going in for {sender}.
+        foreach ([
+            ['Monthly report reminder', 'both', 'Your monthly report is due', "Dear {name},\n\nA reminder that this month's report for {place} is due on the 5th. Open Monthly reports to send it - it takes ten minutes.\n\nThank you for your faithful work.\n{sender}"],
+            ['Event invitation', 'email', 'You are invited', "Dear {name},\n\nYou are warmly invited to [event] on [date] at [venue]. Come with your family and a friend.\n\nPlease reply to let us know you are coming.\n\nGod bless,\n{sender}"],
+            ['Welcome to the church', 'sms', null, 'Dear {name}, welcome to {sender}! We are glad you are part of our family. Sunday service is at 9am - see you there.'],
+            ['Prayer request', 'sms', null, 'Dear {name}, {sender} is standing with you in prayer this week. Reply with anything you would like us to pray for.'],
+        ] as [$name, $channel, $subject, $body]) {
+            MessageTemplate::create(['territory_id' => $diocese->id, 'name' => $name, 'channel' => $channel, 'subject' => $subject, 'body' => $body, 'shared_below' => true]);
         }
     }
 

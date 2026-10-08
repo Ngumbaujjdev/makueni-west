@@ -7,7 +7,6 @@ use App\Jobs\SendMessageBatch;
 use App\Models\MessageBatch;
 use App\Models\MessageRecipient;
 use App\Models\MessageReply;
-use App\Models\MessageTemplate;
 use App\Models\Territory;
 use App\Models\UserTerritoryAssignment;
 use App\Notifications\PlaceNotification;
@@ -26,7 +25,7 @@ use Illuminate\Validation\ValidationException;
 /**
  * Messages (docs/specs/messages-spec.md): send down to our people and the
  * places below - by SMS, email or in the app - schedule, retry; the Inbox
- * with replies; saved messages.
+ * with replies. Templates live in TemplatesController.
  */
 class MessagesController extends Controller
 {
@@ -78,7 +77,8 @@ class MessagesController extends Controller
             'own_roles' => $rolesAt([(int) $place->id]),
             'below' => $below ?: null,
             'channels' => MessageBatch::CHANNELS,
-            'templates' => MessageTemplate::where('territory_id', $place->id)->orderBy('name')->get(['id', 'name', 'channel', 'subject', 'body']),
+            // Ours, and the shared ones from above we haven't made our own copy of.
+            'templates' => TemplatesController::forComposer($place),
         ]);
     }
 
@@ -276,51 +276,6 @@ class MessagesController extends Controller
         }
 
         return $this->ok($this->inboxItem($r->fresh(['batch.territory', 'batch.creator', 'batch.replies' => fn ($q) => $q->where('user_id', $request->user()->id)])), 'Reply sent.', 201);
-    }
-
-    // ------------------------------------------------------------------ saved messages
-
-    public function templates(Request $request): JsonResponse
-    {
-        $place = $this->place($request, 'send');
-
-        return $place instanceof JsonResponse ? $place : $this->ok(MessageTemplate::where('territory_id', $place->id)->orderBy('name')->get());
-    }
-
-    public function saveTemplate(Request $request, ?int $id = null): JsonResponse
-    {
-        $place = $this->place($request, 'send');
-        if ($place instanceof JsonResponse) {
-            return $place;
-        }
-        $template = $id ? MessageTemplate::where('territory_id', $place->id)->find($id) : new MessageTemplate(['territory_id' => $place->id, 'created_by' => $request->user()->id]);
-        if (! $template) {
-            return $this->notFound();
-        }
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:80'],
-            'channel' => ['required', Rule::in(array_keys(MessageBatch::CHANNELS))],
-            'subject' => ['nullable', 'string', 'max:120'],
-            'body' => ['required', 'string', 'max:10000'],
-        ], ['name.required' => 'Give it a name.', 'body.required' => 'Write the message.']);
-        $template->fill($data)->save();
-
-        return $this->ok($template->fresh(), $id ? 'Saved.' : 'Saved for later.', $id ? 200 : 201);
-    }
-
-    public function deleteTemplate(Request $request, int $id): JsonResponse
-    {
-        $place = $this->place($request, 'send');
-        if ($place instanceof JsonResponse) {
-            return $place;
-        }
-        $template = MessageTemplate::where('territory_id', $place->id)->find($id);
-        if (! $template) {
-            return $this->notFound();
-        }
-        $template->delete();
-
-        return $this->ok(['id' => $id], 'Removed.');
     }
 
     // ------------------------------------------------------------------ helpers
