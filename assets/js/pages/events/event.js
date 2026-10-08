@@ -59,15 +59,37 @@
             </div>
             <div class="ev-card-meta">
               <span class="soft-chip soft-${color}"><i class="${E.typeIcon(ev.type)}"></i>${E.esc(ev.type_label)}</span>
-              ${INIT ? `<span><i class="ri-repeat-line"></i>${E.esc(E.meets(ev))}</span><span><i class="ri-calendar-line"></i>${E.shortDate(new Date(ev.starts_at))} - ${E.longDate(new Date(ev.ends_at))}</span>` : `<span><i class="ri-time-line"></i>${E.when(ev.starts_at, ev.ends_at)} · ${E.relative(ev.starts_at)}</span>`}
+              ${INIT ? `<span><i class="ri-repeat-line"></i>${E.esc(E.meets(ev))}</span><span><i class="ri-calendar-line"></i>${E.shortDate(new Date(ev.starts_at))} - ${E.longDate(new Date(ev.ends_at))}</span>` : `<span><i class="ri-time-line"></i>${E.when(ev.starts_at, ev.ends_at)}</span>`}
               ${ev.venue ? `<span><i class="ri-map-pin-line"></i>${E.esc(ev.venue)}</span>` : ""}
               ${by}
             </div>
+            <div class="mt-2">${countdown()}</div>
           </div>
           <div class="ev-hero-actions">${actions}</div>
         </div>
+        <div class="ev-strip" id="evStrip"></div>
         ${heroNote()}
       </div>`;
+  }
+
+  /** Where it stands in time, at a glance: "In 48 days", "Happening now", "Done". */
+  function countdown() {
+    const ev = state.ev;
+    const now = new Date();
+    const start = new Date(ev.starts_at);
+    const end = new Date(ev.ends_at);
+    if (ev.status === "cancelled") return `<span class="soft-chip soft-danger"><i class="ri-close-circle-line"></i>Cancelled</span>`;
+    if (now < start) return `<span class="soft-chip soft-primary ev-countdown"><i class="ri-hourglass-line"></i>${E.relative(ev.starts_at)}${INIT ? " until it starts" : ""}</span>`;
+    if (now <= end) return `<span class="soft-chip soft-success ev-countdown"><i class="ri-live-line"></i>${INIT ? "Running now" : "Happening now"}</span>`;
+    return `<span class="soft-chip soft-primary ev-countdown"><i class="ri-checkbox-circle-line"></i>${ev.status === "completed" ? "Done" : "Ended"} · ${E.longDate(end)}</span>`;
+  }
+
+  /** The hero's strip of four figures (in place of a separate row of cards). */
+  function strip(items) {
+    const el = $("evStrip");
+    if (!el) return;
+    el.innerHTML = items.map((c) => `<div class="ev-strip-item"><span class="ev-strip-icon"><i class="${c.icon}"></i></span><div class="min-w-0"><div class="ev-strip-value">${c.value}</div><div class="ev-strip-label">${c.label}</div>${c.sub ? `<div class="ev-strip-sub">${c.sub}</div>` : ""}</div></div>`).join("");
+    el.hidden = !items.length;
   }
 
   /** "Invite by message": the composer, filled in with the places it's open to (never sideways, so not for a church). */
@@ -97,11 +119,7 @@
   // ================================================================ figures
   function renderStats() {
     const ev = state.ev;
-    const row = $("statCardsRow");
-    if (!ev.totals) {
-      row.innerHTML = "";
-      return;
-    }
+    if (!ev.totals) return strip([]);
     const t = ev.totals;
     const s = ev.sessions || {};
     const cards = INIT ? [
@@ -117,17 +135,17 @@
       { icon: "ri-user-follow-line", label: "People who came", value: t.came == null ? "-" : E.num(t.came), color: "success", sub: t.came == null ? "Places say once it has happened" : t.expected ? `${Math.round((t.came / t.expected) * 100)}% of those expected` : "" },
       { icon: "ri-money-dollar-circle-line", label: "Fees paid", value: E.money(t.fee_paid), color: "secondary", sub: t.fee_due ? `of ${E.money(t.fee_due)} due` : ev.fee_per_person ? "" : "Free to attend" },
     ];
-    row.innerHTML = cards.map((c) => `<div class="col-xl-3 col-lg-6 col-md-6">${UI.renderSparkCard(c)}</div>`).join("");
+    strip(cards);
   }
 
   /** An initiative shows its sessions to whoever can see it - even an invited place. */
   function renderInvitedStats() {
     const s = state.ev.sessions;
     if (!INIT || !s || state.ev.totals) return;
-    $("statCardsRow").innerHTML = [
-      { icon: "ri-calendar-check-line", label: "Sessions", value: `${E.num(s.held)} of ${E.num(s.total)}`, color: "primary", sub: "Held so far" },
-      { icon: "ri-calendar-event-line", label: "Next session", value: s.next ? E.shortDate(new Date(`${s.next}T12:00:00`)) : "-", color: "purple", sub: E.meets(state.ev) },
-    ].map((c) => `<div class="col-xl-3 col-lg-6 col-md-6">${UI.renderSparkCard(c)}</div>`).join("");
+    strip([
+      { icon: "ri-calendar-check-line", label: "Sessions", value: `${E.num(s.held)} of ${E.num(s.total)}`, sub: "Held so far" },
+      { icon: "ri-calendar-event-line", label: "Next session", value: s.next ? E.shortDate(new Date(`${s.next}T12:00:00`)) : "-", sub: E.meets(state.ev) },
+    ]);
   }
 
   // ================================================================ tabs
@@ -186,40 +204,60 @@
   function renderDetails() {
     const ev = state.ev;
     const agenda = (ev.agenda || "").split(/\n+/).map((l) => l.trim()).filter(Boolean);
+    const people = (ev.speakers || "").split(/,|;| and /).map((x) => x.trim()).filter(Boolean);
+    const initials = (n) => n.replace(/^(Rev|Pst|Bishop|Dr|Hon|Mama|Evangelist)\.?\s+/i, "").split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0].toUpperCase()).join("") || "?";
+    const editHint = (what) => (ev.can?.edit ? `<a class="fw-semibold" href="${CTX.baseUrl}/new?id=${ev.id}">${what}</a>` : "");
     pane("details").innerHTML = `
+      ${ev.report_back ? `<div class="card custom-card ev-report"><div class="card-body"><div class="ev-report-head"><span class="avatar avatar-md avatar-rounded bg-primary text-white"><i class="ri-double-quotes-l"></i></span><div><strong>How it went</strong><small>The report back</small></div></div><p class="ev-report-text">${E.esc(ev.report_back)}</p></div></div>` : ""}
       <div class="card custom-card">
         <div class="card-header"><div class="card-title">About the ${N.one}</div></div>
         <div class="card-body">
-          ${ev.description ? `<p class="ev-text">${E.esc(ev.description)}</p>` : `<p class="mb-0 fw-semibold">No description yet.</p>`}
-          ${agenda.length ? `<h6 class="ev-sub mt-4">${INIT ? "What it covers" : "Programme"}</h6><ol class="ev-agenda">${agenda.map((l) => `<li>${E.esc(l)}</li>`).join("")}</ol>` : ""}
-          ${ev.speakers || ev.coordinator ? `<div class="row g-3 mt-2">
-            ${ev.speakers ? `<div class="col-sm-6"><div class="ev-person"><span class="avatar avatar-md avatar-rounded bg-purple text-white"><i class="ri-mic-line"></i></span><div><small>Speakers</small><strong>${E.esc(ev.speakers)}</strong></div></div></div>` : ""}
-            ${ev.coordinator ? `<div class="col-sm-6"><div class="ev-person"><span class="avatar avatar-md avatar-rounded bg-success text-white"><i class="ri-user-star-line"></i></span><div><small>${INIT ? "Facilitator" : "Coordinator"}</small><strong>${E.esc(ev.coordinator)}</strong></div></div></div>` : ""}
-          </div>` : ""}
+          ${ev.description ? `<div class="ev-about">${E.esc(ev.description)}</div>` : `<div class="ev-about is-empty">No description yet. ${editHint("Add one")}</div>`}
+          ${
+            people.length || ev.coordinator
+              ? `<div class="ev-people">
+              ${people.map((n) => `<div class="ev-chip-person"><span class="avatar avatar-sm avatar-rounded bg-primary text-white">${E.esc(initials(n))}</span><div><strong>${E.esc(n)}</strong><small>Speaker</small></div></div>`).join("")}
+              ${ev.coordinator ? `<div class="ev-chip-person"><span class="avatar avatar-sm avatar-rounded bg-primary text-white"><i class="ri-user-star-line"></i></span><div><strong>${E.esc(ev.coordinator)}</strong><small>${INIT ? "Facilitator" : "Coordinator"}</small></div></div>` : ""}
+            </div>`
+              : ""
+          }
+        </div>
+      </div>
+      <div class="card custom-card">
+        <div class="card-header justify-content-between"><div class="card-title">${INIT ? "What it covers" : "Programme"}</div>${agenda.length ? `<span class="soft-chip soft-primary">${agenda.length} ${agenda.length === 1 ? "item" : "items"}</span>` : ""}</div>
+        <div class="card-body">
+          ${
+            agenda.length
+              ? `<ol class="ev-timeline">${agenda
+                  .map((l) => {
+                    const m = l.match(/^([^:]{1,24}):\s*(.+)$/);
+                    return `<li><span class="ev-timeline-dot"></span><div>${m ? `<span class="ev-timeline-when">${E.esc(m[1])}</span><span class="ev-timeline-what">${E.esc(m[2])}</span>` : `<span class="ev-timeline-what">${E.esc(l)}</span>`}</div></li>`;
+                  })
+                  .join("")}</ol>`
+              : `<div class="ev-about is-empty mb-0">No ${INIT ? "topics" : "programme"} yet. ${editHint(`Add ${INIT ? "topics" : "a programme"} in Edit`)}</div>`
+          }
         </div>
       </div>`;
   }
 
+  /** The side's facts as tinted fact boxes (one colour), not a list repeating the header. */
   function renderFacts() {
     const ev = state.ev;
     const invitees = ev.invitees || [];
+    const fact = (icon, label, value, extra = "") => `<div class="profile-fact profile-tint-primary"><span class="avatar avatar-sm avatar-rounded bg-primary text-white flex-shrink-0"><i class="${icon}"></i></span><div class="min-w-0 flex-fill"><div class="profile-fact-label">${label}</div><div class="profile-fact-value">${value}</div>${extra}</div></div>`;
+    const plan = ev.relation === "own" && (ev.planned_income || ev.planned_spend);
+    const planBar = plan && ev.planned_income ? `<div class="progress mt-2" style="height:.4rem" role="progressbar" aria-label="Expenses against income"><div class="progress-bar bg-primary" style="width:${Math.min(100, Math.round((ev.planned_spend / ev.planned_income) * 100))}%"></div></div>` : "";
+    const s = ev.sessions || {};
     return `
+      ${INIT && s.next ? `<div class="card custom-card ev-next"><div class="card-body"><div class="ev-next-label">Next session</div><div class="ev-next-date">${E.longDate(new Date(`${s.next}T12:00:00`))}</div><div class="ev-next-sub"><i class="ri-repeat-line"></i>${E.esc(E.meets(ev))}${ev.venue ? ` · ${E.esc(ev.venue)}` : ""}</div></div></div>` : ""}
       <div class="card custom-card">
         <div class="card-header"><div class="card-title">At a glance</div></div>
         <div class="card-body">
-          <ul class="ev-facts">
-            ${INIT
-              ? `<li><i class="ri-repeat-line"></i><span>${E.esc(E.meets(ev))}</span></li>
-                 <li><i class="ri-calendar-line"></i><span>${E.longDate(new Date(ev.starts_at))} - ${E.longDate(new Date(ev.ends_at))} · ${E.num(ev.sessions?.total || 0)} sessions</span></li>
-                 ${ev.certificate ? `<li><i class="ri-award-line"></i><span>A certificate for those who finish</span></li>` : ""}`
-              : `<li><i class="ri-time-line"></i><span>${E.when(ev.starts_at, ev.ends_at)}</span></li>`}
-            <li><i class="ri-map-pin-line"></i><span>${E.esc(ev.venue) || "Venue not set yet"}</span></li>
-            <li><i class="ri-user-heart-line"></i><span>For ${E.esc((ev.audience || "everyone").replace(/^\w/, (c) => c.toUpperCase()))}${ev.capacity ? ` · ${INIT ? "places" : "room"} for ${E.num(ev.capacity)}` : ""}</span></li>
-            <li><i class="ri-community-line"></i><span>${E.esc(ev.open_to_label)}</span></li>
-            <li><i class="ri-user-add-line"></i><span>${ev.registration ? `${INIT ? "Join" : "Register"}${ev.register_by ? ` by ${E.longDate(new Date(ev.register_by))}` : INIT ? " until the last day" : ""} · ${ev.fee_per_person ? `${E.money(ev.fee_per_person)} a person` : "free"}` : INIT ? "Nothing to join - it's for our own place" : "No registration needed"}</span></li>
-            ${ev.relation === "own" && (ev.planned_income || ev.planned_spend) ? `<li><i class="ri-hand-coin-line"></i><span>Plan: income ${E.money(ev.planned_income)}, expenses ${E.money(ev.planned_spend)}</span></li>` : ""}
-          </ul>
-          ${invitees.length ? `<h6 class="ev-sub mt-3">Open to</h6><div class="d-flex flex-wrap gap-1">${invitees.map((p) => `<span class="soft-chip soft-${p.type === "region" ? "purple" : "success"}"><i class="${p.type === "region" ? "ri-map-2-line" : "ri-home-heart-line"}"></i>${E.esc(p.name)}</span>`).join("")}</div>` : ""}
+          ${fact("ri-user-heart-line", "Who it's for", `${E.esc((ev.audience || "everyone").replace(/^\w/, (c) => c.toUpperCase()))}${ev.capacity ? ` · ${INIT ? "places" : "room"} for ${E.num(ev.capacity)}` : ""}`)}
+          ${fact("ri-community-line", "Open to", E.esc(ev.open_to_label), invitees.length ? `<div class="d-flex flex-wrap gap-1 mt-2">${invitees.map((p) => `<span class="soft-chip soft-primary"><i class="${p.type === "region" ? "ri-map-2-line" : "ri-home-heart-line"}"></i>${E.esc(p.name)}</span>`).join("")}</div>` : "")}
+          ${fact("ri-user-add-line", INIT ? "Joining" : "Registration", ev.registration ? `${INIT ? "Join" : "Register"}${ev.register_by ? ` by ${E.longDate(new Date(ev.register_by))}` : INIT ? " until the last day" : ""} · ${ev.fee_per_person ? `${E.money(ev.fee_per_person)} a person` : "free"}` : INIT ? "Nothing to join - it's for our own place" : "No registration needed")}
+          ${INIT ? fact("ri-calendar-line", "Runs", `${E.longDate(new Date(ev.starts_at))} - ${E.longDate(new Date(ev.ends_at))} · ${E.num(s.total || 0)} sessions${ev.certificate ? " · certificate" : ""}`) : ""}
+          ${plan ? fact("ri-hand-coin-line", "Money plan", `Income ${E.money(ev.planned_income)} · expenses ${E.money(ev.planned_spend)}`, planBar) : ""}
         </div>
       </div>`;
   }

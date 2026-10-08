@@ -213,6 +213,18 @@ The form follows v1-events' event wizard, in our one colour:
 - **The list:** "Plan an event" / "Start an initiative" is the first tile of our own list, when the role can add one.
 - **Demo data:** `ChurchLifeDemoSeeder` adds conferences, a leadership meeting, a worship night, a revival week, a wedding and a harambee. The finished ones have attendance, fees, ratings and a report-back. There are no money entries, because the demo leaves budgets alone.
 
+### The event / initiative page, round 3 (2026-10-08)
+- **The hero** carries a countdown ("In 17 days" / "Happening now" / "Done · date") and a strip of four figures inside it, in place of a separate row of cards:
+  - events: places, expected, came, fees;
+  - initiatives: places, sessions, average, people.
+- **The Details tab** shows:
+  - the report-back as a quote, once there is one;
+  - "About" as readable text;
+  - speakers and the coordinator as people chips;
+  - the programme as a timeline. A "Thu:" style prefix becomes the time pill.
+- **The side** shows "At a glance" as tinted fact boxes in one colour, the money plan with a small bar, and for an initiative a solid "Next session" card.
+- **Empty fields** say what to do ("Add a programme in Edit").
+
 ## Initiatives (L2)
 An initiative is an `activities` row with `kind = initiative`. It uses the same visibility, open-to rules, registrations, money and history as an event; what differs is below.
 

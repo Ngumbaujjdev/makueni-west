@@ -68,8 +68,23 @@
           </div>
           <div class="ev-hero-actions">${actions}</div>
         </div>
+        ${stepper()}
         ${!r.open ? `<div class="alert alert-primary d-flex gap-2 mt-3 mb-0"><i class="ri-time-line fs-16"></i><span>${R.esc(r.label.split(" ")[0])} hasn't started yet - you can write ahead, and send once it has.</span></div>` : ""}
       </div>`;
+  }
+
+  /** Where the report is: Started -> Sent -> Seen, with the dates (replaces the "Where it is" card). */
+  function stepper() {
+    if (!r.id && r.status !== "draft") return "";
+    const steps = [
+      { label: "Started", done: true, when: r.created_at ? R.longDate(r.created_at) : "" },
+      { label: r.reports_to ? `Sent to ${r.reports_to.name}` : "Sent", done: !!r.sent_at, when: r.sent_at ? `${R.longDate(r.sent_at)}${r.on_time === false ? " · late" : ""}` : `Due ${R.longDate(r.due_on)}` },
+      { label: "Seen", done: !!r.seen_at, when: r.seen_at ? `${R.longDate(r.seen_at)}${r.seen_by ? ` · ${r.seen_by}` : ""}` : r.sent_at ? "Waiting to be read" : "" },
+    ];
+    const current = steps.findIndex((x) => !x.done);
+    return `<ol class="mr-stepper">${steps
+      .map((x, i) => `<li class="${x.done ? "is-done" : i === current ? "is-now" : ""}"><span class="mr-stepper-dot">${x.done ? '<i class="ri-check-line"></i>' : i + 1}</span><div><strong>${R.esc(x.label)}</strong>${x.when ? `<small>${R.esc(x.when)}</small>` : ""}</div></li>`)
+      .join("")}</ol>`;
   }
 
   // ================================================================ the figures
@@ -118,6 +133,25 @@
     }
 
     return blocks.join("");
+  }
+
+  /** What happened, for reading: a timeline with date pills and a count chip. */
+  function happenedTimeline(f) {
+    const ev = f.events || { ours: [], took_part: [] };
+    const items = [
+      ...ev.ours.map((e) => ({ date: e.date, title: e.title, sub: `Our ${R.esc(e.type).toLowerCase()}`, n: e.came != null ? `${R.num(e.came)} came` : e.expected ? `${R.num(e.expected)} expected` : "" })),
+      ...ev.took_part.map((e) => ({ date: e.date, title: e.title, sub: `With ${R.esc(e.organiser)}`, n: e.came != null ? `${R.num(e.came)} of ours came` : `${R.num(e.expected)} of ours` })),
+    ].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    const inits = (f.initiatives || []).map((i) => ({ date: null, title: i.title, sub: `${i.sessions} ${i.sessions === 1 ? "session" : "sessions"} held`, n: `${R.num(i.attendance)} attended` }));
+    const all = [...items, ...inits];
+    const extra = r.pastoral_visits != null ? `<div class="profile-fact profile-tint-primary mt-3"><span class="avatar avatar-sm avatar-rounded bg-primary text-white"><i class="ri-home-smile-line"></i></span><div class="flex-fill"><div class="profile-fact-label">Pastoral visits</div><div class="profile-fact-value">${R.num(r.pastoral_visits)}</div></div></div>` : "";
+    return (
+      (all.length
+        ? `<ol class="ev-timeline">${all.map((x) => `<li><span class="ev-timeline-dot"></span><div class="flex-fill">${x.date ? `<span class="ev-timeline-when">${R.shortDate(x.date)}</span>` : `<span class="ev-timeline-when">Sessions</span>`}<span class="ev-timeline-what fw-semibold">${R.esc(x.title)}</span><div class="mr-tl-sub">${x.sub}${x.n ? ` <span class="soft-chip soft-primary ms-1">${x.n}</span>` : ""}</div></div></li>`).join("")}</ol>`
+        : `<p class="fw-semibold mb-0">No events or initiative sessions this month.</p>`) +
+      extra +
+      (r.outreach ? `<div class="mr-quote mt-3"><div class="mr-quote-head"><i class="ri-road-map-line"></i>Outreach</div><p>${R.esc(r.outreach)}</p></div>` : "")
+    );
   }
 
   function happened(f, { editable = false } = {}) {
@@ -269,10 +303,10 @@
     const words = Object.entries(WORDS).filter(([k]) => r.words[k]);
     $("readMain").innerHTML = `
       <div class="card custom-card"><div class="card-header"><div class="card-title">The figures</div>${r.figures_live ? `<span class="soft-chip soft-success ms-auto">Live - not sent yet</span>` : `<span class="soft-chip soft-primary ms-auto">As sent</span>`}</div><div class="card-body">${figureTiles(r.figures, { compact: r.relation !== "own" })}</div></div>
-      <div class="card custom-card"><div class="card-header"><div class="card-title">What happened</div></div><div class="card-body">${happened(r.figures)}</div></div>
+      <div class="card custom-card"><div class="card-header"><div class="card-title">What happened</div></div><div class="card-body">${happenedTimeline(r.figures)}</div></div>
       <div class="card custom-card"><div class="card-header"><div class="card-title">In the pastor's words</div></div><div class="card-body">${
         words.length
-          ? `<div class="row g-3">${words.map(([k, [label, , icon, color]]) => `<div class="col-md-6"><div class="mr-word"><span class="avatar avatar-sm avatar-rounded bg-${color} ${R.textOn(color)}"><i class="${icon}"></i></span><div><h6>${label}</h6><p class="ev-text mb-0">${R.esc(r.words[k])}</p></div></div></div>`).join("")}</div>`
+          ? `<div class="row g-3">${words.map(([k, [label, , icon]]) => `<div class="col-md-6"><div class="mr-quote h-100"><div class="mr-quote-head"><i class="${icon}"></i>${label}</div><p>${R.esc(r.words[k])}</p></div></div>`).join("")}</div>`
           : `<p class="fw-semibold mb-0">Nothing was written.</p>`
       }</div></div>
       ${r.attachments.length ? `<div class="card custom-card"><div class="card-header"><div class="card-title">Photos and files</div></div><div class="card-body"><div class="mr-gallery" id="gallery">${r.attachments.map((a) => `<button type="button" class="mr-thumb" data-file="${a.id}" data-image="${a.is_image ? 1 : 0}" title="${R.esc(a.name)}">${a.is_image ? `<span class="skel" style="display:block;height:100%"></span>` : `<i class="ri-file-pdf-line"></i><small>${R.esc(a.name)}</small>`}</button>`).join("")}</div></div></div>` : ""}`;
@@ -293,27 +327,18 @@
 
   function renderThread() {
     const comments = r.thread || [];
+    const initial = (n) => (n || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0].toUpperCase()).join("");
     $("readSide").innerHTML = `
-      <div class="card custom-card">
-        <div class="card-header justify-content-between"><div class="card-title">Comments</div><span class="soft-chip soft-purple">${comments.length}</span></div>
+      <div class="card custom-card mr-comments">
+        <div class="card-header justify-content-between"><div class="card-title">Comments</div><span class="soft-chip soft-primary">${comments.length}</span></div>
         <div class="card-body">
           ${comments.length
-            ? `<ul class="mr-thread">${comments.map((c) => `<li class="${c.from_above ? "is-above" : "is-ours"}"><span class="avatar avatar-sm avatar-rounded bg-${c.from_above ? "purple" : "success"} text-white">${R.esc((c.who || "?").charAt(0))}</span><div><strong>${R.esc(c.who)}</strong><small>${R.esc(c.place || "")} · ${new Date(c.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</small><p class="mb-0">${R.esc(c.body)}</p></div></li>`).join("")}</ul>`
+            ? `<ul class="mi-thread">${comments.map((c) => `<li class="mi-thread-item${c.from_above ? "" : " is-mine"}"><span class="avatar avatar-sm avatar-rounded bg-primary text-white">${R.esc(initial(c.who))}</span><div class="mi-thread-body"><div class="mi-thread-meta"><strong>${R.esc(c.who)}</strong><span>${R.esc(c.place || "")}</span><span>${new Date(c.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</span></div><div class="mi-thread-text"><p>${R.esc(c.body)}</p></div></div></li>`).join("")}</ul>`
             : `<p class="fw-semibold mb-0">${r.relation === "own" ? "No comments yet. Those above can comment once it's sent." : "No comments yet."}</p>`}
-          ${r.can.comment
-            ? `<div class="mt-3"><label class="form-label" for="commentBody">${r.relation === "own" ? "Reply" : "Comment"}</label><textarea class="form-control" id="commentBody" rows="3" maxlength="2000" placeholder="${r.relation === "own" ? "Answer a question, add something" : "Encourage, ask, follow up"}"></textarea><button class="btn btn-primary w-100 mt-2" id="commentBtn"><i class="ri-chat-3-line me-1"></i>Send comment</button></div>`
-            : ""}
         </div>
-      </div>
-      <div class="card custom-card">
-        <div class="card-header"><div class="card-title">Where it is</div></div>
-        <div class="card-body">
-          <ul class="ev-history">
-            ${r.seen_at ? `<li><span class="ev-history-dot bg-purple"></span><div><strong>Seen by ${R.esc(r.seen_by || "the place above")}</strong><small>${R.longDate(r.seen_at)}</small></div></li>` : ""}
-            ${r.sent_at ? `<li><span class="ev-history-dot bg-success"></span><div><strong>Sent${r.reports_to ? ` to ${R.esc(r.reports_to.name)}` : ""}${r.sent_by ? ` by ${R.esc(r.sent_by)}` : ""}</strong><small>${R.longDate(r.sent_at)}${r.on_time === false ? " · after the due day" : ""}</small></div></li>` : ""}
-            <li><span class="ev-history-dot bg-primary"></span><div><strong>Due</strong><small>${R.longDate(r.due_on)}</small></div></li>
-          </ul>
-        </div>
+        ${r.can.comment
+          ? `<div class="mi-reply"><textarea class="form-control" id="commentBody" rows="3" maxlength="2000" aria-label="${r.relation === "own" ? "Reply" : "Comment"}" placeholder="${r.relation === "own" ? "Answer a question, add something..." : "Encourage, ask, follow up..."}"></textarea><div class="mi-reply-foot justify-content-end"><button class="btn btn-primary" id="commentBtn"><i class="ri-chat-3-line me-1"></i>Send comment</button></div></div>`
+          : ""}
       </div>`;
     $("commentBtn")?.addEventListener("click", async () => {
       const text = $("commentBody").value.trim();
