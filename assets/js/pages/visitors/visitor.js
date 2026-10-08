@@ -248,18 +248,27 @@
       title: "Log a follow-up",
       subtitle: state.p.name,
       icon: "ri-phone-line",
-      color: "primary",
       size: "modal-lg",
-      body: `<div class="row g-3">
-        <div class="col-12"><label class="form-label">How did you follow up?</label><div class="ec-choices" role="radiogroup" aria-label="How">${Object.entries(V.TYPES).map(([k, t], i) => type(k, t, i === 0)).join("")}</div></div>
-        <div class="col-md-6"><label class="form-label" for="fuOutcome">How did it go?</label><select class="form-select" id="fuOutcome">${Object.entries(V.OUTCOMES).filter(([k]) => k !== "sent").map(([k, o]) => `<option value="${k}">${o.label}</option>`).join("")}</select></div>
-        <div class="col-md-6"><label class="form-label" for="fuOn">When</label><input type="date" class="form-control" id="fuOn" value="${V.todayIso()}" max="${V.todayIso()}"></div>
-        <div class="col-12"><label class="form-label" for="fuNote">Note <span class="fw-normal">(optional - only your church's leaders see it)</span></label><textarea class="form-control" id="fuNote" rows="3" maxlength="2000" placeholder="e.g. Asked about the youth group; will come with her sister"></textarea></div>
-        <div class="col-12"><label class="form-label" for="fuNext">Next step <span class="fw-normal">(optional)</span></label>
-          <div class="d-flex flex-wrap gap-2 align-items-center"><input type="date" class="form-control vs-date" id="fuNext" min="${V.todayIso()}">
+      body: PeopleKit.parts([
+        { icon: "ri-phone-line", title: "How did you follow up?", body: `<div class="ec-choices" role="radiogroup" aria-label="How">${Object.entries(V.TYPES).map(([k, t], i) => type(k, t, i === 0)).join("")}</div>` },
+        {
+          icon: "ri-chat-smile-2-line",
+          title: "How it went",
+          body: `<div class="row g-3">
+            <div class="col-md-6"><label class="form-label" for="fuOutcome">Outcome</label><select class="form-select" id="fuOutcome">${Object.entries(V.OUTCOMES).filter(([k]) => k !== "sent").map(([k, o]) => `<option value="${k}">${o.label}</option>`).join("")}</select></div>
+            <div class="col-md-6"><label class="form-label" for="fuOn">When</label><input type="date" class="form-control" id="fuOn" value="${V.todayIso()}" max="${V.todayIso()}"></div>
+            <div class="col-12"><label class="form-label" for="fuNote">Note <span class="fw-normal">(optional - only your church's leaders see it)</span></label><textarea class="form-control" id="fuNote" rows="3" maxlength="2000" placeholder="e.g. Asked about the youth group; will come with her sister"></textarea></div>
+          </div>`,
+        },
+        {
+          icon: "ri-calendar-event-line",
+          title: "Next step",
+          hint: "Optional",
+          body: `<div class="d-flex flex-wrap gap-2 align-items-center"><input type="date" class="form-control vs-date" id="fuNext" min="${V.todayIso()}" aria-label="Next step">
             <button type="button" class="btn btn-sm btn-light border" data-next="${addDays(3)}">In 3 days</button><button type="button" class="btn btn-sm btn-light border" data-next="${nextSunday()}">Next Sunday</button><button type="button" class="btn btn-sm btn-light border" data-next="${addDays(14)}">In 2 weeks</button></div>
-          <div class="form-text">When someone should get in touch again. It shows in My follow-ups and on the calendar.</div></div>
-      </div>`,
+            <div class="form-text">When someone should get in touch again - it shows in My follow-ups and on the calendar.</div>`,
+        },
+      ]),
       foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="fuSave"><i class="ri-check-line me-1"></i>Log it</button>`,
     });
     UI.enhanceSelect($("fuOutcome"), { search: false });
@@ -274,10 +283,15 @@
       title: "Send an SMS",
       subtitle: `${state.p.name} · ${state.p.phone}`,
       icon: "ri-chat-3-line",
-      color: "info",
-      body: `<label class="form-label" for="smsText">Message</label><textarea class="form-control" id="smsText" rows="4" maxlength="640">Hi ${M.esc(first())}, </textarea>
-        <div class="d-flex justify-content-between form-text"><span>Your church's SMS signature is added at the end.</span><span id="smsCount"></span></div>
-        <p class="mb-sub mt-2 mb-0"><i class="ri-chat-check-line me-1"></i>The SMS is logged as a follow-up.</p>`,
+      body: PeopleKit.parts([
+        {
+          icon: "ri-chat-3-line",
+          title: "Message",
+          hint: "Logged as a follow-up",
+          body: `<textarea class="form-control" id="smsText" rows="4" maxlength="640" aria-label="Message">Hi ${M.esc(first())}, </textarea>
+            <div class="d-flex justify-content-between form-text"><span>Your church's SMS signature is added at the end.</span><span id="smsCount"></span></div>`,
+        },
+      ]),
       foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="smsSend"><i class="ri-send-plane-line me-1"></i>Send</button>`,
     });
     const count = () => {
@@ -298,20 +312,29 @@
   }
 
   function recordVisit() {
-    const g = state.options?.gathering_types || [];
+    const choices = state.options?.gathering_choices || [];
     const el = V.modal({
       title: "Record a visit",
       subtitle: state.p.name,
       icon: "ri-calendar-check-line",
-      color: "success",
-      body: `<div class="row g-3">
-        <div class="col-md-6"><label class="form-label" for="viOn">Date</label><input type="date" class="form-control" id="viOn" value="${V.todayIso()}" max="${V.todayIso()}"></div>
-        <div class="col-md-6"><label class="form-label" for="viG">Gathering <span class="fw-normal">(optional)</span></label><select class="form-select" id="viG"><option value="">Not linked to one</option>${g.map((x) => `<option value="${x.id}">${M.esc(x.name)}</option>`).join("")}</select></div>
-      </div>`,
+      body: PeopleKit.parts([
+        {
+          icon: "ri-calendar-check-line",
+          title: "When and where",
+          body: `<div class="row g-3">
+            <div class="col-md-5"><label class="form-label" for="viOn">Date</label><input type="date" class="form-control" id="viOn" value="${V.todayIso()}" max="${V.todayIso()}"></div>
+            <div class="col-md-7"><label class="form-label" for="viG">Service or gathering</label><select class="form-select" id="viG">${V.gatheringOptions(choices, V.todayIso())}</select></div>
+          </div>`,
+        },
+      ]),
       foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="viSave"><i class="ri-check-line me-1"></i>Record visit</button>`,
     });
-    UI.enhanceSelect($("viG"), { search: false });
-    $("viSave").addEventListener("click", (e) => save(e.currentTarget, () => VisitorsAPI.visit(id, { on: $("viOn").value, gathering_type_id: $("viG").value || null }), el));
+    UI.enhanceSelect($("viG"), { search: choices.length > 8 });
+    $("viOn").addEventListener("change", () => {
+      $("viG").innerHTML = V.gatheringOptions(choices, $("viOn").value);
+      UI.syncSelect($("viG"));
+    });
+    $("viSave").addEventListener("click", (e) => save(e.currentTarget, () => VisitorsAPI.visit(id, { on: $("viOn").value, gathering: $("viG").value || null }), el));
   }
 
   function assign() {
@@ -320,9 +343,15 @@
       title: "Who follows them up",
       subtitle: state.p.name,
       icon: "ri-user-follow-line",
-      color: "purple",
-      body: `<label class="form-label" for="asWho">Leader</label><select class="form-select" id="asWho"><option value="">Nobody yet</option>${leaders.map((l) => `<option value="${l.id}" data-color="${UI.colorFor(l.name)}"${state.p.assigned?.id === l.id ? " selected" : ""}>${M.esc(l.name)}${l.id === CTX.userId ? " (me)" : ""}</option>`).join("")}</select>
-        <div class="form-text">They're told in the app. Only leaders who can follow visitors up are listed.</div>`,
+      body: PeopleKit.parts([
+        {
+          icon: "ri-user-follow-line",
+          title: "Leader",
+          hint: "They're told in the app",
+          body: `<select class="form-select" id="asWho" aria-label="Leader"><option value="">Nobody yet</option>${leaders.map((l) => `<option value="${l.id}" data-color="${UI.colorFor(l.name)}"${state.p.assigned?.id === l.id ? " selected" : ""}>${M.esc(l.name)}${l.id === CTX.userId ? " (me)" : ""}</option>`).join("")}</select>
+            <div class="form-text">Only leaders who can follow visitors up are listed.</div>`,
+        },
+      ]),
       foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="asSave"><i class="ri-check-line me-1"></i>Save</button>`,
     });
     UI.enhanceSelect($("asWho"));
@@ -335,14 +364,19 @@
       title: "Edit details",
       subtitle: p.name,
       icon: "ri-edit-line",
-      color: "primary",
-      body: `<div class="row g-3">
-        <div class="col-md-6"><label class="form-label" for="edFirst">First name</label><input class="form-control" id="edFirst" maxlength="80" value="${M.esc(p.first_name)}"></div>
-        <div class="col-md-6"><label class="form-label" for="edLast">Last name</label><input class="form-control" id="edLast" maxlength="80" value="${M.esc(p.last_name)}"></div>
-        <div class="col-md-6"><label class="form-label" for="edPhone">Phone</label><input class="form-control" id="edPhone" inputmode="tel" maxlength="30" value="${M.esc(p.phone || "")}"></div>
-        <div class="col-md-6"><label class="form-label" for="edArea">Area</label><input class="form-control" id="edArea" maxlength="80" list="edAreas" value="${M.esc(p.area || "")}"><datalist id="edAreas">${(state.options?.areas || []).map((a) => `<option value="${M.esc(a)}">`).join("")}</datalist></div>
-        <div class="col-12"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="edNoText"${p.consent ? "" : " checked"}><label class="form-check-label" for="edNoText">Don't text them - they asked not to be contacted</label></div></div>
-      </div>`,
+      body: PeopleKit.parts([
+        {
+          icon: "ri-user-3-line",
+          title: "Who",
+          body: `<div class="row g-3">
+            <div class="col-md-6"><label class="form-label" for="edFirst">First name</label><input class="form-control" id="edFirst" maxlength="80" value="${M.esc(p.first_name)}"></div>
+            <div class="col-md-6"><label class="form-label" for="edLast">Last name</label><input class="form-control" id="edLast" maxlength="80" value="${M.esc(p.last_name)}"></div>
+            <div class="col-md-6"><label class="form-label" for="edPhone">Phone</label><input class="form-control" id="edPhone" inputmode="tel" maxlength="30" value="${M.esc(p.phone || "")}"></div>
+            <div class="col-md-6"><label class="form-label" for="edArea">Area</label><input class="form-control" id="edArea" maxlength="80" list="edAreas" value="${M.esc(p.area || "")}"><datalist id="edAreas">${(state.options?.areas || []).map((a) => `<option value="${M.esc(a)}">`).join("")}</datalist></div>
+          </div>`,
+        },
+        { icon: "ri-chat-off-line", title: "Texting", body: `<div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" role="switch" id="edNoText"${p.consent ? "" : " checked"}><label class="form-check-label" for="edNoText">Don't text them - they asked not to be contacted</label></div>` },
+      ]),
       foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="edSave"><i class="ri-check-line me-1"></i>Save</button>`,
     });
     $("edSave").addEventListener("click", (e) =>
@@ -355,9 +389,11 @@
       title: "Remove personal details",
       subtitle: state.p.name,
       icon: "ri-user-unfollow-line",
-      color: "danger",
-      body: `<p class="fw-semibold">This clears their name, phone, area and follow-up notes. Their visits still count in the totals. <strong>It can't be undone.</strong></p>
-        <label class="form-label" for="anConfirm">Type <strong>REMOVE</strong> to confirm</label><input class="form-control" id="anConfirm" autocomplete="off">`,
+      danger: true,
+      body: PeopleKit.parts([
+        { icon: "ri-error-warning-line", title: "What happens", body: '<p class="mb-0">This clears their name, phone, area and follow-up notes. Their visits still count in the totals. <strong>It can\'t be undone.</strong></p>' },
+        { icon: "ri-shield-keyhole-line", title: "Confirm", body: '<label class="form-label" for="anConfirm">Type <strong>REMOVE</strong> to confirm</label><input class="form-control" id="anConfirm" autocomplete="off">' },
+      ]),
       foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Keep them</button><button type="button" class="btn btn-danger" id="anGo" disabled><i class="ri-user-unfollow-line me-1"></i>Remove their details</button>`,
     });
     $("anConfirm").addEventListener("input", (e) => ($("anGo").disabled = e.target.value.trim() !== "REMOVE"));
@@ -401,6 +437,15 @@
       const b = e.target.closest("#vsHero [data-act], #vsPanes [data-act]");
       if (b) act(b.dataset.act, b);
     });
+    // "Log" / "SMS" from My follow-ups open their window straight away.
+    const auto = params.get("act");
+    if (auto === "log" && canWork() && isVisitor()) logFollowup();
+    if (auto === "sms" && state.p.can.sms) sendSms();
+    if (auto) {
+      const q = new URLSearchParams(window.location.search);
+      q.delete("act");
+      history.replaceState(null, "", `${window.location.pathname}?${q}`);
+    }
   }
 
   document.addEventListener("DOMContentLoaded", init);

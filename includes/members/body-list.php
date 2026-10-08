@@ -17,19 +17,21 @@
     <div class="card-header justify-content-between flex-wrap gap-2">
         <div>
             <div class="card-title">Our members</div>
-            <span class="card-subtitle-text">Find anyone by name, phone or area, then open their page</span>
+            <span class="card-subtitle-text">Tick people to message or change them together - or open one</span>
         </div>
         <div class="btn-group" role="group" aria-label="Which list" id="listSwitch">
             <button type="button" class="btn btn-sm btn-primary" data-list="current">In the register</button>
             <button type="button" class="btn btn-sm btn-outline-primary" data-list="archived">Archived</button>
         </div>
     </div>
+    <div class="card-body pb-0 pt-3" id="memberPills"></div>
     <div class="card-body p-0" id="memberTableWrap">
         <div id="memberFilters" class="list-filterbar-wrap"></div>
         <div class="table-responsive">
-            <table class="table table-hover mb-0" id="memberTable">
+            <table class="table table-hover mb-0 pp-table" id="memberTable">
                 <thead>
                     <tr>
+                        <th class="pp-check"><input type="checkbox" class="form-check-input pp-pick-page" aria-label="Pick everyone on this page"></th>
                         <th>Name</th>
                         <th>Area</th>
                         <th>Part of</th>

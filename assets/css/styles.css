@@ -86,6 +86,8 @@ typography
   --diocese-red-rgb: 242, 53, 53; /* #F23535 - Accent */
   --diocese-black-rgb: 13, 13, 13; /* #0D0D0D - Text */
   --diocese-white-rgb: 255, 255, 255; /* #FFFFFF - Background */
+  /* Every window's header band (2026-10-09) - the dark sidebar's navy. */
+  --modal-band-rgb: 21, 26, 46; /* #151a2e */
 
   /* Map to template variables */
   --body-bg-rgb: 240, 241, 247;
@@ -30132,10 +30134,11 @@ tr.list-row-flash > td {
 }
 
 /* ==========================================================================
-   App modal (2026-09-29) - add/edit modals, same design as the
-   v1-events-backend edit modals: solid accent header with an icon tile,
-   title + subtitle, roomy body, light footer, an in-modal "Saving..." state
-   and a success view. Opt in with .app-modal on the .modal element.
+   App modal (2026-09-29; header band 2026-10-09) - every add/edit window.
+   A solid navy band across the top (like esoma-server and v1-events'
+   bd-modal): a frosted icon tile, white title and subtitle, a soft close
+   button. Red band for windows that remove something (.is-danger), green
+   once the done view shows. Opt in with .app-modal on the .modal element.
    ========================================================================== */
 .app-modal .modal-content {
   border: 0;
@@ -30144,14 +30147,15 @@ tr.list-row-flash > td {
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
 }
 .app-modal .modal-header {
-  /* 2026-10-01: white header with one solid icon tile, like the Demographics
-     report window (.rp-head) - not a solid colour bar across every window. */
   gap: 0.85rem;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--default-border);
-  background: var(--custom-white);
-  color: var(--v2-heading);
+  padding: 1.15rem 1.5rem;
+  border-bottom: 0;
+  background: rgb(var(--modal-band-rgb));
+  color: #fff;
 }
+.app-modal.is-danger .modal-header { background: rgb(var(--danger-rgb)); }
+.app-modal:has(.app-modal-state.is-done) .modal-header,
+.app-modal.is-done .modal-header { background: rgb(var(--success-rgb)); }
 .app-modal-icon {
   display: grid;
   place-items: center;
@@ -30159,31 +30163,42 @@ tr.list-row-flash > td {
   width: 2.6rem;
   height: 2.6rem;
   border-radius: 0.7rem;
-  background: rgb(var(--primary-rgb));
-  color: #fff;
-  font-size: 1.3rem;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+  font-size: 1.25rem;
 }
 .app-modal .modal-title {
-  color: var(--v2-heading);
+  color: #fff;
   font-size: 1.05rem;
   font-weight: 700;
   line-height: 1.25;
 }
 .app-modal-subtitle {
+  margin-top: 0.1rem;
   font-size: 0.8rem;
-  color: var(--default-text-color);
+  color: rgba(255, 255, 255, 0.72);
 }
-.app-modal .btn-close {
-  opacity: 0.75;
+.app-modal .modal-header .btn-close {
+  flex-shrink: 0;
+  width: 1.85rem;
+  height: 1.85rem;
+  margin: 0;
+  padding: 0;
+  border-radius: 0.45rem;
+  background: rgba(255, 255, 255, 0.12) url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23fff'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e") center / 0.7rem auto no-repeat;
+  opacity: 1;
 }
+.app-modal .modal-header .btn-close:hover { background-color: rgba(255, 255, 255, 0.24); }
+.app-modal .modal-header .btn-close:focus { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35); }
 .app-modal .modal-body {
   position: relative;
   padding: 1.35rem 1.5rem;
 }
 .app-modal .modal-footer {
+  gap: 0.5rem;
   padding: 0.9rem 1.5rem;
   border-top: 1px solid var(--default-border);
-  background: rgba(var(--primary-rgb), 0.03);
+  background: var(--custom-white);
 }
 .app-modal-section {
   margin-bottom: 1.1rem;
@@ -30196,6 +30211,11 @@ tr.list-row-flash > td {
   text-transform: uppercase;
   color: var(--text-muted);
 }
+/* A window in parts (esoma's be-sec): a small icon heading, hairline between parts. */
+.app-modal-part + .app-modal-part { margin-top: 1.25rem; padding-top: 1.15rem; border-top: 1px solid var(--default-border); }
+.app-modal-part-head { display: flex; align-items: center; gap: 0.55rem; margin-bottom: 0.85rem; font-size: 0.86rem; font-weight: 700; color: var(--v2-heading); }
+.app-modal-part-head i { display: inline-grid; place-items: center; width: 1.65rem; height: 1.65rem; border-radius: 0.5rem; background: rgba(var(--primary-rgb), 0.12); color: rgb(var(--primary-rgb)); font-size: 0.9rem; }
+.app-modal-part-head small { margin-left: auto; font-size: 0.75rem; font-weight: 600; color: var(--default-text-color); }
 .app-modal .form-text,
 .app-modal .field-hint {
   font-size: 0.78rem;
