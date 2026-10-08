@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Activity;
 use App\Models\CareContact;
 use App\Models\CareRecord;
 use App\Models\Person;
@@ -14,7 +15,8 @@ use Illuminate\Support\Facades\DB;
 /**
  * Takes PeopleDemoSeeder's demo people away again - only them, found by
  * their demo numbers (+254 700 000 xxx) - with their visits, follow-ups,
- * pastoral care, places in ministries, transfers and audits.
+ * pastoral care, places in ministries, transfers and audits - and the
+ * attendance, demo gathering types and events it added for the ministries.
  *
  *   php artisan db:seed --class=PeopleDemoRemoveSeeder
  */
@@ -34,6 +36,14 @@ class PeopleDemoRemoveSeeder extends Seeder
 
     public static function removeDemo(): int
     {
+        // What the demo added outside the register (P4): attendance, demo gathering types, events.
+        DB::table('church_attendance_records')->where('notes', PeopleDemoSeeder::DEMO_NOTE)->delete();
+        $types = DB::table('gathering_types')->where('slug', 'like', 'demo-%')->pluck('id')->all();
+        if ($types && ! DB::table('church_attendance_records')->whereIn('gathering_type_id', $types)->exists()) {
+            DB::table('ministries')->whereIn('gathering_type_id', $types)->update(['gathering_type_id' => null]);
+            DB::table('gathering_types')->whereIn('id', $types)->delete();
+        }
+        Activity::withTrashed()->where('description', PeopleDemoSeeder::DEMO_ACTIVITY)->get()->each->forceDelete();
         $ids = self::ids();
         if (! $ids) {
             return 0;

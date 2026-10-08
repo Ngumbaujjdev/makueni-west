@@ -486,7 +486,8 @@ const DemographicsUI = (function () {
 
   /**
    * @param {string} containerId - a card-body (or any container)
-   * @param {object} opts {total, totalLabel, delta (periodDelta/trend-like {dir,text,caption}), items: [{label, value, color}]}
+   * @param {object} opts {total, totalLabel, delta (periodDelta/trend-like {dir,text,caption}), items: [{label, value, color, sub?}]}
+   *   sub - optional HTML on its own line under the row (e.g. a link to the matching ministry)
    */
   function renderCompositionCard(containerId, { total, totalLabel = "", delta = null, items = [], format = null } = {}) {
     const container = document.getElementById(containerId);
@@ -509,6 +510,7 @@ const DemographicsUI = (function () {
           <li>
             <span class="composition-name"><span class="count-dot bg-${it.color}"></span>${it.label}</span>
             <span class="composition-value">${fmt(Number(it.value) || 0)} <span>${sum ? Math.round(((Number(it.value) || 0) / sum) * 100) : 0}%</span></span>
+            ${it.sub ? `<span class="composition-sub">${it.sub}</span>` : ""}
           </li>`,
           )
           .join("")}

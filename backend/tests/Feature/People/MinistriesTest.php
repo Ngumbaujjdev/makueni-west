@@ -3,6 +3,7 @@
 namespace Tests\Feature\People;
 
 use App\Models\ChurchAttendanceRecord;
+use App\Models\ChurchDemographic;
 use App\Models\FiscalMonth;
 use App\Models\FiscalYear;
 use App\Models\GatheringCategory;
@@ -41,6 +42,8 @@ class MinistriesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // Before any person is saved: saving one loads the ministry models, and auditing is wired when a model first loads.
+        config(['audit.console' => true]);
         $this->buildBudgetWorld();
         $this->senior = $this->userWithRole('senior', 'Senior Pastor', 'church', $this->myChurch->id, ['church.ministries.ministries.read', 'church.ministries.ministries.manage', 'church.members.members.read']);
         $this->youthLeader = $this->userWithRole('youthlead', 'Youth Leader', 'church', $this->myChurch->id, ['church.ministries.ministries.read']);
@@ -157,5 +160,35 @@ class MinistriesTest extends TestCase
         foreach (['Mary', 'Mutua', '+2547', '"name":"Music'] as $needle) {
             $this->assertStringNotContainsString($needle, json_encode($t));
         }
+    }
+
+    public function test_sunday_school_children_are_kept_in_their_ministry_and_the_monthly_figure_shows(): void
+    {
+        config(['audit.console' => true]);
+        Sanctum::actingAs($this->senior);
+        $child = Person::create(['territory_id' => $this->myChurch->id, 'first_name' => 'Joy', 'last_name' => 'Mutua', 'gender' => 'female', 'congregation' => 'sunday_school', 'status' => 'member']);
+        $this->getJson('/api/ministries/overview')->assertOk();
+        $children = $this->ministry('children');
+        $this->assertSame([['id' => $child->id, 'auto' => true]], array_map(fn ($m) => ['id' => $m['id'], 'auto' => $m['auto']], $this->getJson("/api/ministries/{$children->id}/members")->json('data')), 'back-filled from the register');
+
+        // A new Sunday-school child goes straight in; hand removal leaves them; leaving Sunday school takes them out.
+        $tom = Person::create(['territory_id' => $this->myChurch->id, 'first_name' => 'Tom', 'last_name' => 'Kioko', 'gender' => 'male', 'congregation' => 'sunday_school', 'status' => 'member']);
+        $this->assertCount(2, $this->getJson("/api/ministries/{$children->id}/members")->json('data'));
+        $this->postJson("/api/ministries/{$children->id}/members/remove", ['person_ids' => [$tom->id]])->assertOk()->assertJsonPath('data.removed', 0)->assertJsonPath('data.kept', 1);
+        $tom->update(['congregation' => 'main_church']);
+        $this->assertSame([$child->id], array_column($this->getJson("/api/ministries/{$children->id}/members")->json('data'), 'id'));
+        $history = collect($this->getJson("/api/ministries/{$children->id}/history")->json('data'))->pluck('sentence')->all();
+        $this->assertContains('Test Senior added Tom Kioko', $history);
+        $this->assertContains('Test Senior took Tom Kioko out', $history);
+
+        // The church's own monthly figure for the kind - the latest approved report.
+        $year = FiscalYear::create(['year' => 2026, 'start_date' => '2026-01-01', 'end_date' => '2026-12-31', 'is_active' => true]);
+        $months = collect([7, 8])->mapWithKeys(fn ($n) => [$n => FiscalMonth::firstOrCreate(['number' => $n], ['name' => date('F', mktime(0, 0, 0, $n, 1)), 'short_name' => date('M', mktime(0, 0, 0, $n, 1))])]);
+        $base = ['territory_type' => 'church', 'territory_id' => $this->myChurch->id, 'fiscal_year_id' => $year->id];
+        ChurchDemographic::create($base + ['fiscal_month_id' => $months[7]->id, 'status' => 'approved', 'youth_count' => 40, 'sunday_school_male_count' => 10, 'sunday_school_female_count' => 12]);
+        ChurchDemographic::create($base + ['fiscal_month_id' => $months[8]->id, 'status' => 'approved', 'youth_count' => 45]);
+        ChurchDemographic::create($base + ['fiscal_month_id' => $months[8]->id, 'status' => 'draft', 'youth_count' => 99]);
+        $this->getJson("/api/ministries/{$this->ministry('youth')->id}")->assertJsonPath('data.demographic.value', 45)->assertJsonPath('data.demographic.period', 'Aug 2026');
+        $this->getJson("/api/ministries/{$this->ministry('music')->id}")->assertJsonPath('data.demographic', null);
     }
 }

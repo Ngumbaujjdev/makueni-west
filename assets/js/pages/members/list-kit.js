@@ -33,7 +33,7 @@ const PeopleKit = (function () {
     const bar = c.bar
       ? `<div class="pp-stat-bar"><div class="progress progress-xs flex-fill"><div class="progress-bar bg-${color}" style="width:${Math.max(0, Math.min(100, c.bar.pct || 0))}%"></div></div><span>${esc(c.bar.text)}</span></div>`
       : "";
-    return `<div class="card custom-card pp-stat">
+    return `<div class="card custom-card pp-stat flex-fill">
       <div class="card-body">
         <div class="d-flex align-items-start justify-content-between gap-3">
           <div class="min-w-0"><p class="pp-stat-label">${esc(c.label)}</p>${c.sub ? `<span class="pp-stat-sub">${esc(c.sub)}</span>` : ""}</div>
@@ -49,7 +49,8 @@ const PeopleKit = (function () {
   }
 
   function statRow(el, cards, col = "col-xl-3 col-sm-6") {
-    el.innerHTML = cards.map((c) => `<div class="${col}">${statCard(c)}</div>`).join("");
+    // d-flex + flex-fill: every card in a row is the same height, whatever its sub-line or bar.
+    el.innerHTML = cards.map((c) => `<div class="${col} d-flex">${statCard(c)}</div>`).join("");
     UI.mountSparklines(el);
   }
 

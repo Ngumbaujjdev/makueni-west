@@ -214,6 +214,7 @@ $breadcrumbs = [
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js<?= assetVersion('assets/js/pages/demographics/api-handler.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js<?= assetVersion('assets/js/pages/demographics/ui-helpers.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-form-shared.js<?= assetVersion('assets/js/pages/demographics/attendance-form-shared.js') ?>"></script>
+    <?php require_once __DIR__ . '/../../includes/ministries/links.php'; ministryLinkScripts(); ?>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/attendance-gathering.js<?= assetVersion('assets/js/pages/demographics/attendance-gathering.js') ?>"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => window.AttendanceGathering.init());

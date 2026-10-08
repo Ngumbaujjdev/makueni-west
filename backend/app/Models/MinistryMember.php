@@ -11,9 +11,10 @@ class MinistryMember extends Model implements Auditable
 {
     use \OwenIt\Auditing\Auditable;
 
-    protected $fillable = ['ministry_id', 'person_id', 'joined_on', 'added_by'];
+    protected $fillable = ['ministry_id', 'person_id', 'joined_on', 'auto', 'added_by'];
 
-    protected $casts = ['joined_on' => 'date'];
+    /** auto: kept by the register (a Sunday-school child in "Children & Sunday school") - not taken out by hand. */
+    protected $casts = ['joined_on' => 'date', 'auto' => 'boolean'];
 
     protected $auditExclude = ['added_by'];
 

@@ -586,7 +586,17 @@ The standard six are created for a church the first time its ministries are read
 - **Demo data:** `PeopleDemoSeeder` fills the standard six with demo members and demo-person leaders (no made-up attendance); `PeopleDemoRemoveSeeder` takes them out.
 - **Tests:** `tests/Feature/People/MinistriesTest.php` (3).
 
-### P4 acceptance criteria
+### P4 round 2 (2026-10-08)
+After the user's review: connected, filled with data, polished.
+- **Sunday school is connected:** every Sunday-school child in the register is in "Children & Sunday school" - a `Person` saved hook adds them, and takes them out when they leave Sunday school (or the church, or the register). `ministry_members.auto` marks those places; "Take out" leaves them ("change it on their page"), and `Ministries::ensure()` back-fills a church on read.
+- **Linked with Demographics:** a ministry's page shows the church's own latest approved monthly figure for its kind (youth → `youth_count`, women → `womens_fellowship_count`, men → `mens_fellowship_count`, children → the Sunday-school counts; music and prayer have none). The newest report is the one whose period ends last - a month, a half (June or December), or the year. The Demographics overview's Membership Breakdown links each of those groups to its ministry ("Ministry: Youth · 14 in our register").
+- **Linked with Attendance:** the Ministry Gatherings cards and a gathering's page carry a chip to the ministry that meets as it (`assets/js/pages/ministries/links.js`, loaded only for roles that read ministries).
+- **Ministry detail** also returns six months of its gathering's attendance (`attendance_series`, `gatherings_six_months`); Insights returns each ministry's leader, series and its last three months' average against the three before.
+- **Demo data:** each standard ministry has a day it meets, two demo leaders, its gathering (a demo type with a `demo-` slug when the church has none), six months of weekly attendance marked `Demo attendance`, and a few events marked in their description - all removed again by `PeopleDemoRemoveSeeder`. While seeded they also show in Attendance and Demographics.
+- **Look:** cards one height; windows in numbered steps beside a live preview with a saving and done view (the v1-events bd-modal shape); Add members ticks many with the picked ones aside; Insights' chart and list are one height and the table shows share bars, the women · men split, a sparkline and the change.
+- **Tests:** `MinistriesTest` (4).
+
+
 
 - [x] The standard six appear once per church and are not duplicated.
 - [x] A Youth Leader who leads Youth can add and remove its members, and can't change Women's.

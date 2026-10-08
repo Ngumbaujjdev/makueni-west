@@ -237,7 +237,7 @@ const DemographicsOverview = (function () {
       return;
     }
     const ss = (r) => (Number(r.sunday_school_male_count) || 0) + (Number(r.sunday_school_female_count) || 0);
-    UI.renderCompositionCard("compositionCard", {
+    const opts = {
       total: latest.total_members,
       totalLabel: "total members",
       delta:
@@ -245,13 +245,27 @@ const DemographicsOverview = (function () {
           ? UI.periodDelta(Number(latest.total_members), Number(previous.total_members), { prevLabel: UI.demographicPeriodLabel(previous) })
           : null,
       items: [
-        { label: "Youth (13-35)", value: latest.youth_count, color: "success" },
-        { label: "Women's fellowship", value: latest.womens_fellowship_count, color: "pink" },
-        { label: "Men's fellowship", value: latest.mens_fellowship_count, color: "primary" },
-        { label: "Sunday school", value: ss(latest), color: "purple" },
+        { label: "Youth (13-35)", value: latest.youth_count, color: "success", kind: "youth" },
+        { label: "Women's fellowship", value: latest.womens_fellowship_count, color: "pink", kind: "women" },
+        { label: "Men's fellowship", value: latest.mens_fellowship_count, color: "primary", kind: "men" },
+        { label: "Sunday school", value: ss(latest), color: "purple", kind: "children" },
         { label: "Seniors", value: latest.seniors_count, color: "secondary" },
       ],
-    });
+    };
+    UI.renderCompositionCard("compositionCard", opts);
+    // Each group beside the ministry that serves it - how many are in our register (Ministries, P4).
+    if (typeof MinistryLinks !== "undefined") {
+      MinistryLinks.byKind().then((ministries) => {
+        if (!ministries.size) return;
+        UI.renderCompositionCard("compositionCard", {
+          ...opts,
+          items: opts.items.map((it) => {
+            const m = it.kind && ministries.get(it.kind);
+            return m ? { ...it, sub: MinistryLinks.chip(m) } : it;
+          }),
+        });
+      });
+    }
   }
 
   function renderReporting(latest, submittedThisYear) {

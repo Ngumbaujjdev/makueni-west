@@ -208,6 +208,7 @@ $breadcrumbs = [
 
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js<?= assetVersion('assets/js/pages/demographics/api-handler.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js<?= assetVersion('assets/js/pages/demographics/ui-helpers.js') ?>"></script>
+    <?php require_once __DIR__ . '/../../includes/ministries/links.php'; ministryLinkScripts(); ?>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/index.js<?= assetVersion('assets/js/pages/demographics/index.js') ?>"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => window.DemographicsOverview.init());
