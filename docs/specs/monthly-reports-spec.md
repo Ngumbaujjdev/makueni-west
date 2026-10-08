@@ -150,3 +150,11 @@ The read view is a document, in one colour:
 - **Comments** use the inbox's thread (`mi-thread`), with the tinted reply box (`mi-reply`) under them.
 - **The figures** keep their meaning colours (income green, expenses red). There are no "vs last month" changes, because the report data carries only the members change.
 
+### Colour balance (2026-10-08)
+This replaces "in one colour" above. Each part of the report keeps one colour:
+- **The parts:** People green, Attendance purple, Income and expenses gold, Our churches pink.
+- **Where each part's colour shows:** a solid tile beside the heading, a pale "From …" chip, and a pale note with a solid button to where it's recorded.
+- **The timeline** is coloured by kind: our events green, events we joined purple, each initiative its own colour. The date pill is solid and the count chip pale.
+- **Comments:** each person keeps an avatar colour; comments from above sit in pale purple.
+- **The writing stepper** gives each step its own colour.
+

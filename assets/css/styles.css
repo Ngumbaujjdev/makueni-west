@@ -37856,3 +37856,63 @@ button.cal-side-item:focus-visible {
 .cm-result small { flex-shrink: 0; font-weight: 600; color: var(--text-muted); }
 @media (max-width: 575.98px) { .cm-inline { flex-direction: column; } }
 
+
+/* ==========================================================================
+   Monthly report & event form - colour balance (2026-10-08). Each part keeps
+   one colour, set as --q: the report's sections (People green, Attendance
+   purple, Money gold, Our churches pink) with pale notes and a solid button;
+   the timeline coloured by kind; each commenter their own avatar colour;
+   the form's kind cards in each kind's colour, a colour per step, green and
+   pink When cards, and coloured fact tiles in the preview. Inputs stay teal.
+   ========================================================================== */
+.mr-note { display: flex; align-items: center; gap: .6rem; margin-top: .5rem; padding: .7rem .9rem; border-radius: .65rem; background: rgba(var(--q), .1); color: var(--v2-heading); font-size: .85rem; font-weight: 500; }
+.mr-note > i { flex: none; font-size: 1.05rem; color: rgb(var(--q)); }
+.mr-note > span { flex: 1 1 auto; min-width: 0; }
+@media (max-width: 575.98px) { .mr-note { flex-wrap: wrap; } .mr-note-btn { margin-inline-start: 1.65rem; } }
+.mr-note-btn { display: inline-flex; align-items: center; gap: .3rem; padding: .3rem .75rem; border-radius: 999px; background: rgb(var(--q)); color: #fff; font-size: .78rem; font-weight: 700; white-space: nowrap; }
+.mr-note-btn:hover, .mr-note-btn:focus-visible { color: #fff; filter: brightness(.95); }
+.mr-note-btn.is-dark, .mr-note-btn.is-dark:hover { color: #0d0d0d; }
+.mr-block .ev-sub .ev-tile { flex-basis: 1.75rem; width: 1.75rem; height: 1.75rem; border-radius: .5rem; font-size: .85rem; }
+
+.ev-timeline li { --q: var(--primary-rgb); }
+.ev-timeline-dot { border-color: rgb(var(--q)); }
+.ev-timeline-when { background: rgb(var(--q)); }
+.ev-timeline li.is-dark .ev-timeline-when { color: #0d0d0d; }
+
+.mi-thread-item.is-above .mi-thread-body { background: rgba(var(--purple-rgb), .06); border-color: rgba(var(--purple-rgb), .2); }
+
+.ec-choices.is-varied .ec-choice { border-color: rgba(var(--q), .25); }
+.ec-choices.is-varied .ec-choice:hover { border-color: rgba(var(--q), .6); }
+.ec-choices.is-varied .ec-choice-icon { background: rgba(var(--q), .14); color: rgb(var(--q)); }
+.ec-choices.is-varied .ec-choice.is-dark .ec-choice-icon { color: var(--v2-heading); background: rgba(var(--q), .3); }
+.ec-choices.is-varied .ec-choice:has(input:checked) { border-color: rgb(var(--q)); box-shadow: 0 0 0 3px rgba(var(--q), .18); }
+.ec-choices.is-varied .ec-choice:has(input:checked) .ec-choice-icon { background: rgb(var(--q)); color: #fff; }
+.ec-choices.is-varied .ec-choice.is-dark:has(input:checked) .ec-choice-icon { color: #0d0d0d; }
+.ec-choices.is-varied .ec-choice-tick { background: rgb(var(--q)); }
+.ec-choices.is-varied .ec-choice.is-dark .ec-choice-tick { color: #0d0d0d; }
+.ec-choices.is-varied .ec-choice:has(input:focus-visible) { outline-color: rgb(var(--q)); }
+
+.intake-steps.is-varied .intake-step-btn.is-on .intake-step-dot { border-color: rgb(var(--q)); background: rgb(var(--q)); }
+.intake-steps.is-varied .intake-step-btn.is-on.is-dark .intake-step-dot { color: #0d0d0d; }
+.intake-step-num.is-q { background: rgb(var(--q)); }
+.intake-step-num.is-q.is-dark { color: #0d0d0d; }
+
+.ee-when-card.is-start { background: rgba(var(--success-rgb), .06); border-color: rgba(var(--success-rgb), .28); }
+.ee-when-card.is-start .ee-when-title i { color: rgb(var(--success-rgb)); }
+.ee-when-card.is-end { background: rgba(var(--pink-rgb), .08); border-color: rgba(var(--pink-rgb), .35); }
+.ee-when-card.is-end .ee-when-title i { color: rgb(var(--pink-rgb)); }
+.ec-toggle.is-q .ec-toggle-icon { background: rgba(var(--q), .14); color: rgb(var(--q)); }
+.ec-toggle.is-q:has(input:checked) { border-color: rgb(var(--q)); box-shadow: 0 0 0 3px rgba(var(--q), .15); }
+.ec-toggle.is-q:has(input:checked) .ec-toggle-icon, .ec-toggle.is-q:has(input:checked) .ec-toggle-switch { background: rgb(var(--q)); color: #fff; }
+
+/* The preview's facts: a small pale tile per row, each its own colour. */
+.preview-card .ev-facts li { align-items: center; }
+.preview-card .ev-facts li > i { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 1.9rem; height: 1.9rem; border-radius: .5rem; background: rgba(var(--q), .14); color: rgb(var(--q)); font-size: .95rem; }
+.preview-card .ev-facts li:nth-child(6n+1) { --q: var(--primary-rgb); }
+.preview-card .ev-facts li:nth-child(6n+2) { --q: var(--purple-rgb); }
+.preview-card .ev-facts li:nth-child(6n+3) { --q: var(--pink-rgb); }
+.preview-card .ev-facts li:nth-child(6n+4) { --q: var(--success-rgb); }
+.preview-card .ev-facts li:nth-child(6n+5) { --q: var(--warning-rgb); }
+.preview-card .ev-facts li:nth-child(6n+6) { --q: var(--danger-rgb); }
+.preview-card .ev-facts li:nth-child(6n+5) > i { color: var(--v2-heading); }
+.intake-tips strong .ev-tile i { color: inherit; }
