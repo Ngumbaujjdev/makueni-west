@@ -21,9 +21,10 @@ $steps = [
 
     <!-- Writing: the stepper (our own draft) -->
     <div id="writeView" hidden>
-        <nav class="card custom-card intake-steps" id="intakeSteps" aria-label="Steps">
+        <?php $stepColors = [1 => 'success', 2 => 'purple', 3 => 'pink', 4 => 'warning']; // each step its own colour (2026-10-08) ?>
+        <nav class="card custom-card intake-steps is-varied" id="intakeSteps" aria-label="Steps">
             <?php foreach ($steps as $n => [$label, $hint]) { ?>
-                <button type="button" class="intake-step-btn<?= $n === 1 ? ' is-on' : '' ?>" data-go="<?= $n ?>">
+                <button type="button" class="intake-step-btn<?= $n === 1 ? ' is-on' : '' ?><?= $stepColors[$n] === 'warning' ? ' is-dark' : '' ?>" data-go="<?= $n ?>" style="--q: var(--<?= $stepColors[$n] ?>-rgb)">
                     <span class="intake-step-dot"><span><?= $n ?></span><i class="ri-check-line"></i></span>
                     <span class="intake-step-text"><strong><?= $label ?></strong><small><?= $hint ?></small></span>
                 </button>
@@ -37,7 +38,7 @@ $steps = [
                     <?php foreach ($steps as $n => [$label, $hint]) { ?>
                     <section class="intake-step" data-step="<?= $n ?>" <?= $n > 1 ? 'hidden' : '' ?>>
                         <div class="intake-step-head">
-                            <span class="intake-step-num"><?= $n ?></span>
+                            <span class="intake-step-num is-q<?= $stepColors[$n] === 'warning' ? ' is-dark' : '' ?>" style="--q: var(--<?= $stepColors[$n] ?>-rgb)"><?= $n ?></span>
                             <div><h5><?= $label ?></h5><p><?= $hint ?></p></div>
                         </div>
                         <div class="intake-step-body" id="stepBody<?= $n ?>"></div>

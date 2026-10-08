@@ -48,7 +48,7 @@
     // Kind as cards (v1-events' ec-choices): picking one sets the select and counts as a change.
     $("typeChoices").innerHTML = Object.entries(ov.types)
       .map(
-        ([k, label]) => `<label class="ec-choice">
+        ([k, label]) => `<label class="ec-choice${E.typeColor(k) === "secondary" ? " is-dark" : ""}" style="--q: var(--${E.typeColor(k)}-rgb)">
           <input type="radio" name="type_ui" value="${k}">
           <span class="ec-choice-icon"><i class="${E.typeIcon(k)}"></i></span>
           <strong>${E.esc(label)}</strong>
@@ -56,6 +56,7 @@
         </label>`,
       )
       .join("");
+    $("typeChoices").classList.add("is-varied"); // each kind in its own colour, as on the list cards
     $("typeChoices").addEventListener("change", (ev) => {
       if (ev.target.name !== "type_ui") return;
       $("f_type").value = ev.target.value;
@@ -332,12 +333,14 @@
       ${b.description ? `<p class="mt-3 mb-0 fs-13 text-break">${E.esc(b.description).slice(0, 280)}${b.description.length > 280 ? "..." : ""}</p>` : ""}`;
   }
 
+  // Session chips change colour with the month, so a long run reads at a glance.
+  const MONTH_COLORS = ["primary", "purple", "success", "pink", "warning", "danger"];
   function sessionsPreview(b) {
     const dates = sessionDates(b);
     if (!INIT) return "";
     if (!dates.length) return `<div class="ev-sub mt-3">Sessions</div><p class="mb-0 fs-13 fw-semibold">Pick the days to see the sessions.</p>`;
     return `<div class="ev-sub mt-3">${dates.length} ${dates.length === 1 ? "session" : "sessions"}${dates.length >= 104 ? " (the most)" : ""}</div>
-      <div class="d-flex flex-wrap gap-1 mt-1">${dates.slice(0, 8).map((d) => `<span class="soft-chip soft-primary">${d.toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>`).join("")}${dates.length > 8 ? `<span class="soft-chip soft-purple">+${dates.length - 8} more</span>` : ""}</div>`;
+      <div class="d-flex flex-wrap gap-1 mt-1">${dates.slice(0, 8).map((d) => `<span class="soft-chip soft-${MONTH_COLORS[d.getMonth() % MONTH_COLORS.length]}">${d.toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>`).join("")}${dates.length > 8 ? `<span class="badge bg-purple">+${dates.length - 8} more</span>` : ""}</div>`;
   }
 
   function renderReview() {

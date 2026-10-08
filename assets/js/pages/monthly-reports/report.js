@@ -95,41 +95,43 @@
         <div class="flex-fill" style="min-width:0"><small>${label}</small><strong>${value}</strong>${sub ? `<span>${sub}</span>` : ""}</div>
         ${link && !compact ? `<a class="mr-fig-link" href="${link}" title="Open where it's recorded"><i class="ri-arrow-right-up-line"></i></a>` : ""}
       </div>`;
-    const note = (text, link, label) => `<div class="alert alert-primary d-flex gap-2 mb-0 mt-2"><i class="ri-information-line fs-16"></i><span>${R.esc(text)}${link && !compact ? ` <a href="${link}">${label}</a>` : ""}</span></div>`;
+    // Each part keeps one colour (2026-10-08): its tile, its "From ..." chip and its notes.
+    const note = (text, link, label, color) => `<div class="mr-note" style="--q: var(--${color}-rgb)"><i class="ri-information-line"></i><span class="flex-fill">${R.esc(text)}</span>${link && !compact ? `<a class="mr-note-btn${color === "warning" ? " is-dark" : ""}" href="${link}">${label}<i class="ri-arrow-right-line"></i></a>` : ""}</div>`;
+    const head = (icon, color, name, chip) => `<h6 class="ev-sub"><span class="ev-tile is-sm${color === "warning" ? " text-dark" : ""}" style="--q: var(--${color}-rgb)"><i class="${icon}"></i></span>${name} <span class="soft-chip soft-${color}">${chip}</span></h6>`;
     const blocks = [];
     const p = f.people;
     if (p) {
-      blocks.push(`<div class="mr-block"><h6 class="ev-sub">People <span class="soft-chip soft-primary">From Demographics${p.from ? ` · ${R.esc(p.from)}` : ""}</span></h6>${
+      blocks.push(`<div class="mr-block">${head("ri-group-line", "success", "People", `From Demographics${p.from ? ` · ${R.esc(p.from)}` : ""}`)}${
         p.recorded
           ? `<div class="mr-figs">${tile("ri-group-line", "primary", "Members", R.num(p.members), p.members_change != null ? `${p.members_change >= 0 ? "+" : ""}${p.members_change} since the last` : "", recordLink("people"))}${
               p.this_month
                 ? tile("ri-user-add-line", "success", "New members", R.num(p.new_members), "", null) + tile("ri-drop-line", "purple", "Baptisms", R.num(p.baptisms), "", null) + tile("ri-heart-line", "pink", "Conversions", R.num(p.conversions), "", null) + tile("ri-cup-line", "secondary", "Communion", R.num(p.communion), "", null)
                 : ""
-            }</div>${p.note ? note(p.note, recordLink("people"), "Record this month") : ""}`
-          : note(p.note, recordLink("people"), "Record Demographics")
+            }</div>${p.note ? note(p.note, recordLink("people"), "Record this month", "success") : ""}`
+          : note(p.note, recordLink("people"), "Record Demographics", "success")
       }</div>`);
     }
     const a = f.attendance;
     if (a) {
-      blocks.push(`<div class="mr-block"><h6 class="ev-sub">Attendance <span class="soft-chip soft-primary">From Attendance</span></h6>${
+      blocks.push(`<div class="mr-block">${head("ri-sun-line", "purple", "Attendance", "From Attendance")}${
         a.recorded
-          ? `<div class="mr-figs">${tile("ri-sun-line", "primary", "Average Sunday", R.num(a.average_sunday), `${a.sundays} ${a.sundays === 1 ? "Sunday" : "Sundays"} recorded`, recordLink("attendance"))}${tile("ri-arrow-up-line", "success", "Highest Sunday", R.num(a.highest_sunday), "", null)}${tile("ri-group-2-line", "purple", "Other gatherings", R.num(a.gatherings), `${R.num(a.gathering_attendance)} attended`, null)}</div>${a.note ? note(a.note, recordLink("attendance"), "Record attendance") : ""}`
-          : note(a.note, recordLink("attendance"), "Record attendance")
+          ? `<div class="mr-figs">${tile("ri-sun-line", "primary", "Average Sunday", R.num(a.average_sunday), `${a.sundays} ${a.sundays === 1 ? "Sunday" : "Sundays"} recorded`, recordLink("attendance"))}${tile("ri-arrow-up-line", "success", "Highest Sunday", R.num(a.highest_sunday), "", null)}${tile("ri-group-2-line", "purple", "Other gatherings", R.num(a.gatherings), `${R.num(a.gathering_attendance)} attended`, null)}</div>${a.note ? note(a.note, recordLink("attendance"), "Record attendance", "purple") : ""}`
+          : note(a.note, recordLink("attendance"), "Record attendance", "purple")
       }</div>`);
     }
     const m = f.money;
     if (m) {
-      blocks.push(`<div class="mr-block"><h6 class="ev-sub">Income and expenses <span class="soft-chip soft-primary">From Budgets${m.budget?.label ? ` · ${R.esc(m.budget.label)}` : ""}</span></h6>${
+      blocks.push(`<div class="mr-block">${head("ri-wallet-3-line", "warning", "Income and expenses", `From Budgets${m.budget?.label ? ` · ${R.esc(m.budget.label)}` : ""}`)}${
         m.recorded
           ? `<div class="mr-figs">${tile("ri-arrow-down-circle-line", "success", "Income", R.money(m.income), m.income_planned ? `of ${R.money(m.income_planned)} planned` : "", recordLink("money"))}${tile("ri-arrow-up-circle-line", "danger", "Expenses", R.money(m.expenses), m.expenses_planned ? `of ${R.money(m.expenses_planned)} planned` : "", null)}${tile("ri-scales-3-line", m.left < 0 ? "danger" : "primary", "Left", R.money(m.left), "", null)}${
               m.share ? tile("ri-hand-coin-line", m.share.status === "late" ? "danger" : "secondary", R.esc(m.share.name), R.money(m.share.sent), m.share.still_to_send > 0 ? `${R.money(m.share.still_to_send)} still to send` : `sent of ${R.money(m.share.due)}`, null) : ""
             }</div>`
-          : note(m.note || "No budget or money recorded for this month.", recordLink("money"), "Open Budgets")
+          : note(m.note || "No budget or money recorded for this month.", recordLink("money"), "Open Budgets", "warning")
       }</div>`);
     }
     const c = f.churches;
     if (c) {
-      blocks.push(`<div class="mr-block"><h6 class="ev-sub">Our churches <span class="soft-chip soft-primary">From their reports and Budgets</span></h6><div class="mr-figs">${tile("ri-file-chart-line", "primary", "Reports sent", `${c.sent} of ${c.churches}`, `${c.seen} read`, null)}${tile("ri-sun-line", "purple", "Sunday attendance", R.num(c.average_sunday), "All churches, average Sunday", null)}${tile("ri-arrow-down-circle-line", "success", "Income", R.money(c.income), "", null)}${tile("ri-arrow-up-circle-line", "danger", "Expenses", R.money(c.expenses), "", null)}</div></div>`);
+      blocks.push(`<div class="mr-block">${head("ri-community-line", "pink", "Our churches", "From their reports and Budgets")}<div class="mr-figs">${tile("ri-file-chart-line", "primary", "Reports sent", `${c.sent} of ${c.churches}`, `${c.seen} read`, null)}${tile("ri-sun-line", "purple", "Sunday attendance", R.num(c.average_sunday), "All churches, average Sunday", null)}${tile("ri-arrow-down-circle-line", "success", "Income", R.money(c.income), "", null)}${tile("ri-arrow-up-circle-line", "danger", "Expenses", R.money(c.expenses), "", null)}</div></div>`);
     }
 
     return blocks.join("");
@@ -139,15 +141,17 @@
   function happenedTimeline(f) {
     const ev = f.events || { ours: [], took_part: [] };
     const items = [
-      ...ev.ours.map((e) => ({ date: e.date, title: e.title, sub: `Our ${R.esc(e.type).toLowerCase()}`, n: e.came != null ? `${R.num(e.came)} came` : e.expected ? `${R.num(e.expected)} expected` : "" })),
-      ...ev.took_part.map((e) => ({ date: e.date, title: e.title, sub: `With ${R.esc(e.organiser)}`, n: e.came != null ? `${R.num(e.came)} of ours came` : `${R.num(e.expected)} of ours` })),
+      ...ev.ours.map((e) => ({ color: "success", date: e.date, title: e.title, sub: `Our ${R.esc(e.type).toLowerCase()}`, n: e.came != null ? `${R.num(e.came)} came` : e.expected ? `${R.num(e.expected)} expected` : "" })),
+      ...ev.took_part.map((e) => ({ color: "purple", date: e.date, title: e.title, sub: `With ${R.esc(e.organiser)}`, n: e.came != null ? `${R.num(e.came)} of ours came` : `${R.num(e.expected)} of ours` })),
     ].sort((a, b) => String(a.date).localeCompare(String(b.date)));
-    const inits = (f.initiatives || []).map((i) => ({ date: null, title: i.title, sub: `${i.sessions} ${i.sessions === 1 ? "session" : "sessions"} held`, n: `${R.num(i.attendance)} attended` }));
+    // Our events green, ones we joined purple, and each initiative its own colour.
+    const INIT_COLORS = ["warning", "pink", "primary", "danger"];
+    const inits = (f.initiatives || []).map((i, k) => ({ color: INIT_COLORS[k % INIT_COLORS.length], date: null, title: i.title, sub: `${i.sessions} ${i.sessions === 1 ? "session" : "sessions"} held`, n: `${R.num(i.attendance)} attended` }));
     const all = [...items, ...inits];
-    const extra = r.pastoral_visits != null ? `<div class="profile-fact profile-tint-primary mt-3"><span class="avatar avatar-sm avatar-rounded bg-primary text-white"><i class="ri-home-smile-line"></i></span><div class="flex-fill"><div class="profile-fact-label">Pastoral visits</div><div class="profile-fact-value">${R.num(r.pastoral_visits)}</div></div></div>` : "";
+    const extra = r.pastoral_visits != null ? `<div class="profile-fact profile-tint-pink mt-3"><span class="avatar avatar-sm avatar-rounded bg-pink text-white"><i class="ri-home-smile-line"></i></span><div class="flex-fill"><div class="profile-fact-label">Pastoral visits</div><div class="profile-fact-value">${R.num(r.pastoral_visits)}</div></div></div>` : "";
     return (
       (all.length
-        ? `<ol class="ev-timeline">${all.map((x) => `<li><span class="ev-timeline-dot"></span><div class="flex-fill">${x.date ? `<span class="ev-timeline-when">${R.shortDate(x.date)}</span>` : `<span class="ev-timeline-when">Sessions</span>`}<span class="ev-timeline-what fw-semibold">${R.esc(x.title)}</span><div class="mr-tl-sub">${x.sub}${x.n ? ` <span class="soft-chip soft-primary ms-1">${x.n}</span>` : ""}</div></div></li>`).join("")}</ol>`
+        ? `<ol class="ev-timeline">${all.map((x) => `<li class="${x.color === "warning" || x.color === "pink" ? "is-dark" : ""}" style="--q: var(--${x.color}-rgb)"><span class="ev-timeline-dot"></span><div class="flex-fill">${x.date ? `<span class="ev-timeline-when">${R.shortDate(x.date)}</span>` : `<span class="ev-timeline-when">Sessions</span>`}<span class="ev-timeline-what fw-semibold">${R.esc(x.title)}</span><div class="mr-tl-sub">${x.sub}${x.n ? ` <span class="soft-chip soft-${x.color} ms-1">${x.n}</span>` : ""}</div></div></li>`).join("")}</ol>`
         : `<p class="fw-semibold mb-0">No events or initiative sessions this month.</p>`) +
       extra +
       (r.outreach ? `<div class="mr-quote mt-3" style="--q: var(--success-rgb)"><div class="mr-quote-head"><i class="ri-road-map-line"></i>Outreach</div><p>${R.esc(r.outreach)}</p></div>` : "")
@@ -159,10 +163,10 @@
     const rows = [
       ...ev.ours.map((e) => ({ icon: "ri-calendar-check-line", color: "success", title: e.title, sub: `${R.shortDate(e.date)} · our ${R.esc(e.type).toLowerCase()}`, n: e.came != null ? `${R.num(e.came)} came` : e.expected ? `${R.num(e.expected)} expected` : "" })),
       ...ev.took_part.map((e) => ({ icon: "ri-community-line", color: "purple", title: e.title, sub: `${R.shortDate(e.date)} · with ${R.esc(e.organiser)}`, n: e.came != null ? `${R.num(e.came)} of ours came` : `${R.num(e.expected)} of ours` })),
-      ...(f.initiatives || []).map((i) => ({ icon: "ri-seedling-line", color: "primary", title: i.title, sub: `${i.sessions} ${i.sessions === 1 ? "session" : "sessions"} held`, n: `${R.num(i.attendance)} attended` })),
+      ...(f.initiatives || []).map((i, k) => ({ icon: "ri-seedling-line", color: ["warning", "pink", "primary", "danger"][k % 4], title: i.title, sub: `${i.sessions} ${i.sessions === 1 ? "session" : "sessions"} held`, n: `${R.num(i.attendance)} attended` })),
     ];
     const list = rows.length
-      ? `<ul class="mr-list">${rows.map((x) => `<li><span class="avatar avatar-sm avatar-rounded bg-${x.color} text-white"><i class="${x.icon}"></i></span><div class="flex-fill" style="min-width:0"><strong>${R.esc(x.title)}</strong><small>${x.sub}</small></div><span class="fw-semibold">${x.n}</span></li>`).join("")}</ul>`
+      ? `<ul class="mr-list">${rows.map((x) => `<li><span class="avatar avatar-sm avatar-rounded bg-${x.color} ${R.textOn(x.color)}"><i class="${x.icon}"></i></span><div class="flex-fill" style="min-width:0"><strong>${R.esc(x.title)}</strong><small>${x.sub}</small></div><span class="fw-semibold">${x.n}</span></li>`).join("")}</ul>`
       : `<p class="fw-semibold mb-0">No events or initiative sessions this month.${editable ? " They show here as you add them in Events and Initiatives." : ""}</p>`;
     if (!editable) {
       const extra = [
@@ -302,7 +306,7 @@
     $("readView").hidden = false;
     const words = Object.entries(WORDS).filter(([k]) => r.words[k]);
     $("readMain").innerHTML = `
-      <div class="card custom-card"><div class="card-header"><div class="card-title">The figures</div>${r.figures_live ? `<span class="soft-chip soft-success ms-auto">Live - not sent yet</span>` : `<span class="soft-chip soft-primary ms-auto">As sent</span>`}</div><div class="card-body">${figureTiles(r.figures, { compact: r.relation !== "own" })}</div></div>
+      <div class="card custom-card"><div class="card-header"><div class="card-title">The figures</div>${r.figures_live ? `<span class="badge bg-warning text-dark ms-auto">Live - not sent yet</span>` : `<span class="soft-chip soft-success ms-auto"><i class="ri-check-line"></i>As sent</span>`}</div><div class="card-body">${figureTiles(r.figures, { compact: r.relation !== "own" })}</div></div>
       <div class="card custom-card"><div class="card-header"><div class="card-title">What happened</div></div><div class="card-body">${happenedTimeline(r.figures)}</div></div>
       <div class="card custom-card"><div class="card-header"><div class="card-title">In the pastor's words</div></div><div class="card-body">${
         words.length
@@ -327,13 +331,15 @@
 
   function renderThread() {
     const comments = r.thread || [];
+    // Each person keeps one avatar colour, picked from their name.
+    const who = (n) => DemographicsUI.colorFor(n || "?");
     const initial = (n) => (n || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0].toUpperCase()).join("");
     $("readSide").innerHTML = `
       <div class="card custom-card mr-comments">
-        <div class="card-header justify-content-between"><div class="card-title">Comments</div><span class="soft-chip soft-primary">${comments.length}</span></div>
+        <div class="card-header justify-content-between"><div class="card-title">Comments</div><span class="soft-chip soft-purple">${comments.length}</span></div>
         <div class="card-body">
           ${comments.length
-            ? `<ul class="mi-thread">${comments.map((c) => `<li class="mi-thread-item${c.from_above ? "" : " is-mine"}"><span class="avatar avatar-sm avatar-rounded bg-primary text-white">${R.esc(initial(c.who))}</span><div class="mi-thread-body"><div class="mi-thread-meta"><strong>${R.esc(c.who)}</strong><span>${R.esc(c.place || "")}</span><span>${new Date(c.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</span></div><div class="mi-thread-text"><p>${R.esc(c.body)}</p></div></div></li>`).join("")}</ul>`
+            ? `<ul class="mi-thread">${comments.map((c) => `<li class="mi-thread-item${c.from_above ? " is-above" : " is-mine"}"><span class="avatar avatar-sm avatar-rounded bg-${who(c.who)} ${R.textOn(who(c.who))}">${R.esc(initial(c.who))}</span><div class="mi-thread-body"><div class="mi-thread-meta"><strong>${R.esc(c.who)}</strong><span>${R.esc(c.place || "")}</span><span>${new Date(c.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</span></div><div class="mi-thread-text"><p>${R.esc(c.body)}</p></div></div></li>`).join("")}</ul>`
             : `<p class="fw-semibold mb-0">${r.relation === "own" ? "No comments yet. Those above can comment once it's sent." : "No comments yet."}</p>`}
         </div>
         ${r.can.comment

@@ -10,11 +10,13 @@ $steps = [
     4 => ['Check and publish', 'Look it over, then save'],
 ];
 $stepIcons = [1 => 'ri-calendar-event-line', 2 => 'ri-map-pin-user-line', 3 => 'ri-hand-coin-line', 4 => 'ri-send-plane-line'];
+// Each step its own colour (2026-10-08) - its tile and its dot when it's the one open.
+$stepColors = [1 => 'primary', 2 => 'purple', 3 => 'warning', 4 => 'success'];
 ?>
 <div id="eventForm">
-    <nav class="card custom-card intake-steps" id="intakeSteps" aria-label="Steps">
+    <nav class="card custom-card intake-steps is-varied" id="intakeSteps" aria-label="Steps">
         <?php foreach ($steps as $n => [$label, $hint]) { ?>
-            <button type="button" class="intake-step-btn<?= $n === 1 ? ' is-on' : '' ?>" data-go="<?= $n ?>">
+            <button type="button" class="intake-step-btn<?= $n === 1 ? ' is-on' : '' ?><?= $stepColors[$n] === 'warning' ? ' is-dark' : '' ?>" data-go="<?= $n ?>" style="--q: var(--<?= $stepColors[$n] ?>-rgb)">
                 <span class="intake-step-dot"><span><?= $n ?></span><i class="ri-check-line"></i></span>
                 <span class="intake-step-text"><strong><?= $label ?></strong><small><?= $hint ?></small></span>
             </button>
@@ -29,7 +31,7 @@ $stepIcons = [1 => 'ri-calendar-event-line', 2 => 'ri-map-pin-user-line', 3 => '
                 <?php foreach ($steps as $n => [$label, $hint]) { ?>
                 <section class="intake-step" data-step="<?= $n ?>" <?= $n > 1 ? 'hidden' : '' ?>>
                     <div class="intake-step-head">
-                        <span class="intake-step-num"><i class="<?= $stepIcons[$n] ?>"></i></span>
+                        <span class="intake-step-num is-q<?= $stepColors[$n] === 'warning' ? ' is-dark' : '' ?>" style="--q: var(--<?= $stepColors[$n] ?>-rgb)"><i class="<?= $stepIcons[$n] ?>"></i></span>
                         <div><h5><?= $label ?></h5><p><?= $hint ?></p></div>
                     </div>
                     <div class="intake-errors" data-errors-for="<?= $n ?>" hidden role="alert"></div>
@@ -54,7 +56,7 @@ $stepIcons = [1 => 'ri-calendar-event-line', 2 => 'ri-map-pin-user-line', 3 => '
                             <div class="col-12">
                                 <label class="form-label mb-2"><?= $isInit ? 'When it runs' : 'When' ?> <span class="text-danger">*</span></label>
                                 <div class="ee-when">
-                                    <div class="ee-when-card">
+                                    <div class="ee-when-card is-start">
                                         <div class="ee-when-title"><i class="ri-play-circle-line"></i><?= $isInit ? 'First day' : 'Starts' ?></div>
                                         <div class="ee-when-fields">
                                             <input type="date" class="form-control" id="f_start_date" name="starts_at" aria-label="<?= $isInit ? 'First day' : 'Start date' ?>">
@@ -62,7 +64,7 @@ $stepIcons = [1 => 'ri-calendar-event-line', 2 => 'ri-map-pin-user-line', 3 => '
                                         </div>
                                     </div>
                                     <span class="ee-when-arrow" aria-hidden="true"><i class="ri-arrow-right-line"></i></span>
-                                    <div class="ee-when-card">
+                                    <div class="ee-when-card is-end">
                                         <div class="ee-when-title"><i class="ri-stop-circle-line"></i><?= $isInit ? 'Last day' : 'Ends' ?></div>
                                         <div class="ee-when-fields">
                                             <input type="date" class="form-control" id="f_end_date" name="ends_at" aria-label="<?= $isInit ? 'Last day' : 'End date' ?>">
@@ -135,7 +137,7 @@ $stepIcons = [1 => 'ri-calendar-event-line', 2 => 'ri-map-pin-user-line', 3 => '
                         <?php } elseif ($n === 3) { ?>
                         <div id="regBox">
                             <!-- A toggle card (v1-events' ec-toggle) -->
-                            <label class="ec-toggle" for="f_registration">
+                            <label class="ec-toggle is-q" for="f_registration" style="--q: var(--success-rgb)">
                                 <input type="checkbox" role="switch" id="f_registration" name="registration">
                                 <span class="ec-toggle-icon"><i class="ri-clipboard-line"></i></span>
                                 <span class="ec-toggle-text">
@@ -195,7 +197,7 @@ $stepIcons = [1 => 'ri-calendar-event-line', 2 => 'ri-map-pin-user-line', 3 => '
                     <div class="preview-section" id="previewCard"></div>
                 </div>
                 <div class="card custom-card intake-tips">
-                    <strong><i class="ri-lightbulb-line"></i>Good to know</strong>
+                    <strong><span class="ev-tile is-sm text-dark" style="--q: var(--warning-rgb)"><i class="ri-lightbulb-line"></i></span>Good to know</strong>
                     <ul>
                         <li><b>Save as draft</b> keeps it to yourself. Nobody else sees it until you <b>publish</b>.</li>
                         <li>When you publish, the leaders of the places it is open to get a notification in their bell.</li>
