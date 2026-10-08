@@ -50,6 +50,8 @@ function messagesPageStyles(): void
     foreach (['assets/libs/select2/select2.min.css', 'assets/data-tables/1.12.1/css/dataTables.bootstrap5.min.css', 'assets/data-tables/responsive/2.3.0/css/responsive.bootstrap.min.css'] as $css) {
         echo '<link rel="stylesheet" href="' . SITE_URL . "/{$css}\" />\n";
     }
+    // The Inbox's side panel opens the sending place's photos full size.
+    echo '<link rel="stylesheet" href="' . SITE_URL . '/assets/libs/glightbox/css/glightbox.min.css" />' . "\n";
     echo '<link href="' . $v('assets/css/styles.min.css') . '" rel="stylesheet" />' . "\n";
 }
 
@@ -65,7 +67,7 @@ function messagesPageScripts(string $page): void
     }
     echo '<script src="' . $v('assets/js/utils/toast.js') . '"></script>' . "\n";
     echo '<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>' . "\n";
-    foreach (['assets/libs/select2/select2.min.js', 'assets/data-tables/1.12.1/js/jquery.dataTables.min.js', 'assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js', 'assets/data-tables/responsive/2.3.0/js/dataTables.responsive.min.js'] as $src) {
+    foreach (['assets/libs/select2/select2.min.js', 'assets/libs/glightbox/js/glightbox.min.js', 'assets/data-tables/1.12.1/js/jquery.dataTables.min.js', 'assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js', 'assets/data-tables/responsive/2.3.0/js/dataTables.responsive.min.js'] as $src) {
         echo '<script src="' . SITE_URL . "/{$src}\"></script>\n";
     }
     // Templates and the log are Settings > Communication's own code, given a Messages setting (comms-env.js).

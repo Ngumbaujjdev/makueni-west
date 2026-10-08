@@ -1,50 +1,42 @@
 <?php
-// Messages - our own inbox, in the Demographics look (not the template's chat):
-// section tabs with live figures, then one card with the list on the left and
-// the reading pane on the right - the message as a letter, replies as a
-// timeline, and a reply box. On a phone the list fills the screen and a
-// message opens over it, with Back. Filled in by assets/js/pages/messages/index.js.
+// Messages - our inbox in the template's chat layout (chat.html, 2026-10-08):
+// the list (.chat-info) with All / Diocese / Region / Church tabs, the
+// conversation (.main-chat-area) - the message as their bubble, your replies
+// as yours, and the reply box - and who sent it (.chat-user-details): the
+// person, their place, its photos and their other messages. On a phone the
+// list fills the screen and a message opens over it, with Back. Filled in by
+// assets/js/pages/messages/index.js.
 $canSend = $messagesCtx['can']['send'];
-$canRead = $messagesCtx['can']['read'];
 ?>
-<div class="page-toolbar">
-    <div class="page-toolbar-sub" id="placeLine"><?= htmlspecialchars($messagesCtx['place']['name'] ?: 'Messages') ?></div>
-    <div class="page-toolbar-controls">
+<div class="main-chart-wrapper gap-2 d-lg-flex mi-chat" id="miChat">
+    <div class="chat-info border">
         <?php if ($canSend): ?>
-        <a class="btn btn-primary" href="<?= $messagesCtx['baseUrl'] ?>/new"><i class="ri-send-plane-line me-1"></i>Send a message</a>
+        <a aria-label="Send a message" title="Send a message" href="<?= $messagesCtx['baseUrl'] ?>/new" class="btn btn-primary btn-icon rounded-circle chat-add-icon"><i class="ri-add-line"></i></a>
         <?php endif ?>
-    </div>
-</div>
-
-<?php // The old Sent and Saved tabs are their own pages now (Communication > Messages): Campaigns and Templates. ?>
-<div class="nav section-tabs" id="msgTabs" role="tablist" aria-label="Messages">
-    <button class="nav-link section-tab active" data-tab="inbox" type="button" role="tab" aria-selected="true">
-        <span class="section-tab-icon bg-primary"><i class="ri-inbox-line"></i></span>
-        <span class="section-tab-text"><strong>Inbox</strong><small data-tab-figure="inbox">&nbsp;</small></span>
-    </button>
-    <?php foreach (array_filter([
-        ['sent', 'campaigns.php', 'ri-broadcast-line', 'success', 'Campaigns', $canRead],
-        ['saved', 'templates.php', 'ri-file-list-3-line', 'purple', 'Templates', $canSend],
-    ], fn ($t) => $t[5]) as [$key, $file, $icon, $color, $label]): ?>
-    <a class="nav-link section-tab" href="<?= $messagesCtx['baseUrl'] ?>/<?= $file ?>">
-        <span class="section-tab-icon bg-<?= $color ?>"><i class="<?= $icon ?>"></i></span>
-        <span class="section-tab-text"><strong><?= $label ?></strong><small data-tab-figure="<?= $key ?>">&nbsp;</small></span>
-    </a>
-    <?php endforeach ?>
-</div>
-
-<div class="card custom-card mi-inbox" id="miInbox">
-    <div class="mi-list-col">
-        <div class="mi-list-tools">
-            <div class="input-group">
-                <span class="input-group-text"><i class="ri-search-line"></i></span>
-                <input type="search" class="form-control" id="miSearch" placeholder="Search messages" aria-label="Search messages">
+        <div class="d-flex align-items-center justify-content-between gap-2 w-100 p-3 border-bottom">
+            <div class="min-w-0">
+                <h5 class="fw-semibold mb-0">Messages <span class="badge bg-primary rounded-pill fs-11 ms-1 align-middle" id="miUnread" hidden></span></h5>
+                <div class="fs-12 text-truncate mi-chat-place"><?= htmlspecialchars($messagesCtx['place']['name'] ?: '') ?></div>
             </div>
-            <div class="d-flex flex-wrap gap-1 mt-2" id="miFrom" role="group" aria-label="Show messages from"></div>
+            <?php if ($canSend): ?>
+            <a class="btn btn-sm btn-primary-light flex-shrink-0" href="<?= $messagesCtx['baseUrl'] ?>/new"><i class="ri-send-plane-line me-1"></i>New</a>
+            <?php endif ?>
         </div>
-        <div class="mi-list" id="miList" aria-live="polite"></div>
+        <div class="chat-search p-3 border-bottom">
+            <div class="input-group">
+                <input type="search" class="form-control bg-light border-0" placeholder="Search your messages" id="miSearch" aria-label="Search your messages">
+                <span class="input-group-text bg-light border-0"><i class="ri-search-line"></i></span>
+            </div>
+        </div>
+        <ul class="nav nav-tabs tab-style-2 nav-justified mb-0 border-bottom d-flex mi-chat-tabs" id="miFrom" role="tablist" aria-label="Show messages from"></ul>
+        <ul class="list-unstyled mb-0 mt-2 chat-users-tab mi-chat-list" id="miList" aria-live="polite"></ul>
     </div>
-    <div class="mi-pane-col">
-        <div class="mi-pane" id="miPane"></div>
+
+    <div class="main-chat-area border" id="miMain">
+        <div class="mi-chat-empty">
+            <span class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading</span></span>
+        </div>
     </div>
+
+    <div class="chat-user-details border" id="chat-user-details"></div>
 </div>
