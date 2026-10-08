@@ -185,4 +185,29 @@ class MembersTest extends TestCase
         Sanctum::actingAs($this->regionLeader);
         $this->assertSame(2, $this->getJson('/api/people/totals')->json('data.sunday_school'));
     }
+
+    public function test_many_members_at_once_and_finding_one_person_to_message(): void
+    {
+        $a = $this->person(['first_name' => 'Agnes', 'phone' => '+254712000101', 'area' => 'Kasikeu']);
+        $b = $this->person(['first_name' => 'Brian', 'phone' => '+254712000102']);
+        $demo = $this->person(['first_name' => 'Demo', 'phone' => '+254700000009']);
+        $theirs = Person::create(['territory_id' => $this->otherChurch->id, 'first_name' => 'Agnes', 'last_name' => 'Elsewhere', 'phone' => '+254712000103', 'status' => 'member']);
+
+        Sanctum::actingAs($this->secretary);
+        $this->postJson('/api/people/bulk', ['ids' => [$a->id], 'action' => 'archive'])->assertForbidden();
+        $found = $this->getJson('/api/people/search?q=agn')->assertOk()->json('data');
+        $this->assertSame([$a->id], array_column($found, 'id'), 'own church only');
+        $this->assertSame([], $this->getJson('/api/people/search?q=demo')->json('data'), 'demo numbers are never offered');
+        $this->assertSame([$a->id], array_column($this->getJson('/api/people/search?q=kasikeu')->json('data'), 'id'), 'by area too');
+
+        Sanctum::actingAs($this->senior);
+        $this->postJson('/api/people/bulk', ['ids' => [$a->id, $b->id, $theirs->id], 'action' => 'inactive'])
+            ->assertOk()->assertJsonPath('data.done', 2)->assertJsonPath('data.skipped', 1);
+        $this->assertSame(['inactive', 'inactive', 'member'], [$a->fresh()->status, $b->fresh()->status, $theirs->fresh()->status]);
+        $this->postJson('/api/people/bulk', ['ids' => [$a->id, $demo->id], 'action' => 'archive'])->assertOk()->assertJsonPath('data.done', 2);
+        $this->assertNotNull($a->fresh()->archived_at);
+
+        Sanctum::actingAs($this->regionLeader);
+        $this->getJson('/api/people/search?q=agn')->assertForbidden();
+    }
 }

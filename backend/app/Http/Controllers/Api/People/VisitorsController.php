@@ -111,6 +111,7 @@ class VisitorsController extends Controller
         $d = $request->validate([
             'on' => ['required', 'date', "before_or_equal:{$today}"],
             'gathering_type_id' => ['nullable', 'integer', Rule::exists('gathering_types', 'id')->where('territory_id', $church->id)],
+            'gathering' => ['nullable', 'string', 'max:120'],
             'assigned_to' => ['nullable', 'integer', Rule::in($this->visitors->leaders($church)->pluck('id')->all())],
             'welcome_sms' => ['nullable', 'boolean'],
             'rows' => ['required', 'array', 'min:1', 'max:60'],
@@ -123,6 +124,7 @@ class VisitorsController extends Controller
             'rows.*.name.required' => 'Each visitor needs a name.',
             'assigned_to.in' => 'Pick a leader who can follow visitors up.',
         ]);
+        $where = $this->visitors->resolveGathering($church, $d['gathering'] ?? null, $d['gathering_type_id'] ?? null);
         // Every phone first, so one bad number stops the batch before anything is saved.
         $phones = [];
         foreach ($d['rows'] as $i => $row) {
@@ -134,7 +136,7 @@ class VisitorsController extends Controller
         $user = $request->user();
         $results = [];
         $welcome = [];
-        DB::transaction(function () use ($d, $church, $user, $phones, &$results, &$welcome) {
+        DB::transaction(function () use ($d, $church, $user, $phones, $where, &$results, &$welcome) {
             foreach ($d['rows'] as $i => $row) {
                 $phone = $phones[$i] ?? null;
                 $known = $phone ? $this->known($church, Phone::key($phone)) : null;
@@ -143,7 +145,7 @@ class VisitorsController extends Controller
 
                     continue;
                 }
-                $visit = ['territory_id' => $church->id, 'gathering_type_id' => $d['gathering_type_id'] ?? null, 'on' => $d['on'], 'created_by' => $user->id];
+                $visit = $where + ['territory_id' => $church->id, 'on' => $d['on'], 'created_by' => $user->id];
                 $area = ($a = trim((string) ($row['area'] ?? ''))) === '' ? null : mb_convert_case($a, MB_CASE_TITLE);
                 if ($known) {
                     if (! VisitorVisit::where('person_id', $known->id)->whereDate('on', $d['on'])->exists()) {
@@ -279,7 +281,7 @@ class VisitorsController extends Controller
         return $this->ok($this->detail($request, $church, $person->fresh()), $name ? "{$name->firstname} follows them up now." : 'Nobody is assigned now.');
     }
 
-    /** POST /visitors/{id}/visits {on, gathering_type_id?} - they came again. */
+    /** POST /visitors/{id}/visits {on, gathering?} - they came again. */
     public function visit(Request $request, int $id): JsonResponse
     {
         [$church, $person, $error] = $this->person($request, $id, 'manage');
@@ -289,11 +291,13 @@ class VisitorsController extends Controller
         $d = $request->validate([
             'on' => ['required', 'date', 'before_or_equal:'.$this->visitors->today()->toDateString()],
             'gathering_type_id' => ['nullable', 'integer', Rule::exists('gathering_types', 'id')->where('territory_id', $church->id)],
+            'gathering' => ['nullable', 'string', 'max:120'],
         ]);
+        $where = $this->visitors->resolveGathering($church, $d['gathering'] ?? null, $d['gathering_type_id'] ?? null);
         if (VisitorVisit::where('person_id', $person->id)->whereDate('on', $d['on'])->exists()) {
             return $this->unprocessable('on', 'Their visit that day is already recorded.');
         }
-        VisitorVisit::create($d + ['person_id' => $person->id, 'territory_id' => $church->id, 'first_time' => false, 'created_by' => $request->user()->id]);
+        VisitorVisit::create($where + ['on' => $d['on'], 'person_id' => $person->id, 'territory_id' => $church->id, 'first_time' => false, 'created_by' => $request->user()->id]);
         $last = $person->last_visit_on?->toDateString();
         $person->fill([
             'visit_count' => $person->visit_count + 1,
@@ -385,6 +389,45 @@ class VisitorsController extends Controller
         return $this->ok($this->detail($request, $church, $person->fresh()), "{$person->name} is a member now.");
     }
 
+    /**
+     * POST /visitors/bulk {ids[], action: assign|stage|archive, user_id?, stage?}
+     * - many visitors at once from the list. Only this church's; each change
+     * is audited, and someone given visitors to follow up is told once.
+     */
+    public function bulk(Request $request): JsonResponse
+    {
+        $church = $this->church($request, 'manage');
+        if ($church instanceof JsonResponse) {
+            return $church;
+        }
+        $d = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:500'], 'ids.*' => ['integer'],
+            'action' => ['required', Rule::in(['assign', 'stage', 'archive'])],
+            'user_id' => ['nullable', 'integer', Rule::in($this->visitors->leaders($church)->pluck('id')->all())],
+            'stage' => ['required_if:action,stage', 'nullable', Rule::in(['new', 'contacted', 'returning', 'regular'])],
+        ], ['user_id.in' => 'Pick a leader who can follow visitors up.', 'stage.in' => 'Use "Became a member" to make them members.']);
+        $people = Person::where('territory_id', $church->id)->whereNotNull('stage')->whereIn('id', $d['ids'])->whereNull('anonymised_at')->get();
+        $done = 0;
+        foreach ($people as $person) {
+            $change = match ($d['action']) {
+                'assign' => $person->status === 'visitor' ? ['assigned_to' => $d['user_id'] ?? null] : null,
+                'stage' => $person->status === 'visitor' ? ['stage' => $d['stage']] : null,
+                'archive' => $person->archived_at ? null : ['archived_at' => now()],
+            };
+            if ($change) {
+                $person->forceFill($change + ['updated_by' => $request->user()->id])->save();
+                $done++;
+            }
+        }
+        $to = $d['action'] === 'assign' && ! empty($d['user_id']) ? User::find($d['user_id']) : null;
+        if ($to && $done && (int) $to->id !== (int) $request->user()->id) {
+            $to->notify(new PlaceNotification('followup', "{$done} ".($done === 1 ? 'visitor' : 'visitors').' to follow up', "{$request->user()->firstname} asked you to follow up {$done} ".($done === 1 ? 'visitor' : 'visitors')." at {$church->name}.", '/church/visitors/?assigned=me', $church, 'ri-user-follow-line'));
+        }
+        $what = ['assign' => $to ? "given to {$to->firstname}" : 'now with nobody', 'stage' => 'moved to '.strtolower(Person::STAGES[$d['stage'] ?? 'new'] ?? ''), 'archive' => 'archived'][$d['action']];
+
+        return $this->ok(['done' => $done, 'skipped' => count(array_unique($d['ids'])) - $done], "{$done} ".($done === 1 ? 'visitor' : 'visitors')." {$what}.");
+    }
+
     /** POST /visitors/{id}/archive and /restore */
     public function archive(Request $request, int $id): JsonResponse
     {
@@ -461,7 +504,7 @@ class VisitorsController extends Controller
             'first_name' => $p->first_name, 'last_name' => $p->last_name, 'congregation' => $p->congregation,
             'anonymised' => (bool) $p->anonymised_at, 'created_at' => $p->created_at?->toIso8601String(),
             'visit_list' => $visits->map(fn (VisitorVisit $v) => [
-                'id' => $v->id, 'on' => $v->on->toDateString(), 'first_time' => $v->first_time, 'gathering' => $v->gatheringType?->name,
+                'id' => $v->id, 'on' => $v->on->toDateString(), 'first_time' => $v->first_time, 'gathering' => $v->gathering_label,
             ])->values(),
             'followups' => $followups->map(fn (VisitorFollowup $f) => [
                 'id' => $f->id, 'type' => $f->type, 'outcome' => $f->outcome, 'note' => $f->note, 'done_on' => $f->done_on->toDateString(),

@@ -131,6 +131,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('people/totals', [PeopleController::class, 'totals']);
     Route::get('people/transfers', [PeopleController::class, 'transfers']);
     Route::post('people/transfer-in', [PeopleController::class, 'transferIn']);
+    Route::post('people/bulk', [PeopleController::class, 'bulk']);
+    Route::get('people/search', [PeopleController::class, 'search']);
     Route::get('people', [PeopleController::class, 'index']);
     Route::post('people', [PeopleController::class, 'store']);
     Route::get('people/{id}', [PeopleController::class, 'show'])->whereNumber('id');
@@ -149,6 +151,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('visitors/insights', [VisitorsController::class, 'insights']);
     Route::get('visitors/totals', [VisitorsController::class, 'totals']);
     Route::post('visitors/batch', [VisitorsController::class, 'batch']);
+    Route::post('visitors/bulk', [VisitorsController::class, 'bulk']);
     Route::get('visitors', [VisitorsController::class, 'index']);
     Route::get('visitors/{id}', [VisitorsController::class, 'show'])->whereNumber('id');
     Route::put('visitors/{id}', [VisitorsController::class, 'update'])->whereNumber('id');
