@@ -95,5 +95,22 @@ const MessagesAPI = (function () {
     templates: () => request("GET", "/messages/templates"),
     saveTemplate: (id, body) => (id ? request("PUT", `/messages/templates/${id}`, { body }) : request("POST", "/messages/templates", { body })),
     deleteTemplate: (id) => request("DELETE", `/messages/templates/${id}`),
+    // Chat (L6): contacts, one-to-one chats and groups.
+    contacts: (q = "") => request("GET", "/chat/contacts", { params: q ? { q } : null }),
+    chats: () => request("GET", "/chat/chats"),
+    chat: (id) => request("GET", `/chat/chats/${id}`),
+    chatMessages: (id, before) => request("GET", `/chat/chats/${id}/messages`, { params: before ? { before } : null }),
+    chatSend: (id, body) => request("POST", `/chat/chats/${id}/messages`, { body: { body } }),
+    chatRead: (id, messageId) => request("POST", `/chat/chats/${id}/read`, { body: { message_id: messageId } }),
+    direct: (userId) => request("POST", "/chat/direct", { body: { user_id: userId } }),
+    createGroup: (name, memberIds) => request("POST", "/chat/groups", { body: { name, member_ids: memberIds } }),
+    renameGroup: (id, name) => request("PATCH", `/chat/groups/${id}`, { body: { name } }),
+    groupPhoto: (id, file) => {
+      const form = new FormData();
+      form.append("photo", file);
+      return request("POST", `/chat/groups/${id}/photo`, { form });
+    },
+    addMembers: (id, userIds) => request("POST", `/chat/groups/${id}/members`, { body: { user_ids: userIds } }),
+    removeMember: (id, userId) => request("DELETE", `/chat/groups/${id}/members/${userId}`),
   };
 })();

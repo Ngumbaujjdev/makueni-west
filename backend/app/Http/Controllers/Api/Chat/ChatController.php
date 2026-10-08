@@ -23,6 +23,28 @@ class ChatController extends Controller
 {
     public function __construct(private Chats $chats) {}
 
+    /**
+     * GET /chat/realtime - how the page connects live: the Reverb app key, host
+     * and port (public by design - the secret never leaves the server), or
+     * live: false when broadcasting is off and the page should just check.
+     */
+    public function realtime(Request $request): JsonResponse
+    {
+        if ($deny = $this->deny($request)) {
+            return $deny;
+        }
+        $on = config('broadcasting.default') === 'reverb' && config('broadcasting.connections.reverb.key');
+        $opts = config('broadcasting.connections.reverb.options', []);
+
+        return $this->ok($on ? [
+            'live' => true,
+            'key' => config('broadcasting.connections.reverb.key'),
+            'host' => $opts['host'] ?? 'localhost',
+            'port' => (int) ($opts['port'] ?? 8080),
+            'scheme' => $opts['scheme'] ?? 'http',
+        ] : ['live' => false]);
+    }
+
     /** GET /chat/contacts?q= */
     public function contacts(Request $request): JsonResponse
     {

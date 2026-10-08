@@ -156,4 +156,14 @@ class ChatTest extends TestCase
         Sanctum::actingAs($this->otherPastor);
         $auth("private-chat.{$id}")->assertForbidden();
     }
+
+    public function test_the_page_learns_how_to_connect_live_without_the_secret(): void
+    {
+        Sanctum::actingAs($this->pastor);
+        $this->getJson('/api/chat/realtime')->assertOk()->assertJsonPath('data.live', false);
+
+        config(['broadcasting.default' => 'reverb', 'broadcasting.connections.reverb.key' => 'pub-key', 'broadcasting.connections.reverb.secret' => 'sekret']);
+        $data = $this->getJson('/api/chat/realtime')->assertOk()->assertJsonPath('data.key', 'pub-key')->json('data');
+        $this->assertStringNotContainsString('sekret', json_encode($data));
+    }
 }
