@@ -30,7 +30,7 @@ class PeopleCareAccessSeeder extends Seeder
 {
     /** Which modules' pages are built (flipped by each phase's PR). */
     public const LIVE = [
-        'members' => false,
+        'members' => true,
         'visitors' => false,
         'pastoral' => false,
         'ministries' => false,
@@ -46,6 +46,8 @@ class PeopleCareAccessSeeder extends Seeder
             'pages' => [
                 '' => ['Members', 'Everyone in our register: find, filter and open a member.', ['read', 'export']],
                 'new.php' => ['Add member', 'Add someone to the register.', ['manage']],
+                'transfers.php' => ['Transfers', 'Members who moved in from, or out to, another church.', ['transfers']],
+                'insights.php' => ['Insights', 'Ages, joining and leaving, and birthdays.', ['insights']],
             ],
         ],
         'visitors' => [
@@ -193,6 +195,10 @@ class PeopleCareAccessSeeder extends Seeder
                     continue;
                 }
                 foreach ($modules as $key => $abilities) {
+                    // Whoever reads the register also gets its Transfers and Insights pages.
+                    if ($key === 'members' && in_array('read', $abilities, true)) {
+                        $abilities = [...$abilities, 'transfers', 'insights'];
+                    }
                     foreach ($abilities as $ability) {
                         $permission = $permissions["{$level}.{$key}.{$ability}"] ?? null;
                         if ($permission && ! $role->hasPermissionTo($permission)) {

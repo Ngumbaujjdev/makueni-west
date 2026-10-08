@@ -229,6 +229,18 @@ return [
             'sentence' => 'How your emails and SMS go out - through the diocese, or your own account - and what they look like.',
         ],
 
+        // People & care P1 - the church's private member register
+        // (docs/specs/people-and-care-spec.md). Read by PeopleController.
+        'members' => [
+            'label' => 'Members',
+            'icon' => 'ri-contacts-book-2-line',
+            'colour' => 'success',
+            'group' => 'people',
+            'levels' => ['church'],
+            'kind' => 'form',
+            'sentence' => 'What the member form asks for, and the birthday message.',
+        ],
+
         // S5 - how to pay a region or the diocese. Read by Contributions ("How to
         // send it", for the places below). Churches get theirs with the first
         // page that shows a church's payment details.
@@ -325,6 +337,12 @@ return [
         'sms.api_key' => ['section' => 'sms', 'card' => 'Gateway', 'label' => 'API key', 'type' => 'secret', 'secret' => true, 'rules' => ['nullable', 'string', 'max:200'], 'default' => null, 'levels' => ['diocese']],
         'sms.sandbox' => ['section' => 'sms', 'card' => 'Gateway', 'label' => 'Use the sandbox (no real messages)', 'type' => 'switch', 'default' => false, 'levels' => ['diocese']],
         'sms.sender_id' => ['section' => 'sms', 'card' => 'Who SMS comes from', 'label' => 'Sender ID', 'rules' => ['nullable', 'string', 'max:11', 'regex:/^[A-Za-z0-9 ]*$/'], 'default' => null, 'levels' => ['diocese'], 'help' => 'Up to 11 letters or digits, approved by your provider. Leave empty for their default.', 'used_by' => 'Every SMS - churches send under it'],
+
+        // ---- Members (People & care P1) - read by PeopleController (the form's
+        // required fields) and the Insights page's "Send birthday SMS".
+        'members.require_dob' => ['section' => 'members', 'card' => 'The member form', 'label' => 'Date of birth is required', 'type' => 'switch', 'default' => false, 'levels' => ['church', 'diocese'], 'lockable' => true, 'help' => 'Ages feed the age bands and birthdays.', 'used_by' => 'Add member'],
+        'members.require_national_id' => ['section' => 'members', 'card' => 'The member form', 'label' => 'National ID is required', 'type' => 'switch', 'default' => false, 'levels' => ['church', 'diocese'], 'lockable' => true, 'help' => 'Stored encrypted; only your church sees it.', 'used_by' => 'Add member'],
+        'members.birthday_template' => ['section' => 'members', 'card' => 'Birthdays', 'label' => 'Birthday message', 'type' => 'textarea', 'rules' => ['nullable', 'string', 'max:300'], 'default' => 'Happy birthday {first_name}! We thank God for you. From your family at {church}.', 'levels' => ['church'], 'span' => 12, 'help' => '{first_name} and {church} are filled in for each person.', 'used_by' => 'Members > Insights > Send birthday SMS'],
 
         // Communication (S6b). comms.mode flows down and can be locked; everything
         // else is the place's own ('inherits' => false) - a church never sends

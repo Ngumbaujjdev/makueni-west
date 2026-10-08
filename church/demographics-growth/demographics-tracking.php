@@ -336,6 +336,8 @@ $steps = [
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/api-handler.js<?= assetVersion('assets/js/pages/demographics/api-handler.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/ui-helpers.js<?= assetVersion('assets/js/pages/demographics/ui-helpers.js') ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/pages/demographics/demographics-tracking.js<?= assetVersion('assets/js/pages/demographics/demographics-tracking.js') ?>"></script>
+    <!-- "From your register: N" beside the matching boxes (Members, docs/specs/people-and-care-spec.md) - a hint, never filled in by itself -->
+    <script src="<?= SITE_URL ?>/assets/js/pages/members/register-hint.js<?= assetVersion('assets/js/pages/members/register-hint.js') ?>"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => window.DemographicsTracking.init());
     </script>

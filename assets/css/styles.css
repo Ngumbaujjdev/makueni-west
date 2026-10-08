@@ -38124,3 +38124,58 @@ button.cal-side-item:focus-visible {
 .app-modal .select2-container--open .select2-selection--single,
 .intake-form .select2-container--focus .select2-selection--single,
 .intake-form .select2-container--open .select2-selection--single { border-color: rgb(var(--primary-rgb)) !important; box-shadow: 0 0 0 3px rgba(var(--primary-rgb), .12); }
+
+/* ==========================================================================
+   Members - the church's private register (2026-10-08,
+   docs/specs/people-and-care-spec.md P1). Plain rows and white cards so
+   the people read first; one small colour per thing that means something.
+   ========================================================================== */
+.min-w-0 { min-width: 0; }
+.mb-sub { font-size: .78rem; color: var(--default-text-color); }
+.mb-link { color: var(--v2-heading); }
+.mb-link:hover, .mb-link:focus-visible { color: var(--primary-color); }
+.mb-row { cursor: pointer; }
+.mb-avatar img, .mb-hero-photo .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.mb-empty { padding: 2rem 1rem; text-align: center; white-space: normal; }
+.mb-empty p { max-width: 28rem; margin-inline: auto; }
+
+.mb-choice-row { display: flex; flex-wrap: wrap; gap: .5rem; }
+.mb-choice { position: relative; display: inline-flex; align-items: center; gap: .45rem; margin: 0; padding: .5rem .9rem; border: 1.5px solid var(--default-border); border-radius: .6rem; background: var(--custom-white); font-weight: 600; color: var(--v2-heading); cursor: pointer; }
+.mb-choice input { position: absolute; opacity: 0; pointer-events: none; }
+.mb-choice:has(input:checked) { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(var(--primary-rgb), .15); }
+.mb-choice:has(input:checked) i { color: var(--primary-color); }
+.mb-choice:has(input:focus-visible) { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+
+.mb-dup { display: flex; gap: .5rem; align-items: flex-start; margin-top: .5rem; padding: .6rem .75rem; border-radius: .6rem; background: rgba(var(--warning-rgb), .14); color: var(--v2-heading); font-size: .82rem; }
+.mb-dup > i { font-size: 1rem; }
+
+.mb-review { display: flex; flex-direction: column; }
+.mb-review-row { display: grid; grid-template-columns: minmax(9rem, 13rem) minmax(0, 1fr); gap: 1rem; padding: .6rem 0; border-top: 1px solid var(--default-border); }
+.mb-review-row:first-child { border-top: 0; padding-top: 0; }
+.mb-review-row span { font-size: .8rem; font-weight: 600; color: var(--default-text-color); }
+.mb-review-row strong { font-size: .9rem; color: var(--v2-heading); overflow-wrap: anywhere; }
+
+.mb-hero-photo { position: relative; flex: none; padding: 0; border: 0; background: none; border-radius: 50%; }
+.mb-hero-photo.is-static { cursor: default; }
+.mb-hero-photo .avatar { font-size: 1.6rem; font-weight: 700; }
+.mb-hero-photo-cam { position: absolute; right: 0; bottom: 0; display: inline-flex; align-items: center; justify-content: center; width: 1.9rem; height: 1.9rem; border: 2px solid var(--custom-white); border-radius: 50%; background: var(--primary-color); color: #fff; font-size: .9rem; }
+
+.mb-glance { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem; }
+.mb-glance span { display: block; font-size: .75rem; font-weight: 600; color: var(--default-text-color); }
+.mb-glance strong { font-size: .95rem; color: var(--v2-heading); }
+
+.mb-mini-list { margin: 0; padding: 0; list-style: none; }
+.mb-mini-list li { display: flex; align-items: center; gap: .65rem; padding: .55rem 0; border-top: 1px solid var(--default-border); }
+.mb-mini-list li:first-child { border-top: 0; padding-top: 0; }
+.mb-mini-list li > i { font-size: 1.1rem; color: var(--primary-color); }
+.mb-mini-list small { display: block; font-size: .76rem; color: var(--default-text-color); }
+
+.mb-compare { display: flex; flex-direction: column; }
+.mb-compare-head, .mb-compare-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: .5rem; padding: .45rem 0; }
+.mb-compare-head { font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--default-text-color); }
+.mb-compare-row { border-top: 1px solid var(--default-border); font-size: .88rem; color: var(--v2-heading); }
+.mb-compare-row strong { text-align: left; }
+@media (max-width: 575.98px) { .mb-review-row { grid-template-columns: minmax(0, 1fr); gap: .15rem; } }
+.mb-register-hint { display: flex; align-items: center; flex-wrap: wrap; gap: .3rem; margin-top: .4rem; font-size: .76rem; color: var(--default-text-color); }
+.mb-register-hint i { color: rgb(var(--success-rgb)); }
+.mb-register-hint .btn-link { font-size: .76rem; font-weight: 700; }

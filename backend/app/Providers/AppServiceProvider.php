@@ -96,6 +96,9 @@ class AppServiceProvider extends ServiceProvider
             'activity_session' => 'App\Models\ActivitySession',
             'monthly_report' => 'App\Models\MonthlyReport',
             'message_batch' => 'App\Models\MessageBatch',
+            // People & care (docs/specs/people-and-care-spec.md)
+            'person' => 'App\Models\Person',
+            'person_transfer' => 'App\Models\PersonTransfer',
         ]);
 
         // Saved system settings (email server, ...) take over from .env -
