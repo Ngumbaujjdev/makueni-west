@@ -125,7 +125,11 @@ class CalendarLifeTest extends TestCase
         $this->assertSame('KES 40.00 still to send to Test Diocese · late', $due[0]['description']);
         $this->assertSame('/church/budget/contributions.php', $due[0]['url']);
 
-        // Next month's budget, on the 25th, until one covers it.
+        // Next month's budget, on the 25th, until one covers it. The test
+        // users' roles start the day before the real today; travelling back
+        // to 5 October would put them before their roles began (403 once the
+        // real date passed 6 October 2026), so their roles start earlier.
+        \App\Models\UserTerritoryAssignment::query()->update(['effective_from' => '2026-01-01']);
         $this->travelTo(now()->setDate(2026, 10, 5));
         $prepare = collect($this->feed($this->pastor, '2026-10-01', '2026-10-31'))->where('source', 'due')->values();
         $this->assertSame(['Prepare November 2026\'s budget'], $prepare->pluck('title')->all());
