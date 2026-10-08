@@ -109,12 +109,16 @@ The placeholders' unbuilt sub-pages are switched off.
 ### L5b as built
 - **Pages:** `includes/messages/` (`context.php`, `page.php`, `body-{index,new,message}.php`) with wrappers `{church,region,diocese}/messages/{index,new,message}.php`; scripts in `assets/js/pages/messages/` (`api.js`, `ui.js`, `index.js`, `new.js`, `message.js`).
 - **Messages page:** section tabs **Inbox** (everyone), **Sent** and **Saved messages** (those who send). The Inbox reads in place, chat-style, with a reply box; `?open=` opens one (the bell links there).
-- **Messages page is the template's `chat.html`** (2026-10-05): its markup, classes, ids and `chat.js` behaviour, as the first thing on the page (no page header or figure cards, as in the template). The panels are sized to the screen less the sub-tab bar (`--secondary-nav-h`). Its slots hold ours:
-  - Recent / Groups / Calls → **Inbox / Sent / Saved**, and "ACTIVE / ALL CHATS" → **Unread / Earlier**.
-  - The list header's settings menu → show messages from everyone, the diocese, the region or our church.
-  - The header's phone and video buttons → this message's two actions (Reply and Send a new message; Everyone it went to; Use it and Edit). They show from small tablets up; on a phone they're in the ⋮ menu.
-  - The footer's second button → put a saved message into the reply.
-  - The details panel's three round buttons → the same actions plus Copy; "Shared Files" → **About this message**, and for Sent, **Who it went to** with View All.
+- **Messages page: our own inbox** (2026-10-08). It replaced the copy of the template's chat, which the owner found dated. It is built in the Demographics look:
+  - **Section tabs** with live figures: Inbox (unread or count), Sent (this month), Saved.
+  - **One card** sized to the screen:
+    - **The list:** search, "from" chips for the Inbox, Unread / Earlier groups. Rows show a solid icon tile, the sender and time, the subject (one line) and a snippet (two lines, clamped), so long text never breaks the layout.
+    - **The reading pane:**
+      - **Inbox:** the message as a letter, your replies as a timeline, and a reply box with saved-message chips.
+      - **Sent:** the letter, replies, and "Who it went to" with read ticks.
+      - **Saved:** the letter, the phone preview, and Use / Edit.
+  - **On a phone** the list fills the screen and a message opens over it, with Back.
+  - One colour (primary) for chips and fields; coloured placeholders.
 - **Send a message is v1-events' "Send campaign" composer** (2026-10-05), as a page card:
   - **Compose (left):** channel cards (In the app / SMS / Email / SMS and email); saved messages as template chips (with "Write my own"; it asks before replacing typed text); subject and message; placeholder chips that insert at the cursor; the SMS counter ("80 / 160 · 1 SMS"); and **Send a test**, which sends to your own phone or email through the typed-in route, subject marked [TEST].
   - **Who gets it (right):** role chips, the places below, typed-in contacts; the live counter (in the app / SMS / emails, and notes for people with no phone or email); **How it reads** (v1's template-writer phone); and Send now / Schedule.
