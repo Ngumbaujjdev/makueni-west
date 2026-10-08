@@ -23,7 +23,8 @@ const SettingsMessages = (function () {
     const d = new Date(iso);
     return { day: d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }), time: d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }), iso: iso.slice(0, 10) };
   };
-  const statusPill = (s) => UI.pill(STATUS[s]?.[0] || s, STATUS[s]?.[1] || "secondary");
+  // Solid for what happened (sent, failed), pale for "log only" (it never left).
+  const statusPill = (s) => (s === "logged" ? `<span class="soft-chip soft-warning"><i class="ri-flask-line"></i>${STATUS.logged[0]}</span>` : UI.pill(STATUS[s]?.[0] || s, STATUS[s]?.[1] || "secondary"));
   const viaChip = (v) => `<span class="soft-chip soft-${VIA[v]?.[1] || "secondary"}">${VIA[v]?.[0] || esc(v)}</span>`;
 
   function kpis(rows) {
@@ -68,7 +69,7 @@ const SettingsMessages = (function () {
     const cols = ["When", "Type", "Message", ...(showPlace ? ["Where"] : []), "Sent through", "Status", ""];
     host.innerHTML = `
       <div class="row">${kpis(rows)
-        .map((k) => `<div class="col-xxl-3 col-md-6">${k}</div>`)
+        .map((k) => `<div class="col-sm-6">${k}</div>`)
         .join("")}</div>
       ${F.card({
         id: "card-messages",
