@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Settings;
 
 use App\Services\Messaging\PlaceMessenger;
 use App\Support\Messaging\EmailBrand;
+use App\Support\Phone;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -29,7 +30,12 @@ class CommunicationController extends SettingsController
         }
         $data = $request->validate([
             'channel' => ['required', 'in:email,sms'],
-            'to' => ['required', 'string', 'max:255', $request->input('channel') === 'email' ? 'email' : 'regex:/^[0-9+()\s-]{9,30}$/'],
+            'to' => ['required', 'string', 'max:255', $request->input('channel') === 'email' ? 'email' : function ($attr, $value, $fail) {
+                // Say what's wrong (e.g. a digit too many), before anything is sent.
+                if ($problem = Phone::problem($value)) {
+                    $fail($problem);
+                }
+            }],
         ]);
         $c = $messenger->channels($place);
         $via = fn (string $ch) => $c[$ch]['via'] === 'own' ? 'your own account' : "the diocese's";

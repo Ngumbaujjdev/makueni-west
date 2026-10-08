@@ -38034,6 +38034,11 @@ button.cal-side-item:focus-visible {
 
 /* The preview window and the writer */
 .cm-modal .modal-body { padding: 1.5rem; }
+/* A sent message's facts (the Log's window): calm label / value rows, no rules */
+.cm-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem 1.25rem; margin: 0; padding: 1.1rem 1.2rem; border: 1px solid var(--default-border); border-radius: .85rem; background: var(--custom-white); }
+.cm-facts > div { min-width: 0; }
+.cm-facts dt { font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--default-text-color); }
+.cm-facts dd { margin: .15rem 0 0; font-size: .92rem; font-weight: 600; color: var(--v2-heading); overflow-wrap: anywhere; }
 .cm-modal .modal-footer { gap: .5rem; padding: 1rem 1.5rem; }
 .cm-read { padding: 1.1rem 1.2rem; border: 1px solid var(--default-border); border-radius: .85rem; background: var(--custom-white); }
 .cm-read-label, .cm-label-sm { font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--default-text-color); }

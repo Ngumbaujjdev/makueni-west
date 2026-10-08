@@ -17,6 +17,35 @@ final class Phone
         return preg_match('/^(?:254|0)?([17]\d{8})$/', $digits, $m) ? '+254'.$m[1] : null;
     }
 
+    /**
+     * Why a number can't be texted, in words, or null when it can. A Kenyan
+     * number (0…, 254…, +254…) needs 9 digits after the prefix, starting with
+     * 7 or 1; another country's needs its + and country code.
+     */
+    public static function problem(?string $phone): ?string
+    {
+        $raw = trim((string) $phone);
+        $digits = preg_replace('/\D+/', '', $raw);
+        if ($digits === '') {
+            return $raw === '' ? 'Enter a phone number.' : "That doesn't look like a phone number - use the form +254 712 345 678.";
+        }
+        if (self::kenyaMobile($raw)) {
+            return null;
+        }
+        if (preg_match('/^(?:254|0)(\d*)$/', $digits, $m) && ! (str_starts_with($raw, '+') && ! str_starts_with($digits, '254'))) {
+            $n = strlen($m[1]);
+
+            return $n !== 9
+                ? "A Kenyan number has 9 digits after +254 (like +254 712 345 678) - this one has {$n}."
+                : 'A Kenyan mobile number starts with 7 or 1 after +254 (like +254 712 345 678).';
+        }
+        if (str_starts_with($raw, '+') && strlen($digits) >= 10 && strlen($digits) <= 15) {
+            return null; // another country's number
+        }
+
+        return "That doesn't look like a phone number - use the form +254 712 345 678.";
+    }
+
     /** The last 9 digits - "+254 712 345 678" and "0712345678" share one key (users.phone_key, unique). */
     public static function key(?string $phone): ?string
     {

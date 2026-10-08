@@ -131,6 +131,9 @@ class SettingsCommunicationTest extends TestCase
         Sanctum::actingAs($this->pastor);
         $this->postJson('/api/settings/communication/test', ['channel' => 'email', 'to' => 'jane@example.test'])->assertOk()->assertJsonPath('data.via', 'diocese');
         $this->postJson('/api/settings/communication/test', ['channel' => 'sms', 'to' => '0712345678'])->assertOk()->assertJsonPath('data.status', 'logged');
+        // A digit too many is refused with the reason, before anything is sent.
+        $this->postJson('/api/settings/communication/test', ['channel' => 'sms', 'to' => '+2547571410682'])->assertStatus(422)
+            ->assertJsonPath('errors.to.0', 'A Kenyan number has 9 digits after +254 (like +254 712 345 678) - this one has 10.');
         $this->assertSame(2, MessageLog::where('territory_id', $this->myChurch->id)->where('kind', 'test')->count());
         $this->assertStringContainsString('Your email is working', MessageLog::where('channel', 'mail')->value('body'));
     }

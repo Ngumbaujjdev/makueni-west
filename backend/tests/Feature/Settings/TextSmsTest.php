@@ -82,6 +82,18 @@ class TextSmsTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_a_wrong_length_number_is_refused_before_anything_is_sent(): void
+    {
+        $this->driver('textsms');
+        Http::fake();
+
+        $r = app(PlaceMessenger::class)->sms($this->myChurch, '+2547571410682', 'Hi', 'test');
+
+        $this->assertSame('failed', $r['status']);
+        $this->assertStringContainsString('this one has 10', $r['error']);
+        Http::assertNothingSent();
+    }
+
     public function test_choosing_the_log_in_settings_wins(): void
     {
         $this->driver('log');
