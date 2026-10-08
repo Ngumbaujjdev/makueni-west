@@ -30619,14 +30619,33 @@ tr.list-row-flash > td {
   background: rgba(var(--primary-rgb), 0.05);
   border-color: rgba(var(--primary-rgb), 0.15) !important;
 }
+/* 2026-10-08: one field style for every window and form - tinted in the
+   brand colour, a brand-colour placeholder, and a brand focus ring. */
 .app-modal .form-control,
 .app-modal .form-select,
-.app-modal .input-group-text {
-  background-color: rgb(var(--light-rgb));
+.intake-form .form-control,
+.intake-form .form-select {
+  background-color: rgba(var(--primary-rgb), 0.04);
+  border-color: rgba(var(--primary-rgb), 0.25);
+}
+.app-modal .input-group-text,
+.intake-form .input-group-text {
+  background-color: rgba(var(--primary-rgb), 0.08);
+  border-color: rgba(var(--primary-rgb), 0.25);
+  color: var(--primary-color);
+}
+.app-modal .form-control::placeholder,
+.intake-form .form-control::placeholder {
+  color: rgba(var(--primary-rgb), 0.75);
+  opacity: 1;
 }
 .app-modal .form-control:focus,
-.app-modal .form-select:focus {
+.app-modal .form-select:focus,
+.intake-form .form-control:focus,
+.intake-form .form-select:focus {
   background-color: var(--custom-white);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(var(--primary-rgb), 0.15);
 }
 
 /* Responsive */
@@ -37451,3 +37470,61 @@ button.cal-side-item:hover,
 button.cal-side-item:focus-visible {
   background: rgba(var(--primary-rgb), 0.05);
 }
+
+/* ==========================================================================
+   New event / New initiative (2026-10-08) - v1-events' event wizard pieces in
+   our one colour: kind as choice cards (ec-choices), Starts -> Ends cards
+   with a duration badge (ee-when), registration as a toggle card
+   (ec-toggle), a save bar that stays in view, and a "Plan an event" tile on
+   the list. The inputs and ids underneath are unchanged.
+   ========================================================================== */
+.ec-choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr)); gap: .6rem; }
+.ec-choice { position: relative; display: flex; align-items: center; gap: .7rem; margin: 0; padding: .65rem 2.2rem .65rem .7rem; border: 1.5px solid rgba(var(--primary-rgb), .2); border-radius: .7rem; background: var(--custom-white); cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.ec-choice:hover { border-color: rgba(var(--primary-rgb), .5); transform: translateY(-1px); }
+.ec-choice input { position: absolute; opacity: 0; pointer-events: none; }
+.ec-choice-icon { display: inline-flex; flex: 0 0 2.1rem; align-items: center; justify-content: center; width: 2.1rem; height: 2.1rem; border-radius: .6rem; background: rgba(var(--primary-rgb), .1); color: var(--primary-color); font-size: 1rem; }
+.ec-choice strong { font-size: .84rem; font-weight: 600; color: var(--default-text-color); }
+.ec-choice-tick { position: absolute; top: 50%; right: .7rem; display: none; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; margin-top: -.625rem; border-radius: 50%; background: var(--primary-color); color: #fff; font-size: .7rem; }
+.ec-choice:has(input:checked) { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(var(--primary-rgb), .15); }
+.ec-choice:has(input:checked) .ec-choice-icon { background: var(--primary-color); color: #fff; }
+.ec-choice:has(input:checked) .ec-choice-tick { display: inline-flex; }
+.ec-choice:has(input:focus-visible) { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+.has-error .ec-choice { border-color: rgb(var(--danger-rgb)); }
+
+.ee-when { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: .75rem; }
+.ee-when-card { padding: .85rem .95rem .95rem; background: rgba(var(--primary-rgb), .04); border: 1px solid rgba(var(--primary-rgb), .18); border-radius: .7rem; }
+.ee-when-title { display: flex; align-items: center; gap: .4rem; margin-bottom: .6rem; font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--default-text-color); }
+.ee-when-title i { color: var(--primary-color); }
+.ee-when-fields { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: .5rem; }
+.ee-when-arrow { display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; border-radius: 50%; background: var(--primary-color); color: #fff; font-size: 1rem; }
+.ee-when-foot { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .6rem; }
+.ec-duration { display: inline-flex; align-items: center; gap: .35rem; padding: .25rem .7rem; border-radius: 999px; background: var(--primary-color); color: #fff; font-size: .75rem; font-weight: 600; }
+.ec-duration.is-bad { background: rgb(var(--danger-rgb)); }
+@media (max-width: 767.98px) {
+  .ee-when { grid-template-columns: 1fr; gap: .5rem; }
+  .ee-when-arrow { justify-self: center; width: 1.9rem; height: 1.9rem; transform: rotate(90deg); }
+}
+
+.ec-toggle { position: relative; display: flex; align-items: center; gap: .8rem; margin: 0; padding: 1rem; border: 1.5px solid rgba(var(--primary-rgb), .2); border-radius: .75rem; background: var(--custom-white); cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.ec-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+.ec-toggle-icon { display: inline-flex; flex: 0 0 2.6rem; align-items: center; justify-content: center; width: 2.6rem; height: 2.6rem; border-radius: .7rem; background: rgba(var(--primary-rgb), .12); color: var(--primary-color); font-size: 1.15rem; }
+.ec-toggle-text { flex: 1; min-width: 0; }
+.ec-toggle-text strong { display: block; font-size: .9rem; color: var(--default-text-color); }
+.ec-toggle-text small { font-size: .78rem; color: var(--default-text-color); }
+.ec-toggle-switch { position: relative; flex: 0 0 2.5rem; width: 2.5rem; height: 1.4rem; border-radius: 999px; background: var(--gray-3); transition: background .15s; }
+.ec-toggle-switch i { position: absolute; top: .2rem; left: .2rem; width: 1rem; height: 1rem; border-radius: 50%; background: #fff; transition: transform .15s; }
+.ec-toggle:has(input:checked) { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(var(--primary-rgb), .15); }
+.ec-toggle:has(input:checked) .ec-toggle-icon { background: var(--primary-color); color: #fff; }
+.ec-toggle:has(input:checked) .ec-toggle-switch { background: var(--primary-color); }
+.ec-toggle:has(input:checked) .ec-toggle-switch i { transform: translateX(1.1rem); }
+.ec-toggle:has(input:focus-visible) { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+
+/* The save bar stays in view on a long step (v1's sticky ee-card-foot). */
+#eventFormCard .intake-foot { position: sticky; bottom: 0; z-index: 5; background-color: var(--custom-white); box-shadow: 0 -6px 16px rgba(15, 23, 42, .06); }
+
+/* "Plan an event" - the first tile of our list. */
+.ev-new-tile { display: flex; height: 100%; min-height: 7.5rem; flex-direction: column; align-items: center; justify-content: center; gap: .3rem; padding: 1rem; text-align: center; border: 2px dashed rgba(var(--primary-rgb), .45); border-radius: .8rem; background: rgba(var(--primary-rgb), .04); color: var(--default-text-color); transition: background .15s, border-color .15s; }
+.ev-new-tile:hover { background: rgba(var(--primary-rgb), .09); border-color: var(--primary-color); color: var(--default-text-color); }
+.ev-new-tile-icon { display: inline-flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border-radius: 50%; background: var(--primary-color); color: #fff; font-size: 1.4rem; }
+.ev-new-tile strong { font-size: .95rem; }
+.ev-new-tile small { font-size: .78rem; }

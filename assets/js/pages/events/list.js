@@ -169,8 +169,13 @@
     const ahead = state.items.filter((i) => new Date(i.ends_at) >= now);
     const past = state.items.filter((i) => new Date(i.ends_at) < now).reverse();
     const head = (label, n) => `<div class="col-12"><div class="ev-group-head"><span>${label}</span><span class="soft-chip soft-primary">${n}</span></div></div>`;
+    // The way in, first in our own list (as well as the header button and the sub-tab).
+    const newTile =
+      state.scope === "own" && CTX.can.manage
+        ? `<div class="col-xxl-4 col-lg-6"><a class="ev-new-tile" href="${CTX.baseUrl}/new"><span class="ev-new-tile-icon"><i class="ri-add-line"></i></span><strong>${E.IS_INITIATIVE ? "Start an initiative" : "Plan an event"}</strong><small>${E.IS_INITIATIVE ? "Its sessions, who it's open to, the places taking part" : "When and where, who it's open to, any fee"}</small></a></div>`
+        : "";
     grid.innerHTML =
-      (ahead.length ? head(E.IS_INITIATIVE ? "Running and coming up" : "Coming up", ahead.length) + ahead.map(E.eventCard).join("") : "") +
+      (ahead.length || newTile ? head(E.IS_INITIATIVE ? "Running and coming up" : "Coming up", ahead.length) + newTile + ahead.map(E.eventCard).join("") : "") +
       (past.length ? head(E.IS_INITIATIVE ? "Ended" : "Already happened", past.length) + past.map(E.eventCard).join("") : "") +
       `<div class="col-12" id="evNoMatch" hidden>${E.empty("ri-search-line", `No ${N.many} match`, "Try another word, or reset the filters.")}</div>`;
     renderToolbar();
@@ -190,7 +195,7 @@
     const changed = CTX.can.manage !== !!can.manage;
     CTX.can.manage = !!can.manage;
     document.getElementById("newEventBtn")?.classList.toggle("d-none", !CTX.can.manage);
-    if (changed && !state.items.length && state.scope === "own" && document.querySelector("#eventsGrid .ev-empty")) renderGrid();
+    if (changed && state.scope === "own" && document.querySelector("#eventsGrid [data-ev-card], #eventsGrid .ev-empty")) renderGrid();
   }
 
   function gridSkeleton() {

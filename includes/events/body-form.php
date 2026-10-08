@@ -40,27 +40,37 @@ $stepIcons = [1 => 'ri-calendar-event-line', 2 => 'ri-map-pin-user-line', 3 => '
                                 <label class="form-label" for="f_title">Name of the <?= $one ?> <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="f_title" name="title" maxlength="160" placeholder="<?= $isInit ? 'e.g. Discipleship Class 2026' : 'e.g. Regional Youth Convention 2026' ?>">
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="f_type">Kind of <?= $one ?> <span class="text-danger">*</span></label>
-                                <select class="form-select" id="f_type" name="type"></select>
+                            <!-- Kind as cards (v1-events' event wizard); the select underneath keeps the value. -->
+                            <div class="col-12" data-field="type">
+                                <label class="form-label mb-2">Kind of <?= $one ?> <span class="text-danger">*</span></label>
+                                <div class="ec-choices" id="typeChoices" role="radiogroup" aria-label="Kind of <?= $one ?>"></div>
+                                <select class="d-none" id="f_type" name="type" tabindex="-1" aria-hidden="true"></select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="f_audience">Who it is for</label>
                                 <select class="form-select" id="f_audience" name="audience"></select>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="f_start_date"><?= $isInit ? 'First day, and the time it starts' : 'Starts' ?> <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <input type="date" class="form-control" id="f_start_date" name="starts_at">
-                                    <input type="time" class="form-control" id="f_start_time" value="09:00" style="max-width: 8.5rem">
+                            <!-- When: Starts -> Ends cards with how long it runs -->
+                            <div class="col-12">
+                                <label class="form-label mb-2"><?= $isInit ? 'When it runs' : 'When' ?> <span class="text-danger">*</span></label>
+                                <div class="ee-when">
+                                    <div class="ee-when-card">
+                                        <div class="ee-when-title"><i class="ri-play-circle-line"></i><?= $isInit ? 'First day' : 'Starts' ?></div>
+                                        <div class="ee-when-fields">
+                                            <input type="date" class="form-control" id="f_start_date" name="starts_at" aria-label="<?= $isInit ? 'First day' : 'Start date' ?>">
+                                            <input type="time" class="form-control" id="f_start_time" value="09:00" aria-label="Start time">
+                                        </div>
+                                    </div>
+                                    <span class="ee-when-arrow" aria-hidden="true"><i class="ri-arrow-right-line"></i></span>
+                                    <div class="ee-when-card">
+                                        <div class="ee-when-title"><i class="ri-stop-circle-line"></i><?= $isInit ? 'Last day' : 'Ends' ?></div>
+                                        <div class="ee-when-fields">
+                                            <input type="date" class="form-control" id="f_end_date" name="ends_at" aria-label="<?= $isInit ? 'Last day' : 'End date' ?>">
+                                            <input type="time" class="form-control" id="f_end_time" value="16:00" aria-label="End time">
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="f_end_date"><?= $isInit ? 'Last day, and the time it ends' : 'Ends' ?> <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <input type="date" class="form-control" id="f_end_date" name="ends_at">
-                                    <input type="time" class="form-control" id="f_end_time" value="16:00" style="max-width: 8.5rem">
-                                </div>
+                                <div class="ee-when-foot"><span class="ec-duration" id="whenDuration" hidden></span></div>
                             </div>
                             <?php if ($isInit) { ?>
                             <div class="col-md-6">
@@ -124,13 +134,16 @@ $stepIcons = [1 => 'ri-calendar-event-line', 2 => 'ri-map-pin-user-line', 3 => '
                         </div>
                         <?php } elseif ($n === 3) { ?>
                         <div id="regBox">
-                            <div class="ev-switch-row">
-                                <div>
+                            <!-- A toggle card (v1-events' ec-toggle) -->
+                            <label class="ec-toggle" for="f_registration">
+                                <input type="checkbox" role="switch" id="f_registration" name="registration">
+                                <span class="ec-toggle-icon"><i class="ri-clipboard-line"></i></span>
+                                <span class="ec-toggle-text">
                                     <strong><?= $isInit ? 'Places join and say how many are taking part' : 'Places register how many are coming' ?></strong>
-                                    <span>Each place gives its numbers - youth, adults, children, leaders - not names.</span>
-                                </div>
-                                <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" role="switch" id="f_registration" name="registration" aria-label="Places register"></div>
-                            </div>
+                                    <small>Each place gives its numbers - youth, adults, children, leaders - not names.</small>
+                                </span>
+                                <span class="ec-toggle-switch" aria-hidden="true"><i></i></span>
+                            </label>
                             <div class="row g-3 mt-1" id="regFields" hidden>
                                 <div class="col-md-6">
                                     <label class="form-label" for="f_register_by"><?= $isInit ? 'Join by (optional - else until the last day)' : 'Register by' ?></label>
