@@ -165,7 +165,8 @@ Subregions inherit settings but get no Settings page of their own.
   - **Africa's Talking:** `/version1/messaging` with the `apiKey` header, and the sandbox host when `sms.sandbox` is set.
   - **The log,** until one of the others is set up.
 
-  `phpunit.xml` forces `SMS_PROVIDER=log` and blank TextSMS details, so a test never sends. Numbers are normalised to `+2547…` / `+2541…`. `balance()` feeds Health.
+  `phpunit.xml` forces `SMS_PROVIDER=log` and blank TextSMS details, so a test never sends.
+- **Phone numbers (2026-10-08).** `Phone::problem()` explains, before anything is sent, why a number won't do. A Kenyan number needs 9 digits after +254, starting with 7 or 1, and the message says how many it has. Another country's number needs its `+` and country code. `Sms::kenya()` and the Settings test form both use it, so a Kenyan number with a digit too many is never passed to the provider as if it were foreign. Numbers are normalised to `+2547…` / `+2541…`. `balance()` feeds Health.
 - **Message log:** every email (the `LogSentEmail` listener on `MessageSent`) and every SMS is written to `message_logs`.
 - **Health tiles:** Email, SMS, Background jobs (`jobs` / `failed_jobs`; "Retry failed"), Scheduler (a heartbeat cached every minute by `routes/console.php`, OK if under 3 minutes old) and Storage (free %). There's also a count of messages this month and a "What's running" card.
 

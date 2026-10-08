@@ -4,6 +4,7 @@ namespace App\Services\Sms;
 
 use App\Models\MessageLog;
 use App\Services\Settings\Settings;
+use App\Support\Phone;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -61,7 +62,7 @@ final class Sms
         $log += ['body' => MessageLog::mask($message, $log['secrets'] ?? []), 'from' => $account['sender_id'] ?? null];
         $number = self::kenya($to);
         if (! $number) {
-            return $this->record($to, 'failed', null, "That doesn't look like a phone number.", $log);
+            return $this->record($to, 'failed', null, Phone::problem($to) ?? "That doesn't look like a phone number.", $log);
         }
 
         if (($account['driver'] ?? 'log') === 'textsms') {
@@ -134,6 +135,9 @@ final class Sms
         }
         $r = $r ?: ($res->json() ?? []);
         $error = $r['response-description'] ?? trim(substr($res->body(), 0, 200)) ?: "HTTP {$res->status()}";
+        if (stripos($error, 'mobile') !== false) {
+            $error .= " ({$number}) - check the number";
+        }
         // 1006: the key or partner ID in .env is wrong (or was regenerated in the TextSMS dashboard).
         $hint = (int) ($r['response-code'] ?? $r['respose-code'] ?? 0) === 1006 ? ' - check TEXTSMS_API_KEY and TEXTSMS_PARTNER_ID in the server\'s .env' : '';
 
@@ -166,7 +170,8 @@ final class Sms
             return '+254'.$m[1];
         }
 
-        return strlen($digits) >= 10 && str_starts_with(trim((string) $phone), '+') ? '+'.$digits : null;
+        // Another country's number, with its + - never a Kenyan one with the wrong number of digits.
+        return Phone::problem($phone) === null && str_starts_with(trim((string) $phone), '+') ? '+'.$digits : null;
     }
 
     private static function base(mixed $sandbox): string
