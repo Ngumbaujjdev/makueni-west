@@ -77,6 +77,85 @@ final class Facilities
         return PeopleAccess::canNamed($user, $church, 'facilities', 'book') || $this->canManage($user, $church);
     }
 
+    // ------------------------------------------------------------------ duties and kinds (Settings > Facilities)
+
+    /** Icons a church can give a duty or a kind of equipment. */
+    public const ICONS = [
+        'ri-door-open-line', 'ri-hand-heart-line', 'ri-mic-line', 'ri-shield-check-line', 'ri-brush-line', 'ri-music-2-line', 'ri-camera-line',
+        'ri-car-line', 'ri-parking-box-line', 'ri-first-aid-kit-line', 'ri-cup-line', 'ri-book-open-line', 'ri-group-line', 'ri-heart-line',
+        'ri-table-line', 'ri-restaurant-line', 'ri-computer-line', 'ri-archive-line', 'ri-tools-line', 'ri-plant-line', 'ri-gift-line', 'ri-flashlight-line',
+    ];
+
+    /**
+     * What a church set in Settings > Facilities - its duties (with their
+     * teams and how many each service needs) and its kinds of equipment -
+     * or the defaults (DutyRota::DUTIES, Equipment::CATEGORIES) until it does.
+     */
+    public function setup(Territory|int $church): array
+    {
+        $id = $church instanceof Territory ? $church->id : $church;
+        // Kept for the length of one request (a list asks for each item's kind).
+        $memo = request()->attributes->get('facilities.setup', []);
+        if (isset($memo[$id])) {
+            return $memo[$id];
+        }
+        $place = $church instanceof Territory ? $church : Territory::find($id);
+        $saved = (array) (($place?->metadata ?? [])['facilities_setup'] ?? []);
+        $duties = ! empty($saved['duties']) ? $saved['duties']
+            : collect(DutyRota::DUTIES)->map(fn ($d, $k) => ['key' => $k, 'label' => $d[0], 'icon' => $d[1], 'colour' => $d[2], 'active' => true, 'needed' => $k === 'ushering' ? 2 : 1, 'team' => []])->values()->all();
+        $kinds = ! empty($saved['kinds']) ? $saved['kinds']
+            : collect(Equipment::CATEGORIES)->map(fn ($c, $k) => ['key' => $k, 'label' => $c[0], 'icon' => $c[1], 'colour' => $c[2]])->values()->all();
+
+        $memo[$id] = ['duties' => array_values($duties), 'kinds' => array_values($kinds), 'custom' => ! empty($saved)];
+        request()->attributes->set('facilities.setup', $memo);
+
+        return $memo[$id];
+    }
+
+    public function forgetSetup(int $churchId): void
+    {
+        $memo = request()->attributes->get('facilities.setup', []);
+        unset($memo[$churchId]);
+        request()->attributes->set('facilities.setup', $memo);
+    }
+
+    /** key => [label, icon, colour, active, needed, team] - every duty the church has, switched off ones too. */
+    public function duties(Territory|int $church): array
+    {
+        return collect($this->setup($church)['duties'])->mapWithKeys(fn ($d) => [$d['key'] => [$d['label'], $d['icon'], $d['colour'], (bool) ($d['active'] ?? true), (int) ($d['needed'] ?? 1), $d['team'] ?? []]])->all();
+    }
+
+    /** The duties as the pages want them: [{key, label, icon, color, active, needed, team}], the switched off ones only when asked. */
+    public function dutyList(Territory|int $church, bool $all = false): array
+    {
+        return collect($this->setup($church)['duties'])->filter(fn ($d) => $all || ($d['active'] ?? true))
+            ->map(fn ($d) => ['key' => $d['key'], 'label' => $d['label'], 'icon' => $d['icon'], 'color' => $d['colour'], 'active' => (bool) ($d['active'] ?? true), 'needed' => (int) ($d['needed'] ?? 1), 'team' => array_values($d['team'] ?? [])])->values()->all();
+    }
+
+    /** A duty's name - a duty since removed still reads as itself. */
+    public function dutyLabel(Territory|int $church, string $key): string
+    {
+        return $this->duties($church)[$key][0] ?? (DutyRota::DUTIES[$key][0] ?? ucfirst(str_replace('-', ' ', $key)));
+    }
+
+    /** key => [label, icon, colour] */
+    public function kinds(Territory|int $church): array
+    {
+        return collect($this->setup($church)['kinds'])->mapWithKeys(fn ($k) => [$k['key'] => [$k['label'], $k['icon'], $k['colour']]])->all();
+    }
+
+    /** [{key, label, icon, color}] */
+    public function kindList(Territory|int $church): array
+    {
+        return collect($this->setup($church)['kinds'])->map(fn ($k) => ['key' => $k['key'], 'label' => $k['label'], 'icon' => $k['icon'], 'color' => $k['colour']])->values()->all();
+    }
+
+    /** [label, icon, colour] of a kind - one since removed falls back to the default, then to Other. */
+    public function kind(Territory|int $church, ?string $key): array
+    {
+        return $this->kinds($church)[$key] ?? Equipment::CATEGORIES[$key] ?? ['Other', 'ri-archive-line', 'secondary'];
+    }
+
     public function rooms(Territory $church, bool $all = false): Collection
     {
         return Room::where('territory_id', $church->id)->when(! $all, fn ($q) => $q->where('active', true))->orderBy('order')->orderBy('name')->get();
@@ -231,7 +310,7 @@ final class Facilities
 
     public function equipmentRow(Equipment $e, int $out = 0, int $openRepairs = 0): array
     {
-        [$cat, $icon, $colour] = Equipment::CATEGORIES[$e->category] ?? Equipment::CATEGORIES['other'];
+        [$cat, $icon, $colour] = $this->kind((int) $e->territory_id, $e->category);
 
         return [
             'id' => $e->id, 'name' => $e->name, 'category' => $e->category, 'category_label' => $cat, 'icon' => $icon, 'colour' => $colour,
@@ -363,7 +442,7 @@ final class Facilities
             'loans_overdue' => $overdue->count(),
             'agenda' => $agenda->map(fn ($o) => $this->occurrenceRow($o, $user, $church))->values()->all(),
             'duty' => $this->nextDuty($church),
-            'duties' => collect(DutyRota::DUTIES)->map(fn ($d, $k) => ['key' => $k, 'label' => $d[0], 'icon' => $d[1], 'color' => $d[2]])->values()->all(),
+            'duties' => $this->dutyList($church),
             'attention' => [
                 'repairs' => $repairs->where('priority', 'urgent')->take(5)->map(fn ($j) => $this->repairRow($j))->values()->all(),
                 'broken' => $equipment->where('condition', 'broken')->take(5)->map(fn ($e) => ['id' => $e->id, 'name' => $e->name, 'category' => $e->category])->values()->all(),
@@ -413,12 +492,12 @@ final class Facilities
             'with_receipt' => $items->filter(fn ($e) => $e->receipts_count > 0)->count(),
             'with_photo' => $items->filter(fn ($e) => $e->photos->isNotEmpty())->count(),
             'repairs_spent' => round((float) $repairs->sum('cost'), 2),
-            'by_kind' => $group($items->groupBy('category'), fn ($k) => Equipment::CATEGORIES[$k][0] ?? 'Other'),
+            'by_kind' => $group($items->groupBy('category'), fn ($k) => $this->kind($church, $k)[0]),
             'by_room' => $group($items->groupBy(fn ($e) => $e->room?->name ?? 'No room'), fn ($k) => $k),
             'by_year' => $years->map(fn ($list, $y) => ['year' => (int) $y, 'spent' => round($list->sum($total), 2), 'kinds' => $list->count()])->values()->all(),
             'top' => $items->sortByDesc($total)->take(6)->map(fn ($e) => $this->equipmentRow($e))->values()->all(),
             'needs' => $needs->all(),
-            'categories' => collect(Equipment::CATEGORIES)->map(fn ($c, $k) => ['key' => $k, 'label' => $c[0], 'icon' => $c[1], 'color' => $c[2]])->values()->all(),
+            'categories' => $this->kindList($church),
         ];
     }
 }

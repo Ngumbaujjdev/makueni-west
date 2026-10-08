@@ -476,7 +476,7 @@ class EquipmentController extends FacilitiesBase
         $s = $e ? 'sometimes' : 'required';
         $d = $request->validate([
             'name' => [$s, 'string', 'max:120'],
-            'category' => [$s, Rule::in(array_keys(Equipment::CATEGORIES))],
+            'category' => [$s, Rule::in(array_keys($this->facilities->kinds($church)))],
             'room_id' => ['sometimes', 'nullable', 'integer', Rule::exists('rooms', 'id')->where('territory_id', $church->id)->whereNull('deleted_at')],
             'quantity' => ['sometimes', 'integer', 'between:1,100000'],
             'condition' => ['sometimes', Rule::in(array_keys(Equipment::CONDITIONS))],

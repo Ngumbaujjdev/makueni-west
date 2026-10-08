@@ -255,6 +255,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('rota', [RotaController::class, 'index']);
     Route::put('rota', [RotaController::class, 'update']);
     Route::post('rota/copy', [RotaController::class, 'copy']);
+    Route::post('rota/fill', [RotaController::class, 'fill']);
 
     // People & care P2 - visitors and their follow-up; /visitors/totals is the
     // region's and diocese's (counts only)
@@ -334,6 +335,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('profile/photos/{id}', [SettingsGalleryController::class, 'destroy'])->whereNumber('id');
         Route::get('service-times', [SettingsServiceTimesController::class, 'show']);
         Route::put('service-times', [SettingsServiceTimesController::class, 'update']);
+        Route::get('facilities-setup', [\App\Http\Controllers\Api\Settings\FacilitiesSetupController::class, 'show']);
+        Route::put('facilities-setup', [\App\Http\Controllers\Api\Settings\FacilitiesSetupController::class, 'update']);
         Route::get('team', [SettingsTeamController::class, 'index']);
         Route::get('team/check', [SettingsTeamController::class, 'check'])->middleware('throttle:30,1');
         Route::post('team', [SettingsTeamController::class, 'store']);
