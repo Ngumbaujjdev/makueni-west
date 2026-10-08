@@ -38389,34 +38389,55 @@ button.cal-side-item:focus-visible {
 
 /* ==========================================================================
    Preview sheet (2026-10-08) - the Message log's and Templates' preview
-   windows as two panes: a calm details panel (pale grey, filling the height:
-   a summary, quiet label/value rows, the action at its foot) beside the
-   preview. Greys and the brand teal only; no rules, no stripes.
+   windows as two panes: a details panel (a light teal tint, filling the
+   height) beside the preview. On it, white cards: the summary (a solid teal
+   tile, the one status pill, pale chips), the details (pale tiles in teal
+   and purple, in turn), the message as written (placeholders as teal pills,
+   [brackets] to change as purple pills), and the action at its foot.
+   Teal and purple only; no rules, no stripes, no gradients.
    ========================================================================== */
 .cm-modal .modal-body.is-sheet { padding: 0; }
 .cm-sheet { display: grid; grid-template-columns: minmax(18rem, 1fr) minmax(0, 2fr); min-height: 100%; }
-.cm-sheet-side { display: flex; flex-direction: column; gap: 1.25rem; padding: 1.5rem; background: var(--gray-1, #f6f8fa); }
+.cm-sheet-side { display: flex; flex-direction: column; gap: 1rem; padding: 1.25rem; background: rgba(var(--primary-rgb), .06); }
 .cm-sheet-main { min-width: 0; padding: 1.5rem; background: var(--custom-white); }
 .cm-sheet-main .cm-pv-stage { padding: .25rem 0 0; border: 0; background: transparent; }
+.cm-hero-card, .cm-side-card { padding: 1rem 1.1rem; border-radius: .9rem; background: var(--custom-white); box-shadow: 0 1px 3px rgba(15, 23, 42, .07); }
 .cm-sheet-sum { display: flex; align-items: center; gap: .85rem; }
-.cm-sheet-icon { display: inline-flex; flex: 0 0 2.75rem; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border-radius: .75rem; background: var(--custom-white); color: var(--v2-heading); font-size: 1.25rem; box-shadow: 0 1px 2px rgba(15, 23, 42, .06); }
-.cm-sheet-sum strong { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; font-size: .95rem; color: var(--v2-heading); }
+.cm-sheet-icon { display: inline-flex; flex: 0 0 2.75rem; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border-radius: .75rem; background: var(--primary-color); color: #fff; font-size: 1.25rem; }
+.cm-sheet-sum strong { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; font-size: .98rem; color: var(--v2-heading); }
 .cm-sheet-sum small { display: block; margin-top: .15rem; font-size: .8rem; color: var(--default-text-color); overflow-wrap: anywhere; }
+.cm-hero-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .85rem; }
 .cm-sheet-toggle { display: none; }
-.cm-details { display: flex; flex-direction: column; gap: 1rem; margin: 0; }
-.cm-detail { display: flex; align-items: flex-start; gap: .75rem; }
-.cm-detail > i { flex: 0 0 1.25rem; margin-top: .1rem; font-size: 1.05rem; color: var(--default-text-color); text-align: center; }
+.cm-sheet-more > .cm-side-card + .cm-side-card { margin-top: 1rem; }
+.cm-side-title { margin-bottom: .85rem; font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--primary-color); }
+.cm-side-head { display: flex; align-items: center; gap: .6rem; margin-bottom: .75rem; }
+.cm-side-head strong { font-size: .9rem; color: var(--v2-heading); }
+.cm-side-link { display: inline-flex; align-items: center; gap: .3rem; margin-left: auto; padding: .25rem .7rem; border: 0; border-radius: 99px; background: var(--primary-color); color: #fff; font-size: .78rem; font-weight: 600; }
+.cm-side-link:hover { filter: brightness(.95); }
+.cm-details { display: flex; flex-direction: column; gap: .85rem; margin: 0; }
+.cm-detail { display: flex; align-items: center; gap: .75rem; }
+.cm-detail-tile { display: inline-flex; flex: 0 0 2.1rem; align-items: center; justify-content: center; width: 2.1rem; height: 2.1rem; border-radius: .6rem; font-size: 1rem; }
+.cm-detail-tile.is-teal { background: rgba(var(--primary-rgb), .12); color: var(--primary-color); }
+.cm-detail-tile.is-purple { background: rgba(var(--purple-rgb), .12); color: rgb(var(--purple-rgb)); }
+.cm-detail-tile.is-teal.is-solid { background: var(--primary-color); color: #fff; }
+.cm-detail-tile.is-purple.is-solid { background: rgb(var(--purple-rgb)); color: #fff; }
 .cm-detail dt { font-size: .68rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--default-text-color); }
 .cm-detail dd { margin: .1rem 0 0; font-size: .9rem; font-weight: 600; color: var(--v2-heading); overflow-wrap: anywhere; }
-.cm-sheet-label { margin: 1.5rem 0 .5rem; font-size: .68rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--default-text-color); }
-.cm-sheet-text { padding: 1rem 1.1rem; border-radius: .75rem; background: var(--custom-white); box-shadow: 0 1px 2px rgba(15, 23, 42, .06); font-size: .88rem; line-height: 1.6; color: var(--v2-heading); white-space: pre-wrap; overflow-wrap: anywhere; }
-.cm-sheet-text .cm-token { padding: 0; background: none; color: var(--primary-color); font-weight: 700; }
+.cm-detail dd small { display: block; font-size: .8rem; font-weight: 500; color: var(--default-text-color); }
+.cm-tok, .cm-brk { display: inline-block; padding: 0 .4rem; border-radius: .4rem; font-size: .82em; font-weight: 700; line-height: 1.6; }
+.cm-tok { background: var(--primary-color); color: #fff; }
+.cm-brk { background: rgba(var(--purple-rgb), .12); color: rgb(var(--purple-rgb)); }
+.cm-dot { margin: 0 .35rem; color: var(--default-text-color); }
+.cm-sheet-text { padding: .9rem 1rem; border-radius: .7rem; background: rgba(var(--primary-rgb), .04); font-size: .88rem; line-height: 1.65; color: var(--v2-heading); white-space: pre-wrap; overflow-wrap: anywhere; }
+.cm-side-legend { display: flex; flex-wrap: wrap; gap: .4rem 1rem; margin-top: .7rem; font-size: .76rem; color: var(--default-text-color); }
 .cm-sheet-foot { display: flex; flex-direction: column; gap: .75rem; margin-top: auto; }
 .cm-sheet-foot:empty { display: none; }
-.cm-sheet-error { display: flex; gap: .6rem; padding: .8rem .9rem; border-radius: .7rem; background: rgba(var(--danger-rgb), .07); font-size: .84rem; color: var(--v2-heading); }
+.cm-sheet-error, .cm-sheet-note { display: flex; gap: .6rem; padding: .8rem .9rem; border-radius: .7rem; font-size: .84rem; line-height: 1.5; color: var(--v2-heading); }
+.cm-sheet-error { background: rgba(var(--danger-rgb), .08); }
 .cm-sheet-error i { color: rgb(var(--danger-rgb)); font-size: 1.05rem; }
 .cm-sheet-error b { display: block; }
-.cm-sheet-hint { margin: 0; font-size: .82rem; line-height: 1.5; color: var(--default-text-color); }
+.cm-sheet-note { background: rgba(var(--primary-rgb), .1); }
+.cm-sheet-note i { color: var(--primary-color); font-size: 1.1rem; }
 @media (min-width: 992px) {
   .cm-sheet-more.collapse:not(.show) { display: block; }
 }
@@ -38425,5 +38446,4 @@ button.cal-side-item:focus-visible {
   .cm-sheet-side { gap: .9rem; padding: 1rem; }
   .cm-sheet-main { padding: 1rem; }
   .cm-sheet-toggle { display: inline-flex; }
-  .cm-sheet-more.show { padding-top: .25rem; }
 }

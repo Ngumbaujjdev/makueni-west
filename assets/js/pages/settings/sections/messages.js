@@ -160,7 +160,6 @@ const SettingsMessages = (function () {
       ["ri-send-plane-line", "From", m.from || (email ? "" : "The provider's default sender")],
       ["ri-user-line", "To", m.to],
       ...(email ? [["ri-reply-line", "Replies go to", m.reply_to || "The From address"], ["ri-text", "Subject", m.subject || "-"]] : []),
-      ["ri-route-line", "Sent through", VIA[m.via]?.[0] || m.via],
       ["ri-home-heart-line", "For", m.place.name],
       ...(m.by ? [["ri-user-star-line", "Sent by", m.by]] : []),
       ...(KINDS[m.kind] ? [["ri-price-tag-3-line", "Kind", KINDS[m.kind]]] : []),
@@ -196,21 +195,37 @@ const SettingsMessages = (function () {
     }
     const body = el.querySelector("#msgModalBody");
     body.classList.add("is-sheet");
+    const tile = (icon, i) => `<span class="cm-detail-tile ${["is-teal is-solid", "is-purple", "is-teal", "is-purple is-solid"][i % 4]}"><i class="${icon}"></i></span>`; // solid and pale in turn, teal and purple
     body.innerHTML = `
       <div class="cm-sheet">
         <aside class="cm-sheet-side">
-          <div class="cm-sheet-sum">
-            <span class="cm-sheet-icon"><i class="${email ? "ri-mail-line" : "ri-message-3-line"}"></i></span>
-            <div class="min-w-0 flex-fill"><strong>${statusPill(m.status)} <span>${esc(t.day)}, ${esc(t.time)}</span></strong><small>${m.provider_ref ? `Reference ${esc(m.provider_ref)}` : email ? "Email" : "SMS"}</small></div>
-            <button type="button" class="btn btn-sm btn-light border cm-sheet-toggle" data-bs-toggle="collapse" data-bs-target="#msgSheetMore" aria-expanded="false">Details</button>
+          <div class="cm-hero-card">
+            <div class="cm-sheet-sum">
+              <span class="cm-sheet-icon"><i class="${email ? "ri-mail-line" : "ri-message-3-line"}"></i></span>
+              <div class="min-w-0 flex-fill"><strong>${statusPill(m.status)} <span>${esc(t.day)}, ${esc(t.time)}</span></strong><small>${m.provider_ref ? `Reference ${esc(m.provider_ref)}` : `${email ? "Email" : "SMS"} to ${esc(m.to)}`}</small></div>
+              <button type="button" class="btn btn-sm btn-light border cm-sheet-toggle" data-bs-toggle="collapse" data-bs-target="#msgSheetMore" aria-expanded="false">Details</button>
+            </div>
+            <div class="cm-hero-chips">
+              <span class="badge bg-primary list-pill"><i class="${email ? "ri-mail-line" : "ri-message-3-line"} me-1"></i>${email ? "Email" : "SMS"}</span>
+              <span class="soft-chip soft-purple"><i class="ri-route-line"></i>${esc(VIA[m.via]?.[0] === "Own account" ? "Our own account" : `Through the ${VIA[m.via]?.[0]?.toLowerCase() || "diocese"}`)}</span>
+            </div>
           </div>
           <div class="collapse cm-sheet-more" id="msgSheetMore">
-            <dl class="cm-details">${facts.map(([i, k, v]) => `<div class="cm-detail"><i class="${i}"></i><div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div></div>`).join("")}</dl>
+            <div class="cm-side-card">
+              <div class="cm-side-head">${tile("ri-list-check-2", 0)}<strong>Details</strong></div>
+              <dl class="cm-details">${facts
+                .map(([i, k, v], n) => {
+                  // "Name <address>": the name, then the address on its own small line.
+                  const nm = String(v ?? "").match(/^(.*?)\s*<([^>]+)>$/);
+                  return `<div class="cm-detail">${tile(i, n)}<div class="min-w-0"><dt>${esc(k)}</dt><dd>${nm ? `${esc(nm[1])}<small>${esc(nm[2])}</small>` : esc(v)}</dd></div></div>`;
+                })
+                .join("")}</dl>
+            </div>
           </div>
           <div class="cm-sheet-foot">
             ${m.error ? `<div class="cm-sheet-error"><i class="ri-error-warning-line"></i><span><b>Why it failed</b>${esc(m.error)}</span></div>` : ""}
             <div class="d-flex flex-wrap gap-2">
-              ${m.body ? '<button type="button" class="btn btn-light border" id="msgCopy"><i class="ri-file-copy-line me-1"></i>Copy text</button>' : ""}
+              ${m.body ? '<button type="button" class="btn btn-outline-primary" id="msgCopy"><i class="ri-file-copy-line me-1"></i>Copy text</button>' : ""}
               ${m.can_resend ? '<button type="button" class="btn btn-primary" id="msgResend"><i class="ri-restart-line me-1"></i>Send again</button>' : ""}
             </div>
           </div>
