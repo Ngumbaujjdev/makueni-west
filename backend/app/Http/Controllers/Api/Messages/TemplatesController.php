@@ -9,6 +9,7 @@ use App\Models\Territory;
 use App\Services\Messages\Broadcaster;
 use App\Services\Messaging\PlaceMessenger;
 use App\Support\MessagesAccess;
+use App\Support\Messaging\EmailBrand;
 use App\Support\PlaceAccess;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
@@ -150,7 +151,7 @@ class TemplatesController extends Controller
             return $this->unprocessable('channel', $data['channel'] === 'email' ? 'Your profile has no email address.' : 'Your profile has no phone number.');
         }
         $name = trim("{$me->firstname} {$me->lastname}");
-        [$subject, $html, $text] = $this->render($place, (string) ($data['subject'] ?? ''), $data['body'], $name);
+        [$subject, $html, $text] = $this->render($place, (string) ($data['subject'] ?? ''), $data['body'], $name, 'Test');
         $res = $data['channel'] === 'email'
             ? $this->messenger->email($place, $to, "[Test] {$subject}", $html, 'test', [], $me)
             : $this->messenger->sms($place, $to, $text, 'test', [], $me);
@@ -250,7 +251,7 @@ class TemplatesController extends Controller
     }
 
     /** @return array{0: string, 1: string, 2: string} the subject, the email's HTML and the filled-in text */
-    private function render(Territory $place, string $subject, string $body, string $to = self::SAMPLE_NAME): array
+    private function render(Territory $place, string $subject, string $body, string $to = self::SAMPLE_NAME, ?string $badge = null): array
     {
         $text = Broadcaster::fill($body, $to, null, $place->name);
         $subject = Broadcaster::fill($subject, $to, null, $place->name) ?: Str::limit(Str::before($text, "\n"), 80) ?: 'Your message';
@@ -258,6 +259,8 @@ class TemplatesController extends Controller
             'heading' => $subject,
             'lines' => array_values(array_filter(array_map('trim', preg_split('/\n\s*\n/', $text) ?: [$text]))) ?: ['Your message goes here.'],
             'placeName' => $place->name,
+            'brand' => EmailBrand::for($place),
+            'badge' => $badge,
         ])->render();
 
         return [$subject, $html, $text];

@@ -255,7 +255,7 @@
         lookPv = window.CommsPreview($("cmLookPreview"), {
           view: "email",
           from: () => fromNow(),
-          sender: () => senderNow(),
+          sender: () => c.sms?.sender_id || "",
           smsText: (server, text) => (signatureNow() ? `${text}\n- ${signatureNow()}` : text),
         });
         lookPv.set({ subject: SAMPLE_SUBJECT, body: SAMPLE_BODY });

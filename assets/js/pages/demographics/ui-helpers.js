@@ -1369,6 +1369,8 @@ const DemographicsUI = (function () {
       nonSortableColumns = [],
       hideDefaultSearch = false,
       noun = "records",
+      // false for a table that stacks its own rows on a phone (no + toggles)
+      responsive = true,
     } = options;
 
     // Footer: rows-per-page + "Showing x-y of z" on the left, pages on the
@@ -1377,7 +1379,7 @@ const DemographicsUI = (function () {
     const dom = hideDefaultSearch ? `t${footer}` : `<"list-footer list-footer-top"lf>t${footer}`;
 
     const instance = $(`#${tableId}`).DataTable({
-      responsive: true,
+      responsive,
       pageLength,
       lengthMenu: [
         [10, 25, 50, 100],

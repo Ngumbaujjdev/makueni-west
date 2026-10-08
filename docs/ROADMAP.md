@@ -89,6 +89,8 @@ Names and phone numbers stay with the church, as the original Final Documentatio
 
 ## Deferred, not forgotten
 
+- **Public `APP_URL` before real email goes out (2026-10-08).** Emails a place sends (`emails/place-message.blade.php`) show the CCI mark from `{APP_URL}/assets/images/logos/email-mark.png`, so `APP_URL` must be the public API address in production. With `localhost`, the logo shows in Settings previews but not in a real inbox.
+
 - **Mobile PWA** (`docs/design/demographics-mobile-app-design.md`) — a real, detailed design for a native-feeling mobile app covering Demographics (and, later, Financial/Tithe) across all four roles. Confirmed as a real future build, explicitly **not started now** — kept as a design reference so the Demographics backend (item 1) is built compatible with it (field names, workflow) without committing to building the PWA itself yet.
 
 ## Explicitly not planned
