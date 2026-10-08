@@ -593,64 +593,98 @@
     }
   }
 
+  /** One "About" row: a coloured tile, a small label, the value - with an optional link and copy. */
+  function aboutRow(icon, color, label, value, { href = "", copy = false, solid = false } = {}) {
+    if (!value) return "";
+    const val = href ? `<a href="${esc(href)}" class="mi-prof-about-value">${esc(value)}</a>` : `<span class="mi-prof-about-value">${esc(value)}</span>`;
+    return `<li class="mi-prof-about-row" style="--q: var(--${color}-rgb)">
+      <span class="mi-prof-tile${solid ? " is-solid" : ""}"><i class="${icon}"></i></span>
+      <div class="flex-fill min-w-0"><span class="mi-prof-about-label">${label}</span>${val}</div>
+      ${copy ? `<button type="button" class="btn btn-sm btn-icon btn-light mi-prof-copy" data-copy-text="${esc(value)}" title="Copy" aria-label="Copy ${label.toLowerCase()}"><i class="ri-file-copy-line"></i></button>` : ""}
+    </li>`;
+  }
+  const action = (icon, label, cls, attrs) => `<${attrs.startsWith("href") ? "a" : "button type=\"button\""} class="mi-prof-action ${cls}" ${attrs}><span><i class="${icon}"></i></span>${label}</${attrs.startsWith("href") ? "a" : "button"}>`;
+
   function renderDetails() {
     if (!current) return;
     const c = current.chat;
     const d = current.details;
     const box = $("chat-user-details");
+    const close = `<button aria-label="Close" type="button" class="btn btn-icon btn-light mi-chat-close" data-info-close><i class="ri-close-line"></i></button>`;
     if (c.type === "direct") {
       const p = d.person || { name: c.name };
+      const on = online(p.id);
+      const tel = p.phone ? `tel:${p.phone.replace(/\s+/g, "")}` : "";
       box.innerHTML = `
-        <div class="d-flex mb-0"><div class="ms-auto"><button aria-label="Close" type="button" class="btn btn-icon btn-outline-light responsive-chat-close2 mi-chat-close" data-info-close><i class="ri-close-line"></i></button></div></div>
-        <div class="text-center mb-5">
-          <span class="d-inline-block mb-3 mi-chat-bigav">${face(p, "xxl")}</span>
-          <p class="mb-1 fs-15 fw-semibold lh-1 chatnameperson">${esc(p.name)}</p>
-          <p class="fs-12 mb-2">${esc(p.email || "")}</p>
-          <p class="text-center mb-0">
-            ${p.phone ? `<a href="tel:${esc(p.phone.replace(/\s+/g, ""))}" class="btn btn-icon rounded-pill btn-primary-light" aria-label="Call"><i class="ri-phone-line"></i></a>` : ""}
-            <button type="button" class="btn btn-icon rounded-pill btn-primary-light ms-2" data-focus aria-label="Write"><i class="ri-chat-3-line"></i></button>
-            ${p.email ? `<a href="mailto:${esc(p.email)}" class="btn btn-icon rounded-pill btn-primary-light ms-2" aria-label="Email"><i class="ri-mail-line"></i></a>` : ""}
-          </p>
-        </div>
-        <div class="mb-5">
-          <div class="fw-semibold mb-3">Their place</div>
-          <ul class="shared-files list-unstyled mb-0">
-            ${p.role ? `<li><div class="d-flex align-items-center"><div class="me-2"><span class="shared-file-icon"><i class="ri-user-star-line"></i></span></div><div class="flex-fill"><p class="fs-13 fw-semibold mb-0">${esc(p.role)}</p><p class="mb-0 text-muted fs-12">Their role</p></div></div></li>` : ""}
-            ${p.place ? `<li><div class="d-flex align-items-center"><div class="me-2"><span class="shared-file-icon"><i class="ri-community-line"></i></span></div><div class="flex-fill"><p class="fs-13 fw-semibold mb-0">${esc(p.place)}</p><p class="mb-0 text-muted fs-12">${LEVEL[p.level] || ""}</p></div></div></li>` : ""}
-            ${p.phone ? `<li><div class="d-flex align-items-center"><div class="me-2"><span class="shared-file-icon"><i class="ri-phone-line"></i></span></div><div class="flex-fill"><p class="fs-13 fw-semibold mb-0">${esc(p.phone)}</p><p class="mb-0 text-muted fs-12">Phone</p></div></div></li>` : ""}
-          </ul>
-        </div>
-        <div class="mb-0" id="miPhotos"></div>`;
+        ${close}
+        <div class="mi-prof">
+          <div class="mi-prof-cover"></div>
+          <div class="mi-prof-head">
+            <span class="mi-prof-ring">${face(p, "xxl")}</span>
+            <h6 class="mi-prof-name">${esc(p.name)}</h6>
+            <div class="mi-prof-status${on ? " is-online" : ""}"><span></span>${on ? "Online now" : "Offline"}</div>
+            <div class="d-flex flex-wrap justify-content-center gap-1 mt-2">
+              ${p.role ? `<span class="badge bg-primary">${esc(p.role)}</span>` : ""}
+              ${p.place ? `<span class="soft-chip soft-purple"><i class="ri-community-line"></i>${esc(p.place)}</span>` : ""}
+            </div>
+          </div>
+          <div class="mi-prof-actions">
+            ${tel ? action("ri-phone-line", "Call", "is-solid", `href="${esc(tel)}"`) : ""}
+            ${action("ri-chat-3-line", "Message", "is-teal", "data-focus")}
+            ${p.email ? action("ri-mail-line", "Email", "is-purple", `href="mailto:${esc(p.email)}"`) : ""}
+          </div>
+          <div class="mi-prof-section">
+            <div class="mi-prof-title">About</div>
+            <ul class="list-unstyled mb-0 mi-prof-about">
+              ${aboutRow("ri-user-star-line", "primary", "Role", p.role, { solid: true })}
+              ${aboutRow("ri-community-line", "purple", LEVEL[p.level] || "Place", p.place)}
+              ${aboutRow("ri-phone-line", "success", "Phone", p.phone, { href: tel, copy: true })}
+              ${aboutRow("ri-mail-line", "primary", "Email", p.email, { href: p.email ? `mailto:${p.email}` : "", copy: true })}
+            </ul>
+          </div>
+          <div class="mi-prof-section" id="miPhotos"></div>
+        </div>`;
       if (p.place_id) loadPhotos(p.place_id, p.place);
-    } else {
-      const people = d.people || [];
-      box.innerHTML = `
-        <div class="d-flex mb-0"><div class="ms-auto"><button aria-label="Close" type="button" class="btn btn-icon btn-outline-light responsive-chat-close2 mi-chat-close" data-info-close><i class="ri-close-line"></i></button></div></div>
-        <div class="text-center mb-4">
-          <span class="d-inline-block mb-3 mi-chat-bigav position-relative">${chatFace(c, "xxl")}${d.is_admin ? '<button type="button" class="mi-chat-photo-btn" data-group-photo title="Change the photo" aria-label="Change the group photo"><i class="ri-camera-line"></i></button><input type="file" id="miGroupPhoto" accept="image/png,image/jpeg,image/webp" hidden>' : ""}</span>
-          <p class="mb-1 fs-15 fw-semibold lh-1 chatnameperson">${esc(c.name)}${d.is_admin ? ' <button type="button" class="btn btn-sm btn-link p-0 ms-1" data-rename aria-label="Rename"><i class="ri-edit-line"></i></button>' : ""}</p>
-          <p class="fs-12 mb-2">${people.length} ${people.length === 1 ? "member" : "members"}</p>
-          <p class="text-center mb-0">
-            <button type="button" class="btn btn-icon rounded-pill btn-primary-light" data-focus aria-label="Write"><i class="ri-chat-3-line"></i></button>
-            ${d.is_admin ? '<button type="button" class="btn btn-icon rounded-pill btn-primary-light ms-2" data-add-people aria-label="Add people"><i class="ri-user-add-line"></i></button>' : ""}
-            ${d.left ? "" : '<button type="button" class="btn btn-icon rounded-pill btn-danger-light ms-2" data-leave aria-label="Leave the group"><i class="ri-logout-box-r-line"></i></button>'}
-          </p>
+      else $("miPhotos").remove();
+      return;
+    }
+    const people = d.people || [];
+    const onlineN = people.filter((p) => p.id !== myId && online(p.id)).length;
+    box.innerHTML = `
+      ${close}
+      <div class="mi-prof is-group">
+        <div class="mi-prof-cover"></div>
+        <div class="mi-prof-head">
+          <span class="mi-prof-ring position-relative">${chatFace(c, "xxl")}${d.is_admin ? '<button type="button" class="mi-chat-photo-btn" data-group-photo title="Change the photo" aria-label="Change the group photo"><i class="ri-camera-line"></i></button><input type="file" id="miGroupPhoto" accept="image/png,image/jpeg,image/webp" hidden>' : ""}</span>
+          <h6 class="mi-prof-name">${esc(c.name)}${d.is_admin ? ' <button type="button" class="btn btn-sm btn-link p-0 ms-1 align-baseline" data-rename aria-label="Rename the group"><i class="ri-edit-line"></i></button>' : ""}</h6>
+          <div class="mi-prof-status${onlineN ? " is-online" : ""}"><span></span>${people.length} ${people.length === 1 ? "member" : "members"}${onlineN ? ` · ${onlineN} online` : ""}</div>
         </div>
-        <div class="mb-0">
-          <div class="d-flex align-items-center justify-content-between mb-3"><div class="fw-semibold">Members<span class="mi-chat-count">${people.length}</span></div>${d.is_admin ? '<a href="javascript:void(0);" class="fs-12 text-primary fw-semibold" data-add-people>+ Add people</a>' : ""}</div>
-          <ul class="shared-files list-unstyled mb-0 mi-chat-members">
+        <div class="mi-prof-actions">
+          ${action("ri-chat-3-line", "Message", "is-solid", "data-focus")}
+          ${d.is_admin ? action("ri-user-add-line", "Add", "is-teal", "data-add-people") : ""}
+          ${d.left ? "" : action("ri-logout-box-r-line", "Leave", "is-danger", "data-leave")}
+        </div>
+        <div class="mi-prof-section">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="mi-prof-title mb-0">Members<span class="mi-chat-count">${people.length}</span></div>
+            ${d.is_admin ? '<button type="button" class="btn btn-sm btn-primary-light" data-add-people><i class="ri-add-line me-1"></i>Add people</button>' : ""}
+          </div>
+          <ul class="list-unstyled mb-0 mi-prof-members">
             ${people
               .map(
-                (p) => `<li><div class="d-flex align-items-center gap-2">
+                (p) => `<li>
                   ${face(p, "sm")}
-                  <div class="flex-fill min-w-0"><p class="fs-13 fw-semibold mb-0 text-truncate">${esc(p.is_me ? "You" : p.name)}${p.is_admin ? ' <span class="badge bg-primary ms-1">Admin</span>' : ""}</p><p class="mb-0 text-muted fs-12 text-truncate">${esc([p.role, p.place].filter(Boolean).join(" · "))}</p></div>
-                  ${d.is_admin && !p.is_me ? `<button type="button" class="btn btn-sm btn-icon btn-light" data-remove="${p.id}" title="Remove ${esc(p.name)}" aria-label="Remove ${esc(p.name)}"><i class="ri-close-line"></i></button>` : !p.is_me ? `<button type="button" class="btn btn-sm btn-icon btn-primary-light" data-start="${p.id}" aria-label="Chat with ${esc(p.name)}"><i class="ri-chat-3-line"></i></button>` : ""}
-                </div></li>`,
+                  <div class="flex-fill min-w-0">
+                    <div class="mi-prof-member-name">${esc(p.is_me ? "You" : p.name)}${p.is_admin ? '<span class="badge bg-primary ms-1">Admin</span>' : ""}</div>
+                    <div class="mi-prof-member-sub">${esc([p.role, p.place].filter(Boolean).join(" · "))}</div>
+                  </div>
+                  ${d.is_admin && !p.is_me ? `<button type="button" class="btn btn-sm btn-icon btn-light mi-prof-remove" data-remove="${p.id}" title="Remove ${esc(p.name)}" aria-label="Remove ${esc(p.name)}"><i class="ri-close-line"></i></button>` : !p.is_me ? `<button type="button" class="btn btn-sm btn-icon btn-primary-light" data-start="${p.id}" title="Chat with ${esc(p.name)}" aria-label="Chat with ${esc(p.name)}"><i class="ri-chat-3-line"></i></button>` : ""}
+                </li>`,
               )
               .join("")}
           </ul>
-        </div>`;
-    }
+        </div>
+      </div>`;
   }
 
   async function loadPhotos(placeId, placeName) {
@@ -661,8 +695,12 @@
       .catch(() => null);
     const photos = (res?.data?.photos || []).slice(0, 6);
     if (!$("miPhotos")) return;
-    box.innerHTML = `<div class="d-flex align-items-center justify-content-between mb-3"><div class="fw-semibold">Photos & Media<span class="mi-chat-count is-purple">${photos.length}</span></div></div>
-      ${photos.length ? `<div class="row g-2">${photos.map((ph) => `<div class="col-4"><a class="chat-media mi-chat-photo" href="${esc(ph.url)}" ${ph.caption ? `data-title="${esc(ph.caption)}"` : ""}><img src="${esc(ph.thumb_url)}" alt="${esc(ph.caption || "")}" loading="lazy"></a></div>`).join("")}</div>` : `<p class="fs-12 mb-0">${esc(placeName || "Their church")} hasn't added photos yet.</p>`}`;
+    box.innerHTML = `<div class="mi-prof-title">Photos from ${esc(placeName || "their church")}<span class="mi-chat-count is-purple">${photos.length}</span></div>
+      ${
+        photos.length
+          ? `<div class="mi-prof-photos">${photos.map((ph) => `<a class="mi-chat-photo" href="${esc(ph.url)}" ${ph.caption ? `data-title="${esc(ph.caption)}"` : ""}><img src="${esc(ph.thumb_url)}" alt="${esc(ph.caption || "")}" loading="lazy"></a>`).join("")}</div>`
+          : `<div class="mi-prof-empty"><span class="mi-prof-tile"><i class="ri-image-2-line"></i></span><span>${esc(placeName || "Their church")} hasn't added photos yet.</span></div>`
+      }`;
     if (window.GLightbox) {
       lightbox?.destroy();
       lightbox = photos.length ? GLightbox({ selector: "#chat-user-details .mi-chat-photo" }) : null;
@@ -868,6 +906,22 @@
     Toast.success("Group photo saved");
   }
 
+  /** Copy, with a fallback for pages not served over https (no clipboard API there). */
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return Toast.success("Copied");
+    } catch (e) {
+      const ta = Object.assign(document.createElement("textarea"), { value: text });
+      ta.style.cssText = "position:fixed;opacity:0";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      ta.remove();
+      ok ? Toast.success("Copied") : Toast.error("Couldn't copy - select the text instead.");
+    }
+  }
+
   // ================================================================ live status
   function paintLive(on) {
     $("miLive").classList.toggle("is-live", on);
@@ -904,6 +958,10 @@
       if (t.closest("[data-focus]")) {
         $("chat-user-details").classList.remove("open");
         return $("miInput")?.focus();
+      }
+      const cp = t.closest("[data-copy-text]");
+      if (cp) {
+        return copyText(cp.dataset.copyText);
       }
       if (t.closest("[data-leave]")) return leaveGroup();
       const rm = t.closest("[data-remove]");
