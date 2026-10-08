@@ -52,6 +52,8 @@ php artisan test --testsuite=Calendar     # the Calendar and the CCI national ca
 php artisan test --testsuite=Activities   # Church life: events, initiatives and their foundation (docs/specs/events-initiatives-spec.md)
 php artisan test --testsuite=Reporting    # Church life: monthly reports (docs/specs/monthly-reports-spec.md)
 php artisan test --testsuite=Communications # Church life: messages, the Inbox and replies (docs/specs/messages-spec.md)
+php artisan test --testsuite=People         # People & care: members, visitors, pastoral care, ministries (docs/specs/people-and-care-spec.md)
+php artisan test --testsuite=Facilities     # People & care: rooms, bookings, equipment, repairs, duty rota
 ```
 
 Only `tests/Feature/ExampleTest.php` and `tests/Unit/ExampleTest.php` exist today — there is no real coverage yet. New modules should NOT ship without Feature tests covering their permission boundaries (who can read/write what, scoped by territory) — that's the highest-value test surface in this codebase given how central the territory/permission system is.

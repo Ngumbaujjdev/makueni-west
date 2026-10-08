@@ -18,6 +18,8 @@
             <exclude>tests/Feature/Calendar</exclude>
             <exclude>tests/Feature/Reporting</exclude>
             <exclude>tests/Feature/Communications</exclude>
+            <exclude>tests/Feature/People</exclude>
+            <exclude>tests/Feature/Facilities</exclude>
         </testsuite>
         <testsuite name="Diocese">
             <directory>tests/Feature/Diocese</directory>
@@ -42,6 +44,12 @@
         </testsuite>
         <testsuite name="Settings">
             <directory>tests/Feature/Settings</directory>
+        </testsuite>
+        <testsuite name="People">
+            <directory>tests/Feature/People</directory>
+        </testsuite>
+        <testsuite name="Facilities">
+            <directory>tests/Feature/Facilities</directory>
         </testsuite>
     </testsuites>
     <source>

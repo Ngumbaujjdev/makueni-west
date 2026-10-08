@@ -583,10 +583,10 @@ $userName = $_SESSION['user']['firstname'] ?? 'User';
                         break;
                     case 'region':
                     case 'subregion':
-                        window.location.href = '<?= SITE_URL ?>/region/oversight';
+                        window.location.href = '<?= SITE_URL ?>/region/dashboard';
                         break;
                     case 'church':
-                        window.location.href = '<?= SITE_URL ?>/church/member-management';
+                        window.location.href = '<?= SITE_URL ?>/church/dashboard';
                         break;
                     default:
                         window.location.href = '<?= SITE_URL ?>/';

@@ -4,7 +4,7 @@
 
 ## Data Model (as built)
 
-- Aggregate counts per church per **fiscal period** — not an individual member/congregant registry. The period's granularity is per-church configurable (see "Recording Cadence" below) — monthly, half-yearly, or yearly — not fixed at monthly.
+- Aggregate counts per church per **fiscal period** — not an individual member/congregant registry. (A separate, church-private member register is planned in `people-and-care-spec.md`; it only *suggests* numbers to this form and never fills it in.) The period's granularity is per-church configurable (see "Recording Cadence" below) — monthly, half-yearly, or yearly — not fixed at monthly.
 - **Entry only at Church level**, by the Pastor (and, per a later permission decision, Associate Pastor / Church Secretary / Church Administrator too — see Permission Rules below). Region, Subregion, and Diocese never create their own rows — their views are computed by summing descendant churches through `territories.parent_territory_id`, via `App\Services\DemographicsGrowthService`.
 - Uses the existing `fiscal_years`/`fiscal_months`/`fiscal_semi_annuals` tables (built for Budgets) for the period dimension.
 - Follows `backend/app/Models/Budget.php`'s conventions: `territory_type` + `territory_id` fillable columns, `Auditable` + `SoftDeletes` traits, `created_by`/`updated_by`.

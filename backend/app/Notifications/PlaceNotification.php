@@ -21,6 +21,10 @@ class PlaceNotification extends Notification
         'report' => ['icon' => 'ri-file-chart-line', 'colour' => 'purple', 'label' => 'Reports'],
         'message' => ['icon' => 'ri-chat-3-line', 'colour' => 'pink', 'label' => 'Messages'],
         'reminder' => ['icon' => 'ri-alarm-line', 'colour' => 'warning', 'label' => 'Reminders'],
+        // People & care (docs/specs/people-and-care-spec.md)
+        'care' => ['icon' => 'ri-heart-pulse-line', 'colour' => 'danger', 'label' => 'Care'],
+        'followup' => ['icon' => 'ri-user-follow-line', 'colour' => 'success', 'label' => 'Follow-ups'],
+        'booking' => ['icon' => 'ri-door-open-line', 'colour' => 'secondary', 'label' => 'Bookings'],
     ];
 
     public function __construct(

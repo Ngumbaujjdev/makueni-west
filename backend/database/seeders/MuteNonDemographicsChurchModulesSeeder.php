@@ -57,6 +57,12 @@ class MuteNonDemographicsChurchModulesSeeder extends Seeder
 
                 continue;
             }
+            // People & care's modules are switched on and off by PeopleCareAccessSeeder, phase by phase.
+            if ($module->submodules()->where(fn ($q) => $q->where('path', 'like', '/church/members/%')->orWhere('path', 'like', '/church/visitors/%')->orWhere('path', 'like', '/church/pastoral-care/%')->orWhere('path', 'like', '/church/ministries/%')->orWhere('path', 'like', '/church/facilities/%'))->exists()) {
+                $this->command->info("   🔊 Left to PeopleCareAccessSeeder: {$module->name} (ID: {$module->id})");
+
+                continue;
+            }
             if ($module->is_active) {
                 $module->is_active = false;
                 $module->save();
