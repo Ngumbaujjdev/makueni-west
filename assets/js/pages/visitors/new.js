@@ -26,13 +26,14 @@
 
   // -------------------------------------------------------------- rows
   function rowHtml(r, i) {
-    return `<div class="vs-entry" data-key="${r.key}">
+    const field = (cls, id, label, icon, input) => `<div class="${cls}"><label class="form-label visually-hidden" for="${id}">${label}</label><div class="vs-input"><i class="${icon}"></i>${input}</div></div>`;
+    return `<div class="vs-entry${r.name.trim() || r.phone.trim() ? " is-filled" : ""}" data-key="${r.key}">
       <div class="vs-entry-num">${i + 1}</div>
       <div class="vs-entry-body">
         <div class="row g-2">
-          <div class="col-md-5"><label class="form-label visually-hidden" for="n${r.key}">Name</label><input class="form-control" id="n${r.key}" data-f="name" placeholder="Full name" maxlength="160" value="${M.esc(r.name)}"></div>
-          <div class="col-md-3 col-sm-6"><label class="form-label visually-hidden" for="p${r.key}">Phone</label><input class="form-control" id="p${r.key}" data-f="phone" inputmode="tel" placeholder="Phone (0712...)" maxlength="30" value="${M.esc(r.phone)}"></div>
-          <div class="col-md-4 col-sm-6"><label class="form-label visually-hidden" for="a${r.key}">Area</label><input class="form-control" id="a${r.key}" data-f="area" list="vsAreas" placeholder="Area, e.g. Kasikeu" maxlength="80" value="${M.esc(r.area)}"></div>
+          ${field("col-md-5", `n${r.key}`, "Name", "ri-user-3-line", `<input class="form-control" id="n${r.key}" data-f="name" placeholder="Full name" maxlength="160" value="${M.esc(r.name)}">`)}
+          ${field("col-md-3 col-sm-6", `p${r.key}`, "Phone", "ri-phone-line", `<input class="form-control" id="p${r.key}" data-f="phone" inputmode="tel" placeholder="0712 345 678" maxlength="30" value="${M.esc(r.phone)}">`)}
+          ${field("col-md-4 col-sm-6", `a${r.key}`, "Area", "ri-map-pin-line", `<input class="form-control" id="a${r.key}" data-f="area" list="vsAreas" placeholder="Area, e.g. Kasikeu" maxlength="80" value="${M.esc(r.area)}">`)}
         </div>
         <div class="vs-entry-known" data-known></div>
       </div>
@@ -115,8 +116,15 @@
       ["ri-repeat-line", "warning", "Coming back", back],
       ["ri-home-heart-line", "purple", "Members (not counted)", members],
     ]
-      .map(([icon, c, label, n]) => `<div class="vs-tally-row"><span class="ev-tile is-sm is-soft" style="--q: var(--${c}-rgb)"><i class="${icon}"></i></span><span class="flex-fill">${label}</span><strong>${n}</strong></div>`)
+      .map(([icon, c, label, n]) => `<div class="vs-tally-row"><span class="ev-tile is-sm${n ? "" : " is-soft"}" style="--q: var(--${c}-rgb)"><i class="${icon}"></i></span><span class="flex-fill">${label}</span><strong>${n}</strong></div>`)
       .join("");
+    const people = fresh + back;
+    $("vsPrevCount").textContent = `${people} ${people === 1 ? "visitor" : "visitors"}`;
+    $("vsCount").textContent = `${rows.length} ${rows.length === 1 ? "person" : "people"}`;
+    document.querySelectorAll(".vs-entry").forEach((el) => {
+      const r = rowOf(el);
+      el.classList.toggle("is-filled", !!r && !!(r.name.trim() || r.phone.trim()));
+    });
     const o = state.options;
     if (o.welcome_template) {
       $("vsWelcome").hidden = false;
@@ -125,6 +133,18 @@
       $("vsWelcomeText").textContent = o.welcome_template.replace(/\{first_name\}/g, first).replace(/\{church\}/g, o.church_name || "");
     }
     $("vsSave").innerHTML = `<i class="ri-check-line me-1"></i>Save ${rows.length ? `${rows.length} ${rows.length === 1 ? "visitor" : "visitors"}` : "visitors"}`;
+  }
+
+  /** The preview's heading: the day, the gathering and who follows them up. */
+  function preview() {
+    const on = $("vsOn").value;
+    $("vsPrevWhen").textContent = on ? new Date(`${on}T12:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "Pick a date";
+    const g = $("vsGathering").selectedOptions[0];
+    const a = $("vsAssign").selectedOptions[0];
+    $("vsPrevMeta").innerHTML = [
+      `<span><i class="ri-community-line"></i>${M.esc(g && g.value ? g.textContent : "Not at a gathering")}</span>`,
+      `<span><i class="ri-user-follow-line"></i>${a && a.value ? `${M.esc(a.textContent.replace(" (me)", ""))} follows up` : "Nobody follows up yet"}</span>`,
+    ].join("");
   }
 
   // -------------------------------------------------------------- saving
@@ -235,14 +255,19 @@
     // Our weekly services first (Sunday service is picked on a Sunday), then the other gatherings.
     const choices = o.gathering_choices || [];
     $("vsGathering").innerHTML = V.gatheringOptions(choices, $("vsOn").value);
+    if (typeof DateField !== "undefined") DateField.enhance($("vsOn"), { quick: ["today", "lastSunday"] });
     $("vsOn").addEventListener("change", () => {
       $("vsGathering").innerHTML = V.gatheringOptions(choices, $("vsOn").value);
       UI.syncSelect($("vsGathering"));
+      preview();
     });
     $("vsAssign").insertAdjacentHTML("beforeend", o.leaders.map((l) => `<option value="${l.id}" data-color="${UI.colorFor(l.name)}"${l.id === CTX.userId ? " selected" : ""}>${M.esc(l.name)}${l.id === CTX.userId ? " (me)" : ""}</option>`).join(""));
     $("vsAreas").innerHTML = (o.areas || []).map((a) => `<option value="${M.esc(a)}">`).join("");
     UI.enhanceSelect($("vsGathering"), { search: choices.length > 8 });
     UI.enhanceSelect($("vsAssign"));
+    // Select2 fires jQuery's change, which addEventListener doesn't hear.
+    ["vsGathering", "vsAssign"].forEach((id) => (window.jQuery ? window.jQuery($(id)).on("change", preview) : $(id).addEventListener("change", preview)));
+    preview();
     $("vsWelcomeSw").checked = !!o.welcome_sms;
     state.rows = [blank(), blank(), blank()];
     renderRows();

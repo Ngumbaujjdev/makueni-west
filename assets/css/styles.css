@@ -38683,3 +38683,22 @@ button.cal-side-item:focus-visible {
 @media (max-width: 575.98px) {
   .cr-hosp-boxes { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Record visitors, in the Demographics entry's look (intake-form + preview-card) */
+.vs-step-purple { background: rgb(var(--purple-rgb)); }
+.vs-rows { display: flex; flex-direction: column; gap: .6rem; }
+.vs-rows .vs-entry, .vs-rows .vs-entry:first-child { align-items: flex-start; padding: .75rem; border: 1px solid var(--default-border); border-radius: .8rem; background: rgba(var(--primary-rgb), .035); transition: border-color .15s, background .15s, box-shadow .15s; }
+.vs-rows .vs-entry:focus-within { border-color: rgba(var(--primary-rgb), .45); background: var(--custom-white); box-shadow: 0 0 0 3px rgba(var(--primary-rgb), .08); }
+.vs-rows .vs-entry-num { margin-top: .35rem; }
+.vs-rows .vs-entry.is-filled .vs-entry-num { background: var(--primary-color); color: #fff; }
+.vs-rows .vs-entry-remove { margin-top: .3rem; }
+.vs-input { position: relative; }
+.vs-input > i { position: absolute; top: 50%; left: .7rem; font-size: .95rem; color: var(--text-muted); transform: translateY(-50%); pointer-events: none; }
+.vs-input .form-control { padding-left: 2.1rem; }
+.vs-input:focus-within > i { color: var(--primary-color); }
+.vs-foot-hint { display: inline-flex; align-items: center; gap: .35rem; font-size: .78rem; color: var(--default-text-color); }
+.vs-foot-hint i { color: rgb(var(--purple-rgb)); }
+.vs-prev-meta { display: flex; flex-direction: column; gap: .3rem; margin-top: .4rem; font-size: .8rem; color: var(--default-text-color); }
+.vs-prev-meta span { display: inline-flex; align-items: center; gap: .4rem; }
+.vs-prev-meta i { color: rgb(var(--purple-rgb)); }
+.vs-aside .preview-section { margin-top: .9rem; }
