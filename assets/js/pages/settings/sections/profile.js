@@ -1,7 +1,9 @@
 /**
  * SETTINGS - Profile: who the place is, how to reach it, where to find it,
- * and its logo (GET / PUT /settings/profile, POST / DELETE
- * /settings/profile/logo). The preview card on the right updates as you type.
+ * its logo, its YouTube link and its photo gallery (GET / PUT
+ * /settings/profile, POST / DELETE /settings/profile/logo, /settings/profile/photos).
+ * The preview card on the right updates as you type. Gallery changes save at
+ * once; the rest saves with the Save bar.
  */
 (function () {
   "use strict";
@@ -9,8 +11,8 @@
   const UI = DemographicsUI;
   const F = window.SettingsFields;
   const esc = F.esc;
-  const FIELDS = ["name", "established_date", "description", "phone", "email", "website", "address", "town", "sub_county", "county", "postal_code", "latitude", "longitude"];
-  const CHECKS = { phone: "Phone number", email: "Email address", address: "Physical address", county: "County", location: "Map pin", logo: "Logo or photo" };
+  const FIELDS = ["name", "established_date", "description", "phone", "email", "website", "youtube_url", "address", "town", "sub_county", "county", "postal_code", "latitude", "longitude"];
+  const CHECKS = { phone: "Phone number", email: "Email address", address: "Physical address", county: "County", location: "Map pin", logo: "Logo or photo", photos: "At least 3 photos" };
   const DEFAULT_CENTRE = [-1.95, 37.55]; // Makueni
   const TYPE_LABEL = { church: "Church", region: "Region", diocese: "Diocese" };
   // A brand-coloured pin from the icon font - the template's Leaflet copy has no marker shadow image.
@@ -23,6 +25,8 @@
   let marker = null;
   let can = false;
   let counties = [];
+  let gallery = { photos: [], max: 30 };
+  let lightbox = null;
 
   const $ = (sel) => root.querySelector(sel);
   const val = (name) => {
@@ -114,6 +118,19 @@
             sub: "Shown on your pages and reports",
             body: `<div class="d-flex align-items-center flex-wrap gap-3" id="logoArea"></div>`,
           })}
+          ${F.card({
+            id: "card-online", title: "Services online", icon: "ri-youtube-line", colour: "danger",
+            sub: "Your YouTube channel, or the link to a service",
+            body: `<div class="row g-3">
+              ${field("youtube_url", "YouTube link", text("youtube_url", p.youtube_url, `maxlength="255" placeholder="youtube.com/@yourchurch" ${dis}`), "col-12", "Your channel (youtube.com/@yourchurch) or a video or live link - a video plays right here.")}
+              <div class="col-12" id="ytPreview"></div>
+            </div>`,
+          })}
+          ${F.card({
+            id: "card-gallery", title: "Gallery", icon: "ri-gallery-line", colour: "purple",
+            sub: "Photos of your church, services and events - for your page",
+            body: `<div id="galleryArea"><span class="skel skel-line"></span></div>`,
+          })}
         </div>
         <div class="col-xxl-4 col-xl-5">
           <div class="settings-sticky">
@@ -124,6 +141,8 @@
 
     snapshot = current();
     drawLogo();
+    drawYouTube();
+    drawGallery();
     drawPreview();
     initMap();
     UI.enhanceSelect($("#p-county"), { search: true });
@@ -140,10 +159,13 @@
       { id: "card-contact", label: "How to reach you" },
       { id: "card-location", label: "Where to find you" },
       { id: "card-logo", label: "Logo or photo" },
+      { id: "card-online", label: "Services online" },
+      { id: "card-gallery", label: "Gallery" },
     ]);
   }
 
-  function onChange() {
+  function onChange(e) {
+    if (e?.target?.name === "youtube_url") drawYouTube();
     drawPreview();
     SettingsHub.changed();
   }
@@ -180,9 +202,11 @@
       county: !!v.county,
       location: v.latitude !== "" && v.longitude !== "",
       logo: !!data.profile.logo_url,
+      photos: gallery.photos.length >= 3,
     };
     const n = Object.values(done).filter(Boolean).length;
-    return { percent: Math.round((n / 6) * 100), done: n, missing: Object.keys(done).filter((k) => !done[k]) };
+    const total = Object.keys(done).length;
+    return { percent: Math.round((n / total) * 100), done: n, missing: Object.keys(done).filter((k) => !done[k]) };
   }
 
   function drawPreview() {
@@ -211,6 +235,8 @@
           ${fact("ri-map-pin-line", where)}
           ${fact("ri-calendar-line", v.established_date ? `Since ${new Date(v.established_date).getFullYear()}` : "")}
         </ul>
+        ${v.youtube_url && ytKind(v.youtube_url) ? `<a class="settings-yt-badge mt-3" href="${esc(withScheme(v.youtube_url))}" target="_blank" rel="noopener"><i class="ri-youtube-fill"></i>${ytKind(v.youtube_url) === "video" ? "Watch our service" : "Our services on YouTube"}</a>` : ""}
+        ${gallery.photos.length ? `<div class="settings-preview-photos mt-3">${gallery.photos.slice(0, 4).map((ph, i) => `<img src="${esc(ph.thumb_url)}" alt="${esc(ph.caption || "")}" loading="lazy">${i === 3 && gallery.photos.length > 4 ? `<span>+${gallery.photos.length - 4}</span>` : ""}`).join("")}</div>` : ""}
         ${!v.phone && !v.email && !where ? '<div class="text-center fs-13 mt-2">Add your contact details and they show up here.</div>' : ""}
       </div>
       <div class="card-footer">
@@ -290,6 +316,189 @@
     );
   }
 
+  /* ---------- services online ---------- */
+
+  const withScheme = (u) => (/^https?:\/\//i.test(u) ? u : `https://${u}`);
+  /** The same links the server accepts (app/Support/YouTube.php). */
+  const YT = /^(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com\/(?:@[\w.-]+|channel\/[\w-]+|c\/[\w.-]+|user\/[\w.-]+|watch\?(?:.*&)?v=[\w-]{11}|live\/[\w-]{11}|shorts\/[\w-]{11}|embed\/[\w-]{11}|playlist\?(?:.*&)?list=[\w-]+)|youtu\.be\/[\w-]{11})(?:[/?&#].*)?$/i;
+  function videoId(u) {
+    for (const re of [/youtu\.be\/([\w-]{11})/i, /[?&]v=([\w-]{11})/i, /\/(?:live|shorts|embed)\/([\w-]{11})/i]) {
+      const m = String(u || "").match(re);
+      if (m) return m[1];
+    }
+    return null;
+  }
+  const ytKind = (u) => (!u || !YT.test(u.trim()) ? null : videoId(u) ? "video" : "channel");
+
+  function drawYouTube() {
+    const u = val("youtube_url");
+    const box = $("#ytPreview");
+    const kind = ytKind(u);
+    if (!u) {
+      box.innerHTML = `<div class="settings-yt-empty"><span class="settings-yt-icon"><i class="ri-youtube-fill"></i></span><div><strong>No YouTube link yet</strong><small>When you stream or post your services, put the link here - it shows on your page.</small></div></div>`;
+    } else if (!kind) {
+      box.innerHTML = `<div class="settings-yt-empty is-wrong"><span class="settings-yt-icon"><i class="ri-error-warning-line"></i></span><div><strong>That isn't a YouTube link</strong><small>Use youtube.com/@yourchurch, or copy a video's link from YouTube.</small></div></div>`;
+    } else if (kind === "video") {
+      box.innerHTML = `<div class="ratio ratio-16x9 settings-yt-player"><iframe src="https://www.youtube-nocookie.com/embed/${videoId(u)}" title="Your service on YouTube" loading="lazy" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
+    } else {
+      box.innerHTML = `<a class="settings-yt-channel" href="${esc(withScheme(u))}" target="_blank" rel="noopener"><span class="settings-yt-icon is-solid"><i class="ri-youtube-fill"></i></span><div class="min-w-0"><strong>Your YouTube channel</strong><small class="text-break">${esc(u)}</small></div><i class="ri-external-link-line ms-auto"></i></a>`;
+    }
+  }
+
+  /* ---------- gallery ---------- */
+
+  async function loadGallery() {
+    const res = await SettingsAPI.photos();
+    if (res.ok) gallery = res.data;
+    drawGallery();
+    drawPreview();
+  }
+
+  function drawGallery() {
+    const box = $("#galleryArea");
+    if (!box) return;
+    const photos = gallery.photos;
+    const left = gallery.max - photos.length;
+    box.innerHTML = `
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <span class="soft-chip soft-purple"><i class="ri-image-2-line"></i>${photos.length} of ${gallery.max} photos</span>
+        ${can && left > 0 ? `<input type="file" id="galFile" accept="image/png,image/jpeg,image/webp" multiple hidden><button type="button" class="btn btn-primary btn-sm" id="galPick"><i class="ri-image-add-line me-1"></i>Choose photos</button>` : ""}
+      </div>
+      ${can && left > 0 ? `<div class="gal-drop" id="galDrop" tabindex="0" role="button" aria-label="Add photos">
+          <span class="gal-drop-icon"><i class="ri-upload-cloud-2-line"></i></span>
+          <div><strong>Drop photos here, or choose them</strong><small>JPG, PNG or WebP, up to 10 MB each - up to ${left} more. We stand them upright, resize them and keep them as small WebP files.</small></div>
+        </div>` : ""}
+      <div class="gal-progress" id="galProgress" hidden><div class="d-flex justify-content-between mb-1"><span id="galProgressText"></span><span id="galProgressPct"></span></div><div class="progress progress-sm"><div class="progress-bar bg-purple" id="galProgressBar" style="width:0%"></div></div></div>
+      <div class="invalid-feedback d-block" data-error-for="photos"></div>
+      ${photos.length
+        ? `<div class="gal-grid">${photos
+            .map(
+              (ph, i) => `<figure class="gal-item" data-id="${ph.id}">
+                <a class="gal-thumb" href="${esc(ph.url)}" data-gallery="place" ${ph.caption ? `data-title="${esc(ph.caption)}"` : ""}><img src="${esc(ph.thumb_url)}" alt="${esc(ph.caption || `Photo ${i + 1}`)}" loading="lazy"></a>
+                ${can ? `<div class="gal-tools">
+                    <button type="button" class="gal-tool" data-move="-1" ${i === 0 ? "disabled" : ""} aria-label="Move earlier"><i class="ri-arrow-left-s-line"></i></button>
+                    <button type="button" class="gal-tool" data-move="1" ${i === photos.length - 1 ? "disabled" : ""} aria-label="Move later"><i class="ri-arrow-right-s-line"></i></button>
+                    <button type="button" class="gal-tool is-danger" data-remove aria-label="Remove this photo"><i class="ri-delete-bin-line"></i></button>
+                  </div>
+                  <input class="form-control form-control-sm gal-caption" value="${esc(ph.caption || "")}" maxlength="160" placeholder="Add a caption" aria-label="Caption">`
+                  : ph.caption ? `<figcaption>${esc(ph.caption)}</figcaption>` : ""}
+              </figure>`,
+            )
+            .join("")}</div>`
+        : `<div class="gal-empty"><i class="ri-gallery-line"></i><span>No photos yet${can ? " - add your church, a Sunday service or an event." : "."}</span></div>`}`;
+
+    if (window.GLightbox) {
+      lightbox?.destroy();
+      lightbox = photos.length ? GLightbox({ selector: "#galleryArea .gal-thumb" }) : null;
+    }
+    if (!can) return;
+    const file = $("#galFile");
+    $("#galPick")?.addEventListener("click", () => file.click());
+    file?.addEventListener("change", (e) => addPhotos([...e.target.files]));
+    const drop = $("#galDrop");
+    if (drop) {
+      drop.addEventListener("click", () => file.click());
+      drop.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), file.click()));
+      ["dragenter", "dragover"].forEach((t) => drop.addEventListener(t, (e) => (e.preventDefault(), drop.classList.add("is-over"))));
+      ["dragleave", "drop"].forEach((t) => drop.addEventListener(t, () => drop.classList.remove("is-over")));
+      drop.addEventListener("drop", (e) => {
+        e.preventDefault();
+        addPhotos([...e.dataTransfer.files].filter((f) => /^image\//.test(f.type)));
+      });
+    }
+    box.querySelectorAll(".gal-item").forEach((item) => {
+      const id = Number(item.dataset.id);
+      item.querySelectorAll("[data-move]").forEach((b) => b.addEventListener("click", () => move(id, Number(b.dataset.move))));
+      const del = item.querySelector("[data-remove]");
+      del.addEventListener("click", () => {
+        // Two taps: the first asks, the second removes.
+        if (!del.classList.contains("is-asking")) {
+          del.classList.add("is-asking");
+          del.innerHTML = '<span class="fs-11 fw-semibold px-1">Remove?</span>';
+          setTimeout(() => del.isConnected && (del.classList.remove("is-asking"), (del.innerHTML = '<i class="ri-delete-bin-line"></i>')), 3000);
+          return;
+        }
+        removePhoto(id, del);
+      });
+      const cap = item.querySelector(".gal-caption");
+      const saveCap = async () => {
+        const ph = gallery.photos.find((x) => x.id === id);
+        const value = cap.value.trim();
+        if (!ph || value === (ph.caption || "")) return;
+        const res = await SettingsAPI.captionPhoto(id, value);
+        if (!res.ok) return Toast.error(res.message);
+        ph.caption = res.data.caption;
+        Toast.success("Caption saved");
+      };
+      cap.addEventListener("blur", saveCap);
+      cap.addEventListener("keydown", (e) => e.key === "Enter" && (e.preventDefault(), cap.blur()));
+    });
+  }
+
+  async function addPhotos(files) {
+    const err = $('[data-error-for="photos"]');
+    err.textContent = "";
+    const left = gallery.max - gallery.photos.length;
+    const tooBig = files.filter((f) => f.size > 10 * 1024 * 1024);
+    let queue = files.filter((f) => f.size <= 10 * 1024 * 1024);
+    if (queue.length > left) {
+      err.textContent = `Only ${left} more ${left === 1 ? "photo fits" : "photos fit"} - the first ${left} will be added.`;
+      queue = queue.slice(0, left);
+    }
+    if (!queue.length) {
+      if (tooBig.length) err.textContent = "Each photo must be 10 MB or smaller.";
+      return;
+    }
+    const bar = $("#galProgress");
+    bar.hidden = false;
+    let added = 0;
+    const failed = [];
+    for (const [i, f] of queue.entries()) {
+      $("#galProgressText").textContent = `Adding ${i + 1} of ${queue.length} - ${f.name}`;
+      $("#galProgressPct").textContent = `${Math.round((i / queue.length) * 100)}%`;
+      $("#galProgressBar").style.width = `${(i / queue.length) * 100}%`;
+      const res = await SettingsAPI.uploadPhoto(f);
+      if (res.ok) {
+        gallery = res.data;
+        added++;
+      } else failed.push(`${f.name}: ${res.message}`);
+    }
+    drawGallery();
+    drawPreview();
+    SettingsRail.setAttention("profile", completeness(current()).percent < 100);
+    const errEl = $('[data-error-for="photos"]');
+    const notes = [...(tooBig.length ? [`${tooBig.length} over 10 MB ${tooBig.length === 1 ? "was" : "were"} left out`] : []), ...failed];
+    if (notes.length) errEl.textContent = notes.join(" · ");
+    if (added) Toast.success(added === 1 ? "Photo added" : `${added} photos added`);
+  }
+
+  async function move(id, by) {
+    const ids = gallery.photos.map((p) => p.id);
+    const i = ids.indexOf(id);
+    const j = i + by;
+    if (i < 0 || j < 0 || j >= ids.length) return;
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+    const res = await SettingsAPI.orderPhotos(ids);
+    if (!res.ok) return Toast.error(res.message);
+    gallery = res.data;
+    drawGallery();
+    drawPreview();
+  }
+
+  async function removePhoto(id, btn) {
+    UI.setButtonLoading(btn, "");
+    const res = await SettingsAPI.removePhoto(id);
+    if (!res.ok) {
+      UI.restoreButton(btn);
+      return Toast.error(res.message);
+    }
+    gallery = res.data;
+    drawGallery();
+    drawPreview();
+    SettingsRail.setAttention("profile", completeness(current()).percent < 100);
+    Toast.success("Photo removed");
+  }
+
   /* ---------- logo ---------- */
 
   async function upload(file) {
@@ -344,7 +553,9 @@
       data = res.data;
       can = !!data.can?.update;
       counties = ref.ok ? ref.data.counties : [];
+      gallery = { photos: [], max: 30 };
       draw();
+      loadGallery();
     },
     isDirty() {
       if (!root || !data || !$('[name="name"]')) return 0;
@@ -353,6 +564,7 @@
     },
     discard() {
       draw();
+      loadGallery();
     },
     async save() {
       root.querySelectorAll(".is-invalid").forEach((e) => e.classList.remove("is-invalid"));
@@ -384,6 +596,7 @@
         if (el && f !== "latitude" && f !== "longitude") el.value = saved ?? "";
       });
       snapshot = current();
+      drawYouTube();
       drawPreview();
       SettingsRail.setAttention("profile", data.completeness.percent < 100);
       Toast.success(res.message);
