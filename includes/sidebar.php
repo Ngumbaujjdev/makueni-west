@@ -24,9 +24,9 @@ function getDashboardUrl($territoryType, $baseUrl) {
     $dashboardMap = [
         'global' => '/diocese/dashboard',
         'diocese' => '/diocese/dashboard',
-        'region' => '/region/oversight',
-        'subregion' => '/region/oversight',
-        'church' => '/church/member-management'
+        'region' => '/region/dashboard',
+        'subregion' => '/region/dashboard',
+        'church' => '/church/dashboard'
     ];
     return $baseUrl . ($dashboardMap[$territoryType] ?? '/diocese/dashboard');
 }
