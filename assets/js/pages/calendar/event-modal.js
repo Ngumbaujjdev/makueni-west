@@ -35,6 +35,7 @@ const CalendarMeta = (function () {
     session: "ri-seedling-line",
     service: "ri-book-open-line",
     due: "ri-alarm-warning-line",
+    booking: "ri-door-open-line",
   };
   /** What the calendar can show besides its own events (docs/specs/calendar-spec.md, C3). */
   const SOURCES = {
@@ -43,6 +44,7 @@ const CalendarMeta = (function () {
     sessions: { label: "Initiative sessions", one: "Initiative session", icon: "ri-seedling-line", colour: "success" },
     services: { label: "Services", one: "Service", icon: "ri-book-open-line", colour: "pink" },
     due: { label: "Due dates", one: "Due date", icon: "ri-alarm-warning-line", colour: "secondary" },
+    bookings: { label: "Room bookings", one: "Room booking", icon: "ri-door-open-line", colour: "success" },
   };
   const REPEATS = { none: "Doesn't repeat", weekly: "Every week", monthly: "Every month", yearly: "Every year" };
 
@@ -182,6 +184,8 @@ const CalendarEventModal = (function () {
     if (o.source === "events") return { label: "Open the event", icon: "ri-calendar-check-line" };
     if (o.source === "sessions") return { label: "Open the initiative", icon: "ri-seedling-line" };
     if (o.source === "services") return { label: "See service times", icon: "ri-time-line" };
+    if (o.source === "bookings") return { label: "See the room's bookings", icon: "ri-door-open-line" };
+    if (url.includes("facilities/rota")) return { label: "Open the duty rota", icon: "ri-team-line" };
     if (url.includes("monthly-reports")) return { label: o.status === "late" ? "Write it now" : "Open the report", icon: "ri-file-text-line" };
     if (url.includes("contributions")) return { label: "Record what was sent", icon: "ri-hand-coin-line" };
     if (url.includes("budget")) return { label: "Prepare the budget", icon: "ri-wallet-3-line" };
@@ -192,7 +196,8 @@ const CalendarEventModal = (function () {
   function keptNote(o) {
     if (o.source === "services") return "Service times are set in Settings › Service times.";
     if (o.source === "sessions") return "Attendance for this session is taken on the initiative page.";
-    if (o.source === "due") return "Due dates come from Monthly reports and Budgets.";
+    if (o.source === "bookings") return "Rooms are booked in Facilities › Bookings.";
+    if (o.source === "due") return "Due dates come from Monthly reports, Budgets, Visitors, Pastoral care and the duty rota.";
     return "";
   }
 

@@ -34,7 +34,7 @@ class PeopleCareAccessSeeder extends Seeder
         'visitors' => true,
         'pastoral' => true,
         'ministries' => true,
-        'facilities' => false,
+        'facilities' => true,
     ];
 
     /** module => the church module, the placeholder names it reuses, and its pages (path => [title, description, the ability it holds]). */
@@ -86,7 +86,10 @@ class PeopleCareAccessSeeder extends Seeder
             'description' => 'Rooms and bookings, equipment, repairs and the duty rota.',
             'pages' => [
                 '' => ['Facilities', "Today's bookings, repairs and this Sunday's duty.", ['read', 'manage']],
-                'bookings.php' => ['Book a room', 'Book a room, and see who has it when.', ['book']],
+                'bookings.php' => ['Bookings', 'Book a room, and see who has it when.', ['bookings', 'book']],
+                'equipment.php' => ['Equipment', 'What we own, where it is kept, and who has borrowed it.', ['equipment']],
+                'repairs.php' => ['Repairs', 'What needs fixing, who is on it, and what it cost.', ['repairs']],
+                'rota.php' => ['Duty rota', 'Who is on duty at each service.', ['rota']],
             ],
         ],
     ];

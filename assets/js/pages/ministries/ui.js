@@ -577,7 +577,8 @@ const MinistriesUI = (function () {
     </div>`;
   }
 
-  return { DAYS, esc, textOn, num, initials, tile, day, nextLabel, average, cardBody, card, windowEl, options, ministryWindow, meetsWindow, addMembersWindow, addToMinistryWindow, personCard };
+  // windowEl, submit, step, field, affix and close are shared with Facilities' windows.
+  return { DAYS, esc, textOn, num, initials, tile, day, nextLabel, average, cardBody, card, windowEl, submit, step, field, affix, close, options, ministryWindow, meetsWindow, addMembersWindow, addToMinistryWindow, personCard };
 })();
 
 window.MinistriesUI = MinistriesUI;

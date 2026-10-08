@@ -106,6 +106,12 @@ class AppServiceProvider extends ServiceProvider
             'ministry' => 'App\Models\Ministry',
             'ministry_leader' => 'App\Models\MinistryLeader',
             'ministry_member' => 'App\Models\MinistryMember',
+            'room' => 'App\Models\Room',
+            'room_booking' => 'App\Models\RoomBooking',
+            'equipment' => 'App\Models\Equipment',
+            'equipment_loan' => 'App\Models\EquipmentLoan',
+            'maintenance_job' => 'App\Models\MaintenanceJob',
+            'duty_rota' => 'App\Models\DutyRota',
         ]);
 
         // Saved system settings (email server, ...) take over from .env -

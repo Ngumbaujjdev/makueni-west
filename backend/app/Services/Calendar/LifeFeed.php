@@ -30,7 +30,7 @@ use Illuminate\Support\Collection;
  */
 final class LifeFeed
 {
-    public const SOURCES = ['calendar', 'events', 'sessions', 'services', 'due'];
+    public const SOURCES = ['calendar', 'events', 'sessions', 'services', 'due', 'bookings'];
 
     /** Dates and times are the diocese's own, not UTC's. */
     public const TZ = 'Africa/Nairobi';
@@ -59,7 +59,10 @@ final class LifeFeed
             $out = [...$out, ...$this->services($place, $from, $to)];
         }
         if (in_array('ours', $layers, true) && in_array('due', $sources, true)) {
-            $out = [...$out, ...$this->due($place, $from, $to, $user), ...$this->reportsDue($place, $from, $to, $user), ...$this->followupsDue($place, $from, $to, $user), ...$this->careDue($place, $from, $to, $user)];
+            $out = [...$out, ...$this->due($place, $from, $to, $user), ...$this->reportsDue($place, $from, $to, $user), ...$this->followupsDue($place, $from, $to, $user), ...$this->careDue($place, $from, $to, $user), ...$this->dutyDue($place, $from, $to, $user)];
+        }
+        if (in_array('ours', $layers, true) && in_array('bookings', $sources, true)) {
+            $out = [...$out, ...$this->bookings($place, $from, $to, $user)];
         }
 
         return $out;
@@ -361,6 +364,56 @@ final class LifeFeed
             description: 'Next steps in pastoral care',
             allDay: true,
             tone: $day === $today->toDateString() ? 'danger' : null,
+        ))->values()->all();
+    }
+
+    /** Our rooms' bookings (P5) - weekly ones expanded - for those who see the facilities. */
+    private function bookings(Territory $place, CarbonImmutable $from, CarbonImmutable $to, ?User $user): array
+    {
+        if (PlaceAccess::level($place) !== 'church' || ! PeopleAccess::canNamed($user, $place, 'facilities')) {
+            return [];
+        }
+        $facilities = app(\App\Services\Facilities\Facilities::class);
+
+        return $facilities->occurrences($place, $from->setTimezone(self::TZ), $to->setTimezone(self::TZ))->map(fn ($o) => $this->item(
+            key: "booking-{$o['booking']->id}-{$o['start']->format('Ymd')}",
+            title: ($o['booking']->room?->name ?? 'Room').': '.$o['booking']->purpose,
+            kind: 'booking',
+            start: $o['start'],
+            end: $o['end'],
+            layer: 'ours',
+            owner: $place,
+            source: 'bookings',
+            url: '/church/facilities/bookings?date='.$o['start']->toDateString(),
+            status: 'booked',
+            location: $o['booking']->room?->name,
+            description: $o['booking']->booker ? 'Booked by '.trim("{$o['booking']->booker->firstname} {$o['booking']->booker->lastname}") : null,
+        ))->values()->all();
+    }
+
+    /** Who is on duty (P5) - one line a service day, "Duty: 6 people", never a name. */
+    private function dutyDue(Territory $place, CarbonImmutable $from, CarbonImmutable $to, ?User $user): array
+    {
+        if (PlaceAccess::level($place) !== 'church' || ! PeopleAccess::canNamed($user, $place, 'facilities')) {
+            return [];
+        }
+        $byDay = \App\Models\DutyRota::where('territory_id', $place->id)->whereBetween('on', [$from->toDateString(), $to->toDateString()])->pluck('on')
+            ->map(fn ($d) => $d->toDateString())->countBy()->sortKeys();
+
+        return $byDay->map(fn (int $n, string $day) => $this->item(
+            key: "duty-{$day}",
+            title: 'Duty: '.$n.' '.($n === 1 ? 'person' : 'people'),
+            kind: 'due',
+            start: $day,
+            end: CarbonImmutable::parse($day)->addDay()->toDateString(),
+            layer: 'ours',
+            owner: $place,
+            source: 'due',
+            url: '/church/facilities/rota',
+            status: 'due',
+            location: null,
+            description: 'Who is on duty at the services',
+            allDay: true,
         ))->values()->all();
     }
 

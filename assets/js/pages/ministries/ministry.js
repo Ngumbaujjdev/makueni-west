@@ -43,6 +43,7 @@
         <div class="ev-hero-actions">
           ${can.roster && m.active ? '<button type="button" class="btn btn-primary" data-act="add"><i class="ri-user-add-line me-1"></i>Add members</button>' : ""}
           ${CTX.can.message && m.members ? '<button type="button" class="btn btn-outline-primary" data-act="message"><i class="ri-chat-3-line me-1"></i>Send message</button>' : ""}
+          ${CTX.can.book_room && m.active ? `<a class="btn btn-outline-primary" href="${CTX.siteUrl}/church/facilities/bookings?new=1&ministry=${m.id}"><i class="ri-door-open-line me-1"></i>Book its room</a>` : ""}
           ${can.manage ? '<button type="button" class="btn btn-outline-primary" data-act="edit"><i class="ri-edit-line me-1"></i>Edit</button>' : can.mine ? '<button type="button" class="btn btn-outline-primary" data-act="meets"><i class="ri-repeat-line me-1"></i>When it meets</button>' : ""}
         </div>
       </div>
