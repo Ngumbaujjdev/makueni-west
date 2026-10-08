@@ -411,26 +411,55 @@
     ];
     const body = el.querySelector('[data-m="body"]');
     body.classList.add("is-sheet");
+    // Teal and purple, pale for facts, solid for the one signal; placeholders and [brackets] as pills.
+    const tile = (icon, i) => `<span class="cm-detail-tile ${["is-teal is-solid", "is-purple", "is-teal", "is-purple is-solid"][i % 4]}"><i class="${icon}"></i></span>`; // solid and pale in turn, teal and purple
+    const tokenPills = used.length ? TOKENS.filter(([k]) => `${t.subject || ""} ${t.body}`.includes(k)).map(([k, l]) => `<span class="cm-tok">${k}</span> ${esc(l)}`).join('<span class="cm-dot">·</span>') : "None - everyone gets the same text";
+    const asWritten = esc(t.body)
+      .replace(/\{[a-z_]+\}/gi, (m) => `<span class="cm-tok">${m}</span>`)
+      .replace(/\[[a-z ]+\]/gi, (m) => `<span class="cm-brk">${m}</span>`);
+    const hasBrackets = /\[[a-z ]+\]/i.test(t.body);
     body.innerHTML = `
       <div class="cm-sheet">
         <aside class="cm-sheet-side">
-          <div class="cm-sheet-sum">
-            <span class="cm-sheet-icon"><i class="${ch.icon}"></i></span>
-            <div class="min-w-0 flex-fill"><strong>${esc(ch.label)} template</strong><small>${esc(from)}</small></div>
-            <button type="button" class="btn btn-sm btn-light border cm-sheet-toggle" data-bs-toggle="collapse" data-bs-target="#tplSheetMore" aria-expanded="false">Details</button>
+          <div class="cm-hero-card">
+            <div class="cm-sheet-sum">
+              <span class="cm-sheet-icon"><i class="${ch.icon}"></i></span>
+              <div class="min-w-0 flex-fill"><strong>${esc(ch.label)} template</strong><small>${esc(from)}</small></div>
+              <button type="button" class="btn btn-sm btn-light border cm-sheet-toggle" data-bs-toggle="collapse" data-bs-target="#tplSheetMore" aria-expanded="false">Details</button>
+            </div>
+            <div class="cm-hero-chips">
+              <span class="badge bg-primary list-pill"><i class="${ch.icon} me-1"></i>${esc(ch.label)}</span>
+              <span class="soft-chip soft-purple"><i class="${ours ? "ri-bookmark-line" : "ri-building-4-line"}"></i>${ours ? (t.copied_from ? "Our copy" : "Ours") : "From the diocese"}</span>
+            </div>
           </div>
           <div class="collapse cm-sheet-more" id="tplSheetMore">
-            <dl class="cm-details">${rows.map(([i, k, v]) => `<div class="cm-detail"><i class="${i}"></i><div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div></div>`).join("")}</dl>
-            <div class="cm-sheet-label">The message, as written</div>
-            <div class="cm-sheet-text">${esc(t.body).replace(/\{[a-z_]+\}/gi, (m) => `<span class="cm-token">${m}</span>`)}</div>
+            <div class="cm-side-card">
+              <div class="cm-side-head">${tile("ri-list-check-2", 0)}<strong>Details</strong></div>
+              <dl class="cm-details">${rows
+                .map(([i, k, v], n) => `<div class="cm-detail">${tile(i, n)}<div class="min-w-0"><dt>${esc(k)}</dt><dd>${k === "Placeholders" ? tokenPills : esc(v)}</dd></div></div>`)
+                .join("")}</dl>
+            </div>
+            <div class="cm-side-card">
+              <div class="cm-side-head">${tile("ri-quill-pen-line", 3)}<strong>As written</strong><button type="button" class="cm-side-link" id="tplCopyText"><i class="ri-file-copy-line"></i>Copy</button></div>
+              <div class="cm-sheet-text">${asWritten}</div>
+              <div class="cm-side-legend"><span><span class="cm-tok">{name}</span> fills in for each person</span>${hasBrackets ? '<span><span class="cm-brk">[event]</span> change before sending</span>' : ""}</div>
+            </div>
           </div>
           <div class="cm-sheet-foot">
             ${unknown.length ? `<div class="cm-sheet-error"><i class="ri-error-warning-line"></i><span><b>Won't be filled in</b>${unknown.map(esc).join(", ")} - they go out exactly as written.</span></div>` : ""}
-            ${!ours && !t.our_copy_id ? `<p class="cm-sheet-hint">Make your own copy to send it - ${esc(placeName())} goes in wherever it says {sender}, and you can change anything.</p>` : ""}
+            ${!ours && !t.our_copy_id ? `<div class="cm-sheet-note"><i class="ri-lightbulb-line"></i><span>Make your own copy to send it - <b>${esc(placeName())}</b> goes in wherever it says {sender}, and you can change anything.</span></div>` : ""}
           </div>
         </aside>
         <section class="cm-sheet-main"><div id="cmTplPv"></div></section>
       </div>`;
+    body.querySelector("#tplCopyText").addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(t.body);
+        Toast.success("Copied.");
+      } catch (e) {
+        Toast.error("Couldn't copy - select the text instead.");
+      }
+    });
     const pv = CommsPreview(el.querySelector("#cmTplPv"), { view: t.channel === "email" || t.channel === "both" ? "email" : "phone", test: true });
     pv.set({ subject: t.subject || "", body: t.body });
 
