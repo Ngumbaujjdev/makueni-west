@@ -7,6 +7,7 @@ use App\Jobs\SendMessageBatch;
 use App\Models\MessageBatch;
 use App\Models\MessageRecipient;
 use App\Models\MessageReply;
+use App\Models\PlacePhoto;
 use App\Models\Territory;
 use App\Models\UserTerritoryAssignment;
 use App\Notifications\PlaceNotification;
@@ -16,6 +17,7 @@ use App\Services\Messages\Broadcaster;
 use App\Support\MessagesAccess;
 use App\Support\PeopleAccess;
 use App\Support\PlaceAccess;
+use App\Support\Settings\PlaceProfile;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -238,9 +240,20 @@ class MessagesController extends Controller
             ->when($from, fn ($q) => $q->whereHas('batch.territory', fn ($t) => $t->where('territory_type', $from)))
             ->latest('id')->limit(200)->get();
 
+        // Each sending place once - its logo, how to reach it and a few photos, for the chat's side panel.
+        $places = $items->map(fn (MessageRecipient $r) => $r->batch->territory)->filter()->unique('id')
+            ->mapWithKeys(fn (Territory $t) => [$t->id => [
+                'logo_url' => PlaceProfile::logoUrl($t),
+                'phone' => $t->phone,
+                'email' => $t->email,
+                'youtube_url' => $t->youtube_url,
+                'photos' => PlacePhoto::where('territory_id', $t->id)->orderBy('position')->orderBy('id')->limit(6)->get()->map->present()->values(),
+            ]]);
+
         return $this->ok([
             'unread' => MessageRecipient::where('user_id', $request->user()->id)->whereNull('read_at')->whereHas('batch', fn ($q) => $q->whereIn('status', ['sending', 'sent']))->count(),
             'items' => $items->map(fn (MessageRecipient $r) => $this->inboxItem($r))->values(),
+            'places' => (object) $places->all(),
         ]);
     }
 
@@ -345,6 +358,8 @@ class MessagesController extends Controller
             'body' => $body,
             'from' => ['id' => $b->territory_id, 'name' => $b->territory?->name, 'type' => $b->territory?->territory_type?->value],
             'by' => $b->creator ? trim("{$b->creator->firstname} {$b->creator->lastname}") : null,
+            'by_photo_url' => $b->creator?->photo_url,
+            'by_position' => $b->creator?->position,
             'channel' => $b->channel,
             'at' => ($b->sent_at ?? $b->created_at)?->toIso8601String(),
             'read_at' => $r->read_at?->toIso8601String(),

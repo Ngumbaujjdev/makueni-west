@@ -156,6 +156,10 @@ class MessagesTest extends TestCase
         $inbox = $this->getJson('/api/messages/inbox')->assertOk()->json('data');
         $this->assertSame(1, $inbox['unread']);
         $this->assertSame('Join us, Test.', $inbox['items'][0]['body']);
+        // The chat's side panel: who sent it, and their place once - logo, contact, photos.
+        $this->assertArrayHasKey('by_photo_url', $inbox['items'][0]);
+        $from = (string) $inbox['items'][0]['from']['id'];
+        $this->assertSame(['logo_url', 'phone', 'email', 'youtube_url', 'photos'], array_keys($inbox['places'][$from]));
         $rid = $inbox['items'][0]['id'];
         $this->postJson("/api/messages/inbox/{$rid}/read")->assertOk();
         $this->postJson("/api/messages/inbox/{$rid}/reply", ['body' => 'We will come.'])->assertCreated()->assertJsonPath('data.my_replies.0.body', 'We will come.');
