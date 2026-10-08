@@ -42,6 +42,7 @@ function visitorsPageContext(string $level, string $page): array
             'care' => $level === 'church' && $can('pastoral.care.read'),
             'care_manage' => $level === 'church' && $can('pastoral.care.manage'),
             'manage' => $level === 'church' && $can('visitors.visitors.manage'),
+            'export' => $level === 'church' && $can('visitors.visitors.export'),
             'insights' => $level === 'church' && $can('visitors.insights.read'),
             'message' => $level === 'church' && $can('messages.messages.send'),
         ],

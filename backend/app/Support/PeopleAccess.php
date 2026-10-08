@@ -31,6 +31,7 @@ final class PeopleAccess
         'visitors' => [
             'read' => 'visitors.visitors.read',
             'manage' => 'visitors.visitors.manage',
+            'export' => 'visitors.visitors.export',
             'insights' => 'visitors.insights.read',
             'below' => 'visitors.below.read',
         ],
