@@ -7,6 +7,7 @@ use App\Models\MessageTemplate;
 use App\Models\Permission;
 use App\Models\User;
 use App\Services\Settings\Settings;
+use App\Support\Messaging\EmailBrand;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\Feature\Financial\BuildsBudgetWorld;
@@ -97,14 +98,31 @@ class TemplatesTest extends TestCase
         $data = $this->postJson('/api/messages/templates/preview', ['subject' => 'Hello {name}', 'body' => "Dear {name},\n\nSee you on Sunday.\n\n{sender}"])->assertOk()->json('data');
 
         $this->assertSame('Hello Stephen', $data['subject']);
-        $this->assertStringContainsString('<h1', $data['html']);
+        $this->assertStringContainsString('class="h1"', $data['html']);
         $this->assertStringContainsString('Hello Stephen', $data['html']);
         $this->assertStringContainsString('Sent by My Church through the Makueni West Diocese system.', $data['html']);
         $this->assertStringContainsString('See you on Sunday.', $data['html']);
+        // esoma's layout in our brand: the CCI mark | the place, a dark title band, no stripe.
+        $this->assertStringContainsString('assets/images/logos/email-mark.png', $data['html']);
+        $this->assertStringContainsString('Church · Test Diocese', $data['html']);
+        $this->assertStringContainsString('background:#0D0D0D', $data['html']);
+        $this->assertStringNotContainsString('height:6px', $data['html']);
         $this->assertSame("Dear Stephen,\n\nSee you on Sunday.\n\nMy Church\n- My Church", $data['sms']['text']);
         $this->assertSame(1, $data['sms']['parts']);
         $this->assertStringStartsWith('My Church <', $data['from']);
         $this->assertSame(0, MessageLog::count());
+    }
+
+    public function test_the_email_header_is_the_cci_mark_and_the_place(): void
+    {
+        $this->assertSame(['name' => 'My Church', 'sub' => 'Church · Test Diocese', 'reply_to' => null], array_diff_key(EmailBrand::for($this->myChurch), ['logo' => 1]));
+        $this->assertSame('Region · Test Diocese', EmailBrand::for($this->region)['sub']);
+        $this->assertSame(['Test Diocese', 'Christian Church International'], [EmailBrand::for($this->diocese)['name'], EmailBrand::for($this->diocese)['sub']]);
+        $this->assertStringEndsWith('/assets/images/logos/email-mark.png', EmailBrand::for($this->myChurch)['logo']);
+
+        // The display name and reply-to from Settings > Communication.
+        app(Settings::class)->setMany($this->myChurch, 'church', 'communication', ['comms.display_name' => 'CCI My Church', 'comms.reply_to' => 'office@mychurch.test'], [], [], $this->pastor);
+        $this->assertSame(['CCI My Church', 'office@mychurch.test'], [EmailBrand::for($this->myChurch)['name'], EmailBrand::for($this->myChurch)['reply_to']]);
     }
 
     public function test_send_this_to_me_goes_to_my_own_contact(): void

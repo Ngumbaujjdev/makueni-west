@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Settings;
 
 use App\Services\Messaging\PlaceMessenger;
+use App\Support\Messaging\EmailBrand;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -38,6 +39,8 @@ class CommunicationController extends SettingsController
                 'heading' => 'Your email is working',
                 'lines' => ["This is a test email from {$c['display_name']}'s Settings.", 'It was sent through '.$via('email').' email.'],
                 'placeName' => $c['display_name'],
+                'brand' => EmailBrand::for($place),
+                'badge' => 'Test',
             ])->render(), 'test', [], $request->user())
             : $messenger->sms($place, $data['to'], "Test SMS from {$c['display_name']} Settings. If you got this, SMS is working.", 'test', [], $request->user());
 
