@@ -39,7 +39,7 @@
 
   const placeName = () => SettingsRail.data?.place?.name || "your place";
   const level = () => SettingsRail.data?.level || SettingsHub.ctx?.level || "church";
-  const base = () => (window.AppConfig?.FRONTEND_BASE_URL || "") + `/${level()}/messages`;
+  const base = () => (typeof AppConfig !== "undefined" ? AppConfig.FRONTEND_BASE_URL : "") + `/${level()}/messages`;
   const composeUrl = (t) => `${base()}/new${t ? `?template=${t.id}` : ""}`;
 
   /** As the sample person reads it: {name}, {place} and {sender} filled in. */
@@ -61,10 +61,18 @@
   // ------------------------------------------------------------------ the live preview (shared)
 
   let seq = 0;
+  const LOGO = () => `${typeof AppConfig !== "undefined" ? AppConfig.FRONTEND_BASE_URL : ""}/assets/images/brand-logos/toggle-logo.png`;
+  const STATUS_BAR = `<div class="cm-phone-status"><b>9:41</b><span><i class="ri-signal-wifi-3-fill"></i><i class="ri-wifi-fill"></i><i class="ri-battery-2-fill"></i></span></div>`;
+  const initials = (s) => (String(s || "").match(/[A-Za-z0-9]+/g) || []).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
+
   /**
-   * A live preview: On a phone / As an email, Desktop / Mobile, the real email
-   * in a sandboxed frame, and (optionally) "Send this to me".
-   *   CommsPreview(host, { view, test, smsText(data, text), from(data) })
+   * A live preview that looks like the real thing (v1-events' previews, made fuller):
+   *   - On a phone: a handset with the status bar, the Messages header (sender
+   *     ID), "Today", the incoming bubble and the input bar;
+   *   - As an email: a mail app - subject, the sender with our logo, "to
+   *     Stephen Mutua" - around the real email, rendered by the server into a
+   *     sandboxed frame. Mobile puts the same mail app inside the handset.
+   *   CommsPreview(host, { view, test, smsText(data, text), from(data), sender(data) })
    *   .set({ subject, body })   redraws (the email after a short pause)
    *   .view("phone" | "email")
    */
@@ -78,41 +86,66 @@
       <div class="cm-pv">
         <div class="cm-pv-bar">
           <div class="pb-segment" role="radiogroup" aria-label="Preview as">
-            <input type="radio" name="${id}View" id="${id}Phone" value="phone"><label for="${id}Phone"><i class="ri-smartphone-line me-1"></i>On a phone</label>
+            <input type="radio" name="${id}View" id="${id}Phone" value="phone"><label for="${id}Phone"><i class="ri-message-2-line me-1"></i>As an SMS</label>
             <input type="radio" name="${id}View" id="${id}Email" value="email"><label for="${id}Email"><i class="ri-mail-line me-1"></i>As an email</label>
           </div>
-          <div class="pb-segment cm-pv-width" role="radiogroup" aria-label="Email width">
-            <input type="radio" name="${id}Width" id="${id}Desk" value="desktop" checked><label for="${id}Desk" title="Desktop"><i class="ri-computer-line"></i><span class="visually-hidden">Desktop</span></label>
-            <input type="radio" name="${id}Width" id="${id}Mob" value="mobile"><label for="${id}Mob" title="Mobile"><i class="ri-smartphone-line"></i><span class="visually-hidden">Mobile</span></label>
+          <div class="pb-segment cm-pv-width" role="radiogroup" aria-label="Email on">
+            <input type="radio" name="${id}Width" id="${id}Desk" value="desktop" checked><label for="${id}Desk"><i class="ri-computer-line me-1"></i>Desktop</label>
+            <input type="radio" name="${id}Width" id="${id}Mob" value="mobile"><label for="${id}Mob"><i class="ri-smartphone-line me-1"></i>Mobile</label>
           </div>
         </div>
+
         <div class="cm-pv-stage" data-stage="phone">
-          <div class="cm-handset">
-            <div class="cm-handset-top"><span></span></div>
-            <div class="cm-handset-head"><span class="ev-tile is-sm is-soft" style="--q: var(--success-rgb)"><i class="ri-message-2-line"></i></span><b data-pv="sender">&nbsp;</b></div>
-            <div class="cm-handset-screen"><div class="nw-bubble" data-pv="bubble"></div></div>
+          <div class="cm-phone">
+            <div class="cm-phone-screen">
+              ${STATUS_BAR}
+              <div class="cm-sms-head">
+                <i class="ri-arrow-left-s-line"></i>
+                <span class="cm-sms-avatar" data-pv="initials"></span>
+                <div class="cm-sms-who"><b data-pv="sender"></b><small>Text message</small></div>
+                <i class="ri-phone-line ms-auto"></i>
+              </div>
+              <div class="cm-sms-thread">
+                <div class="cm-sms-day">Today 9:41</div>
+                <div class="cm-sms-bubble" data-pv="bubble"></div>
+                <div class="cm-sms-time">9:41 AM</div>
+              </div>
+              <div class="cm-sms-input"><span>Text message</span><i class="ri-send-plane-2-fill"></i></div>
+            </div>
           </div>
           <div class="nw-seg" data-pv="seg"></div>
         </div>
+
         <div class="cm-pv-stage" data-stage="email" hidden>
-          <div class="cm-mailbox">
-            <div class="cm-mailbox-row"><span>From</span><b data-pv="from">&nbsp;</b></div>
-            <div class="cm-mailbox-row"><span>To</span><b>${SAMPLE}</b></div>
-            <div class="cm-mailbox-row"><span>Subject</span><b data-pv="subject">&nbsp;</b></div>
-          </div>
-          <div class="cm-frame-wrap" data-pv="wrap">
-            <iframe class="cm-frame" sandbox="allow-same-origin" title="How the email looks" data-pv="frame"></iframe>
-            <div class="cm-frame-loading" data-pv="loading"><span class="spinner-border spinner-border-sm text-primary"></span></div>
+          <div class="cm-mailapp" data-pv="mailapp">
+            ${STATUS_BAR}
+            <div class="cm-mailapp-bar">
+              <span class="cm-mailapp-dots"><i></i><i></i><i></i></span>
+              <span class="cm-mailapp-back"><i class="ri-arrow-left-s-line"></i>Inbox</span>
+              <span class="cm-mailapp-tools"><i class="ri-archive-line"></i><i class="ri-delete-bin-6-line"></i><i class="ri-mail-unread-line"></i><i class="ri-more-2-fill"></i></span>
+            </div>
+            <h4 class="cm-mailapp-subject" data-pv="subject">&nbsp;</h4>
+            <div class="cm-mailapp-from">
+              <img class="cm-mailapp-avatar" src="${LOGO()}" alt="">
+              <div class="cm-mailapp-who"><div><b data-pv="fromName">&nbsp;</b> <span data-pv="fromAddr"></span></div><small>to ${SAMPLE}</small></div>
+              <span class="cm-mailapp-time">9:41 AM</span>
+            </div>
+            <div class="cm-mailapp-body">
+              <iframe class="cm-frame" sandbox="allow-same-origin" title="How the email looks" data-pv="frame"></iframe>
+              <div class="cm-frame-loading" data-pv="loading"><span class="spinner-border spinner-border-sm text-primary"></span></div>
+            </div>
           </div>
         </div>
+
         <div class="cm-pv-foot">
-          <span class="soft-chip soft-primary"><i class="ri-user-smile-line"></i>Written to ${SAMPLE}, a sample person</span>
-          ${opts.test ? `<button type="button" class="btn btn-sm btn-success ms-auto" data-pv="test"><i class="ri-send-plane-line me-1"></i>Send this to me</button>` : ""}
+          <span class="cm-pv-note"><i class="ri-user-smile-line"></i>Written to ${SAMPLE}, a sample person</span>
+          ${opts.test ? `<button type="button" class="btn btn-sm btn-primary ms-auto" data-pv="test"><i class="ri-send-plane-line me-1"></i>Send this to me</button>` : ""}
         </div>
         <div class="cm-note is-warning mt-3 mb-0" data-pv="error" hidden></div>
       </div>`;
     const $ = (k) => host.querySelector(`[data-pv="${k}"]`);
     const frame = $("frame");
+    const stage = host.querySelector('[data-stage="email"]');
 
     function fit() {
       try {
@@ -126,14 +159,19 @@
 
     function drawPhone() {
       const text = opts.smsText ? opts.smsText(server, fill(now.body)) : server?.sms?.text ?? fill(now.body);
-      $("sender").textContent = (opts.sender ? opts.sender(server) : server?.sender) || "Your SMS sender ID";
+      const sender = (opts.sender ? opts.sender(server) : server?.sender) || "";
+      $("sender").textContent = sender || "Your sender ID";
+      $("initials").innerHTML = initials(sender) || '<i class="ri-user-3-fill"></i>';
       $("bubble").textContent = text || "Your message shows here.";
       const p = smsParts(text || "");
       $("seg").className = `nw-seg${p.parts > 1 ? " is-over" : ""}`;
       $("seg").innerHTML = segLine(p);
     }
     function drawEmailHead() {
-      $("from").textContent = (opts.from ? opts.from(server) : server?.from) || "…";
+      const from = (opts.from ? opts.from(server) : server?.from) || "";
+      const m = from.match(/^(.*?)\s*<([^>]*)>$/);
+      $("fromName").textContent = (m ? m[1] : from) || "…";
+      $("fromAddr").textContent = m ? `<${m[2]}>` : "";
       $("subject").textContent = server?.subject || fill(now.subject) || "…";
     }
 
@@ -165,7 +203,7 @@
     host.querySelectorAll(`input[name="${id}View"]`).forEach((r) => r.addEventListener("change", () => view(r.value)));
     host.querySelectorAll(`input[name="${id}Width"]`).forEach((r) =>
       r.addEventListener("change", () => {
-        $("wrap").classList.toggle("is-mobile", r.value === "mobile");
+        stage.classList.toggle("is-mobile", r.value === "mobile");
         requestAnimationFrame(fit);
       }),
     );
@@ -199,103 +237,97 @@
 
   // ------------------------------------------------------------------ the library
 
-  let state = { host: null, list: [], filter: "all", q: "", blocked: null, onCount: null };
+  let state = { host: null, list: [], blocked: null, onCount: null };
 
   const isDiocese = () => level() === "diocese";
   const canShare = () => level() !== "church";
-  const ownerWord = (t) => (t.owner?.type === "region" ? "the region" : "the diocese");
 
-  function groups() {
-    const shown = state.list.filter((t) => {
-      if (state.filter === "email" && !["email", "both"].includes(t.channel)) return false;
-      if (state.filter === "sms" && !["sms", "both"].includes(t.channel)) return false;
-      if (state.q && !`${t.name} ${t.subject || ""} ${t.body}`.toLowerCase().includes(state.q)) return false;
-      return true;
-    });
-    if (canShare()) {
-      return [
-        { key: "shared", title: `Shared with every ${isDiocese() ? "church and region" : "church in the region"}`, sub: "Places below see these and copy them, with their own name in", icon: "ri-share-forward-line", c: "purple", items: shown.filter((t) => t.source === "ours" && t.shared_below), empty: "Nothing shared yet - write one and switch on Share." },
-        ...(isDiocese() ? [] : [{ key: "above", title: "From the diocese", sub: "Copy one to make it your own", icon: "ri-building-4-line", c: "primary", items: shown.filter((t) => t.source === "shared"), empty: "The diocese hasn't shared any yet." }]),
-        { key: "ours", title: isDiocese() ? "For the diocese only" : "Only ours", sub: "Not shared below", icon: "ri-bookmark-line", c: "success", items: shown.filter((t) => t.source === "ours" && !t.shared_below), empty: "None yet." },
-      ];
-    }
-    return [
-      { key: "above", title: "From the diocese", sub: "Ready-made - copy one and it carries your name", icon: "ri-building-4-line", c: "purple", items: shown.filter((t) => t.source === "shared"), empty: "The diocese hasn't shared any yet." },
-      { key: "ours", title: "Ours", sub: "Our copies and our own", icon: "ri-bookmark-line", c: "success", items: shown.filter((t) => t.source === "ours"), empty: "None yet - copy one above or write your own." },
-    ];
+  /** Where a template comes from, as the From column says it (and filters on it). */
+  function fromOf(t) {
+    if (t.source === "shared") return { label: t.owner?.type === "region" ? "From the region" : "From the diocese", c: "purple", icon: "ri-building-4-line" };
+    if (t.copied_from) return { label: "Our copy", c: "primary", icon: "ri-file-copy-line" };
+    if (t.shared_below) return { label: "Shared below", c: "warning", icon: "ri-share-forward-line" };
+    return { label: isDiocese() ? "Diocese only" : "Ours", c: "success", icon: "ri-bookmark-line" };
   }
+  const firstLine = (t) => fill(t.channel === "email" || t.channel === "both" ? t.subject || t.body : t.body).replace(/\s+/g, " ").trim();
+  const day = (iso) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
 
-  function look(t) {
-    const ch = CH[t.channel] || CH.sms;
-    if (t.channel === "email" || t.channel === "both") {
-      const lines = fill(t.body).split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean);
-      return `
-        <div class="cm-tpl-look is-email">
-          <div class="cm-mini-mail">
-            <div class="cm-mini-bar"></div>
-            <div class="cm-mini-eyebrow">${esc(placeName())}</div>
-            <div class="cm-mini-title">${esc(fill(t.subject) || lines[0] || "")}</div>
-            ${lines.slice(0, 2).map((l) => `<p>${esc(l)}</p>`).join("")}
-          </div>
-        </div>`;
-    }
-    return `
-      <div class="cm-tpl-look is-sms" style="--q: var(--${ch.c}-rgb)">
-        <div class="cm-mini-from"><i class="${ch.icon}"></i>${t.channel === "app" ? "In the app" : esc(placeName())}</div>
-        <div class="cm-mini-bubble">${esc(fill(t.body))}</div>
-      </div>`;
-  }
-
-  function tplCard(t) {
+  /** One row - v1's template table: the template (icon, name, first line), channel, from, length, updated, actions. */
+  function row(t) {
     const ch = CH[t.channel] || CH.sms;
     const ours = t.source === "ours";
-    const tags = [
-      `<span class="badge bg-${ch.c} list-pill"><i class="${ch.icon} me-1"></i>${ch.label}</span>`,
-      !ours ? `<span class="soft-chip soft-secondary"><i class="ri-building-4-line"></i>${esc(t.owner?.name || "Diocese")}</span>` : "",
-      ours && t.copied_from ? `<span class="soft-chip soft-primary"><i class="ri-file-copy-line"></i>Copied from ${esc(t.copied_from.owner || "the diocese")}</span>` : "",
-      ours && t.shared_below ? `<span class="soft-chip soft-warning"><i class="ri-share-forward-line"></i>Shared below</span>` : "",
-      !ours && t.our_copy_id ? `<span class="soft-chip soft-success"><i class="ri-check-line"></i>You have a copy</span>` : "",
-    ].join("");
-    const actions = [
-      // One solid action a card: Preview on ours, Make our copy on a shared one.
-      `<button type="button" class="btn btn-sm ${ours || t.our_copy_id ? "btn-primary" : "btn-light border"}" data-act="preview"><i class="ri-eye-line me-1"></i>Preview</button>`,
-      ours ? `<a class="btn btn-sm btn-light border" href="${composeUrl(t)}"><i class="ri-send-plane-line me-1"></i>Use</a>` : "",
-      !ours && !t.our_copy_id ? `<button type="button" class="btn btn-sm btn-primary" data-act="copy"><i class="ri-file-copy-line me-1"></i>Make our copy</button>` : "",
-      !ours && t.our_copy_id ? `<button type="button" class="btn btn-sm btn-light border" data-act="mine"><i class="ri-arrow-right-line me-1"></i>Our copy</button>` : "",
-      ours ? `<button type="button" class="btn btn-sm btn-icon btn-light border" data-act="edit" title="Edit" aria-label="Edit ${esc(t.name)}"><i class="ri-pencil-line"></i></button>` : "",
-      ours && t.copied_from ? `<button type="button" class="btn btn-sm btn-icon btn-light border" data-act="reset" title="Reset to ${esc(t.copied_from.owner || "the diocese")}'s text" aria-label="Reset"><i class="ri-arrow-go-back-line"></i></button>` : "",
-      ours ? `<button type="button" class="btn btn-sm btn-icon btn-light border text-danger" data-act="remove" title="Remove" aria-label="Remove ${esc(t.name)}"><i class="ri-delete-bin-6-line"></i></button>` : "",
+    const from = fromOf(t);
+    const p = smsParts(fill(t.body));
+    const length = t.channel === "email" ? "Email" : t.channel === "app" ? "In the app" : `${p.parts} ${p.parts === 1 ? "text" : "texts"}`;
+    const menu = [
+      ours ? `<a class="dropdown-item" href="${composeUrl(t)}"><i class="ri-send-plane-line me-2"></i>Use in a campaign</a>` : "",
+      !ours && !t.our_copy_id ? `<button type="button" class="dropdown-item" data-act="copy"><i class="ri-file-copy-line me-2"></i>Make our copy</button>` : "",
+      !ours && t.our_copy_id ? `<button type="button" class="dropdown-item" data-act="mine"><i class="ri-arrow-right-line me-2"></i>Open our copy</button>` : "",
+      ours ? `<button type="button" class="dropdown-item" data-act="edit"><i class="ri-pencil-line me-2"></i>Edit</button>` : "",
+      ours && t.copied_from ? `<button type="button" class="dropdown-item" data-act="reset"><i class="ri-arrow-go-back-line me-2"></i>Reset to ${esc(t.copied_from.owner || "the diocese")}'s text</button>` : "",
+      ours ? `<div class="dropdown-divider"></div><button type="button" class="dropdown-item text-danger" data-act="remove"><i class="ri-delete-bin-6-line me-2"></i>Remove</button>` : "",
     ].join("");
     return `
-      <div class="col-xxl-4 col-md-6">
-        <article class="cm-tpl" data-tpl="${t.id}">
-          <button type="button" class="cm-tpl-open" data-act="preview" aria-label="Preview ${esc(t.name)}">${look(t)}</button>
-          <div class="cm-tpl-body">
-            <h3 class="cm-tpl-name">${esc(t.name)}</h3>
-            <div class="cm-tpl-tags">${tags}</div>
-          </div>
-          <div class="cm-tpl-actions">${actions}</div>
-        </article>
-      </div>`;
+      <tr data-tpl="${t.id}">
+        <td data-label="Template" data-search="${esc(t.name)} ${esc(t.subject || "")}">
+          <button type="button" class="cm-tpl-cell" data-act="preview" title="Preview">
+            <span class="cm-tpl-icon"><i class="${ch.icon}"></i></span>
+            <span class="cm-tpl-text"><strong>${esc(t.name)}</strong><small>${esc(firstLine(t))}</small></span>
+          </button>
+        </td>
+        <td data-label="Channel" data-search="${ch.label}">${UI.pill(ch.label, ch.c, ch.icon)}</td>
+        <td data-label="From" data-search="${from.label}"><span class="soft-chip soft-${from.c}"><i class="${from.icon}"></i>${from.label}</span>${!ours && t.our_copy_id ? ' <span class="cm-has-copy" title="You have a copy"><i class="ri-check-line"></i></span>' : ""}</td>
+        <td data-label="Length" data-order="${t.channel === "email" ? 99 : p.parts}">${length}</td>
+        <td data-label="Updated" class="text-nowrap" data-order="${esc(t.updated_at || "")}">${day(t.updated_at)}</td>
+        <td class="text-end text-nowrap cm-tpl-actions">
+          <button type="button" class="btn btn-sm btn-primary" data-act="preview"><i class="ri-eye-line me-1"></i>Preview</button>
+          ${menu ? `<div class="dropdown d-inline-block"><button type="button" class="btn btn-sm btn-icon btn-light border" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="More for ${esc(t.name)}"><i class="ri-more-2-fill"></i></button><div class="dropdown-menu dropdown-menu-end">${menu}</div></div>` : ""}
+        </td>
+      </tr>`;
   }
 
+  const FILTERS = [
+    { id: "cmTplChannel", columnIndex: 1, exact: true },
+    { id: "cmTplFrom", columnIndex: 2, exact: true },
+  ];
+
+  /** The table and its filter bar - drawn again after a change, keeping what was typed and picked. */
   function drawList() {
-    const box = state.host.querySelector("#cmTplGroups");
+    const box = state.host.querySelector("#cmTplList");
     if (!box) return;
-    const gs = groups();
-    box.innerHTML = gs
-      .map(
-        (g, i) => `
-        <section class="cm-group">
-          <header class="cm-group-head">
-            <span class="ev-tile${i % 2 ? " is-soft" : ""}" style="--q: var(--${g.c}-rgb)"><i class="${g.icon}"></i></span>
-            <div class="flex-fill"><h3>${g.title}</h3><p>${g.sub}</p></div>
-            <span class="soft-chip soft-${g.c}">${g.items.length}</span>
-          </header>
-          ${g.items.length ? `<div class="row g-3">${g.items.map(tplCard).join("")}</div>` : `<div class="cm-group-empty"><i class="ri-inbox-line"></i>${state.q || state.filter !== "all" ? "Nothing matches." : g.empty}</div>`}
-        </section>`,
-      )
-      .join("");
+    const keep = { q: box.querySelector("#cmTplToolbarSearch")?.value || "", ...Object.fromEntries(FILTERS.map((f) => [f.id, box.querySelector(`#${f.id}`)?.value || ""])) };
+    const cols = ["Template", "Channel", "From", "Length", "Updated", ""];
+    const froms = [...new Map(state.list.map((t) => [fromOf(t).label, fromOf(t)])).values()];
+    box.innerHTML = `
+      <div id="cmTplToolbar"></div>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0 cm-table" id="cmTplTable">
+          <thead><tr>${cols.map((c) => `<th>${c}</th>`).join("")}</tr></thead>
+          <tbody>${state.list.length ? state.list.map(row).join("") : UI.renderTableEmpty(cols.length, "No templates yet - write the first one", "ri-file-list-3-line")}</tbody>
+        </table>
+      </div>`;
+    UI.renderFilterToolbar("cmTplToolbar", {
+      searchPlaceholder: "Search templates…",
+      filters: [
+        { id: "cmTplChannel", label: "Every channel", options: Object.values(CH).map((c) => ({ value: c.label, label: c.label, color: c.c })) },
+        { id: "cmTplFrom", label: "From anywhere", options: froms.map((f) => ({ value: f.label, label: f.label, color: f.c })) },
+      ],
+    });
+    const table = state.list.length ? UI.initListDataTable("cmTplTable", { order: [[0, "asc"]], nonSortableColumns: [cols.length - 1], hideDefaultSearch: true, noun: "templates", pageLength: 25, responsive: false }) : null;
+    UI.wireFilterToolbar("cmTplToolbar", table, FILTERS, { noun: "templates", urlSync: false });
+    FILTERS.forEach((f) => {
+      const sel = box.querySelector(`#${f.id}`);
+      if (sel && keep[f.id] && [...sel.options].some((o) => o.value === keep[f.id])) {
+        sel.value = keep[f.id];
+        UI.syncSelect?.(sel);
+        sel.dispatchEvent(new Event("change"));
+      }
+    });
+    const search = box.querySelector("#cmTplToolbarSearch");
+    if (search && keep.q) {
+      search.value = keep.q;
+      search.dispatchEvent(new Event("input"));
+    }
   }
 
   function drawShell() {
@@ -304,36 +336,21 @@
       return;
     }
     state.host.innerHTML = `
-      <div class="cm-hero" style="--q: var(--purple-rgb)">
-        <span class="ev-tile" style="--q: var(--purple-rgb)"><i class="ri-file-list-3-line"></i></span>
-        <div class="flex-fill">
-          <h3>Templates</h3>
-          <p>${canShare() ? `Write a message once and share it - every ${isDiocese() ? "church and region" : "church"} below sees it and makes its own copy.` : "The diocese's ready-made messages, and your own. Copy one and your church's name goes in."}</p>
+      <div class="card custom-card cm-tpl-card">
+        <div class="card-header justify-content-between flex-wrap gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <span class="avatar avatar-sm bg-purple text-white"><i class="ri-file-list-3-line"></i></span>
+            <div>
+              <div class="card-title mb-0">Templates</div>
+              <div class="settings-card-sub">${canShare() ? `Shared ones reach every ${isDiocese() ? "church and region" : "church"} below - they copy them, with their own name in.` : "The diocese's ready-made messages, and ours. Copy one and your church's name goes in."}</div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary" id="cmTplNew"><i class="ri-add-line me-1"></i>New template</button>
         </div>
-        <button type="button" class="btn btn-primary" id="cmTplNew"><i class="ri-add-line me-1"></i>New template</button>
-      </div>
-      <div class="cm-toolbar">
-        <div class="pb-segment cm-filter" role="radiogroup" aria-label="Show">
-          ${[["all", "All"], ["email", "Email"], ["sms", "SMS"]].map(([v, l]) => `<input type="radio" name="cmTplFilter" id="cmTplF-${v}" value="${v}"${state.filter === v ? " checked" : ""}><label for="cmTplF-${v}">${l}</label>`).join("")}
-        </div>
-        <div class="input-group cm-search">
-          <span class="input-group-text"><i class="ri-search-line"></i></span>
-          <input type="search" class="form-control" id="cmTplSearch" placeholder="Search templates" aria-label="Search templates" value="${esc(state.q)}">
-        </div>
-      </div>
-      <div id="cmTplGroups"></div>`;
+        <div class="card-body" id="cmTplList"></div>
+      </div>`;
     state.host.querySelector("#cmTplNew").addEventListener("click", () => writer(null));
-    state.host.querySelectorAll('input[name="cmTplFilter"]').forEach((r) =>
-      r.addEventListener("change", () => {
-        state.filter = r.value;
-        drawList();
-      }),
-    );
-    state.host.querySelector("#cmTplSearch").addEventListener("input", (e) => {
-      state.q = e.target.value.trim().toLowerCase();
-      drawList();
-    });
-    state.host.querySelector("#cmTplGroups").addEventListener("click", (e) => {
+    state.host.querySelector("#cmTplList").addEventListener("click", (e) => {
       const b = e.target.closest("[data-act]");
       const t = b && state.list.find((x) => x.id === Number(b.closest("[data-tpl]")?.dataset.tpl));
       if (t) act(b.dataset.act, t, b);
