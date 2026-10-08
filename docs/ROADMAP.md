@@ -7,7 +7,7 @@ Deferred implementation work, in priority order. Nothing in this file has been b
 **Why**: "Core Module 1" in the original scope, zero implementation today. See `AUDIT-2026-08.md` → Backend → Not started.
 
 **Locked-in design decisions** (from planning conversation, refined by `docs/design/demographics-mobile-app-design.md` — a mobile PWA design reference, not being built as an app yet, but its screens define real field lists and workflow):
-- Aggregate counts, not an individual member registry — matches the "monitoring system" framing of the original scope, avoids the scope blow-up of a full congregant database (dedup rules, PII handling).
+- Aggregate counts, not an individual member registry — matches the "monitoring system" framing of the original scope, avoids the scope blow-up of a full congregant database (dedup rules, PII handling). *(2026-10-08: Demographics stays counts, but a separate church-private member register is now planned - see section 8.)*
 - **Entry only at Church level**, by the Pastor. Real field list (from the design reference, replaces an earlier guessed set): total members, youth (13–35), women's/men's fellowship, Sunday school, seniors, gender split, new members, transfers out, baptisms, communion participants, conversions.
 - **Not pure read-only above Church**: Subregion Overseer has a real approve/flag/request-changes review action (Budgets had a submit/approve/reject workflow at the time; it was removed in the 2026-10 overhaul). Region and Diocese are summary/analytics-only, no review action. See `docs/specs/demographics-module-spec.md` → Workflow.
 - Reuse the existing `fiscal_years`/`fiscal_quarters`/`fiscal_months` tables (already built for Budgets) — no new period system.
@@ -76,6 +76,17 @@ Five modules for church, region and diocese, built on one foundation (`PlaceAcce
 
 **Still open:** the "Region Summary" demographics page (`region/regional-reporting/statistics.php`) is empty; live calendar sync, SMS delivery receipts and quiet hours are not built; the dashboards come last.
 
+## 8. People & care - planned (2026-10-08)
+The five empty church modules, rebuilt in phases (`docs/specs/people-and-care-spec.md`):
+- **P0** foundation
+- **P1 Members:** a church-private register
+- **P2** Visitors
+- **P3** Pastoral care
+- **P4** Ministries
+- **P5** Facilities
+
+Names and phone numbers stay with the church, as the original Final Documentation said ("Diocese never sees names"). The region and diocese get totals pages only.
+
 ## Deferred, not forgotten
 
 - **Mobile PWA** (`docs/design/demographics-mobile-app-design.md`) — a real, detailed design for a native-feeling mobile app covering Demographics (and, later, Financial/Tithe) across all four roles. Confirmed as a real future build, explicitly **not started now** — kept as a design reference so the Demographics backend (item 1) is built compatible with it (field names, workflow) without committing to building the PWA itself yet.
@@ -84,4 +95,4 @@ Five modules for church, region and diocese, built on one foundation (`PlaceAcce
 
 - No rewrite of the *existing desktop* frontend to a JS framework (Vue/React/Inertia) — the original scope docs specified Vue, but the decision (see root `CLAUDE.md`) is to keep finishing the current PHP-include + fetch pattern for the desktop admin pages, not chase the old spec's tech choice. (The mobile PWA above is a separate, later, explicitly-deferred effort — not a contradiction of this.)
 - No splitting `backend/` into its own repo yet — documented as the eventual intent, not scheduled.
-- No individual member/congregant registry — the aggregate-counts decision for Demographics (item 1) is deliberate, not a placeholder for "do it properly later."
+- ~~No individual member/congregant registry~~ - **reversed 2026-10-08** by the user: a church-private register is planned (section 8). Demographics itself stays aggregate counts.
