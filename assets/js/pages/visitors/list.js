@@ -122,7 +122,8 @@
             .join(""),
         )}</span>`
       : '<span class="mb-sub">Nobody yet</span>';
-    const foot = p.status === "visitor" ? `${p.first_visit_on ? `First came ${M.day(p.first_visit_on)}` : ""}` : `Member since ${M.day(p.became_member_on)}`;
+    const short = (iso) => (iso ? new Date(`${iso}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "");
+    const foot = p.status === "visitor" ? (p.first_visit_on ? `First came ${short(p.first_visit_on)}` : "") : `Member since ${short(p.became_member_on)}`;
     return `<div class="card custom-card vs-card${p.status === "visitor" && state.can.manage ? "" : " is-fixed"}" data-id="${p.id}">
       <div class="card-body p-0">
         <div class="p-3 kanban-board-head">

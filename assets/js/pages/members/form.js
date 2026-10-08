@@ -138,6 +138,7 @@
     }
     $("f_how_joined").innerHTML += Object.entries(M.HOW_JOINED).map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
     $("f_status").innerHTML = Object.entries(M.STATUS).filter(([k]) => k !== "visitor").map(([v, s]) => `<option value="${v}">${s.label}</option>`).join("");
+    renderPreview(); // straight away - the card is never blank while the rest loads
     const [p, o] = await Promise.all([editId ? MembersAPI.get(editId) : Promise.resolve(null), MembersAPI.overview()]);
     if (o?.ok) $("areaList").innerHTML = (o.data.areas || []).map((a) => `<option value="${M.esc(a)}">`).join("");
     if (editId) {
