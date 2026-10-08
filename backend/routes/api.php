@@ -38,6 +38,7 @@ use App\Http\Controllers\Api\Reports\MonthlyReportsController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\Settings\AuditController as SettingsAuditController;
 use App\Http\Controllers\Api\Settings\CommunicationController as SettingsCommunicationController;
+use App\Http\Controllers\Api\Settings\GalleryController as SettingsGalleryController;
 use App\Http\Controllers\Api\Settings\HubController as SettingsHubController;
 use App\Http\Controllers\Api\Settings\MessagesController as SettingsMessagesController;
 use App\Http\Controllers\Api\Settings\ProfileController as SettingsProfileController;
@@ -88,6 +89,9 @@ Route::get('/system-admin/contact', [UserController::class, 'getSystemAdminConta
 // === PROTECTED ROUTES (Authentication Required) ===
 // A place's logo is public - it shows on its pages and documents (Settings > Profile).
 Route::get('settings/logo/{territory}', [SettingsProfileController::class, 'logo']);
+// A place's photos and its gallery are public too - they are meant for the church's own page.
+Route::get('places/{territory}/photos/{photo}/{size?}', [SettingsGalleryController::class, 'file'])->whereNumber(['territory', 'photo'])->whereIn('size', ['thumb']);
+Route::get('places/{territory}/gallery', [SettingsGalleryController::class, 'gallery'])->whereNumber('territory');
 // A person's photo is public the same way - it shows beside their name (My Profile).
 Route::get('users/{user}/photo', [ProfilePhotoController::class, 'show'])->whereNumber('user');
 
@@ -288,6 +292,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::put('profile', [SettingsProfileController::class, 'update']);
         Route::post('profile/logo', [SettingsProfileController::class, 'uploadLogo']);
         Route::delete('profile/logo', [SettingsProfileController::class, 'removeLogo']);
+        Route::get('profile/photos', [SettingsGalleryController::class, 'index']);
+        Route::post('profile/photos', [SettingsGalleryController::class, 'store'])->middleware('throttle:20,1');
+        Route::post('profile/photos/order', [SettingsGalleryController::class, 'order']);
+        Route::patch('profile/photos/{id}', [SettingsGalleryController::class, 'update'])->whereNumber('id');
+        Route::delete('profile/photos/{id}', [SettingsGalleryController::class, 'destroy'])->whereNumber('id');
         Route::get('service-times', [SettingsServiceTimesController::class, 'show']);
         Route::put('service-times', [SettingsServiceTimesController::class, 'update']);
         Route::get('team', [SettingsTeamController::class, 'index']);

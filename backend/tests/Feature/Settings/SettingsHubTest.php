@@ -103,7 +103,7 @@ class SettingsHubTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.profile.county', 'Makueni')
             ->assertJsonPath('data.profile.website', 'https://mychurch.or.ke')
-            ->assertJsonPath('data.completeness.percent', 83); // all but the logo
+            ->assertJsonPath('data.completeness.percent', 71); // all but the logo and the photos
 
         $this->assertDatabaseHas('territories', ['id' => $this->myChurch->id, 'phone' => '+254 712 345 678', 'county' => 'Makueni']);
         $this->assertDatabaseHas('audits', ['event' => 'settings.updated', 'auditable_type' => 'territory', 'auditable_id' => $this->myChurch->id, 'tags' => 'settings,profile']);

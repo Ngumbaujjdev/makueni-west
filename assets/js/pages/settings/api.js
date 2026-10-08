@@ -66,6 +66,13 @@ const SettingsAPI = (function () {
     return request("POST", "/settings/profile/logo", form, true);
   }
 
+  /** One photo per request, so each file shows its own progress and a bad one doesn't sink the rest. */
+  function uploadPhoto(file) {
+    const form = new FormData();
+    form.append("photos[]", file);
+    return request("POST", "/settings/profile/photos", form, true);
+  }
+
   return {
     territoryId,
     sections: () => request("GET", "/settings/sections"),
@@ -77,6 +84,11 @@ const SettingsAPI = (function () {
     saveProfile: (body) => request("PUT", "/settings/profile", body),
     uploadLogo,
     removeLogo: () => request("DELETE", "/settings/profile/logo"),
+    photos: () => request("GET", "/settings/profile/photos"),
+    uploadPhoto,
+    captionPhoto: (id, caption) => request("PATCH", `/settings/profile/photos/${id}`, { caption }),
+    orderPhotos: (ids) => request("POST", "/settings/profile/photos/order", { ids }),
+    removePhoto: (id) => request("DELETE", `/settings/profile/photos/${id}`),
     serviceTimes: () => request("GET", "/settings/service-times"),
     saveServiceTimes: (times) => request("PUT", "/settings/service-times", { times }),
     team: () => request("GET", "/settings/team"),
