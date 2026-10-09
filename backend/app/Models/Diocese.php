@@ -46,9 +46,9 @@ class Diocese extends Territory
     {
         return Church::whereHas('parent', function ($query) {
             $query->where('parent_territory_id', $this->id)
-                ->orWhereHas('parent', function ($q) {
-                    $q->where('parent_territory_id', $this->id);
-                });
+                  ->orWhereHas('parent', function ($q) {
+                      $q->where('parent_territory_id', $this->id);
+                  });
         })->get();
     }
 

@@ -2,19 +2,21 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\HasApiTokens;
-use OwenIt\Auditing\Contracts\Auditable;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Spatie\Permission\Traits\HasRoles;
+use Carbon\Carbon;
+use OwenIt\Auditing\Contracts\Auditable;
 
 class User extends Authenticatable implements Auditable
 {
-    use HasApiTokens, HasFactory, HasRoles, Notifiable, \OwenIt\Auditing\Auditable;
+    use HasFactory, Notifiable, HasRoles, HasApiTokens, \OwenIt\Auditing\Auditable;
 
     /** Keep users.phone_key (unique) in step with the phone, so no two people share a number. */
     protected static function booted(): void
@@ -196,118 +198,116 @@ class User extends Authenticatable implements Auditable
     /**
      * Get all audit history for this user
      */
-    /**
-     * Get all audit history for this user
-     */
-    public function getAuditHistory($limit = 20)
-    {
-        return $this->audits()
-            ->with('user:id,firstname,lastname,username')
-            ->latest()
-            ->limit($limit)
-            ->get()
-            ->map(function ($audit) {
-                return [
-                    'id' => $audit->id,
-                    'event' => $audit->event,
-                    'changed_by' => $audit->user ? [
-                        'id' => $audit->user->id,
-                        'name' => $audit->user->full_name,
-                    ] : 'System',
-                    'old_values' => $audit->old_values,
-                    'new_values' => $audit->new_values,
-                    'ip_address' => $audit->ip_address,
-                    'user_agent' => $audit->user_agent,
-                    'created_at' => $audit->created_at->format('Y-m-d H:i:s'),
-                ];
-            });
-    }
-
-    /**
-     * Get login history (successful and failed logins)
-     */
+ /**
+ * Get all audit history for this user
+ */
+public function getAuditHistory($limit = 20)
+{
+    return $this->audits()
+        ->with('user:id,firstname,lastname,username')
+        ->latest()
+        ->limit($limit)
+        ->get()
+        ->map(function ($audit) {
+            return [
+                'id' => $audit->id,
+                'event' => $audit->event,
+                'changed_by' => $audit->user ? [
+                    'id' => $audit->user->id,
+                    'name' => $audit->user->full_name,
+                ] : 'System',
+                'old_values' => $audit->old_values,
+                'new_values' => $audit->new_values,
+                'ip_address' => $audit->ip_address,
+                'user_agent' => $audit->user_agent,
+                'created_at' => $audit->created_at->format('Y-m-d H:i:s'),
+            ];
+        });
+}
     /**
      * Get login history (successful and failed logins)
      */
-    /**
-     * Get login history (successful and failed logins)
-     */
-    public function getLoginAuditHistory($limit = 20)
-    {
-        return $this->audits()
-            ->where(function ($query) {
-                $query->where('event', 'user_login')  // ← Manual login success
-                    ->orWhere('event', 'login_failed')  // ← Manual login failure
-                    ->orWhere('event', 'account_locked')
-                    ->orWhere('event', 'like', '%login%');
-            })
-            ->with('user:id,firstname,lastname,username')
-            ->latest()
-            ->limit($limit)
-            ->get()
-            ->map(function ($audit) {
-                return [
-                    'id' => $audit->id,
-                    'event' => $audit->event,
-                    'login_success' => $audit->new_values['login_success'] ?? null,
-                    'login_attempts' => $audit->new_values['login_attempts'] ?? $audit->old_values['login_attempts'] ?? null,
-                    'last_login_at' => $audit->new_values['last_login_at'] ?? null,
-                    'ip_address' => $audit->ip_address,
-                    'user_agent' => $audit->user_agent,
-                    'created_at' => $audit->created_at->format('Y-m-d H:i:s'),
-                ];
-            });
-    }
-
+  /**
+ * Get login history (successful and failed logins)
+ */
+/**
+ * Get login history (successful and failed logins)
+ */
+public function getLoginAuditHistory($limit = 20)
+{
+    return $this->audits()
+        ->where(function ($query) {
+            $query->where('event', 'user_login')  // ← Manual login success
+                  ->orWhere('event', 'login_failed')  // ← Manual login failure
+                  ->orWhere('event', 'account_locked')
+                  ->orWhere('event', 'like', '%login%');
+        })
+        ->with('user:id,firstname,lastname,username')
+        ->latest()
+        ->limit($limit)
+        ->get()
+        ->map(function ($audit) {
+            return [
+                'id' => $audit->id,
+                'event' => $audit->event,
+                'login_success' => $audit->new_values['login_success'] ?? null,
+                'login_attempts' => $audit->new_values['login_attempts'] ?? $audit->old_values['login_attempts'] ?? null,
+                'last_login_at' => $audit->new_values['last_login_at'] ?? null,
+                'ip_address' => $audit->ip_address,
+                'user_agent' => $audit->user_agent,
+                'created_at' => $audit->created_at->format('Y-m-d H:i:s'),
+            ];
+        });
+}
     /**
      * Get password change history
      */
-    /**
-     * Get password change history
-     */
-    public function getPasswordChangeHistory($limit = 10)
-    {
-        return $this->audits()
-            ->where(function ($query) {
-                $query->where('event', 'password_changed')
-                    ->orWhere('event', 'like', '%password%');
-            })
-            ->with('user:id,firstname,lastname,username')
-            ->latest()
-            ->limit($limit)
-            ->get()
-            ->map(function ($audit) {
-                return [
-                    'id' => $audit->id,
-                    'event' => $audit->event,
-                    'changed_by' => $audit->user ? [
-                        'id' => $audit->user->id,
-                        'name' => $audit->user->full_name,
-                    ] : 'System',
-                    'password_changed_at' => $audit->new_values['password_changed_at'] ?? null,
-                    'must_change_password' => $audit->new_values['must_change_password'] ?? null,
-                    'password_expires_at' => $audit->new_values['password_expires_at'] ?? null,
-                    'ip_address' => $audit->ip_address,
-                    'user_agent' => $audit->user_agent,
-                    'created_at' => $audit->created_at->format('Y-m-d H:i:s'),
-                ];
-            });
-    }
+   /**
+ * Get password change history
+ */
+public function getPasswordChangeHistory($limit = 10)
+{
+    return $this->audits()
+        ->where(function ($query) {
+            $query->where('event', 'password_changed')
+                  ->orWhere('event', 'like', '%password%');
+        })
+        ->with('user:id,firstname,lastname,username')
+        ->latest()
+        ->limit($limit)
+        ->get()
+        ->map(function ($audit) {
+            return [
+                'id' => $audit->id,
+                'event' => $audit->event,
+                'changed_by' => $audit->user ? [
+                    'id' => $audit->user->id,
+                    'name' => $audit->user->full_name,
+                ] : 'System',
+                'password_changed_at' => $audit->new_values['password_changed_at'] ?? null,
+                'must_change_password' => $audit->new_values['must_change_password'] ?? null,
+                'password_expires_at' => $audit->new_values['password_expires_at'] ?? null,
+                'ip_address' => $audit->ip_address,
+                'user_agent' => $audit->user_agent,
+                'created_at' => $audit->created_at->format('Y-m-d H:i:s'),
+            ];
+        });
+}
 
     /**
      * Get profile change history
      */
-    /**
-     * Get profile change history
-     */
-    public function getProfileChangeHistory($limit = 20)
-    {
-        return $this->audits()
-            ->where(function ($query) {
-                $query->where('event', 'profile_updated')
-                    ->orWhere('event', 'updated');
-            })
-            ->whereRaw("(
+   /**
+ * Get profile change history
+ */
+public function getProfileChangeHistory($limit = 20)
+{
+    return $this->audits()
+        ->where(function ($query) {
+            $query->where('event', 'profile_updated')
+                  ->orWhere('event', 'updated');
+        })
+        ->whereRaw("(
             JSON_EXTRACT(new_values, '$.firstname') IS NOT NULL OR
             JSON_EXTRACT(new_values, '$.lastname') IS NOT NULL OR
             JSON_EXTRACT(new_values, '$.email') IS NOT NULL OR
@@ -315,63 +315,63 @@ class User extends Authenticatable implements Auditable
             JSON_EXTRACT(new_values, '$.position') IS NOT NULL OR
             JSON_EXTRACT(new_values, '$.username') IS NOT NULL
         )")
-            ->with('user:id,firstname,lastname,username')
-            ->latest()
-            ->limit($limit)
-            ->get()
-            ->map(function ($audit) {
-                return [
-                    'id' => $audit->id,
-                    'event' => $audit->event,
-                    'changed_by' => $audit->user ? [
-                        'id' => $audit->user->id,
-                        'name' => $audit->user->full_name,
-                    ] : 'Self',
-                    'changes' => [
-                        'old' => $audit->old_values,
-                        'new' => $audit->new_values,
-                    ],
-                    'ip_address' => $audit->ip_address,
-                    'user_agent' => $audit->user_agent,
-                    'created_at' => $audit->created_at->format('Y-m-d H:i:s'),
-                ];
-            });
-    }
+        ->with('user:id,firstname,lastname,username')
+        ->latest()
+        ->limit($limit)
+        ->get()
+        ->map(function ($audit) {
+            return [
+                'id' => $audit->id,
+                'event' => $audit->event,
+                'changed_by' => $audit->user ? [
+                    'id' => $audit->user->id,
+                    'name' => $audit->user->full_name,
+                ] : 'Self',
+                'changes' => [
+                    'old' => $audit->old_values,
+                    'new' => $audit->new_values,
+                ],
+                'ip_address' => $audit->ip_address,
+                'user_agent' => $audit->user_agent,
+                'created_at' => $audit->created_at->format('Y-m-d H:i:s'),
+            ];
+        });
+}
 
     /**
      * Get status change history (active, inactive, suspended)
      */
-    /**
-     * Get status change history (active, inactive, suspended)
-     */
-    public function getStatusChangeHistory($limit = 20)
-    {
-        return $this->audits()
-            ->where(function ($query) {
-                $query->where('event', 'like', 'status_changed%')
-                    ->orWhere('event', 'account_locked');
-            })
-            ->whereRaw("JSON_EXTRACT(new_values, '$.status') IS NOT NULL")
-            ->with('user:id,firstname,lastname,username')
-            ->latest()
-            ->limit($limit)
-            ->get()
-            ->map(function ($audit) {
-                return [
-                    'id' => $audit->id,
-                    'event' => $audit->event,
-                    'old_status' => $audit->old_values['status'] ?? null,
-                    'new_status' => $audit->new_values['status'] ?? null,
-                    'changed_by' => $audit->user ? [
-                        'id' => $audit->user->id,
-                        'name' => $audit->user->full_name,
-                    ] : 'System',
-                    'ip_address' => $audit->ip_address,
-                    'user_agent' => $audit->user_agent,
-                    'created_at' => $audit->created_at->format('Y-m-d H:i:s'),
-                ];
-            });
-    }
+   /**
+ * Get status change history (active, inactive, suspended)
+ */
+public function getStatusChangeHistory($limit = 20)
+{
+    return $this->audits()
+        ->where(function ($query) {
+            $query->where('event', 'like', 'status_changed%')
+                  ->orWhere('event', 'account_locked');
+        })
+        ->whereRaw("JSON_EXTRACT(new_values, '$.status') IS NOT NULL")
+        ->with('user:id,firstname,lastname,username')
+        ->latest()
+        ->limit($limit)
+        ->get()
+        ->map(function ($audit) {
+            return [
+                'id' => $audit->id,
+                'event' => $audit->event,
+                'old_status' => $audit->old_values['status'] ?? null,
+                'new_status' => $audit->new_values['status'] ?? null,
+                'changed_by' => $audit->user ? [
+                    'id' => $audit->user->id,
+                    'name' => $audit->user->full_name,
+                ] : 'System',
+                'ip_address' => $audit->ip_address,
+                'user_agent' => $audit->user_agent,
+                'created_at' => $audit->created_at->format('Y-m-d H:i:s'),
+            ];
+        });
+}
 
     /**
      * Get who last modified this user
@@ -383,15 +383,15 @@ class User extends Authenticatable implements Auditable
             ->latest()
             ->first();
 
-        if (! $lastAudit) {
+        if (!$lastAudit) {
             return null;
         }
 
-        if (! $lastAudit->user) {
+        if (!$lastAudit->user) {
             return 'System';
         }
 
-        return $lastAudit->user->full_name.' on '.$lastAudit->created_at->format('Y-m-d H:i:s');
+        return $lastAudit->user->full_name . ' on ' . $lastAudit->created_at->format('Y-m-d H:i:s');
     }
 
     /*
@@ -482,7 +482,6 @@ class User extends Authenticatable implements Auditable
 
         if (Hash::check($pin, $this->pin)) {
             $this->update(['failed_pin_attempts' => 0]);
-
             return true;
         }
 
@@ -504,7 +503,7 @@ class User extends Authenticatable implements Auditable
 
     public function getRemainingPinLockMinutes(): int
     {
-        if (! $this->isPinLocked()) {
+        if (!$this->isPinLocked()) {
             return 0;
         }
 
@@ -538,7 +537,7 @@ class User extends Authenticatable implements Auditable
 
     public function getDaysUntilPasswordExpiry(): int
     {
-        if (! $this->password_expires_at) {
+        if (!$this->password_expires_at) {
             return 0;
         }
 
@@ -591,8 +590,8 @@ class User extends Authenticatable implements Auditable
     public function getPrimaryAssignment(): ?UserTerritoryAssignment
     {
         return $this->activeAssignments()
-            ->where('assignment_type', \App\Enums\AssignmentType::PRIMARY)
-            ->first();
+                   ->where('assignment_type', \App\Enums\AssignmentType::PRIMARY)
+                   ->first();
     }
 
     public function getAccessibleTerritories(): \Illuminate\Support\Collection
@@ -639,7 +638,7 @@ class User extends Authenticatable implements Auditable
 
     public function getFullNameAttribute(): string
     {
-        return trim($this->firstname.' '.$this->lastname);
+        return trim($this->firstname . ' ' . $this->lastname);
     }
 
     /** The public photo link, or null. The file name changes with each upload, so it busts caches too. */

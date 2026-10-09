@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use OwenIt\Auditing\Contracts\Auditable;
 
 class Module extends Model implements Auditable
@@ -17,13 +17,13 @@ class Module extends Model implements Auditable
         'icon',
         'number',
         'is_active',
-        'description',
+        'description'
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'module_group_id' => 'integer',
-        'number' => 'integer',
+        'number' => 'integer'
     ];
 
     /*
@@ -146,8 +146,8 @@ class Module extends Model implements Auditable
         return $this->audits()
             ->where(function ($query) {
                 $query->where('event', 'like', 'module_%')
-                    ->orWhereJsonContains('new_values->is_active', true)
-                    ->orWhereJsonContains('new_values->is_active', false);
+                      ->orWhereJsonContains('new_values->is_active', true)
+                      ->orWhereJsonContains('new_values->is_active', false);
             })
             ->with('user:id,firstname,lastname,username')
             ->latest()
@@ -178,15 +178,15 @@ class Module extends Model implements Auditable
             ->latest()
             ->first();
 
-        if (! $lastAudit) {
+        if (!$lastAudit) {
             return null;
         }
 
-        if (! $lastAudit->user) {
+        if (!$lastAudit->user) {
             return 'System';
         }
 
-        return $lastAudit->user->full_name.' on '.$lastAudit->created_at->format('Y-m-d H:i:s');
+        return $lastAudit->user->full_name . ' on ' . $lastAudit->created_at->format('Y-m-d H:i:s');
     }
 
     /*
@@ -233,7 +233,7 @@ class Module extends Model implements Auditable
 
     public function scopeWithActiveGroup($query)
     {
-        return $query->whereHas('moduleGroup', function ($q) {
+        return $query->whereHas('moduleGroup', function($q) {
             $q->where('is_active', true);
         });
     }
@@ -266,6 +266,6 @@ class Module extends Model implements Auditable
 
     public function isInGroup(): bool
     {
-        return ! is_null($this->module_group_id);
+        return !is_null($this->module_group_id);
     }
 }

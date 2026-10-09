@@ -11,7 +11,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 class SupportTicket extends Model implements Auditable, HasMedia
 {
-    use HasFactory, InteractsWithMedia, \OwenIt\Auditing\Auditable;
+    use HasFactory, \OwenIt\Auditing\Auditable, InteractsWithMedia;
 
     protected $fillable = [
         'ticket_number',
@@ -43,24 +43,24 @@ class SupportTicket extends Model implements Auditable, HasMedia
     /**
      * Register media collections for file attachments
      */
-    /**
-     * Register media collections for file attachments
-     */
-    public function registerMediaCollections(): void
-    {
-        $this->addMediaCollection('attachments')
-            ->acceptsMimeTypes([
-                'image/jpeg',
-                'image/png',
-                'image/gif',
-                'image/webp',
-                'application/pdf',
-                'application/msword',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'application/vnd.ms-excel',
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            ]);
-    }
+   /**
+ * Register media collections for file attachments
+ */
+public function registerMediaCollections(): void
+{
+    $this->addMediaCollection('attachments')
+        ->acceptsMimeTypes([
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+}
 
     /*
     |--------------------------------------------------------------------------
@@ -192,8 +192,7 @@ class SupportTicket extends Model implements Auditable, HasMedia
             ->first();
 
         $number = $lastTicket ? (int) substr($lastTicket->ticket_number, -4) + 1 : 1;
-
-        return 'SUP-'.$year.'-'.str_pad($number, 4, '0', STR_PAD_LEFT);
+        return 'SUP-' . $year . '-' . str_pad($number, 4, '0', STR_PAD_LEFT);
     }
 
     /**
