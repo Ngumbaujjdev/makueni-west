@@ -9,11 +9,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class JournalLine extends Model
 {
     protected $fillable = [
-        'journal_id', 'territory_id', 'date', 'line_no', 'account_id', 'fund_id', 'budget_line_id', 'debit', 'credit', 'memo', 'for_territory_id',
+        'journal_id', 'territory_id', 'date', 'line_no', 'account_id', 'fund_id', 'budget_line_id', 'debit', 'credit', 'memo', 'for_territory_id', 'cleared_on', 'reconciliation_id',
     ];
 
     protected $casts = [
         'date' => 'date',
+        'cleared_on' => 'date',
         'debit' => 'decimal:2',
         'credit' => 'decimal:2',
     ];

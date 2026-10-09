@@ -31,6 +31,8 @@ class AccountingAccessSeeder extends Seeder
         'journals' => ['journals.php', 'Journals', 'Opening balances and corrections, in balanced journals', null],
         'documents' => ['documents.php', 'All documents', 'Every receipt, payment, transfer and journal, newest first', null],
         'chart' => ['chart.php', 'Chart of accounts', 'The standard accounts every church, region and diocese posts to', ['diocese']],
+        'reconciliation' => ['reconciliation.php', 'Reconciliation', 'Count the cash, match the bank and M-Pesa to their statements - and the places below', null],
+        'close' => ['close.php', 'Month-end close', 'Close each month once every account is proven; the level above reopens', null],
     ];
 
     /** Ability => [permission (after "{level}.") => the page it opens]. */
@@ -41,6 +43,8 @@ class AccountingAccessSeeder extends Seeder
             'accounting.cashbook.read' => 'cashbook',
             'accounting.payments.read' => 'payments',
             'accounting.documents.read' => 'documents',
+            'accounting.reconciliation.read' => 'reconciliation',
+            'accounting.periods.read' => 'close',
         ],
         'receipt' => ['accounting.receipts.create' => 'receipts'],
         'prepare' => ['accounting.payments.prepare' => 'payments'],
@@ -50,28 +54,32 @@ class AccountingAccessSeeder extends Seeder
         'accounts' => ['accounting.accounts.manage' => 'accounts'],
         'chart' => ['accounting.chart.manage' => 'chart'],
         'below' => ['accounting.below.read' => 'overview'],
+        'reconcile' => ['accounting.reconcile.do' => 'reconciliation'],
+        'petty' => ['accounting.pettycash.spend' => 'accounts'],
+        'close' => ['accounting.periods.close' => 'close'],
+        'reopen' => ['accounting.periods.reopen' => 'close'],
     ];
 
     /** Who does what, per level - the standard separation of duties. */
     private const GRANTS = [
         'church' => [
-            'Church Treasurer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal'],
+            'Church Treasurer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'reconcile', 'petty', 'close'],
             'Senior Pastor' => ['read', 'authorise'],
             'Associate Pastor' => ['read', 'authorise'],
-            'Church Administrator' => ['read', 'receipt', 'prepare'],
-            'Church Secretary' => ['read', 'prepare'],
+            'Church Administrator' => ['read', 'receipt', 'prepare', 'petty'],
+            'Church Secretary' => ['read', 'prepare', 'petty'],
             'Church Committee Member' => ['read'],
         ],
         'region' => [
-            'Regional Treasurer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'below'],
-            'Regional Overseer' => ['read', 'authorise', 'below'],
+            'Regional Treasurer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'below', 'reconcile', 'petty', 'close', 'reopen'],
+            'Regional Overseer' => ['read', 'authorise', 'below', 'reopen'],
             'Regional Secretary' => ['read', 'prepare', 'below'],
             'Regional Coordinator' => ['read', 'below'],
             'Regional Committee Member' => ['read', 'below'],
         ],
         'diocese' => [
-            'Diocese Finance Officer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'chart', 'below'],
-            'Diocese Treasurer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'below'],
+            'Diocese Finance Officer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'chart', 'below', 'reconcile', 'petty', 'close', 'reopen'],
+            'Diocese Treasurer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'below', 'reconcile', 'petty', 'close', 'reopen'],
             'Bishop' => ['read', 'authorise', 'below'],
             'Diocese Administrator' => ['read', 'prepare', 'below'],
             'Diocese Secretary' => ['read', 'prepare', 'below'],

@@ -2,18 +2,18 @@
 
 namespace App\Models;
 
+use App\Enums\TerritoryType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
-use App\Enums\TerritoryType;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Contracts\Auditable;
 
 class Territory extends Model implements Auditable
 {
-    use HasFactory, SoftDeletes, \OwenIt\Auditing\Auditable;
+    use HasFactory, \OwenIt\Auditing\Auditable, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -191,8 +191,8 @@ class Territory extends Model implements Auditable
         return $this->audits()
             ->where(function ($query) {
                 $query->where('event', 'like', 'territory_%')
-                      ->orWhereJsonContains('new_values->is_active', true)
-                      ->orWhereJsonContains('new_values->is_active', false);
+                    ->orWhereJsonContains('new_values->is_active', true)
+                    ->orWhereJsonContains('new_values->is_active', false);
             })
             ->with('user:id,firstname,lastname,username')
             ->latest()
@@ -221,7 +221,7 @@ class Territory extends Model implements Auditable
         return $this->audits()
             ->where(function ($query) {
                 $query->where('event', 'territory_moved')
-                      ->orWhereJsonContains('new_values->parent_territory_id', true);
+                    ->orWhereJsonContains('new_values->parent_territory_id', true);
             })
             ->with('user:id,firstname,lastname,username')
             ->latest()
@@ -252,15 +252,15 @@ class Territory extends Model implements Auditable
             ->latest()
             ->first();
 
-        if (!$lastAudit) {
+        if (! $lastAudit) {
             return null;
         }
 
-        if (!$lastAudit->user) {
+        if (! $lastAudit->user) {
             return 'System';
         }
 
-        return $lastAudit->user->full_name . ' on ' . $lastAudit->created_at->format('Y-m-d H:i:s');
+        return $lastAudit->user->full_name.' on '.$lastAudit->created_at->format('Y-m-d H:i:s');
     }
 
     /**
@@ -310,7 +310,7 @@ class Territory extends Model implements Auditable
     public function children(): HasMany
     {
         return $this->hasMany(Territory::class, 'parent_territory_id')
-                   ->orderBy('name');
+            ->orderBy('name');
     }
 
     /**
@@ -335,11 +335,11 @@ class Territory extends Model implements Auditable
     public function activeUserAssignments(): HasMany
     {
         return $this->userAssignments()
-                   ->where('is_active', true)
-                   ->where(function($query) {
-                       $query->whereNull('expires_at')
-                             ->orWhere('expires_at', '>', now());
-                   });
+            ->where('is_active', true)
+            ->where(function ($query) {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            });
     }
 
     /**
@@ -384,11 +384,12 @@ class Territory extends Model implements Auditable
      */
     public function calculateLevel(): int
     {
-        if (!$this->parent_territory_id) {
+        if (! $this->parent_territory_id) {
             return 0; // Global level
         }
 
         $parent = Territory::find($this->parent_territory_id);
+
         return $parent ? $parent->level + 1 : 0;
     }
 
@@ -397,7 +398,7 @@ class Territory extends Model implements Auditable
      */
     public function generateFullPath(): string
     {
-        if (!$this->parent_territory_id) {
+        if (! $this->parent_territory_id) {
             return $this->name;
         }
 
@@ -447,9 +448,9 @@ class Territory extends Model implements Auditable
     public function getSiblings(): \Illuminate\Support\Collection
     {
         return Territory::where('parent_territory_id', $this->parent_territory_id)
-                       ->where('id', '!=', $this->id)
-                       ->where('is_active', true)
-                       ->get();
+            ->where('id', '!=', $this->id)
+            ->where('is_active', true)
+            ->get();
     }
 
     /**
@@ -492,8 +493,8 @@ class Territory extends Model implements Auditable
         $currentLevel = $this->territory_type->getLevel();
 
         return collect(TerritoryType::cases())
-            ->filter(fn($type) => $type->getLevel() === $currentLevel + 1)
-            ->map(fn($type) => [
+            ->filter(fn ($type) => $type->getLevel() === $currentLevel + 1)
+            ->map(fn ($type) => [
                 'value' => $type->value,
                 'label' => $type->getDisplayName(),
                 'level' => $type->getLevel(),
@@ -509,10 +510,10 @@ class Territory extends Model implements Auditable
     {
         $prefix = $this->code;
         $childCount = $this->children()
-                          ->where('territory_type', $childType)
-                          ->count() + 1;
+            ->where('territory_type', $childType)
+            ->count() + 1;
 
-        $typeCode = match($childType) {
+        $typeCode = match ($childType) {
             TerritoryType::DIOCESE => 'D',
             TerritoryType::REGION => 'R',
             TerritoryType::SUBREGION => 'SR',

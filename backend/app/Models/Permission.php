@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-use Spatie\Permission\Models\Permission as SpatiePermission;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use OwenIt\Auditing\Contracts\Auditable;
+use Spatie\Permission\Models\Permission as SpatiePermission;
 
 class Permission extends SpatiePermission implements Auditable
 {
@@ -17,7 +17,7 @@ class Permission extends SpatiePermission implements Auditable
         'submodule_id',
         'sub_submodule_id',
         'action',
-        'territory_scope'
+        'territory_scope',
     ];
 
     protected $casts = [
@@ -143,7 +143,7 @@ class Permission extends SpatiePermission implements Auditable
         return $this->audits()
             ->where(function ($query) {
                 $query->where('event', 'permission_scope_changed')
-                      ->orWhereJsonContains('new_values->territory_scope', true);
+                    ->orWhereJsonContains('new_values->territory_scope', true);
             })
             ->with('user:id,firstname,lastname,username')
             ->latest()
@@ -174,15 +174,15 @@ class Permission extends SpatiePermission implements Auditable
             ->latest()
             ->first();
 
-        if (!$lastAudit) {
+        if (! $lastAudit) {
             return null;
         }
 
-        if (!$lastAudit->user) {
+        if (! $lastAudit->user) {
             return 'System';
         }
 
-        return $lastAudit->user->full_name . ' on ' . $lastAudit->created_at->format('Y-m-d H:i:s');
+        return $lastAudit->user->full_name.' on '.$lastAudit->created_at->format('Y-m-d H:i:s');
     }
 
     /*
@@ -228,6 +228,7 @@ class Permission extends SpatiePermission implements Auditable
     public function getFullScopeDescriptionAttribute(): string
     {
         $scope = ucfirst($this->territory_scope ?? 'all');
+
         return "{$this->formatted_name} ({$scope} Level)";
     }
 
@@ -282,7 +283,7 @@ class Permission extends SpatiePermission implements Auditable
             'church' => ['church'],
             'subregion' => ['church', 'subregion'],
             'region' => ['church', 'subregion', 'region'],
-            'diocese' => ['church', 'subregion', 'region', 'diocese']
+            'diocese' => ['church', 'subregion', 'region', 'diocese'],
         ];
 
         return $scopeHierarchy[$level] ?? ['church'];
@@ -294,6 +295,7 @@ class Permission extends SpatiePermission implements Auditable
     public function isApplicableForLevel($level): bool
     {
         $allowedScopes = $this->getAllowedScopes($level);
+
         return in_array($this->territory_scope, $allowedScopes);
     }
 }

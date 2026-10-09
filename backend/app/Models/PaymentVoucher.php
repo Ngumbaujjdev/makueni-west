@@ -22,7 +22,7 @@ class PaymentVoucher extends Model implements HasMedia
     public const MAX_ATTACHMENTS = 5;
 
     protected $fillable = [
-        'territory_id', 'number', 'date', 'payee_name', 'payee_phone', 'pay_from_account_id', 'narration', 'amount', 'status', 'method', 'reference',
+        'territory_id', 'number', 'date', 'payee_name', 'payee_phone', 'pay_from_account_id', 'narration', 'purpose', 'amount', 'status', 'method', 'reference',
         'prepared_by', 'prepared_at', 'authorised_by', 'authorised_at', 'authorise_note', 'rejected_by', 'rejected_at', 'reject_reason',
         'paid_by', 'paid_at', 'paid_on', 'journal_id', 'cancelled_by', 'cancelled_at',
     ];

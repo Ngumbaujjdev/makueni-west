@@ -27,7 +27,9 @@ final class Books
     {
         $accounts = $this->chart->cashAccounts($place, false);
         $balances = $this->ledger->balances($place, $accounts);
-        $used = JournalLine::where('territory_id', $place->id)->whereIn('account_id', $accounts->pluck('id'))->distinct()->pluck('account_id')->flip();
+        $used = JournalLine::where('territory_id', $place->id)->whereIn('account_id', $accounts->pluck('id'))->distinct()->pluck('account_id')
+            // Petty cash with a float set shows even before its first spend.
+            ->merge(\App\Models\AccountingPlaceAccount::where('territory_id', $place->id)->whereNotNull('imprest_float')->pluck('account_id'))->flip();
 
         return $accounts
             // A standard account the place never used and a switched-off one with nothing in it stay out of the way.
@@ -232,6 +234,7 @@ final class Books
             'amount' => (float) $pv->amount,
             'status' => $pv->status,
             'status_label' => PaymentVoucher::STATUSES[$pv->status],
+            'purpose' => $pv->purpose,
             'pay_from' => $pv->payFrom ? ['id' => $pv->payFrom->id, 'name' => $pv->payFrom->name, 'kind' => $pv->payFrom->cash_kind] : null,
             'method' => $pv->method,
             'reference' => $pv->reference,

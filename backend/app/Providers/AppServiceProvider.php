@@ -79,6 +79,10 @@ class AppServiceProvider extends ServiceProvider
             'payment_voucher' => 'App\Models\PaymentVoucher',
             'payment_voucher_line' => 'App\Models\PaymentVoucherLine',
             'accounting_period' => 'App\Models\AccountingPeriod',
+            'accounting_place_account' => 'App\Models\AccountingPlaceAccount',
+            'cash_count' => 'App\Models\CashCount',
+            'bank_reconciliation' => 'App\Models\BankReconciliation',
+            'bank_statement_line' => 'App\Models\BankStatementLine',
 
             // Fiscal period models
             'fiscal_year' => 'App\Models\FiscalYear',

@@ -49,6 +49,7 @@ class FiscalMonth extends Model
     public function getEndDateForYear(int $year): string
     {
         $date = \Carbon\Carbon::create($year, $this->number, 1);
+
         return $date->endOfMonth()->format('Y-m-d');
     }
 }
