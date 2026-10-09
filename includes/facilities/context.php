@@ -9,7 +9,7 @@ require_once __DIR__ . '/../session-manager.php';
 require_once __DIR__ . '/../auth-check.php';
 require_once __DIR__ . '/../permission-check.php';
 
-/** @param string $page index | bookings | equipment | item | assets | reports | repairs | rota */
+/** @param string $page index | bookings | equipment | item | assets | reports | repairs | rota | teams */
 function facilitiesPageContext(string $page): array
 {
     $permission = [
@@ -20,6 +20,7 @@ function facilitiesPageContext(string $page): array
         'reports' => 'church.facilities.facilities.export',
         'repairs' => 'church.facilities.repairs.read',
         'rota' => 'church.facilities.rota.read',
+        'teams' => 'church.facilities.teams.read',
     ][$page] ?? 'church.facilities.facilities.read';
     requirePermission($permission);
     $role = getCurrentRole() ?? [];
