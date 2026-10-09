@@ -28,6 +28,8 @@ final class AccountingAccess
         'petty' => 'accounting.pettycash.spend',
         'close' => 'accounting.periods.close',
         'reopen' => 'accounting.periods.reopen',
+        'collect' => 'accounting.collections.record',
+        'confirm' => 'accounting.collections.confirm',
     ];
 
     /** Abilities that let someone open the books (they can see what they write). */
@@ -81,6 +83,15 @@ final class AccountingAccess
         }
 
         return PlaceAccess::isOwn($user, $place) && self::canAt($user, $place, $ability);
+    }
+
+    /**
+     * May the user see this place's collections? Whoever reads the books, and
+     * the ushers and elders who count or confirm them (without the rest of the books).
+     */
+    public static function canSeeCollections(?User $user, Territory $place): bool
+    {
+        return self::canRead($user, $place) || self::can($user, $place, 'collect') || self::can($user, $place, 'confirm');
     }
 
     /**

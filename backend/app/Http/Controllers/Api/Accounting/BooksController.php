@@ -60,7 +60,24 @@ class BooksController extends AccountingBase
             'latest' => Journal::with(['poster', 'media'])->where('territory_id', $place->id)->orderByDesc('date')->orderByDesc('id')->limit(8)->get()
                 ->map(fn ($j) => $this->books->presentJournal($j))->all(),
             'documents' => Journal::where('territory_id', $place->id)->count(),
+            'collections' => $place->territory_type->value === 'church' ? $this->collections($place) : null,
         ]);
+    }
+
+    /** The church's last collection and this month's giving, for the Overview. */
+    private function collections(Territory $place): array
+    {
+        $last = \App\Models\Collection::with('lines')->where('territory_id', $place->id)->where('status', 'posted')->orderByDesc('date')->orderByDesc('id')->first();
+        $month = \App\Models\Collection::where('territory_id', $place->id)->where('status', 'posted')->where('date', '>=', now()->startOfMonth()->toDateString());
+
+        return [
+            'last' => $last ? ['id' => $last->id, 'date' => $last->date->toDateString(), 'title' => $last->title, 'total' => (float) $last->total, 'banked' => (bool) $last->banking_journal_id,
+                'kinds' => $last->lines->groupBy('label')->map(fn ($g, $label) => ['label' => $label, 'amount' => round($g->sum(fn ($l) => (float) $l->cash_amount + (float) $l->mpesa_amount), 2)])->values()] : null,
+            'month_total' => round((float) (clone $month)->sum('total'), 2),
+            'month_count' => (clone $month)->count(),
+            'waiting' => \App\Models\Collection::where('territory_id', $place->id)->where('status', 'counted')->count(),
+            'unbanked' => \App\Services\Accounting\Collections::unbanked($place),
+        ];
     }
 
     /** GET /accounting/places - our own books and, with "below", the regions and churches under us (for the picker). */
@@ -458,7 +475,7 @@ class BooksController extends AccountingBase
     /** Whoever keeps the books reverses anything; a treasurer their receipts and transfers. */
     private function mayReverse(Request $request, Journal $journal, Territory $place): bool
     {
-        if ($journal->status !== 'posted' || $journal->doc_type === 'reversal' || in_array($journal->source_type, ['budget_entry', 'payment_voucher', 'cash_count'], true)) {
+        if ($journal->status !== 'posted' || $journal->doc_type === 'reversal' || in_array($journal->source_type, ['budget_entry', 'payment_voucher', 'cash_count', 'collection'], true)) {
             return false;
         }
         $u = $request->user();

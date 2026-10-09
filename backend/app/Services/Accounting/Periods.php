@@ -90,6 +90,14 @@ final class Periods
             }
         }
 
+        if ($waiting = Collections::waitingIn($place, $s, $e)) {
+            $blockers[] = "{$waiting} ".($waiting === 1 ? 'collection is' : 'collections are').' still waiting to be confirmed.';
+        }
+        $unbanked = Collections::unbanked($place, $e);
+        if ($unbanked['count']) {
+            $warnings[] = "Cash from {$unbanked['count']} ".($unbanked['count'] === 1 ? 'collection' : 'collections').' (KES '.number_format($unbanked['total'], 2).') is not banked yet.';
+        }
+
         $unpaid = PaymentVoucher::where('territory_id', $place->id)->where('status', 'authorised')->whereBetween('date', [$s, $e])->count();
         if ($unpaid) {
             $warnings[] = "{$unpaid} authorised ".($unpaid === 1 ? 'voucher is' : 'vouchers are').' not paid yet.';
