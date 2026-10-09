@@ -276,6 +276,7 @@ class DatabaseSeeder extends Seeder
             // {level}.accounting.* (docs/specs/accounting-spec.md)
             // ==========================================
             AccountingAccessSeeder::class,
+            ApprovalWorkflowsSeeder::class,
         ]);
     }
 }

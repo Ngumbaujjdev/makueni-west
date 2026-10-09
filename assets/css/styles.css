@@ -39541,3 +39541,30 @@ a.mi-prof-about-value:hover { color: var(--primary-color); }
   .acc-kind { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .acc-kind-name, .acc-kind-pick { grid-column: 1 / -1; }
 }
+
+/* ACCOUNTING A4 (2026-10-09) - approvals, requisitions, approval rules */
+.acc-ap-list { display: flex; flex-direction: column; }
+.acc-ap-row { display: flex; align-items: center; gap: .85rem; padding: .9rem 1.25rem; border-bottom: 1px solid var(--default-border); cursor: pointer; }
+.acc-ap-row:last-child { border-bottom: 0; }
+.acc-ap-row:hover, .acc-ap-row:focus-visible { background: rgba(var(--primary-rgb), .04); outline: none; }
+.acc-tl { display: flex; flex-direction: column; gap: .75rem; margin: 0; padding: 0; list-style: none; }
+.acc-tl-stage { display: flex; gap: .7rem; }
+.acc-tl-dot { display: grid; flex: 0 0 1.7rem; place-items: center; width: 1.7rem; height: 1.7rem; border-radius: 50%; background: rgba(var(--secondary-rgb), .2); font-size: .78rem; font-weight: 700; color: var(--v2-heading); }
+.acc-tl-stage.is-approved .acc-tl-dot { background: rgb(var(--success-rgb)); color: #fff; }
+.acc-tl-stage.is-active .acc-tl-dot { background: rgb(var(--warning-rgb)); color: var(--diocese-black); }
+.acc-tl-stage.is-rejected .acc-tl-dot, .acc-tl-stage.is-blocked .acc-tl-dot { background: rgb(var(--danger-rgb)); color: #fff; }
+.acc-tl-person { display: flex; gap: .5rem; margin-top: .45rem; }
+.acc-tl-person small { color: var(--default-text-color); }
+.acc-tl-comment { margin-top: .2rem; padding: .35rem .55rem; border-radius: .5rem; background: rgba(var(--primary-rgb), .05); font-size: .82rem; color: var(--v2-heading); }
+.acc-rules { display: grid; grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr)); gap: .75rem; }
+.acc-rule { padding: .85rem; border: 1px solid var(--default-border); border-radius: .8rem; }
+.acc-rule.is-off { opacity: .6; }
+.acc-rule-stages { display: flex; flex-direction: column; gap: .4rem; margin: .7rem 0 0; padding: 0; list-style: none; }
+.acc-rule-stages li { display: flex; gap: .55rem; }
+.acc-rule-stages li > div { display: flex; flex-direction: column; min-width: 0; }
+.acc-rule-stages small { color: var(--default-text-color); }
+.acc-rule-n { display: inline-grid; flex: 0 0 1.5rem; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: .4rem; background: rgba(var(--primary-rgb), .12); font-size: .74rem; font-weight: 700; color: rgb(var(--primary-rgb)); }
+.acc-stage-edit { margin-bottom: .75rem; padding: .85rem; border: 1px solid var(--default-border); border-radius: .8rem; }
+.acc-stage-edit .form-label { margin-bottom: .2rem; font-size: .74rem; font-weight: 600; }
+.acc-who { display: flex; flex-direction: column; gap: .4rem; }
+.acc-who-picked, .acc-who-found { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .3rem; }

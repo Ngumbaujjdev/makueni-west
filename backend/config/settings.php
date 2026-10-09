@@ -276,6 +276,18 @@ return [
             'sentence' => 'Where the churches below send their share: M-Pesa and bank details, shown on their Contributions page.',
         ],
 
+        // Approvals (docs/specs/accounting-spec.md, A4) - how the diocese's approval notices go out.
+        'approvals' => [
+            'label' => 'Approvals',
+            'icon' => 'ri-shield-check-line',
+            'colour' => 'success',
+            'group' => 'money',
+            'levels' => ['diocese'],
+            'kind' => 'form',
+            'grants' => ['update' => ['diocese' => ['Diocese Finance Officer', 'Diocese Treasurer']]],
+            'sentence' => 'How approvers hear about money waiting for them, and how long an advance may stay unaccounted for. Who approves what is under Accounting, Approval rules.',
+        ],
+
         // Existing settings pages, shown inside the hub (S3). 'permission' is
         // the page's own read permission ("{level}." is added); 'absorbs' is
         // the page's menu row, which SettingsHubSeeder moves under Settings.
@@ -409,6 +421,11 @@ return [
         'finance.bank_account_name' => ['section' => 'finance', 'card' => 'Bank', 'label' => 'Account name', 'rules' => ['nullable', 'string', 'max:120'], 'default' => null, 'levels' => ['region', 'diocese'], 'inherits' => false],
         'finance.bank_account_number' => ['section' => 'finance', 'card' => 'Bank', 'label' => 'Account number', 'rules' => ['nullable', 'regex:/^[0-9][0-9 -]{4,29}$/'], 'default' => null, 'levels' => ['region', 'diocese'], 'inherits' => false],
         'finance.payment_note' => ['section' => 'finance', 'card' => 'For whoever sends money', 'label' => 'Anything else they should know', 'type' => 'textarea', 'rules' => ['nullable', 'string', 'max:300'], 'default' => null, 'levels' => ['region', 'diocese'], 'inherits' => false, 'span' => 12, 'help' => 'e.g. "Send the share by the 5th of the next month, and record it in Money in and out."'],
+
+        // Approvals (A4) - read by App\Jobs\SendApprovalNotice and App\Services\Accounting\Requisitions.
+        'approvals.notify_sms' => ['section' => 'approvals', 'card' => 'Telling approvers', 'label' => 'Send an SMS when something waits for approval', 'type' => 'switch', 'default' => true, 'levels' => ['diocese'], 'used_by' => 'Approval notices'],
+        'approvals.notify_email' => ['section' => 'approvals', 'card' => 'Telling approvers', 'label' => 'Send an email too', 'type' => 'switch', 'default' => true, 'levels' => ['diocese']],
+        'approvals.advance_days' => ['section' => 'approvals', 'card' => 'Advances', 'label' => 'Days to account for an advance', 'type' => 'number', 'rules' => ['required', 'integer', 'between:1,90'], 'default' => 14, 'levels' => ['diocese'], 'help' => 'After this, the person can\'t get another advance until they account for it.', 'used_by' => 'Requisitions'],
 
         // Security (S4b) - read by User::verifyPin, the password rules in AuthController and Sanctum.
         'security.pin_attempts' => ['section' => 'security', 'card' => 'Employee code + PIN', 'label' => 'Wrong PINs before it locks', 'type' => 'number', 'rules' => ['required', 'integer', 'between:1,10'], 'default' => 3, 'levels' => ['diocese'], 'used_by' => 'Sign-in with employee code and PIN'],

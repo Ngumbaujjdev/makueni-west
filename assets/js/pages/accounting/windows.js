@@ -611,7 +611,7 @@ const AccountingWindows = (function () {
       .join("")}</tbody><tfoot><tr><th>Total</th><th class="d-none d-sm-table-cell"></th><th class="text-end">${A.amount(v.amount)}</th></tr></tfoot></table></div>`;
     const body =
       alert +
-      steps +
+      (v.approval ? part("ri-route-line", "Approval", A.approvalTimeline(v.approval), `<small>${esc(v.approval.workflow || "")}</small>`) : steps) +
       part("ri-information-line", "Details", factGrid([["Pay to", esc(v.payee_name)], v.payee_phone && ["Phone", esc(v.payee_phone)], ["For", esc(v.narration)], ["Date", A.day(v.date)], ["Pay from", esc(v.pay_from?.name)], v.authorise_note && ["Authoriser's note", esc(v.authorise_note)], v.status === "paid" && ["Paid by", `${esc(v.method || "")} ${esc(v.reference || "")}`], v.journal_number && ["In the books", esc(v.journal_number)]])) +
       part("ri-list-check-2", "What it pays for", lines) +
       filesPart(v.files, { canAdd: c.own && (c.prepare || c.pay || c.journal), canRemove: c.own && v.status !== "paid" && (c.prepare || c.pay), label: "Invoice, quote and receipt" });
@@ -621,7 +621,7 @@ const AccountingWindows = (function () {
       c.reverse_this ? btn("reverse", "btn-outline-danger me-auto", "ri-arrow-go-back-line", "Reverse payment") : "",
       c.edit ? btn("edit", "btn-outline-primary", "ri-edit-line", "Change") : "",
       c.reject_this ? btn("reject", "btn-outline-danger", "ri-arrow-go-back-line", "Send back") : "",
-      c.authorise_this ? btn("authorise", "btn-success", "ri-shield-check-line", "Authorise") : "",
+      c.authorise_this ? btn("authorise", "btn-success", "ri-shield-check-line", v.approval && v.approval.status === "pending" ? "Approve" : "Authorise") : "",
       c.pay_this ? btn("pay", "btn-primary", "ri-hand-coin-line", "Pay") : "",
       '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>',
     ].join("");

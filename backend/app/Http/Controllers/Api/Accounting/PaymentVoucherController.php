@@ -207,6 +207,10 @@ class PaymentVoucherController extends AccountingBase
         if (! $pv || ! $place || ! AccountingAccess::canRead($request->user(), $place)) {
             return [null, null, $this->notFound('That voucher isn\'t in the books.')];
         }
+        // Whoever the approval rules name decides it, wherever their role is.
+        if ($ability === 'authorise' && ($req = app(\App\Approval\Services\ApprovalService::class)->current($pv)) && app(\App\Approval\Services\Inbox::class)->myTurn($request->user(), $req)) {
+            return [$pv, $place, null];
+        }
         if ($ability && ! AccountingAccess::can($request->user(), $place, $ability)) {
             return [null, null, $this->forbidden(match ($ability) {
                 'authorise' => 'Your role can\'t authorise payments here.',
@@ -224,13 +228,19 @@ class PaymentVoucherController extends AccountingBase
         $pv->loadMissing(['lines.account', 'payFrom', 'preparer', 'authoriser', 'rejecter', 'payer', 'journal']);
         $can = AccountingAccess::abilities($request->user(), $place);
         $me = $request->user()->id;
+        $engine = app(\App\Approval\Services\ApprovalService::class);
+        $inbox = app(\App\Approval\Services\Inbox::class);
+        $req = $engine->latest($pv);
+        $pending = $req && $req->status === 'pending';
+        $turn = $pending ? $inbox->myTurn($request->user(), $req) : null;
 
         return $this->books->presentVoucher($pv, true) + [
+            'approval' => $req ? $inbox->present($req, $request->user(), true) : null,
             'place' => $this->placeInfo($place),
             'can' => $can + [
                 'edit' => $can['prepare'] && in_array($pv->status, ['prepared', 'rejected'], true),
-                'authorise_this' => $can['authorise'] && $pv->status === 'prepared' && (int) $pv->prepared_by !== $me,
-                'reject_this' => $can['authorise'] && in_array($pv->status, ['prepared', 'authorised'], true),
+                'authorise_this' => $pending ? (bool) $turn : ($can['authorise'] && $pv->status === 'prepared' && (int) $pv->prepared_by !== $me),
+                'reject_this' => $pending ? (bool) $turn : ($can['authorise'] && in_array($pv->status, ['prepared', 'authorised'], true)),
                 'pay_this' => $can['pay'] && $pv->status === 'authorised',
                 'cancel_this' => $can['prepare'] && in_array($pv->status, ['prepared', 'authorised', 'rejected'], true),
                 'reverse_this' => $can['journal'] && $pv->status === 'paid',

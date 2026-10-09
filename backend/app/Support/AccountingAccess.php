@@ -30,6 +30,8 @@ final class AccountingAccess
         'reopen' => 'accounting.periods.reopen',
         'collect' => 'accounting.collections.record',
         'confirm' => 'accounting.collections.confirm',
+        'request' => 'accounting.requisitions.create',
+        'rules' => 'accounting.approvalrules.manage',
     ];
 
     /** Abilities that let someone open the books (they can see what they write). */
@@ -92,6 +94,26 @@ final class AccountingAccess
     public static function canSeeCollections(?User $user, Territory $place): bool
     {
         return self::canRead($user, $place) || self::can($user, $place, 'collect') || self::can($user, $place, 'confirm');
+    }
+
+    /** Requisitions: those who read the books see all of them; anyone who may ask sees their own. */
+    public static function canSeeRequisitions(?User $user, Territory $place): bool
+    {
+        return self::canRead($user, $place) || self::can($user, $place, 'request');
+    }
+
+    /** May the user change the approval rules? The diocese's finance officer (and global admins). */
+    public static function canManageRules(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+        if ($user->hasGlobalAccess()) {
+            return true;
+        }
+        $acting = PlaceAccess::acting($user);
+
+        return $acting && $acting->territory_type->value === 'diocese' && self::canAt($user, $acting, 'rules');
     }
 
     /**

@@ -73,3 +73,6 @@ Schedule::command('people:retention')->dailyAt('02:30')->timezone('Africa/Nairob
 
 // Facilities (P5): the day before a service, text the people on duty - each church at its own time (off by default).
 Schedule::command('facilities:duty-reminders')->hourlyAt(0)->timezone('Africa/Nairobi');
+
+// Approvals (docs/specs/accounting-spec.md, A4): remind late approvers, then pass it up.
+Schedule::command('approvals:escalate')->hourly()->withoutOverlapping();

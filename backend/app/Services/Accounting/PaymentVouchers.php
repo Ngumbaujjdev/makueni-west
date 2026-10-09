@@ -2,6 +2,8 @@
 
 namespace App\Services\Accounting;
 
+use App\Approval\Services\ApprovalService;
+use App\Approval\Services\Inbox;
 use App\Models\Journal;
 use App\Models\PaymentVoucher;
 use App\Models\Territory;
@@ -18,7 +20,7 @@ use Illuminate\Validation\ValidationException;
  */
 final class PaymentVouchers
 {
-    public function __construct(private Documents $docs, private Ledger $ledger, private Numbering $numbering, private BudgetBridge $bridge) {}
+    public function __construct(private Documents $docs, private Ledger $ledger, private Numbering $numbering, private BudgetBridge $bridge, private ApprovalService $engine) {}
 
     /** @param array{date: string, payee_name: string, payee_phone?: ?string, pay_from_account_id: int, narration: string, lines: array} $data */
     public function prepare(Territory $place, User $user, array $data): PaymentVoucher
@@ -34,16 +36,33 @@ final class PaymentVouchers
                 'payee_phone' => $data['payee_phone'] ?? null,
                 'pay_from_account_id' => $from->id,
                 'narration' => trim($data['narration']),
-                'purpose' => ($data['purpose'] ?? 'payment') === 'imprest_topup' ? 'imprest_topup' : 'payment',
+                'purpose' => in_array($data['purpose'] ?? 'payment', ['imprest_topup', 'advance'], true) ? $data['purpose'] : 'payment',
+                'requisition_id' => $data['requisition_id'] ?? null,
                 'amount' => $total,
-                'status' => 'prepared',
+                'status' => ($data['status'] ?? 'prepared') === 'authorised' ? 'authorised' : 'prepared',
+                'authorised_by' => ($data['status'] ?? '') === 'authorised' ? ($data['authorised_by'] ?? null) : null,
+                'authorised_at' => ($data['status'] ?? '') === 'authorised' ? now() : null,
+                'authorise_note' => $data['authorise_note'] ?? null,
                 'prepared_by' => $user->id,
                 'prepared_at' => now(),
             ]);
             $pv->lines()->createMany($lines);
+            if ($pv->status === 'prepared') {
+                // Through the approval rules; with none for it, the A1 rule (anyone who authorises but the preparer).
+                $this->engine->route($pv, $user);
+            }
 
-            return $pv->load('lines');
+            return $pv->fresh('lines');
         });
+    }
+
+    /**
+     * A voucher for something already approved (a requisition): authorised at
+     * once, by whoever approved it - nobody approves the same money twice.
+     */
+    public function prepareAuthorised(Territory $place, User $user, array $data, ?int $authorisedBy, string $note): PaymentVoucher
+    {
+        return $this->prepare($place, $user, $data + ['status' => 'authorised', 'authorised_by' => $authorisedBy, 'authorise_note' => $note]);
     }
 
     /** Change it while it waits, or after it was sent back (it goes back to waiting). */
@@ -68,6 +87,10 @@ final class PaymentVouchers
             ]);
             $pv->lines()->delete();
             $pv->lines()->createMany($lines);
+            if ($pending = $this->engine->current($pv)) {
+                $this->engine->cancel($pending, $user);
+            }
+            $this->engine->route($pv->fresh(), $user);
 
             return $pv->fresh('lines');
         });
@@ -76,6 +99,15 @@ final class PaymentVouchers
     public function authorise(PaymentVoucher $pv, User $user, ?string $note = null): PaymentVoucher
     {
         $this->assertStatus($pv, ['prepared'], 'Only a voucher waiting to be authorised can be authorised.');
+        if ($request = $this->engine->current($pv)) {
+            $turn = app(Inbox::class)->myTurn($user, $request);
+            if (! $turn) {
+                throw ValidationException::withMessages(['voucher' => [(int) $pv->prepared_by === (int) $user->id ? 'You prepared this voucher - someone else must authorise it.' : 'It waits for someone else\'s approval.']]);
+            }
+            $this->engine->approve($turn, $user, $note);
+
+            return $pv->fresh('lines');
+        }
         if ((int) $pv->prepared_by === (int) $user->id) {
             throw ValidationException::withMessages(['voucher' => ['You prepared this voucher - someone else must authorise it.']]);
         }
@@ -90,6 +122,15 @@ final class PaymentVouchers
         $reason = trim($reason);
         if ($reason === '') {
             throw ValidationException::withMessages(['reason' => ['Say what needs fixing.']]);
+        }
+        if ($request = $this->engine->current($pv)) {
+            $turn = app(Inbox::class)->myTurn($user, $request);
+            if (! $turn) {
+                throw ValidationException::withMessages(['voucher' => ['It waits for someone else\'s approval.']]);
+            }
+            $this->engine->sendBack($turn, $user, $reason);
+
+            return $pv->fresh('lines');
         }
         $pv->update(['status' => 'rejected', 'rejected_by' => $user->id, 'rejected_at' => now(), 'reject_reason' => mb_substr($reason, 0, 255), 'authorised_by' => null, 'authorised_at' => null]);
 
@@ -128,6 +169,9 @@ final class PaymentVouchers
             ], $lines, $user);
             $pv->update(['status' => 'paid', 'paid_by' => $user->id, 'paid_at' => now(), 'paid_on' => $data['paid_on'], 'method' => $journal->method, 'reference' => $journal->reference, 'journal_id' => $journal->id]);
             $this->bridge->journalPosted($journal, $user);
+            if ($pv->requisition_id) {
+                app(Requisitions::class)->paid($pv->fresh(), $user);
+            }
 
             return $pv->fresh('lines');
         });
@@ -151,6 +195,9 @@ final class PaymentVouchers
     public function cancel(PaymentVoucher $pv, User $user): PaymentVoucher
     {
         $this->assertStatus($pv, ['prepared', 'authorised', 'rejected'], 'A paid voucher can\'t be cancelled - reverse its payment first.');
+        if ($request = $this->engine->current($pv)) {
+            $this->engine->cancel($request, $user);
+        }
         $pv->update(['status' => 'cancelled', 'cancelled_by' => $user->id, 'cancelled_at' => now()]);
 
         return $pv->fresh('lines');

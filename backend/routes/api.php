@@ -694,6 +694,39 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('collections/{id}/return', [$col, 'sendBack'])->whereNumber('id');
         Route::post('collections/{id}/bank', [$col, 'bank'])->whereNumber('id');
         Route::post('collections/{id}/reverse', [$col, 'reverse'])->whereNumber('id');
+        // A4 - requisitions and staff advances.
+        $req = \App\Http\Controllers\Api\Accounting\RequisitionController::class;
+        Route::get('requisitions', [$req, 'index']);
+        Route::get('requisitions/options', [$req, 'options']);
+        Route::post('requisitions', [$req, 'store']);
+        Route::get('requisitions/{id}', [$req, 'show'])->whereNumber('id');
+        Route::put('requisitions/{id}', [$req, 'update'])->whereNumber('id');
+        Route::post('requisitions/{id}/cancel', [$req, 'cancel'])->whereNumber('id');
+        Route::post('requisitions/{id}/pay', [$req, 'pay'])->whereNumber('id');
+        Route::post('requisitions/{id}/{decision}', [$req, 'decide'])->whereNumber('id')->whereIn('decision', ['approve', 'reject', 'return']);
+        Route::post('requisitions/{id}/attachments', [$req, 'addAttachment'])->whereNumber('id')->middleware('throttle:30,1');
+        Route::get('requisitions/{id}/attachments/{media}', [$req, 'showAttachment'])->whereNumber(['id', 'media']);
+        Route::delete('requisitions/{id}/attachments/{media}', [$req, 'removeAttachment'])->whereNumber(['id', 'media']);
+        Route::post('advances/{id}/retire', [$req, 'retire'])->whereNumber('id');
+    });
+
+    // Approvals (docs/specs/accounting-spec.md, A4) - my inbox, decisions, delegations, the rules.
+    Route::prefix('approvals')->group(function () {
+        $ap = \App\Http\Controllers\Api\Accounting\ApprovalController::class;
+        Route::get('/', [$ap, 'index']);
+        Route::get('requests/{id}', [$ap, 'show'])->whereNumber('id');
+        Route::post('requests/{id}/cancel', [$ap, 'cancel'])->whereNumber('id');
+        Route::post('requests/{id}/retry', [$ap, 'retry'])->whereNumber('id');
+        Route::post('requests/{id}/{decision}', [$ap, 'decide'])->whereNumber('id')->whereIn('decision', ['approve', 'reject', 'return']);
+        Route::get('requests/{id}/files/{media}', [$ap, 'file'])->whereNumber(['id', 'media']);
+        Route::get('delegations', [$ap, 'delegations']);
+        Route::post('delegations', [$ap, 'delegate']);
+        Route::delete('delegations/{id}', [$ap, 'undelegate'])->whereNumber('id');
+        Route::get('workflows', [$ap, 'workflows']);
+        Route::get('people', [$ap, 'people']);
+        Route::post('workflows', [$ap, 'saveWorkflow']);
+        Route::put('workflows/{id}', [$ap, 'saveWorkflow'])->whereNumber('id');
+        Route::delete('workflows/{id}', [$ap, 'deleteWorkflow'])->whereNumber('id');
     });
 
     // Demographics (Church-level entry - Phase 3 of the Demographics module plan)
