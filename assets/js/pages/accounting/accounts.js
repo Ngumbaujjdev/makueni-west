@@ -17,6 +17,7 @@
   const $ = (id) => document.getElementById(id);
   const esc = A.esc;
   let data = null;
+  let petty = null;
   let type = new URLSearchParams(window.location.search).get("type") || "asset";
 
   function cashCards() {
@@ -28,19 +29,43 @@
           <div class="card-body">
             <div class="d-flex align-items-start gap-3">${A.tile(a.cash_kind)}<div class="min-w-0 flex-fill"><div class="fw-semibold text-truncate">${esc(a.name)}</div><div class="acc-sub">${esc(a.code)} · ${esc(k.label)}${a.bank_name ? ` · ${esc(a.bank_name)}` : ""}</div>${a.number_masked ? `<div class="acc-sub">${esc(a.number_masked)}</div>` : ""}</div>${a.is_active ? "" : '<span class="badge bg-secondary text-dark">Off</span>'}</div>
             <div class="acc-money-value${a.balance < 0 ? " text-danger" : ""}">${A.money(a.balance)}</div>
+            ${a.cash_kind === "petty_cash" ? pettyLine() : ""}
             <div class="d-flex gap-2 flex-wrap">
+              ${a.cash_kind === "petty_cash" && !A.viewingBelow() ? pettyButtons() : ""}
               <a class="btn btn-sm btn-outline-primary" href="${A.link("cashbook.php", { account_id: a.id })}"><i class="ri-book-open-line me-1"></i>Cashbook</a>
               ${own && a.own ? `<button type="button" class="btn btn-sm btn-outline-secondary" data-edit="${a.id}"><i class="ri-edit-line me-1"></i>Change</button>` : ""}
             </div>
           </div></div></div>`;
       })
       .join("");
+    if (own && !data.cash.some((a) => a.cash_kind === "petty_cash")) {
+      $("cashCards").insertAdjacentHTML(
+        "beforeend",
+        `<div class="col-xxl-3 col-xl-4 col-sm-6 d-flex"><button type="button" class="card custom-card flex-fill acc-add-card" data-petty="float"><span class="avatar avatar-md avatar-rounded bg-warning text-dark"><i class="ri-wallet-3-line"></i></span><span class="fw-semibold">Set up petty cash</span><small>A fixed float for small spends, topped up for exactly what was spent</small></button></div>`,
+      );
+    }
     if (own) {
       $("cashCards").insertAdjacentHTML(
         "beforeend",
         `<div class="col-xxl-3 col-xl-4 col-sm-6 d-flex"><button type="button" class="card custom-card flex-fill acc-add-card" data-add><span class="avatar avatar-md avatar-rounded bg-primary text-white"><i class="ri-add-line"></i></span><span class="fw-semibold">Add a bank or M-Pesa account</span><small>Each place keeps its own, under the diocese's chart</small></button></div>`,
       );
     }
+  }
+
+  /** The float, cash in the box, what to top up. */
+  function pettyLine() {
+    if (!petty) return "";
+    if (petty.float === null) return '<div class="acc-float"><span>No float set</span></div>';
+    return `<div class="acc-float"><span>Float ${A.money(petty.float)}${petty.custodian ? ` · kept by ${esc(petty.custodian.name)}` : ""}</span><span>${petty.pending_top_up ? `Top-up ${esc(petty.pending_top_up.number)} waiting` : petty.top_up > 0 ? `${A.money(petty.top_up)} to top up` : "Full"}</span></div>`;
+  }
+
+  function pettyButtons() {
+    const c = data.can;
+    return [
+      c.petty ? '<button type="button" class="btn btn-sm btn-primary" data-petty="spend"><i class="ri-wallet-3-line me-1"></i>Spend</button>' : "",
+      c.prepare && petty?.float !== null && petty?.top_up > 0 && !petty?.pending_top_up ? '<button type="button" class="btn btn-sm btn-outline-primary" data-petty="topup"><i class="ri-refresh-line me-1"></i>Top up</button>' : "",
+      c.accounts ? '<button type="button" class="btn btn-sm btn-outline-secondary" data-petty="float"><i class="ri-settings-3-line me-1"></i>Float</button>' : "",
+    ].join("");
   }
 
   function chartTable() {
@@ -71,7 +96,8 @@
   async function load() {
     A.ownOnly();
     $("cashCards").innerHTML = DemographicsUI.skeletonCards(4, "col-xxl-3 col-xl-4 col-sm-6");
-    const res = await AccountingAPI.accounts();
+    const [res, pc] = await Promise.all([AccountingAPI.accounts(), AccountingAPI.petty()]);
+    petty = pc.ok ? pc.data : null;
     if (!res.ok) {
       $("cashCards").innerHTML = `<div class="col-12">${A.errorBox(res.message)}</div>`;
       return;
@@ -89,6 +115,8 @@
     $("transferBtn")?.addEventListener("click", () => W.transfer({ onDone: load }));
     $("cashCards").addEventListener("click", (e) => {
       if (e.target.closest("[data-add]")) return add();
+      const pb = e.target.closest("[data-petty]");
+      if (pb) return { spend: () => W.pettySpend({ onDone: load }), topup: () => W.topUp({ onDone: load }), float: () => W.setFloat({ onDone: load }) }[pb.dataset.petty]();
       const ed = e.target.closest("[data-edit]");
       if (ed) W.account({ account: data.cash.find((a) => a.id === Number(ed.dataset.edit)), onDone: load });
     });
