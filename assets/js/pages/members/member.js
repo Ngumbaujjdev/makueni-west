@@ -123,10 +123,11 @@
         </div>
       </div>
       ${CTX.can.ministries && typeof MinistriesUI !== "undefined" ? MinistriesUI.personCard(p, { ministriesUrl: CTX.ministriesUrl }) : ""}
+      ${CTX.can.duty_teams && typeof FacilitiesUI !== "undefined" ? '<div class="card custom-card"><div class="card-header"><div class="card-title">Duty teams</div></div><div class="card-body" id="mbTeams"><span class="skel skel-line"></span></div></div>' : ""}
       <div class="card custom-card">
         <div class="card-header"><div class="card-title">Transfers</div></div>
         <div class="card-body">${transfers.length ? `<ul class="mb-mini-list">${transfers.map((t) => `<li><i class="${JOURNEY[t.kind].icon}"></i><div><strong>${M.esc(t.label)}</strong><small>${M.day(t.on)}</small></div></li>`).join("")}</ul>` : '<p class="mb-0 fw-semibold">None.</p>'}</div>
-      </div>`;
+      </div>`;    if ($("mbTeams")) FacilitiesUI.personTeams($("mbTeams"), p.id, { teamsUrl: CTX.can.duty_teams ? CTX.teamsUrl : "", manage: CTX.can.duty_teams_manage });
   }
 
   // -------------------------------------------------------------- history

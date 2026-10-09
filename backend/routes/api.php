@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\Facilities\EquipmentController;
 use App\Http\Controllers\Api\Facilities\FacilitiesController;
 use App\Http\Controllers\Api\Facilities\RepairsController;
 use App\Http\Controllers\Api\Facilities\RotaController;
+use App\Http\Controllers\Api\Facilities\TeamsController;
 use App\Http\Controllers\Api\FiscalYearController;
 use App\Http\Controllers\Api\GatheringCategoryController;
 use App\Http\Controllers\Api\GatheringTypeController;
@@ -256,6 +257,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('rota', [RotaController::class, 'update']);
     Route::post('rota/copy', [RotaController::class, 'copy']);
     Route::post('rota/fill', [RotaController::class, 'fill']);
+    Route::get('facilities/teams', [TeamsController::class, 'index']);
+    Route::get('facilities/teams/person/{person}', [TeamsController::class, 'person'])->whereNumber('person');
+    Route::post('facilities/teams/{duty}/members', [TeamsController::class, 'store']);
+    Route::put('facilities/teams/{duty}/order', [TeamsController::class, 'order']);
+    Route::delete('facilities/teams/members/{member}', [TeamsController::class, 'destroy'])->whereNumber('member');
 
     // People & care P2 - visitors and their follow-up; /visitors/totals is the
     // region's and diocese's (counts only)

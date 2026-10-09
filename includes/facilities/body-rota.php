@@ -2,7 +2,7 @@
     <div class="page-toolbar-sub d-flex flex-wrap align-items-center gap-2"><span><?= htmlspecialchars($facCtx['place']['name'] ?: 'Our church') ?></span><span id="reminderChip"></span></div>
     <div class="page-toolbar-controls">
         <?php if ($facCtx['can']['manage']): ?>
-        <a class="btn btn-outline-primary" href="<?= $facCtx['settingsUrl'] ?>"><i class="ri-team-line me-1"></i>Teams</a>
+        <a class="btn btn-outline-primary" href="<?= $facCtx['baseUrl'] ?>/teams"><i class="ri-team-line me-1"></i>Teams</a>
         <button type="button" class="btn btn-outline-primary" id="copyBtn"><i class="ri-file-copy-line me-1"></i>Copy a week</button>
         <button type="button" class="btn btn-primary" id="fillBtn"><i class="ri-magic-line me-1"></i>Fill from the teams</button>
         <?php endif ?>

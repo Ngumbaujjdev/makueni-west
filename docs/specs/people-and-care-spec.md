@@ -872,3 +872,45 @@ The user asked for this after round 2:
 - [x] Duties (with teams) and kinds are each church's own. A kind in use can't go. A duty on the rota is switched off, not dropped. Others can read but not change.
 - [x] The rota fills the empty duties from the teams in turn, and leaves filled ones alone.
 - [x] Room by room, Bought in a year and Repairs and their cost build (PDF and Excel), and need the export permission.
+
+### P5 round 4: the Teams page (2026-10-09)
+The user asked for this after round 3: the ushers and other duty teams could only be set in Settings, and it wasn't clear how a member gets onto a team. They wanted the duty teams **in the sidebar**, so adding members to teams is easy. Duties are not linked to Ministries; the user picked this page instead.
+
+**Data:**
+- The people on each team move out of `facilities_setup.duties[].team` into their own table, `duty_team_members`:
+  - `territory_id`, `duty` (key);
+  - `person_id` (cascades when the person is deleted) or a typed `name`;
+  - `position` (the turn order) and `added_by`;
+  - unique per church, duty and person.
+- **The migration** moves each church's old lists across, in order, and `down()` puts them back.
+- **Someone who left** (inactive, transferred out, deceased, archived or anonymised) stays on the list, marked **away**. `Facilities::team()` / `dutyList()` leave them out, so Fill and the rota cell window skip them.
+- **Settings › Facilities** keeps only the duty itself: name, icon, colour, how many each service, and on/off. It shows each team's count with a link to the Teams page. A duty taken out of Settings takes its team with it.
+
+**API** (`TeamsController`; reading needs any Facilities read, changes need `manage`; church only):
+- `GET facilities/teams`:
+  - each duty in use, its team in turn order (away flag, typed or from the register, times on duty in the last 3 months, next date on the rota);
+  - counts: teams, people serving, away, the next service's empty spots, and members not on any team.
+- `POST facilities/teams/{duty}/members {person_ids[], names[]}` → `{added, already}`.
+- `PUT facilities/teams/{duty}/order {ids[]}` sets the turn order.
+- `DELETE facilities/teams/members/{id}` takes someone off; their rota entries stay.
+- `GET facilities/teams/person/{person}`: the teams one person is on.
+
+**Pages:**
+- **Facilities › Teams** (`church/facilities/teams.php`, menu page `teams.php`, permission `facilities.teams.read`, given to everyone who reads Facilities):
+  - four cards: Teams, People serving, Next service with its spots to fill, Not on a team;
+  - a card per duty, its people numbered in turn order, with how often they serve and when next;
+  - managers can **Add people** (several from the register at once, or typed names), move people up or down, and take them off.
+  - **Fill the rota** opens the rota's Fill window.
+- **Members:**
+  - the list gets a bulk action, **Add to a duty team**;
+  - the member page gets a **Duty teams** card, with Add to a team and take off for managers.
+- **The rota:** its Teams button and the empty-team links go to the Teams page.
+
+**Demo data:** the demo seeder writes teams into the table (6 ushers, 4 for each other duty) unless the church has its own. Removing the demo deletes the demo people's team rows.
+
+**Tests:** `tests/Feature/Facilities/TeamsTest.php` (4); `SetupTest` now saves duties without teams.
+
+- [x] People are added (from the register and by name; twice counts as already), reordered and taken off. Each team lists them in turn order.
+- [x] Only managers change teams, and only at their own church. Another church's person is refused.
+- [x] Someone who left is kept but marked, and Fill skips them. A duty removed in Settings takes its team.
+- [x] The migration moves the old lists into the table in order, and back.

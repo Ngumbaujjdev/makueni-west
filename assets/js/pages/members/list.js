@@ -58,8 +58,10 @@
   function actions() {
     const send = { key: "sms", label: "Send message", icon: "ri-chat-3-line", primary: true, run: (ids) => K.messagePeople(CTX.messagesUrl, ids.map((id) => byId.get(id)).filter(Boolean)) };
     const toMinistry = { key: "ministry", label: "Add to ministry", icon: "ri-team-line", run: (ids) => MinistriesUI.addToMinistryWindow(ids, { onDone: () => load() }) };
+    const toTeam = { key: "team", label: "Add to a duty team", icon: "ri-shield-user-line", run: (ids) => FacilitiesUI.toTeamWindow(ids) };
+    const joins = [...(CTX.can.ministries_manage ? [toMinistry] : []), ...(CTX.can.duty_teams_manage ? [toTeam] : [])];
     if (list === "archived") return [send];
-    if (!CTX.can.manage) return CTX.can.ministries_manage ? [send, toMinistry] : [send];
+    if (!CTX.can.manage) return [send, ...joins];
     const change = (action, title, icon, danger, text) => ({
       key: action,
       label: title,
@@ -81,7 +83,7 @@
     });
     return [
       send,
-      ...(CTX.can.ministries_manage ? [toMinistry] : []),
+      ...joins,
       change("inactive", "Mark inactive", "ri-user-unfollow-line", false, "They stay in the register as inactive - you can change it back on each person's page."),
       change("archive", "Archive", "ri-archive-line", true, "They leave the lists but stay counted. You can bring each one back from Archived."),
     ];

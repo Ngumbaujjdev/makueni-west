@@ -5,6 +5,7 @@ namespace App\Services\Facilities;
 use App\Http\Controllers\Api\Settings\ServiceTimesController;
 use App\Models\Activity;
 use App\Models\DutyRota;
+use App\Models\DutyTeamMember;
 use App\Models\Equipment;
 use App\Models\EquipmentLoan;
 use App\Models\MaintenanceJob;
@@ -87,9 +88,10 @@ final class Facilities
     ];
 
     /**
-     * What a church set in Settings > Facilities - its duties (with their
-     * teams and how many each service needs) and its kinds of equipment -
-     * or the defaults (DutyRota::DUTIES, Equipment::CATEGORIES) until it does.
+     * What a church set in Settings > Facilities - its duties (how many each
+     * service needs) and its kinds of equipment - or the defaults
+     * (DutyRota::DUTIES, Equipment::CATEGORIES) until it does. Who is on each
+     * duty's team is kept apart (duty_team_members, the Teams page).
      */
     public function setup(Territory|int $church): array
     {
@@ -102,7 +104,8 @@ final class Facilities
         $place = $church instanceof Territory ? $church : Territory::find($id);
         $saved = (array) (($place?->metadata ?? [])['facilities_setup'] ?? []);
         $duties = ! empty($saved['duties']) ? $saved['duties']
-            : collect(DutyRota::DUTIES)->map(fn ($d, $k) => ['key' => $k, 'label' => $d[0], 'icon' => $d[1], 'colour' => $d[2], 'active' => true, 'needed' => $k === 'ushering' ? 2 : 1, 'team' => []])->values()->all();
+            : collect(DutyRota::DUTIES)->map(fn ($d, $k) => ['key' => $k, 'label' => $d[0], 'icon' => $d[1], 'colour' => $d[2], 'active' => true, 'needed' => $k === 'ushering' ? 2 : 1])->values()->all();
+        $duties = array_map(fn ($d) => array_diff_key($d, ['team' => 1]), $duties);
         $kinds = ! empty($saved['kinds']) ? $saved['kinds']
             : collect(Equipment::CATEGORIES)->map(fn ($c, $k) => ['key' => $k, 'label' => $c[0], 'icon' => $c[1], 'colour' => $c[2]])->values()->all();
 
@@ -114,22 +117,44 @@ final class Facilities
 
     public function forgetSetup(int $churchId): void
     {
-        $memo = request()->attributes->get('facilities.setup', []);
-        unset($memo[$churchId]);
-        request()->attributes->set('facilities.setup', $memo);
+        foreach (['facilities.setup', 'facilities.teams'] as $k) {
+            $memo = request()->attributes->get($k, []);
+            unset($memo[$churchId]);
+            request()->attributes->set($k, $memo);
+        }
+    }
+
+    /** duty key => the people on its team, in turn order (kept for the request). */
+    public function teams(Territory|int $church): Collection
+    {
+        $id = $church instanceof Territory ? $church->id : $church;
+        $memo = request()->attributes->get('facilities.teams', []);
+        if (! isset($memo[$id])) {
+            $memo[$id] = DutyTeamMember::with('person')->where('territory_id', $id)->orderBy('position')->orderBy('id')->get()->groupBy('duty');
+            request()->attributes->set('facilities.teams', $memo);
+        }
+
+        return $memo[$id];
+    }
+
+    /** The people on a duty's team who can take a turn now: [{id, person_id, name}]. */
+    public function team(Territory|int $church, string $duty): array
+    {
+        return ($this->teams($church)[$duty] ?? collect())->reject(fn (DutyTeamMember $m) => $m->away)
+            ->map(fn (DutyTeamMember $m) => ['id' => $m->id, 'person_id' => $m->person_id, 'name' => $m->who])->values()->all();
     }
 
     /** key => [label, icon, colour, active, needed, team] - every duty the church has, switched off ones too. */
     public function duties(Territory|int $church): array
     {
-        return collect($this->setup($church)['duties'])->mapWithKeys(fn ($d) => [$d['key'] => [$d['label'], $d['icon'], $d['colour'], (bool) ($d['active'] ?? true), (int) ($d['needed'] ?? 1), $d['team'] ?? []]])->all();
+        return collect($this->setup($church)['duties'])->mapWithKeys(fn ($d) => [$d['key'] => [$d['label'], $d['icon'], $d['colour'], (bool) ($d['active'] ?? true), (int) ($d['needed'] ?? 1), $this->team($church, $d['key'])]])->all();
     }
 
     /** The duties as the pages want them: [{key, label, icon, color, active, needed, team}], the switched off ones only when asked. */
     public function dutyList(Territory|int $church, bool $all = false): array
     {
         return collect($this->setup($church)['duties'])->filter(fn ($d) => $all || ($d['active'] ?? true))
-            ->map(fn ($d) => ['key' => $d['key'], 'label' => $d['label'], 'icon' => $d['icon'], 'color' => $d['colour'], 'active' => (bool) ($d['active'] ?? true), 'needed' => (int) ($d['needed'] ?? 1), 'team' => array_values($d['team'] ?? [])])->values()->all();
+            ->map(fn ($d) => ['key' => $d['key'], 'label' => $d['label'], 'icon' => $d['icon'], 'color' => $d['colour'], 'active' => (bool) ($d['active'] ?? true), 'needed' => (int) ($d['needed'] ?? 1), 'team' => $this->team($church, $d['key'])])->values()->all();
     }
 
     /** A duty's name - a duty since removed still reads as itself. */

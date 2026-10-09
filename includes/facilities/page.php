@@ -3,7 +3,7 @@
 // $facCtx (includes/facilities/context.php); the body for each page is includes/facilities/body-{page}.php.
 $titles = [
     'index' => 'Facilities', 'bookings' => 'Bookings', 'equipment' => 'Equipment', 'item' => 'Equipment', 'assets' => 'What we own', 'reports' => 'Asset reports',
-    'repairs' => 'Repairs', 'rota' => 'Duty rota',
+    'repairs' => 'Repairs', 'rota' => 'Duty rota', 'teams' => 'Teams',
 ];
 $pageTitle = $titles[$facCtx['page']];
 $pageIcon = 'ri-building-2-line';

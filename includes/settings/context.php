@@ -32,6 +32,7 @@ function settingsPageContext(string $level, string $active = 'overview'): array
         'level' => $level,
         'hubUrl' => SITE_URL . "/{$level}/settings/",
         'homeUrl' => SITE_URL . "/{$level}/dashboard",
+        'siteUrl' => SITE_URL,
         'active' => $requested !== '' ? $requested : $active,
         'place' => [
             'id' => (int) ($role['territory_id'] ?? 0),

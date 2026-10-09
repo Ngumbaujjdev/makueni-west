@@ -6,6 +6,7 @@ use App\Models\Activity;
 use App\Models\CareContact;
 use App\Models\CareRecord;
 use App\Models\DutyRota;
+use App\Models\DutyTeamMember;
 use App\Models\Equipment;
 use App\Models\EquipmentLoan;
 use App\Models\FiscalMonth;
@@ -434,20 +435,23 @@ class PeopleDemoSeeder extends Seeder
                     }
                 }
             }
-            // A team for each duty (Settings > Facilities), from the demo people - unless the church set its own.
+            // How many each duty needs (Settings > Facilities) - unless the church set its own.
             $metadata = $church->fresh()->metadata ?? [];
+            $setup = app(Facilities::class)->setup($church);
             if (empty($metadata['facilities_setup'])) {
-                $setup = app(Facilities::class)->setup($church);
-                $at = 0;
-                $metadata['facilities_setup'] = ['kinds' => $setup['kinds'], 'duties' => collect($setup['duties'])->map(function ($d) use ($people, &$at, $need) {
-                    $size = $d['key'] === 'ushering' ? 6 : 4;
-                    $team = collect(range(0, $size - 1))->map(fn ($i) => $people[($at + $i) % $people->count()])->unique('id')->map(fn ($p) => ['person_id' => $p->id, 'name' => $p->name])->values()->all();
-                    $at += $size;
-
-                    return ['needed' => $need[$d['key']] ?? 1, 'team' => $team] + $d;
-                })->all()];
+                $metadata['facilities_setup'] = ['kinds' => $setup['kinds'], 'duties' => collect($setup['duties'])->map(fn ($d) => ['needed' => $need[$d['key']] ?? 1] + $d)->all()];
                 $church->metadata = $metadata;
                 Territory::withoutAuditing(fn () => $church->save());
+            }
+            // A team for each duty (the Teams page), from the demo people - unless the church has its own.
+            if (! DutyTeamMember::where('territory_id', $church->id)->exists()) {
+                $at = 0;
+                foreach ($setup['duties'] as $d) {
+                    $size = $d['key'] === 'ushering' ? 6 : 4;
+                    collect(range(0, $size - 1))->map(fn ($i) => $people[($at + $i) % $people->count()])->unique('id')->values()
+                        ->each(fn ($p, $pos) => DutyTeamMember::create(['territory_id' => $church->id, 'duty' => $d['key'], 'person_id' => $p->id, 'position' => $pos]));
+                    $at += $size;
+                }
             }
         }
     }

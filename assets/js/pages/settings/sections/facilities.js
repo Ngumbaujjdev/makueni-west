@@ -3,8 +3,8 @@
  * the one place to set a church's facilities up.
  *   Rooms              - name, how many it holds, colour, can be booked, order
  *                        (the /rooms routes)
- *   Duties and teams   - each duty, how many people each service needs, and
- *                        its team: people from the register or typed names
+ *   Duties             - each duty and how many people each service needs;
+ *                        who is on each team is the Teams page's (round 4)
  *   Kinds of equipment - name, icon, colour (a kind in use can't go)
  *   then the section's fields (booking hours, lending, duty reminders) - the
  *   generic form, saved with the same Save.
@@ -23,6 +23,7 @@
     "ri-computer-line": "Computer", "ri-archive-line": "Box", "ri-tools-line": "Tools", "ri-plant-line": "Plant", "ri-gift-line": "Gift", "ri-flashlight-line": "Torch",
   };
 
+  const teamsUrl = `${window.SETTINGS_CTX?.siteUrl || ""}/church/facilities/teams`;
   let root = null;
   let data = null;
   let rooms = [];
@@ -81,13 +82,6 @@
 
   // ------------------------------------------------------------------ duties
 
-  function teamHtml(d, i) {
-    return `<div class="fs-team">
-      <div class="pp-chips">${d.team.length ? d.team.map((p, n) => `<span class="pp-chip"><span>${esc(p.name)}</span>${can ? `<button type="button" data-unteam="${i}:${n}" aria-label="Take ${esc(p.name)} off">&times;</button>` : ""}</span>`).join("") : '<span class="mb-sub">Nobody on this team yet</span>'}</div>
-      ${can ? `<div class="pp-picker-search mt-2"><i class="ri-search-line"></i><input type="search" class="form-control" data-team-q="${i}" placeholder="Add someone - search the register, or type a name and press Enter" autocomplete="off"></div><div class="pp-picker-list" data-team-found="${i}"></div>` : ""}
-    </div>`;
-  }
-
   function drawDuties() {
     const box = $("#fsDuties");
     const dis = can ? "" : "disabled";
@@ -104,8 +98,7 @@
                   <div class="col-lg-3 col-md-6"><div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" role="switch" data-f="active" id="da${i}"${d.active ? " checked" : ""} ${dis}><label class="form-check-label fs-12" for="da${i}">${d.active ? "In use" : "Switched off"}</label></div></div>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-2 mt-2"><span class="form-label fs-12 mb-0">Colour</span>${swatches(`dc${i}`, data.colours, d.colour, "Colour")}</div>
-                <div class="d-flex align-items-center gap-2 mt-2 mb-1"><span class="fw-semibold fs-13">Team</span><span class="soft-chip soft-${d.colour}">${d.team.length} ${d.team.length === 1 ? "person" : "people"}</span>${d.on_rota ? `<span class="mb-sub">· on the rota ${d.on_rota} ${d.on_rota === 1 ? "time" : "times"}</span>` : ""}</div>
-                ${teamHtml(d, i)}
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-2"><span class="form-label fs-12 mb-0">Team</span>${d.key ? `<span class="soft-chip soft-${d.colour}">${d.team_count} ${d.team_count === 1 ? "person" : "people"}</span>${d.on_rota ? `<span class="mb-sub">· on the rota ${d.on_rota} ${d.on_rota === 1 ? "time" : "times"}</span>` : ""}<a class="fw-semibold mb-link fs-13" href="${teamsUrl}#team-${esc(d.key)}">Manage on the Teams page<i class="ri-arrow-right-line ms-1"></i></a>` : '<span class="mb-sub">Save first, then add the people on the Teams page</span>'}</div>
               </div>
               ${can ? `<div class="fs-row-tools"><button type="button" class="btn btn-icon btn-sm btn-light border" data-dup="${i}" aria-label="Move up"${i ? "" : " disabled"}><i class="ri-arrow-up-s-line"></i></button><button type="button" class="btn btn-icon btn-sm btn-light border" data-ddown="${i}" aria-label="Move down"${i === duties.length - 1 ? " disabled" : ""}><i class="ri-arrow-down-s-line"></i></button><button type="button" class="btn btn-icon btn-sm btn-light border" data-dremove="${i}" title="${d.on_rota ? "It is on the rota - it will be switched off" : "Remove"}" aria-label="Remove ${esc(d.label)}"><i class="ri-delete-bin-line"></i></button></div>` : ""}
             </div>`,
@@ -119,40 +112,6 @@
         duties[i].icon = s.value;
         s.closest(".fs-row").querySelector(".fs-row-tile i").className = s.value;
         changed();
-      });
-    });
-    box.querySelectorAll("[data-team-q]").forEach((input) => {
-      const i = Number(input.dataset.teamQ);
-      const found = box.querySelector(`[data-team-found="${i}"]`);
-      let t = null;
-      let hits = [];
-      const add = (p) => {
-        const key = p.person_id ? `p${p.person_id}` : `n${p.name.toLowerCase()}`;
-        if (!duties[i].team.some((x) => (x.person_id ? `p${x.person_id}` : `n${x.name.toLowerCase()}`) === key)) duties[i].team.push(p);
-        drawDuties();
-        changed();
-        box.querySelector(`[data-team-q="${i}"]`)?.focus();
-      };
-      input.addEventListener("input", () => {
-        clearTimeout(t);
-        const q = input.value.trim();
-        if (q.length < 2) return (found.innerHTML = "");
-        t = setTimeout(async () => {
-          const res = await SettingsAPI.facilityPeople(q);
-          hits = res.ok ? res.data : [];
-          found.innerHTML = `${hits.map((p, n) => `<button type="button" class="pp-picker-row w-100 border-0 text-start" data-hit="${n}"><span class="avatar avatar-sm avatar-rounded bg-${UI.colorFor(p.name)} text-white flex-shrink-0">${esc(p.initials || "")}</span><span class="flex-fill min-w-0"><strong>${esc(p.name)}</strong><small>${esc([p.kind === "visitor" ? "Visitor" : "Member", p.area].filter(Boolean).join(" · "))}</small></span><i class="ri-add-line"></i></button>`).join("")}<button type="button" class="pp-picker-row w-100 border-0 text-start" data-typed><span class="avatar avatar-sm avatar-rounded bg-light text-dark flex-shrink-0"><i class="ri-edit-2-line"></i></span><span class="flex-fill min-w-0"><strong>Use "${esc(q)}"</strong><small>Not in the register - just the name</small></span></button>`;
-        }, 250);
-      });
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && input.value.trim().length >= 2) {
-          e.preventDefault();
-          add({ person_id: null, name: input.value.trim() });
-        }
-      });
-      found.addEventListener("click", (e) => {
-        const hit = e.target.closest("[data-hit]");
-        if (hit) return add({ person_id: hits[Number(hit.dataset.hit)].id, name: hits[Number(hit.dataset.hit)].name });
-        if (e.target.closest("[data-typed]")) add({ person_id: null, name: input.value.trim() });
       });
     });
   }
@@ -223,11 +182,7 @@
     else if (d.dup !== undefined) move(duties, Number(d.dup), -1), drawDuties();
     else if (d.ddown !== undefined) move(duties, Number(d.ddown), 1), drawDuties();
     else if (d.dremove !== undefined) duties.splice(Number(d.dremove), 1), drawDuties();
-    else if (d.unteam !== undefined) {
-      const [i, n] = d.unteam.split(":").map(Number);
-      duties[i].team.splice(n, 1);
-      drawDuties();
-    } else if (d.kremove !== undefined) kinds.splice(Number(d.kremove), 1), drawKinds();
+    else if (d.kremove !== undefined) kinds.splice(Number(d.kremove), 1), drawKinds();
     else return;
     changed();
   }
@@ -235,7 +190,7 @@
   function links() {
     return [
       { id: "card-rooms", label: "Rooms" },
-      { id: "card-duties", label: "Duties and teams" },
+      { id: "card-duties", label: "Duties" },
       { id: "card-kinds", label: "Kinds of equipment" },
       ...[...root.querySelectorAll("#fsForm .card[id^='card-']")].filter((el) => !el.hidden).map((el) => ({ id: el.id, label: el.querySelector(".card-title")?.textContent.trim() || "" })),
     ];
@@ -245,7 +200,7 @@
     root.innerHTML = `<div id="fsWrap">
       ${can ? "" : `<div class="alert alert-primary d-flex align-items-center gap-2"><span class="avatar avatar-sm bg-primary text-white"><i class="ri-eye-line"></i></span><div><b>View only.</b> Your role can see how the facilities are set up, but not change it.</div></div>`}
       ${F.card({ id: "card-rooms", title: "Rooms", icon: "ri-door-open-line", colour: "primary", sub: "Booked by the hour, and where equipment is kept. A room with bookings to come can't be removed - switch off \"Can be booked\".", actions: canRooms ? '<button type="button" class="btn btn-primary btn-sm" id="fsAddRoom"><i class="ri-add-line me-1"></i>Add a room</button>' : "", body: '<div id="fsRooms" class="fs-rows"></div>' })}
-      ${F.card({ id: "card-duties", title: "Duties and teams", icon: "ri-team-line", colour: "purple", sub: "The duties at each service and who does each - the rota picks from the team, and \"Fill from the teams\" takes turns.", actions: can ? '<button type="button" class="btn btn-primary btn-sm" id="fsAddDuty"><i class="ri-add-line me-1"></i>Add a duty</button>' : "", body: '<div id="fsDuties" class="fs-rows"></div><div class="invalid-feedback d-block" data-error-for="duties"></div>' })}
+      ${F.card({ id: "card-duties", title: "Duties", icon: "ri-team-line", colour: "purple", sub: "The duties at each service and how many people each needs. Who is on each team is set on the Teams page (Facilities > Teams).", actions: can ? '<button type="button" class="btn btn-primary btn-sm" id="fsAddDuty"><i class="ri-add-line me-1"></i>Add a duty</button>' : "", body: '<div id="fsDuties" class="fs-rows"></div><div class="invalid-feedback d-block" data-error-for="duties"></div>' })}
       ${F.card({ id: "card-kinds", title: "Kinds of equipment", icon: "ri-archive-line", colour: "success", sub: "How our things are grouped - on Equipment, What we own and the reports. A kind with things in it can't be removed.", actions: can ? '<button type="button" class="btn btn-primary btn-sm" id="fsAddKind"><i class="ri-add-line me-1"></i>Add a kind</button>' : "", body: '<div id="fsKinds" class="fs-rows"></div><div class="invalid-feedback d-block" data-error-for="kinds"></div>' })}
       </div>
       <div id="fsForm"></div>`;
@@ -264,7 +219,7 @@
       root.querySelector("[data-room]:last-child [data-f=name]")?.focus();
     });
     $("#fsAddDuty")?.addEventListener("click", () => {
-      duties.push({ key: null, label: "", icon: "ri-group-line", colour: data.colours[duties.length % data.colours.length], active: true, needed: 1, team: [], on_rota: 0 });
+      duties.push({ key: null, label: "", icon: "ri-group-line", colour: data.colours[duties.length % data.colours.length], active: true, needed: 1, team_count: 0, on_rota: 0 });
       drawDuties();
       changed();
       root.querySelector("[data-duty]:last-child [data-f=label]")?.focus();
@@ -289,7 +244,7 @@
     canRooms = !!opts.ok && !!opts.data.can?.manage;
     roomColours = opts.ok ? opts.data.colours : ["primary"];
     rooms = (opts.ok ? opts.data.rooms : []).map((r) => ({ id: r.id, name: r.name, capacity: r.capacity, colour: r.colour, bookable: !!r.bookable, active: r.active !== false }));
-    duties = data.duties.map((d) => ({ ...d, team: (d.team || []).map((p) => ({ person_id: p.person_id || null, name: p.name })) }));
+    duties = data.duties.map((d) => ({ ...d }));
     kinds = data.kinds.map((k) => ({ ...k }));
     data.rooms = JSON.parse(JSON.stringify(rooms));
     draw();
@@ -352,7 +307,7 @@
         }
         if (can) {
           const res = await SettingsAPI.saveFacilitiesSetup({
-            duties: duties.map((d) => ({ key: d.key, label: d.label.trim(), icon: d.icon, colour: d.colour, active: !!d.active, needed: Number(d.needed) || 1, team: d.team })),
+            duties: duties.map((d) => ({ key: d.key, label: d.label.trim(), icon: d.icon, colour: d.colour, active: !!d.active, needed: Number(d.needed) || 1 })),
             kinds: kinds.map((k) => ({ key: k.key, label: k.label.trim(), icon: k.icon, colour: k.colour })),
           });
           if (!res.ok) {

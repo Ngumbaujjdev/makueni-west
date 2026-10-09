@@ -115,6 +115,11 @@ const FacilitiesAPI = (function () {
     saveRota: (body) => request("PUT", "/rota", { body }),
     copyRota: (body) => request("POST", "/rota/copy", { body }),
     fillRota: (body) => request("POST", "/rota/fill", { body }),
+    teams: () => request("GET", "/facilities/teams"),
+    personTeams: (personId) => request("GET", `/facilities/teams/person/${personId}`),
+    addToTeam: (duty, body) => request("POST", `/facilities/teams/${encodeURIComponent(duty)}/members`, { body }),
+    orderTeam: (duty, ids) => request("PUT", `/facilities/teams/${encodeURIComponent(duty)}/order`, { body: { ids } }),
+    removeFromTeam: (id) => request("DELETE", `/facilities/teams/members/${id}`),
   };
 })();
 
