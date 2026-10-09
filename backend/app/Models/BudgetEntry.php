@@ -47,6 +47,12 @@ class BudgetEntry extends Model implements HasMedia
         return $this->belongsTo(BudgetLineItem::class, 'budget_line_item_id');
     }
 
+    /** Its journal in the books (Accounting) - docs/specs/accounting-spec.md. */
+    public function journal(): BelongsTo
+    {
+        return $this->belongsTo(Journal::class);
+    }
+
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');

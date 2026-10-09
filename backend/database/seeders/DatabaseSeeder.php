@@ -268,6 +268,14 @@ class DatabaseSeeder extends Seeder
             // with its phase (docs/specs/people-and-care-spec.md)
             // ==========================================
             PeopleCareAccessSeeder::class,
+
+            // ==========================================
+            // PHASE 36: Accounting - the real money of every church, region
+            // and diocese in standard double entry: the chart of accounts,
+            // receipts, payment vouchers, cash and bank, the cashbook;
+            // {level}.accounting.* (docs/specs/accounting-spec.md)
+            // ==========================================
+            AccountingAccessSeeder::class,
         ]);
     }
 }

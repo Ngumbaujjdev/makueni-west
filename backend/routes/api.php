@@ -621,6 +621,44 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('/{entry}/receipts/{mediaId}', [\App\Http\Controllers\Api\BudgetEntryController::class, 'removeReceipt']); // Take it off
     });
 
+    // Accounting (docs/specs/accounting-spec.md) - the real money of every church, region and diocese:
+    // one engine for every level; the place is the acting role's (or one below, read-only, ?territory_id=).
+    Route::prefix('accounting')->group(function () {
+        $books = \App\Http\Controllers\Api\Accounting\BooksController::class;
+        $pvs = \App\Http\Controllers\Api\Accounting\PaymentVoucherController::class;
+        Route::get('overview', [$books, 'overview']);
+        Route::get('places', [$books, 'places']);
+        Route::get('options', [$books, 'options']);
+        Route::get('accounts', [$books, 'accounts']);
+        Route::post('accounts', [$books, 'storeAccount']);
+        Route::put('accounts/{id}', [$books, 'updateAccount'])->whereNumber('id');
+        Route::post('chart', [$books, 'storeChart']);
+        Route::put('chart/{id}', [$books, 'updateChart'])->whereNumber('id');
+        Route::get('cashbook', [$books, 'cashbook']);
+        Route::get('trial-balance', [$books, 'trialBalance']);
+        Route::get('journals', [$books, 'journals']);
+        Route::get('journals/{id}', [$books, 'show'])->whereNumber('id');
+        Route::post('journals/{id}/reverse', [$books, 'reverse'])->whereNumber('id');
+        Route::post('journals/{id}/attachments', [$books, 'addAttachment'])->whereNumber('id')->middleware('throttle:30,1');
+        Route::get('journals/{id}/attachments/{media}', [$books, 'showAttachment'])->whereNumber(['id', 'media']);
+        Route::delete('journals/{id}/attachments/{media}', [$books, 'removeAttachment'])->whereNumber(['id', 'media']);
+        Route::post('receipts', [$books, 'receipt']);
+        Route::post('transfers', [$books, 'transfer']);
+        Route::post('journal-vouchers', [$books, 'journalVoucher']);
+        Route::get('payment-vouchers', [$pvs, 'index']);
+        Route::post('payment-vouchers', [$pvs, 'store']);
+        Route::get('payment-vouchers/{id}', [$pvs, 'show'])->whereNumber('id');
+        Route::put('payment-vouchers/{id}', [$pvs, 'update'])->whereNumber('id');
+        Route::post('payment-vouchers/{id}/authorise', [$pvs, 'authorise'])->whereNumber('id');
+        Route::post('payment-vouchers/{id}/reject', [$pvs, 'reject'])->whereNumber('id');
+        Route::post('payment-vouchers/{id}/pay', [$pvs, 'pay'])->whereNumber('id');
+        Route::post('payment-vouchers/{id}/reverse', [$pvs, 'reversePayment'])->whereNumber('id');
+        Route::post('payment-vouchers/{id}/cancel', [$pvs, 'cancel'])->whereNumber('id');
+        Route::post('payment-vouchers/{id}/attachments', [$pvs, 'addAttachment'])->whereNumber('id')->middleware('throttle:30,1');
+        Route::get('payment-vouchers/{id}/attachments/{media}', [$pvs, 'showAttachment'])->whereNumber(['id', 'media']);
+        Route::delete('payment-vouchers/{id}/attachments/{media}', [$pvs, 'removeAttachment'])->whereNumber(['id', 'media']);
+    });
+
     // Demographics (Church-level entry - Phase 3 of the Demographics module plan)
     Route::prefix('demographics')->group(function () {
         Route::get('/', [DemographicsController::class, 'index']);                               // List own church's submissions

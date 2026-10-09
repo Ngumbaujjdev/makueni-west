@@ -14,6 +14,8 @@ class AppServiceProvider extends ServiceProvider
     {
         // One Settings hub service per request, so its per-request row cache is shared.
         $this->app->singleton(\App\Services\Settings\Settings::class);
+        // The chart of accounts checks itself once per request.
+        $this->app->singleton(\App\Services\Accounting\Chart::class);
     }
 
     /**
@@ -68,6 +70,15 @@ class AppServiceProvider extends ServiceProvider
             'budget_deduction_item' => 'App\Models\BudgetDeductionItem',
             'budget_period' => 'App\Models\BudgetPeriod',
             'budget_entry' => 'App\Models\BudgetEntry',
+
+            // Accounting models (docs/specs/accounting-spec.md)
+            'accounting_account' => 'App\Models\AccountingAccount',
+            'accounting_fund' => 'App\Models\AccountingFund',
+            'journal' => 'App\Models\Journal',
+            'journal_line' => 'App\Models\JournalLine',
+            'payment_voucher' => 'App\Models\PaymentVoucher',
+            'payment_voucher_line' => 'App\Models\PaymentVoucherLine',
+            'accounting_period' => 'App\Models\AccountingPeriod',
 
             // Fiscal period models
             'fiscal_year' => 'App\Models\FiscalYear',
