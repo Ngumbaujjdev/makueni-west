@@ -15,6 +15,7 @@ class BudgetLine extends Model implements Auditable
 
     protected $fillable = [
         'budget_category_id',
+        'account_id',
         'name',
         'slug',
         'territory_scope',
@@ -33,6 +34,12 @@ class BudgetLine extends Model implements Auditable
         'is_active' => 'boolean',
         'display_order' => 'integer',
     ];
+
+    /** The account its money posts to in the books (docs/specs/accounting-spec.md). */
+    public function account(): BelongsTo
+    {
+        return $this->belongsTo(AccountingAccount::class, 'account_id');
+    }
 
     /**
      * Get the budget category this line belongs to

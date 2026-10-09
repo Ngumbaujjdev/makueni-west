@@ -8,6 +8,7 @@ use App\Models\BudgetLine;
 use App\Models\BudgetLineItem;
 use App\Models\BudgetLog;
 use App\Models\User;
+use App\Services\Accounting\BudgetBridge;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
@@ -215,9 +216,12 @@ final class BudgetBook
     }
 
     /**
-     * @param  array{budget_line_id: int, amount: numeric, entry_date: string, description: string, counterparty?: ?string, method?: ?string, reference?: ?string}  $data
+     * Every entry is also in the books (Accounting): recording one posts its
+     * journal - unless it comes from Accounting (journal_id), which already did.
+     *
+     * @param  array{budget_line_id: int, amount: numeric, entry_date: string, description: string, counterparty?: ?string, method?: ?string, reference?: ?string, journal_id?: ?int}  $data
      */
-    public function record(User $user, Budget $budget, array $data): BudgetEntry
+    public function record(?User $user, Budget $budget, array $data): BudgetEntry
     {
         $this->assertCanRecord($budget, $data['entry_date']);
 
@@ -233,8 +237,13 @@ final class BudgetBook
                 'counterparty' => $data['counterparty'] ?? null,
                 'method' => $data['method'] ?? null,
                 'reference' => $data['reference'] ?? null,
-                'recorded_by' => $user->id,
+                'recorded_by' => $user?->id,
             ]);
+            if (! empty($data['journal_id'])) {
+                $entry->forceFill(['journal_id' => (int) $data['journal_id']])->saveQuietly();
+            } else {
+                app(BudgetBridge::class)->entryRecorded($entry->load('lineItem.budgetLine'), $user);
+            }
             $this->refreshLine($item);
             $this->log($budget, $user, 'entry_recorded', $this->entrySentence('Recorded', $entry, $item), entry: $entry);
 
@@ -244,6 +253,7 @@ final class BudgetBook
 
     public function changeEntry(User $user, BudgetEntry $entry, array $data): BudgetEntry
     {
+        app(BudgetBridge::class)->assertChangeable($entry);
         $budget = $entry->budget;
         $this->assertCanRecord($budget, $data['entry_date'] ?? $entry->entry_date->toDateString());
 
@@ -262,6 +272,7 @@ final class BudgetBook
                 'reference' => array_key_exists('reference', $data) ? $data['reference'] : $entry->reference,
                 'updated_by' => $user->id,
             ])->save();
+            app(BudgetBridge::class)->entryChanged($entry, $user);
             $this->refreshLine($item);
             if ($oldItem && $oldItem->id !== $item->id) {
                 $this->refreshLine($oldItem);
@@ -272,13 +283,20 @@ final class BudgetBook
         });
     }
 
-    public function removeEntry(User $user, BudgetEntry $entry): void
+    /** $fromLedger: Accounting reversed the document this entry came from - the books lead, even on a closed budget. */
+    public function removeEntry(?User $user, BudgetEntry $entry, bool $fromLedger = false): void
     {
-        $this->assertOpen($entry->budget);
-        DB::transaction(function () use ($user, $entry) {
+        if (! $fromLedger) {
+            app(BudgetBridge::class)->assertChangeable($entry);
+            $this->assertOpen($entry->budget);
+        }
+        DB::transaction(function () use ($user, $entry, $fromLedger) {
             $item = $entry->lineItem;
-            $entry->update(['updated_by' => $user->id]);
+            $entry->update(['updated_by' => $user?->id]);
             $entry->delete();
+            if (! $fromLedger) {
+                app(BudgetBridge::class)->entryRemoved($entry, $user);
+            }
             $this->refreshLine($item);
             $this->log($entry->budget, $user, 'entry_removed', $this->entrySentence('Removed', $entry, $item), entry: $entry);
         });
@@ -286,6 +304,7 @@ final class BudgetBook
 
     public function restoreEntry(User $user, BudgetEntry $entry): BudgetEntry
     {
+        app(BudgetBridge::class)->assertChangeable($entry);
         $this->assertOpen($entry->budget);
 
         return DB::transaction(function () use ($user, $entry) {
@@ -294,6 +313,7 @@ final class BudgetBook
                 $item->restore();
             }
             $entry->restore();
+            app(BudgetBridge::class)->entryRecorded($entry->fresh(['budget', 'lineItem.budgetLine']), $user);
             $this->refreshLine($item);
             $this->log($entry->budget, $user, 'entry_restored', $this->entrySentence('Brought back', $entry, $item), entry: $entry);
 
@@ -332,7 +352,7 @@ final class BudgetBook
     }
 
     /** The budget's line for this budget line - added as "unplanned" when the budget didn't plan it. */
-    private function itemFor(Budget $budget, int $lineId, User $user): BudgetLineItem
+    private function itemFor(Budget $budget, int $lineId, ?User $user): BudgetLineItem
     {
         $item = BudgetLineItem::withTrashed()->with('budgetCategory')->where('budget_id', $budget->id)->where('budget_line_id', $lineId)->first();
         if ($item) {
@@ -352,7 +372,7 @@ final class BudgetBook
             'budgeted_amount' => 0,
             'actual_amount' => 0,
             'is_unplanned' => true,
-            'created_by' => $user->id,
+            'created_by' => $user?->id,
         ]);
         $item->budget_category_id = $line->budget_category_id;
         $item->saveQuietly();
