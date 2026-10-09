@@ -125,6 +125,16 @@ const AccountingAPI = (function () {
     periods: (year) => request("GET", "/accounting/periods", { params: { year } }),
     closeMonth: (year, month) => request("POST", "/accounting/periods/close", { body: { year, month } }),
     reopenMonth: (year, month, reason) => request("POST", "/accounting/periods/reopen", { body: { year, month, reason } }),
+    // A3 - Sunday collections
+    collections: () => request("GET", "/accounting/collections"),
+    collectionOptions: (date) => request("GET", "/accounting/collections/options", { params: { date } }),
+    collection: (id) => request("GET", `/accounting/collections/${id}`),
+    saveCollection: (id, body) => request(id ? "PUT" : "POST", id ? `/accounting/collections/${id}` : "/accounting/collections", { body }),
+    deleteCollection: (id) => request("DELETE", `/accounting/collections/${id}`),
+    confirmCollection: (id) => request("POST", `/accounting/collections/${id}/confirm`),
+    returnCollection: (id, reason) => request("POST", `/accounting/collections/${id}/return`, { body: { reason } }),
+    bankCollection: (id, body) => request("POST", `/accounting/collections/${id}/bank`, { body }),
+    reverseCollection: (id, reason) => request("POST", `/accounting/collections/${id}/reverse`, { body: { reason } }),
   };
 })();
 

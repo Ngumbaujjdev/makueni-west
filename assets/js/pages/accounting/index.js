@@ -124,6 +124,24 @@
       : `<tr><td colspan="4">${A.empty("ri-file-list-3-line", "No documents yet", "Receipts, payments and transfers show here as they are written.")}</td></tr>`;
   }
 
+  /** Churches: the last service's giving, by kind - and what still waits. */
+  function lastSunday(d) {
+    const el = $("lastSunday");
+    const c = d.collections;
+    if (!c || (!c.last && !c.waiting)) {
+      el.hidden = true;
+      return;
+    }
+    const kinds = c.last ? c.last.kinds.map((k) => `<span class="acc-lastsun-kind"><small>${esc(k.label)}</small><strong>${A.short(k.amount)}</strong></span>`).join("") : "";
+    el.innerHTML = `<div class="card-body d-flex flex-wrap align-items-center gap-3">
+      <span class="avatar avatar-md avatar-rounded bg-success text-white"><i class="ri-hand-heart-line fs-18"></i></span>
+      <div class="min-w-0"><div class="acc-sub">${c.last ? `${esc(c.last.title)} · ${A.day(c.last.date, { weekday: "short", day: "numeric", month: "short" })}` : "Collections"}</div><div class="fs-18 fw-bold">${c.last ? A.money(c.last.total) : "-"}</div></div>
+      <div class="acc-lastsun-kinds">${kinds}</div>
+      <div class="ms-auto d-flex flex-wrap gap-2 align-items-center">${c.waiting ? `<span class="soft-chip soft-warning"><i class="ri-time-line"></i>${c.waiting} waiting to confirm</span>` : ""}${c.unbanked.count ? `<span class="soft-chip soft-purple"><i class="ri-bank-line"></i>${A.short(c.unbanked.total)} not banked</span>` : ""}<a class="btn btn-sm btn-outline-primary" href="${CTX.baseUrl}/collections.php">Collections<i class="ri-arrow-right-line ms-1"></i></a></div>
+    </div>`;
+    el.hidden = false;
+  }
+
   function start(d) {
     const el = $("startCard");
     const own = !A.viewingBelow();
@@ -156,6 +174,7 @@
     const d = res.data;
     A.placeLine($("accPlaceLine"), d.place);
     start(d);
+    lastSunday(d);
     cards(d);
     cashList(d);
     inOutChart(d);

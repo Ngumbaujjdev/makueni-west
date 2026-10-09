@@ -328,10 +328,31 @@ Proving the books right, the same for every level.
 ### Permissions
 `accounting.reconcile.do` (treasurers, finance officers), `accounting.pettycash.spend` (treasurers, church administrator and secretary), `accounting.periods.close` (treasurers, finance officers), `accounting.periods.reopen` (regional treasurer and overseer, diocese finance officer and treasurer). Approving a difference and signing off use `accounting.payments.authorise`. New pages: Reconciliation and Month-end close (every level); Reconcile opens from Reconciliation.
 
+## A3 - Sunday collections (built 2026-10-09)
+
+Churches only (the page and permissions exist at church level).
+
+### Data
+- `collections`: place, `date`, `title`, `attendance_record_id` / `gathering_type_id` (that day's attendance, optional), `cash_account_id` (default Cash at hand), `mpesa_account_id` (the church's M-Pesa, made on first use), `denominations`, `cash_total`, `mpesa_total`, `total`, `witnesses` (names, e.g. ushers without accounts), `notes`, `status` counted | returned | posted | reversed, `counted_by`, `confirmed_by/at`, `return_reason`, `journal_id` (the receipt), `banking_journal_id` (the deposit).
+- `collection_lines`: `label`, `account_id` (income, or money held for others), `fund_id`, `cash_amount`, `mpesa_amount`. Presets: Offering (4010, General), Tithe (4000, General), Thanksgiving (4020, General), Building (4020, Building fund), KYS (4020, KYS fund); any other income account and fund can be added.
+
+### Rules
+- Whoever records the count can change it until it is confirmed. If the notes and coins are counted, they must add up to the cash entered.
+- A second person (never the counter) confirms it: one official receipt is posted - Dr cash, Dr M-Pesa, Cr each kind with its fund - and Budgets follow through the bridge. Or they send it back with a reason; it is fixed and waits again. A count never confirmed can be deleted.
+- Bank it (treasurer): a transfer from where the cash was kept to the bank or M-Pesa, linked to the collection, with the deposit slip attached; once. Reversing that transfer lets it be banked again.
+- A confirmed collection is reversed from Collections (whoever keeps the books), only before it is banked; its receipt can't be reversed from the documents.
+- Month-end close: collections waiting or sent back in the month block it; confirmed cash not banked is a warning.
+- Ushers and elders who count or confirm see Collections, not the rest of the books.
+
+### API (under `/api/accounting`)
+`GET collections` · `GET collections/options?date=` · `POST collections` · `GET|PUT|DELETE collections/{id}` · `POST collections/{id}/confirm|return|bank|reverse`. The Overview gains `collections` (last service by kind, this month, waiting, not banked) for churches.
+
+### Permissions
+`church.accounting.collections.record` (Church Treasurer, Church Administrator, Church Secretary, Usher Coordinator, Deacon, Elder), `church.accounting.collections.confirm` (Church Treasurer, Senior Pastor, Associate Pastor, Elder), `church.accounting.collections.read` (with either, and with reading the books). Banking needs `receipts.create`; reversing needs `journals.post`.
+
 ## Later phases (outline - specified when built)
 - **A2 Reconciliation:** built 2026-10-09, see "A2 - Reconciliation" above.
-- **A3 Sunday collections:** two counters, then receipts per fund; banking with
-  a photo of the deposit slip.
+- **A3 Sunday collections:** built 2026-10-09, see "A3 - Sunday collections" above.
 - **A4 Approvals engine + requisitions:** the erp-server approval engine ported
   (workflows by amount band, delegation, escalation, SMS and email); requisition
   → PV; staff advances and their retirement. It replaces A1's single
