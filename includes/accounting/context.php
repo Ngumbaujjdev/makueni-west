@@ -12,7 +12,7 @@ require_once __DIR__ . '/../permission-check.php';
 
 /**
  * @param string $level church | region | diocese
- * @param string $page  index | accounts | cashbook | receipts | payments | journals | documents | chart
+ * @param string $page  index | accounts | cashbook | receipts | payments | journals | documents | chart | reconciliation | reconcile | close
  */
 function accountingPageContext(string $level, string $page): array
 {
@@ -24,6 +24,8 @@ function accountingPageContext(string $level, string $page): array
         'journals' => 'journals.post',
         'documents' => 'documents.read',
         'chart' => 'chart.manage',
+        'reconciliation', 'reconcile' => 'reconciliation.read',
+        'close' => 'periods.read',
     ][$page] ?? 'books.read'));
     $role = getCurrentRole() ?? [];
     $user = getAuthUser() ?? [];
@@ -47,6 +49,10 @@ function accountingPageContext(string $level, string $page): array
             'accounts' => $can('accounts.manage'),
             'chart' => $level === 'diocese' && $can('chart.manage'),
             'below' => $level !== 'church' && $can('below.read'),
+            'reconcile' => $can('reconcile.do'),
+            'petty' => $can('pettycash.spend'),
+            'close' => $can('periods.close'),
+            'reopen' => $level !== 'church' && $can('periods.reopen'),
         ],
     ];
 }

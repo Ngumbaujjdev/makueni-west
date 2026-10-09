@@ -31,10 +31,10 @@ trait BuildsBooks
     protected function buildBooks(): void
     {
         $this->buildBudgetWorld();
-        $all = ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal'];
+        $all = ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'reconcile', 'petty', 'close'];
         $this->treasurer = $this->userWithRole('treasurer', 'Church Treasurer', 'church', $this->myChurch->id, $this->perms('church', $all));
         $this->authoriser = $this->userWithRole('senior', 'Senior Pastor', 'church', $this->myChurch->id, $this->perms('church', ['read', 'authorise']));
-        $this->regionReader = $this->userWithRole('regtreasurer', 'Regional Treasurer', 'region', $this->region->id, $this->perms('region', [...$all, 'below']));
+        $this->regionReader = $this->userWithRole('regtreasurer', 'Regional Treasurer', 'region', $this->region->id, $this->perms('region', [...$all, 'below', 'reopen', 'authorise']));
         $this->otherTreasurer = $this->userWithRole('othertreasurer', 'Church Treasurer', 'church', $this->otherChurch->id, []);
         $this->chart = app(Chart::class);
         $this->chart->ensureStandard();
@@ -53,6 +53,10 @@ trait BuildsBooks
             'accounts' => ['accounting.accounts.manage'],
             'chart' => ['accounting.chart.manage'],
             'below' => ['accounting.below.read'],
+            'reconcile' => ['accounting.reconcile.do'],
+            'petty' => ['accounting.pettycash.spend'],
+            'close' => ['accounting.periods.close'],
+            'reopen' => ['accounting.periods.reopen'],
         ];
 
         return collect($abilities)->flatMap(fn ($a) => array_map(fn ($p) => "{$level}.{$p}", $map[$a]))->all();
@@ -66,6 +70,17 @@ trait BuildsBooks
     protected function cash(): AccountingAccount
     {
         return $this->chart->account('cash_at_hand');
+    }
+
+    /** Post a receipt of $amount into an account (cash at hand by default). */
+    protected function receive(float $amount, ?int $accountId = null, ?string $date = null): int
+    {
+        \Laravel\Sanctum\Sanctum::actingAs($this->treasurer);
+
+        return $this->postJson('/api/accounting/receipts', [
+            'date' => $date ?? $this->day(), 'account_id' => $accountId ?? $this->cash()->id, 'party_name' => 'Members',
+            'lines' => [['account_id' => $this->acc('4010')->id, 'amount' => $amount]],
+        ])->assertCreated()->json('data.id');
     }
 
     /** A date this year, safely in the past. */

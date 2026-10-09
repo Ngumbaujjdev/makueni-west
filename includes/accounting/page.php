@@ -4,12 +4,15 @@
 $titles = [
     'index' => 'Accounting', 'accounts' => 'Cash & bank', 'cashbook' => 'Cashbook', 'receipts' => 'Receipts',
     'payments' => 'Payment vouchers', 'journals' => 'Journals', 'documents' => 'All documents', 'chart' => 'Chart of accounts',
+    'reconciliation' => 'Reconciliation', 'reconcile' => 'Reconcile', 'close' => 'Month-end close',
 ];
 $pageTitle = $titles[$accCtx['page']];
 $pageIcon = 'ri-bank-line';
-$breadcrumbs = $accCtx['page'] === 'index'
-    ? ['Home' => $accCtx['homeUrl'], 'Accounting' => null]
-    : ['Home' => $accCtx['homeUrl'], 'Accounting' => $accCtx['baseUrl'] . '/', $pageTitle => null];
+$breadcrumbs = match ($accCtx['page']) {
+    'index' => ['Home' => $accCtx['homeUrl'], 'Accounting' => null],
+    'reconcile' => ['Home' => $accCtx['homeUrl'], 'Accounting' => $accCtx['baseUrl'] . '/', 'Reconciliation' => $accCtx['baseUrl'] . '/reconciliation.php', $pageTitle => null],
+    default => ['Home' => $accCtx['homeUrl'], 'Accounting' => $accCtx['baseUrl'] . '/', $pageTitle => null],
+};
 ?>
 <!DOCTYPE html>
 <html lang="en" dir="ltr" class="<?= appearanceHtmlClasses() ?>" data-nav-layout="vertical" <?= appearanceThemeAttributes() ?>

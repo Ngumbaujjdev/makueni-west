@@ -664,7 +664,180 @@ const AccountingWindows = (function () {
     if (window.DateField) DateField.enhance(el.querySelector("#payOn"), { quick: ["today", "yesterday"] });
   }
 
-  return { receipt, voucher, transfer, journal, account, viewJournal, viewVoucher, close };
+  // ------------------------------------------------------------ A2: count cash
+
+  const NOTES = ["1000", "500", "200", "100", "50"];
+  const COINS = ["40", "20", "10", "5", "1"];
+
+  /**
+   * Count the cash: the notes and coins add up live against the book. If it
+   * agrees, it is recorded as balanced; if not, say why - someone else approves.
+   * accounts: [{id, name, cash_kind, balance}] (cash and petty cash only).
+   */
+  function countCash({ accounts, accountId = null, onDone }) {
+    const boxes = accounts.filter((a) => a.cash_kind === "cash" || a.cash_kind === "petty_cash");
+    if (!boxes.length) return Toast.error("No cash accounts to count.");
+    const today = new Date().toISOString().slice(0, 10);
+    const grid = (list, label) => `<div class="acc-den-group"><div class="acc-den-head">${label}</div>${list.map((d) => `<label class="acc-den"><span class="acc-den-face">${Number(d).toLocaleString("en-GB")}</span><span class="acc-den-x">×</span><input type="number" min="0" step="1" inputmode="numeric" class="form-control" data-den="${d}" placeholder="0"><span class="acc-den-sum" data-sum="${d}">-</span></label>`).join("")}</div>`;
+    open({
+      title: "Count the cash",
+      subtitle: "Count every note and coin - it is checked against the book",
+      icon: "ri-calculator-line",
+      parts: [
+        { title: "Which cash?", body: cashTiles(boxes.map((a) => ({ ...a, name: a.name })), accountId || boxes[0].id, "ccBox") },
+        { title: "When", body: `<div class="row g-2 align-items-center"><div class="col-sm-6"><input type="date" class="form-control" id="ccDate" data-field="counted_on" value="${today}" max="${today}"></div><div class="col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="ccSurprise"><label class="form-check-label" for="ccSurprise">A surprise count</label></div></div></div>` },
+        { title: "Notes and coins", hint: "How many of each", body: `<div class="acc-den-grid">${grid(NOTES, "Notes")}${grid(COINS, "Coins")}</div>` },
+        { title: "If it doesn't agree", body: `<textarea class="form-control" id="ccReason" data-field="reason" rows="2" maxlength="255" placeholder="Why is it different? e.g. Change given twice on Sunday"></textarea>` },
+      ],
+      preview: `<div class="att-preview-label">Count</div><div class="att-preview-what" id="ccPvBox">-</div><div class="att-preview-total budget-fit-amount"><small>KES</small><span id="ccPvTotal">0</span></div><ul class="att-preview-list" id="ccPvList"></ul><div class="acc-cc-verdict" id="ccVerdict"></div>`,
+      saveLabel: "Record the count",
+      onReady: (el) => {
+        // The book on the day counted (not today's), fetched when the cash or the date changes.
+        const books = {};
+        let pending = null;
+        const bookOn = (id, date) => {
+          const key = `${id}:${date}`;
+          if (books[key] !== undefined) return books[key];
+          if (pending !== key) {
+            pending = key;
+            API.cashbook({ account_id: id, from: date, to: date }).then((r) => {
+              books[key] = r.ok ? r.data.closing : null;
+              upd();
+            });
+          }
+          return null;
+        };
+        const upd = () => {
+          let total = 0;
+          el.querySelectorAll("[data-den]").forEach((i) => {
+            const v = Math.max(0, parseInt(i.value || "0", 10) || 0) * Number(i.dataset.den);
+            total += v;
+            el.querySelector(`[data-sum="${i.dataset.den}"]`).textContent = v ? v.toLocaleString("en-GB") : "-";
+          });
+          const box = boxes.find((a) => String(a.id) === el.querySelector('input[name="ccBox"]:checked')?.value);
+          const fetched = box ? bookOn(box.id, el.querySelector("#ccDate").value) : null;
+          const book = fetched ?? Number(box?.balance || 0);
+          const diff = Math.round((total - book) * 100) / 100;
+          el.querySelector("#ccPvBox").textContent = box?.name || "-";
+          el.querySelector("#ccPvTotal").textContent = total.toLocaleString("en-GB");
+          el.querySelector("#ccPvList").innerHTML = `<li><span>The book says${fetched === null ? " (checking...)" : ""}</span><strong>${A.amount(book) || "0.00"}</strong></li><li><span>Counted</span><strong>${A.amount(total) || "0.00"}</strong></li>`;
+          el.querySelector("#ccVerdict").innerHTML = diff === 0 ? '<span class="badge bg-success"><i class="ri-check-line me-1"></i>Agrees with the book</span>' : `<span class="badge bg-${diff < 0 ? "danger" : "warning text-dark"}">${diff < 0 ? "Short" : "Over"} by ${A.money(Math.abs(diff))}</span><div class="acc-sub mt-1">Say why - someone else approves it.</div>`;
+          el.querySelector("#ccReason").closest(".att-entry-section").hidden = diff === 0;
+        };
+        el.querySelectorAll("[data-den]").forEach((i) => i.addEventListener("input", upd));
+        el.querySelectorAll('input[name="ccBox"]').forEach((r) => r.addEventListener("change", upd));
+        el.querySelector("#ccDate").addEventListener("change", upd);
+        dateField(el, "#ccDate", ["today", "yesterday", "lastSunday"]);
+        upd();
+      },
+      save: (el) => {
+        const denominations = {};
+        el.querySelectorAll("[data-den]").forEach((i) => {
+          const v = parseInt(i.value || "0", 10) || 0;
+          if (v > 0) denominations[i.dataset.den] = v;
+        });
+        return API.countCash({
+          account_id: Number(el.querySelector('input[name="ccBox"]:checked')?.value),
+          counted_on: val(el, "#ccDate"),
+          denominations,
+          counted_total: Object.keys(denominations).length ? undefined : 0,
+          reason: val(el, "#ccReason") || null,
+          is_surprise: el.querySelector("#ccSurprise").checked,
+        });
+      },
+      done: (res) => ({
+        title: res.data.status === "balanced" ? "It agrees with the book" : "Counted - waiting for approval",
+        facts: [["Counted", A.money(res.data.counted)], ["The book", A.money(res.data.book)], ["Difference", res.data.difference ? A.money(res.data.difference, { sign: true }) : "None"]],
+        wire: () => onDone?.(res.data),
+      }),
+    });
+  }
+
+  // ------------------------------------------------------------ A2: petty cash
+
+  async function pettySpend({ onDone } = {}) {
+    const o = await A.options();
+    if (!o) return;
+    const st = await API.petty();
+    if (!st.ok) return Toast.error(st.message);
+    open({
+      title: "Spend from petty cash",
+      subtitle: `A petty cash voucher - ${A.money(st.data.balance)} in the box`,
+      icon: "ri-wallet-3-line",
+      parts: [
+        { title: "Paid to", body: `<div class="row g-2"><div class="col-sm-7"><input type="text" class="form-control" id="pcPayee" data-field="payee" maxlength="150" placeholder="Who was paid? e.g. Mama Duka"></div><div class="col-sm-5"><input type="date" class="form-control" id="pcDate" data-field="date" value="${o.today}" max="${o.today}"></div><div class="col-12"><input type="text" class="form-control" id="pcNote" maxlength="255" placeholder="What for? (optional)"></div></div>` },
+        { title: "What was bought", body: linesBlock("petty") },
+        { title: "Receipt", body: filePick("Attach the receipt (photo or PDF)") },
+      ],
+      preview: `<div class="att-preview-label">Petty cash voucher</div><div class="att-preview-what" id="pcPvTo">-</div><div class="att-preview-total budget-fit-amount"><small>KES</small><span id="pcPvTotal">0.00</span></div><ul class="att-preview-list" id="pcPvList"></ul><div class="att-preview-compare" id="pcPvLeft"></div>`,
+      saveLabel: "Write voucher",
+      onReady: (el) => {
+        const upd = () => {
+          const lines = readLines(el).filter((l) => l.amount > 0);
+          const total = lines.reduce((t, l) => t + l.amount, 0);
+          el.querySelector("#pcPvTo").textContent = val(el, "#pcPayee") || "To whom?";
+          el.querySelector("#pcPvTotal").textContent = A.amount(total) || "0.00";
+          el.querySelector("#pcPvList").innerHTML = lines.map((l) => `<li><span>${esc(l.name || "Pick what for")}</span><strong>${A.amount(l.amount)}</strong></li>`).join("");
+          const left = st.data.balance - total;
+          el.querySelector("#pcPvLeft").innerHTML = left < 0 ? `<span class="text-danger fw-semibold">Only ${A.money(st.data.balance)} in the box</span>` : `Leaves <strong>${A.money(left)}</strong> in the box`;
+        };
+        wireLines(el, o, o.expense, [{ account_id: o.expense.find((a) => a.code === "5500")?.id }], upd);
+        el.querySelector("#pcPayee").addEventListener("input", upd);
+        dateField(el, "#pcDate", ["today", "yesterday"]);
+        wireFiles(el);
+        upd();
+      },
+      save: async (el) => {
+        const res = await API.pettySpend({ date: val(el, "#pcDate"), payee: val(el, "#pcPayee"), narration: val(el, "#pcNote") || null, lines: readLines(el).filter((l) => l.account_id || l.amount).map(({ name, ...l }) => l) });
+        if (res.ok) await sendFiles(el, (f) => API.addJournalFile(res.data.id, f));
+        return res;
+      },
+      done: (res) => ({ title: `Voucher ${res.data.number}`, facts: [["Paid to", esc(res.data.party_name)], ["Amount", A.money(res.data.amount)]], wire: () => onDone?.(res.data) }),
+    });
+  }
+
+  async function setFloat({ onDone } = {}) {
+    const st = await API.petty();
+    if (!st.ok) return Toast.error(st.message);
+    const d = st.data;
+    const el = PeopleKit.confirmWindow({
+      title: "Petty cash float",
+      subtitle: "A fixed amount kept for small spends, topped back up for exactly what was spent",
+      icon: "ri-wallet-3-line",
+      go: '<i class="ri-check-line me-1"></i>Save',
+      body: PeopleKit.parts([
+        { icon: "ri-money-dollar-circle-line", title: "The float", body: `<div class="input-group"><span class="input-group-text">KES</span><input type="text" inputmode="decimal" class="form-control text-end fw-semibold" id="pfFloat" value="${d.float ?? 5000}"></div>` },
+        { icon: "ri-user-line", title: "Kept by", body: `<select class="form-select" id="pfWho"><option value="">Nobody named</option>${d.people.map((p) => `<option value="${p.id}"${d.custodian?.id === p.id ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</select>` },
+      ]),
+      run: async () => {
+        const res = await API.setFloat({ imprest_float: n(document.getElementById("pfFloat").value), custodian_id: Number(document.getElementById("pfWho").value) || null });
+        if (res.ok) setTimeout(() => onDone?.(res.data), 300);
+        return res;
+      },
+    });
+    UI.enhanceSelect(el.querySelector("#pfWho"));
+  }
+
+  async function topUp({ onDone } = {}) {
+    const [st, o] = await Promise.all([API.petty(), A.options()]);
+    if (!st.ok) return Toast.error(st.message);
+    const d = st.data;
+    const from = o.cash.filter((a) => a.cash_kind !== "petty_cash");
+    PeopleKit.confirmWindow({
+      title: "Top up petty cash",
+      subtitle: `Back to its float of ${A.money(d.float)}: ${A.money(d.top_up)} for ${d.vouchers_since} vouchers`,
+      icon: "ri-refresh-line",
+      go: '<i class="ri-check-line me-1"></i>Prepare the voucher',
+      body: PeopleKit.parts([{ icon: "ri-bank-line", title: "Pay it from", hint: "A payment voucher is prepared - it is authorised and paid like any other", body: cashTiles(from, from.find((a) => a.cash_kind === "bank")?.id || from[0]?.id, "tuFrom") }]),
+      run: async () => {
+        const res = await API.topUp(Number(document.querySelector('input[name="tuFrom"]:checked')?.value));
+        if (res.ok) setTimeout(() => onDone?.(res.data), 300);
+        return res;
+      },
+    });
+  }
+
+  return { receipt, voucher, transfer, journal, account, viewJournal, viewVoucher, close, countCash, pettySpend, setFloat, topUp, reasonWindow, cashTiles };
 })();
 
 window.AccountingWindows = AccountingWindows;

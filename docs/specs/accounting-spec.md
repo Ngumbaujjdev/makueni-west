@@ -303,12 +303,33 @@ own place to write, the places below to read).
 - `php artisan accounting:backfill-budget-entries` posts budget entries recorded before Accounting -
   run it once on each database (it is safe to run again).
 
+## A2 - Reconciliation (built 2026-10-09)
+
+Proving the books right, the same for every level.
+
+### Data
+- `cash_counts`: place, account (cash or petty cash), `counted_on`, `denominations` (1000/500/200/100/50 notes; 40/20/10/5/1 coins), `counted_total`, `book_balance` on that date, `difference`, `reason`, `is_surprise`, `status` balanced | waiting | approved | rejected, `counted_by`, `approved_by/at`, `reject_reason`, `journal_id` (the adjustment).
+- `bank_reconciliations`: place, account (bank or M-Pesa), `statement_date`, `statement_balance`, `book_balance`, `in_transit`, `unpresented`, `difference`, `status` draft | submitted | approved | returned, `prepared_by/at`, `approved_by/at`, `return_reason`, `notes`.
+- `bank_statement_lines`: an imported statement's lines - date, description, reference, money in/out, balance, `matched_line_id`, `status` unmatched | matched | added | ignored.
+- `journal_lines.cleared_on` + `reconciliation_id`: a book line on the statement.
+- `accounting_place_accounts`: a place's settings for one money account - `imprest_float`, `custodian_id`, `statement_mapping` (the CSV columns, remembered). Separate from the account because standard accounts like Petty cash are shared by every place.
+- `journals.doc_type` gains `petty_cash` (numbered `PCV`); `payment_vouchers.purpose` payment | imprest_topup (a top-up posts as a transfer).
+
+### Rules
+- **Cash count**: equal to the book (on its date) -> balanced, nothing posted. Different -> a reason is required and it waits; someone other than the counter (authorise ability) approves it, which posts the difference (short: Dr 5950 / Cr cash; over: Dr cash / Cr 5950), or sends it back to count again. One waiting count per account.
+- **Reconciliation**: `statement + in transit (uncleared book debits up to the date) - unpresented (uncleared book credits) - book balance = difference`. Ticking a book line clears it; an imported statement auto-matches one to one (same amount and direction within 7 days, a matching reference first); a statement line the books lack is added to the books (receipt or payment, already matched); lines can be matched by hand, unmatched or left out. Submit only at a zero difference; someone other than the preparer signs off (refused if the books changed since) or sends it back. A date already signed off can't be reconciled again; uncleared lines over 30 days are flagged.
+- **Petty cash**: a fixed float and custodian; petty cash vouchers never spend more than is in the box; Top up prepares a payment voucher for exactly float - balance (one waiting at a time), authorised and paid as usual.
+- **Month-end close**: a month closes when every money account that moved or held money in it has a balanced/approved count (cash) or a signed-off reconciliation dated in it (bank, M-Pesa), nothing waits, the month has ended and the months before it (from the first posting) are closed. Warnings: authorised vouchers unpaid, petty cash below its float. Reopen: the level above (`accounting.periods.reopen`), or the diocese its own, with a reason; the latest closed month first.
+- **Board**: every region and church below, each money account's balance, last check and months behind, waiting items, last closed month; state ok | due | late | none.
+
+### API (all under `/api/accounting`)
+`GET reconciliation` · `GET reconciliation-board` · `POST cash-counts` · `POST cash-counts/{id}/approve|reject` · `POST reconciliations` · `GET|PUT|DELETE reconciliations/{id}` · `POST reconciliations/{id}/tick|statement|submit|approve|return` · `POST reconciliations/{id}/statement/{line}/match|unmatch|ignore|add` · `GET|PUT petty-cash` · `POST petty-cash/spend|top-up` · `GET periods?year=` · `POST periods/close|reopen`.
+
+### Permissions
+`accounting.reconcile.do` (treasurers, finance officers), `accounting.pettycash.spend` (treasurers, church administrator and secretary), `accounting.periods.close` (treasurers, finance officers), `accounting.periods.reopen` (regional treasurer and overseer, diocese finance officer and treasurer). Approving a difference and signing off use `accounting.payments.authorise`. New pages: Reconciliation and Month-end close (every level); Reconcile opens from Reconciliation.
+
 ## Later phases (outline - specified when built)
-- **A2 Reconciliation:** cash counts (by notes and coins; a difference needs a
-  second person and posts to 5950); bank and M-Pesa reconciliation (statement
-  import, auto-match, the standard reconciliation statement, sign-off); petty
-  cash imprest; month-end close with a checklist; the trial balance page; the
-  reconciliation board for the region and diocese.
+- **A2 Reconciliation:** built 2026-10-09, see "A2 - Reconciliation" above.
 - **A3 Sunday collections:** two counters, then receipts per fund; banking with
   a photo of the deposit slip.
 - **A4 Approvals engine + requisitions:** the erp-server approval engine ported

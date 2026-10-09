@@ -34,6 +34,7 @@ final class PaymentVouchers
                 'payee_phone' => $data['payee_phone'] ?? null,
                 'pay_from_account_id' => $from->id,
                 'narration' => trim($data['narration']),
+                'purpose' => ($data['purpose'] ?? 'payment') === 'imprest_topup' ? 'imprest_topup' : 'payment',
                 'amount' => $total,
                 'status' => 'prepared',
                 'prepared_by' => $user->id,
@@ -50,7 +51,7 @@ final class PaymentVouchers
     {
         $this->assertStatus($pv, ['prepared', 'rejected'], 'Only a voucher still waiting, or sent back, can be changed.');
         $place = Territory::findOrFail($pv->territory_id);
-        [$from, $lines, $total] = $this->check($place, $data);
+        [$from, $lines, $total] = $this->check($place, $data + ['purpose' => $pv->purpose]);
 
         return DB::transaction(function () use ($pv, $user, $data, $from, $lines, $total) {
             $pv->update([
@@ -114,7 +115,8 @@ final class PaymentVouchers
             ])->all();
             $lines[] = ['account_id' => $from->id, 'credit' => $pv->amount];
             $journal = $this->ledger->post($place, [
-                'doc_type' => 'payment',
+                // A float top-up moves money between our own accounts - a transfer, not spending.
+                'doc_type' => $pv->purpose === 'imprest_topup' ? 'transfer' : 'payment',
                 'date' => $data['paid_on'],
                 'narration' => "{$pv->number}: {$pv->narration}",
                 'party_name' => $pv->payee_name,
@@ -165,7 +167,8 @@ final class PaymentVouchers
         $total = 0;
         foreach ($data['lines'] ?? [] as $i => $l) {
             $account = $this->docs->postable($place, (int) $l['account_id'], "lines.{$i}.account_id");
-            if ($account->isCash()) {
+            $topUp = ($data['purpose'] ?? 'payment') === 'imprest_topup' && $account->cash_kind === 'petty_cash' && $account->id !== $from->id;
+            if ($account->isCash() && ! $topUp) {
                 throw ValidationException::withMessages(["lines.{$i}.account_id" => ['Moving money between your own accounts is a transfer, not a payment.']]);
             }
             $amount = $this->docs->amount($l['amount'], "lines.{$i}.amount");

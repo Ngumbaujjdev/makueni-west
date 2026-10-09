@@ -657,6 +657,31 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('payment-vouchers/{id}/attachments', [$pvs, 'addAttachment'])->whereNumber('id')->middleware('throttle:30,1');
         Route::get('payment-vouchers/{id}/attachments/{media}', [$pvs, 'showAttachment'])->whereNumber(['id', 'media']);
         Route::delete('payment-vouchers/{id}/attachments/{media}', [$pvs, 'removeAttachment'])->whereNumber(['id', 'media']);
+        // A2 - proving the books right: counts, reconciliations, petty cash, the board, month-end close.
+        $rec = \App\Http\Controllers\Api\Accounting\ReconciliationController::class;
+        $per = \App\Http\Controllers\Api\Accounting\PeriodController::class;
+        Route::get('reconciliation', [$rec, 'index']);
+        Route::get('reconciliation-board', [$rec, 'board']);
+        Route::post('cash-counts', [$rec, 'count']);
+        Route::post('cash-counts/{id}/approve', [$rec, 'approveCount'])->whereNumber('id');
+        Route::post('cash-counts/{id}/reject', [$rec, 'rejectCount'])->whereNumber('id');
+        Route::post('reconciliations', [$rec, 'start']);
+        Route::get('reconciliations/{id}', [$rec, 'show'])->whereNumber('id');
+        Route::put('reconciliations/{id}', [$rec, 'update'])->whereNumber('id');
+        Route::delete('reconciliations/{id}', [$rec, 'discard'])->whereNumber('id');
+        Route::post('reconciliations/{id}/tick', [$rec, 'tick'])->whereNumber('id');
+        Route::post('reconciliations/{id}/statement', [$rec, 'import'])->whereNumber('id');
+        Route::post('reconciliations/{id}/statement/{line}/{action}', [$rec, 'statementLine'])->whereNumber(['id', 'line'])->whereIn('action', ['match', 'unmatch', 'ignore', 'add']);
+        Route::post('reconciliations/{id}/submit', [$rec, 'submit'])->whereNumber('id');
+        Route::post('reconciliations/{id}/approve', [$rec, 'approve'])->whereNumber('id');
+        Route::post('reconciliations/{id}/return', [$rec, 'sendBack'])->whereNumber('id');
+        Route::get('petty-cash', [$rec, 'petty']);
+        Route::put('petty-cash', [$rec, 'setFloat']);
+        Route::post('petty-cash/spend', [$rec, 'spend']);
+        Route::post('petty-cash/top-up', [$rec, 'topUp']);
+        Route::get('periods', [$per, 'index']);
+        Route::post('periods/close', [$per, 'close']);
+        Route::post('periods/reopen', [$per, 'reopen']);
     });
 
     // Demographics (Church-level entry - Phase 3 of the Demographics module plan)

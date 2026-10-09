@@ -24,10 +24,14 @@ final class AccountingAccess
         'accounts' => 'accounting.accounts.manage',
         'chart' => 'accounting.chart.manage',
         'below' => 'accounting.below.read',
+        'reconcile' => 'accounting.reconcile.do',
+        'petty' => 'accounting.pettycash.spend',
+        'close' => 'accounting.periods.close',
+        'reopen' => 'accounting.periods.reopen',
     ];
 
     /** Abilities that let someone open the books (they can see what they write). */
-    private const READS = ['read', 'receipt', 'prepare', 'authorise', 'pay', 'journal', 'accounts', 'chart'];
+    private const READS = ['read', 'receipt', 'prepare', 'authorise', 'pay', 'journal', 'accounts', 'chart', 'reconcile', 'petty', 'close', 'reopen'];
 
     /**
      * The place a request is for: the acting place, or one below it that the
@@ -79,6 +83,28 @@ final class AccountingAccess
         return PlaceAccess::isOwn($user, $place) && self::canAt($user, $place, $ability);
     }
 
+    /**
+     * May the user reopen a closed month of this place? The one write into a
+     * place below: the level above reopens a church's or region's month, the
+     * diocese its own (there is nobody above it).
+     */
+    public static function canReopen(?User $user, Territory $place): bool
+    {
+        if (! $user) {
+            return false;
+        }
+        if ($user->hasGlobalAccess()) {
+            return true;
+        }
+        $acting = PlaceAccess::acting($user);
+        if (! $acting || ! self::canAt($user, $acting, 'reopen')) {
+            return false;
+        }
+
+        return PlaceAccess::isBelow($user, $place)
+            || (PlaceAccess::isOwn($user, $place) && $place->territory_type->value === 'diocese');
+    }
+
     /** Everything the user may do here, for the page to offer. */
     public static function abilities(?User $user, Territory $place): array
     {
@@ -87,6 +113,7 @@ final class AccountingAccess
             $out[$ability] = $ability === 'below' ? self::belowAnywhere($user) : self::can($user, $place, $ability);
         }
         $out['read'] = self::canRead($user, $place);
+        $out['reopen'] = self::canReopen($user, $place);
         $out['own'] = (bool) $user && ($user->hasGlobalAccess() || PlaceAccess::isOwn($user, $place));
 
         return $out;

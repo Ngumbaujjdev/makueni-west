@@ -39463,3 +39463,64 @@ a.mi-prof-about-value:hover { color: var(--primary-color); }
   .main-content.app-content { margin: 0 !important; padding: 0 !important; }
   #cbCard { border: 0; box-shadow: none; }
 }
+
+/* ACCOUNTING A2 (2026-10-09) - counting cash, reconciling, petty cash, month-end close */
+.acc-den-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; }
+.acc-den-group { display: flex; flex-direction: column; gap: .35rem; }
+.acc-den-head { font-size: .7rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--default-text-color); }
+.acc-den { display: grid; grid-template-columns: 4.2rem 1rem minmax(0, 1fr) 5.5rem; align-items: center; gap: .4rem; margin: 0; }
+.acc-den-face { padding: .35rem .5rem; border-radius: .5rem; background: rgba(var(--success-rgb), .1); font-weight: 700; text-align: center; color: var(--v2-heading); }
+.acc-den-x { color: var(--default-text-color); text-align: center; }
+.acc-den-sum { font-weight: 600; text-align: right; color: var(--v2-heading); }
+.acc-cc-verdict { margin-top: .75rem; }
+.acc-float { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .25rem .75rem; padding: .45rem .6rem; border-radius: .6rem; background: rgba(var(--warning-rgb), .1); font-size: .78rem; color: var(--v2-heading); }
+.acc-wait { display: flex; flex-direction: column; }
+.acc-wait-row { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; padding: .75rem 1.25rem; border-bottom: 1px solid var(--default-border); }
+.acc-wait-row:last-child { border-bottom: 0; }
+
+/* Reconcile */
+.acc-rechead { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem; }
+.acc-rechead-fields { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .6rem; }
+.acc-rechead-fields > div { min-width: 11rem; }
+.acc-rechead-fields .form-label { margin-bottom: .25rem; font-size: .74rem; font-weight: 600; }
+.acc-recstrip { position: sticky; top: 4.5rem; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; margin-bottom: 1.5rem; padding: .85rem 1.1rem; border: 1px solid var(--default-border); border-radius: .8rem; background: #fff; box-shadow: 0 6px 16px rgba(13, 13, 13, .06); }
+.acc-recstrip > div { display: flex; flex-direction: column; }
+.acc-recstrip span { font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--default-text-color); }
+.acc-recstrip strong { font-size: 1rem; color: var(--v2-heading); }
+.acc-recstrip > i { font-size: 1.1rem; color: var(--default-text-color); }
+.acc-recstrip-diff { margin-left: auto; padding: .35rem .75rem; border-radius: .6rem; background: rgb(var(--danger-rgb)); }
+.acc-recstrip-diff span, .acc-recstrip-diff strong { color: #fff; }
+.acc-recstrip.is-ok .acc-recstrip-diff { background: rgb(var(--success-rgb)); }
+.acc-book-wrap { max-height: 34rem; overflow-y: auto; }
+.acc-book tr.is-cleared td { background: rgba(var(--success-rgb), .05); }
+.acc-stmt { display: flex; flex-direction: column; gap: .4rem; max-height: 34rem; overflow-y: auto; }
+.acc-stmt-row { display: flex; flex-direction: column; gap: .35rem; padding: .55rem .65rem; border: 1px solid var(--default-border); border-radius: .65rem; }
+.acc-stmt-row.is-unmatched { border-color: rgba(var(--warning-rgb), .7); }
+.acc-stmt-row.is-ignored { opacity: .6; }
+.acc-stmt-acts { display: flex; flex-wrap: wrap; gap: .3rem; }
+.acc-recfoot { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: 1.5rem; }
+.acc-pick { display: flex; flex-direction: column; gap: .4rem; }
+.acc-pick-row { display: flex; align-items: flex-start; gap: .55rem; padding: .5rem .6rem; border: 1px solid var(--default-border); border-radius: .6rem; cursor: pointer; }
+.acc-pick-row span { display: flex; flex-direction: column; }
+.acc-pick-row small { color: var(--default-text-color); }
+.acc-im-map .form-label { margin-bottom: .2rem; font-size: .74rem; font-weight: 600; }
+
+/* Month-end close */
+.acc-checks { display: flex; flex-wrap: wrap; gap: .5rem; }
+.acc-check { display: flex; align-items: center; gap: .5rem; padding: .45rem .6rem; border: 1px solid rgba(var(--danger-rgb), .45); border-radius: .65rem; }
+.acc-check > span:nth-child(2) { display: flex; flex-direction: column; }
+.acc-check small { font-size: .72rem; color: var(--default-text-color); }
+.acc-check > i { font-size: 1.1rem; color: rgb(var(--danger-rgb)); }
+.acc-check.is-ok { border-color: rgba(var(--success-rgb), .45); }
+.acc-check.is-ok > i { color: rgb(var(--success-rgb)); }
+.acc-blockers, .acc-warnings { margin: .75rem 0 0; padding: 0; list-style: none; font-size: .84rem; }
+.acc-blockers li, .acc-warnings li { display: flex; gap: .4rem; padding: .2rem 0; color: var(--v2-heading); }
+.acc-blockers i { color: rgb(var(--danger-rgb)); }
+.acc-warnings i { color: rgb(var(--warning-rgb)); }
+
+@media (max-width: 767.98px) {
+  .acc-recstrip { position: static; }
+  .acc-recstrip > i { display: none; }
+  .acc-recstrip-diff { margin-left: 0; }
+  .acc-den { grid-template-columns: 3.6rem .8rem minmax(0, 1fr) 4.5rem; }
+}

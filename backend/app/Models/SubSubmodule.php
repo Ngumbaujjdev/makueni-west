@@ -16,7 +16,7 @@ class SubSubmodule extends Model implements Auditable
         'title',
         'path',
         'is_active',
-        'description'
+        'description',
     ];
 
     protected $casts = [
@@ -137,8 +137,8 @@ class SubSubmodule extends Model implements Auditable
         return $this->audits()
             ->where(function ($query) {
                 $query->where('event', 'like', 'sub_submodule_%')
-                      ->orWhereJsonContains('new_values->is_active', true)
-                      ->orWhereJsonContains('new_values->is_active', false);
+                    ->orWhereJsonContains('new_values->is_active', true)
+                    ->orWhereJsonContains('new_values->is_active', false);
             })
             ->with('user:id,firstname,lastname,username')
             ->latest()
@@ -169,15 +169,15 @@ class SubSubmodule extends Model implements Auditable
             ->latest()
             ->first();
 
-        if (!$lastAudit) {
+        if (! $lastAudit) {
             return null;
         }
 
-        if (!$lastAudit->user) {
+        if (! $lastAudit->user) {
             return 'System';
         }
 
-        return $lastAudit->user->full_name . ' on ' . $lastAudit->created_at->format('Y-m-d H:i:s');
+        return $lastAudit->user->full_name.' on '.$lastAudit->created_at->format('Y-m-d H:i:s');
     }
 
     /*

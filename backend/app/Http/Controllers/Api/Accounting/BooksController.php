@@ -241,7 +241,7 @@ class BooksController extends AccountingBase
             return $place;
         }
         $data = $request->validate([
-            'type' => ['nullable', 'in:receipt,payment,transfer,journal,reversal'],
+            'type' => ['nullable', 'in:receipt,payment,transfer,journal,reversal,petty_cash'],
             'from' => ['nullable', 'date'], 'to' => ['nullable', 'date'], 'q' => ['nullable', 'string', 'max:100'], 'account_id' => ['nullable', 'integer'],
         ]);
         $to = $data['to'] ?? now()->toDateString();
@@ -458,13 +458,14 @@ class BooksController extends AccountingBase
     /** Whoever keeps the books reverses anything; a treasurer their receipts and transfers. */
     private function mayReverse(Request $request, Journal $journal, Territory $place): bool
     {
-        if ($journal->status !== 'posted' || $journal->doc_type === 'reversal' || in_array($journal->source_type, ['budget_entry', 'payment_voucher'], true)) {
+        if ($journal->status !== 'posted' || $journal->doc_type === 'reversal' || in_array($journal->source_type, ['budget_entry', 'payment_voucher', 'cash_count'], true)) {
             return false;
         }
         $u = $request->user();
 
         return AccountingAccess::can($u, $place, 'journal')
-            || (in_array($journal->doc_type, ['receipt', 'transfer'], true) && AccountingAccess::can($u, $place, 'receipt'));
+            || (in_array($journal->doc_type, ['receipt', 'transfer'], true) && AccountingAccess::can($u, $place, 'receipt'))
+            || ($journal->doc_type === 'petty_cash' && AccountingAccess::can($u, $place, 'petty'));
     }
 
     private function mayWrite(Request $request, Territory $place): bool
