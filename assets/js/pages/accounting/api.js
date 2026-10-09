@@ -1,0 +1,108 @@
+/**
+ * ============================================================================
+ * ACCOUNTING - API (docs/specs/accounting-spec.md)
+ * ============================================================================
+ * The same shape as FacilitiesAPI: it sends the acting role
+ * (X-Assignment-Id), and the place below when the page was opened for one
+ * (?territory_id=); every call resolves to { ok, status, message, errors,
+ * data, raw }.
+ * ============================================================================
+ */
+const AccountingAPI = (function () {
+  "use strict";
+
+  const BASE = AppConfig.API_BASE_URL;
+  const territoryId = () => new URLSearchParams(window.location.search).get("territory_id");
+  const TIMEOUT_MS = 20000;
+
+  function headers(json = true) {
+    const h = { Accept: "application/json", Authorization: `Bearer ${localStorage.getItem(Constants.STORAGE_KEYS.AUTH_TOKEN)}` };
+    if (json) h["Content-Type"] = "application/json";
+    try {
+      const role = JSON.parse(localStorage.getItem(Constants.STORAGE_KEYS.CURRENT_ROLE) || "null");
+      if (role?.assignment_id) h["X-Assignment-Id"] = String(role.assignment_id);
+    } catch (e) {
+      /* no role cached - the API uses the primary one */
+    }
+    return h;
+  }
+
+  function url(path, params = null) {
+    const q = new URLSearchParams();
+    Object.entries(params || {}).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== "") q.set(k, v);
+    });
+    if (territoryId() && !q.has("territory_id")) q.set("territory_id", territoryId());
+    const qs = q.toString();
+    return `${BASE}${path}${qs ? `?${qs}` : ""}`;
+  }
+
+  async function request(method, path, { params, body, form } = {}) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+    try {
+      const res = await fetch(url(path, params), { method, headers: headers(!form), body: form || (body === undefined ? undefined : JSON.stringify(body)), signal: ctrl.signal });
+      const json = await res.json().catch(() => null);
+      if (json === null) return { ok: false, status: res.status, message: "The server sent an unexpected reply. Please try again.", errors: null, data: null, raw: null };
+      const ok = res.ok && json.success !== false;
+      const firstError = json.errors ? Object.values(json.errors).flat()[0] : null;
+      return { ok, status: res.status, message: ok ? json.message : firstError || json.message || "Something went wrong. Please try again.", errors: json.errors || null, data: json.data, raw: json };
+    } catch (e) {
+      const message = e.name === "AbortError" ? "The server took too long to answer. Please try again." : "Can't reach the server. Check your connection and try again.";
+      return { ok: false, status: 0, message, errors: null, data: null, raw: null };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function upload(path, file) {
+    const form = new FormData();
+    form.append("file", file);
+    return request("POST", path, { form });
+  }
+
+  /** A private file through the API, as a blob URL for a new tab. */
+  async function fileUrl(path) {
+    const h = headers(false);
+    h.Accept = "*/*";
+    try {
+      const res = await fetch(url(path), { headers: h });
+      return res.ok ? URL.createObjectURL(await res.blob()) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  return {
+    overview: () => request("GET", "/accounting/overview"),
+    places: () => request("GET", "/accounting/places", { params: { territory_id: "" } }),
+    options: () => request("GET", "/accounting/options"),
+    accounts: () => request("GET", "/accounting/accounts"),
+    saveAccount: (id, body) => request(id ? "PUT" : "POST", id ? `/accounting/accounts/${id}` : "/accounting/accounts", { body }),
+    saveChart: (id, body) => request(id ? "PUT" : "POST", id ? `/accounting/chart/${id}` : "/accounting/chart", { body }),
+    cashbook: (params) => request("GET", "/accounting/cashbook", { params }),
+    trialBalance: (date) => request("GET", "/accounting/trial-balance", { params: { date } }),
+    journals: (params) => request("GET", "/accounting/journals", { params }),
+    journal: (id) => request("GET", `/accounting/journals/${id}`),
+    reverse: (id, body) => request("POST", `/accounting/journals/${id}/reverse`, { body }),
+    receipt: (body) => request("POST", "/accounting/receipts", { body }),
+    transfer: (body) => request("POST", "/accounting/transfers", { body }),
+    journalVoucher: (body) => request("POST", "/accounting/journal-vouchers", { body }),
+    addJournalFile: (id, file) => upload(`/accounting/journals/${id}/attachments`, file),
+    removeJournalFile: (id, media) => request("DELETE", `/accounting/journals/${id}/attachments/${media}`),
+    journalFileUrl: (id, media) => fileUrl(`/accounting/journals/${id}/attachments/${media}`),
+    vouchers: (status) => request("GET", "/accounting/payment-vouchers", { params: { status } }),
+    voucher: (id) => request("GET", `/accounting/payment-vouchers/${id}`),
+    saveVoucher: (id, body) => request(id ? "PUT" : "POST", id ? `/accounting/payment-vouchers/${id}` : "/accounting/payment-vouchers", { body }),
+    authorise: (id, note) => request("POST", `/accounting/payment-vouchers/${id}/authorise`, { body: { note } }),
+    reject: (id, reason) => request("POST", `/accounting/payment-vouchers/${id}/reject`, { body: { reason } }),
+    pay: (id, body) => request("POST", `/accounting/payment-vouchers/${id}/pay`, { body }),
+    reversePayment: (id, reason) => request("POST", `/accounting/payment-vouchers/${id}/reverse`, { body: { reason } }),
+    cancelVoucher: (id) => request("POST", `/accounting/payment-vouchers/${id}/cancel`),
+    addVoucherFile: (id, file) => upload(`/accounting/payment-vouchers/${id}/attachments`, file),
+    removeVoucherFile: (id, media) => request("DELETE", `/accounting/payment-vouchers/${id}/attachments/${media}`),
+    voucherFileUrl: (id, media) => fileUrl(`/accounting/payment-vouchers/${id}/attachments/${media}`),
+  };
+})();
+
+window.AccountingAPI = AccountingAPI;
