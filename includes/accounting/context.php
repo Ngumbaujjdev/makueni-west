@@ -27,6 +27,9 @@ function accountingPageContext(string $level, string $page): array
         'reconciliation', 'reconcile' => 'reconciliation.read',
         'close' => 'periods.read',
         'collections' => 'collections.read',
+        'approvals' => 'approvals.read',
+        'requisitions' => 'requisitions.create',
+        'approval-rules' => 'approvalrules.manage',
     ][$page] ?? 'books.read'));
     $role = getCurrentRole() ?? [];
     $user = getAuthUser() ?? [];
@@ -57,6 +60,8 @@ function accountingPageContext(string $level, string $page): array
             'collect' => $level === 'church' && $can('collections.record'),
             'confirm' => $level === 'church' && $can('collections.confirm'),
             'books' => $can('books.read'),
+            'request' => $can('requisitions.create'),
+            'rules' => $level === 'diocese' && $can('approvalrules.manage'),
         ],
     ];
 }

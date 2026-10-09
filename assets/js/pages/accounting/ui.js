@@ -148,7 +148,38 @@ const AccountingUI = (function () {
     return `${CTX.baseUrl}/${page}${p.toString() ? `?${p}` : ""}`;
   };
 
-  return { esc, textOn, money, short, amount, day, num, KINDS, kind, tile, DOCS, doc, docPill, docTile, VOUCHER, voucherPill, methodChip, reversedChip, viewingBelow, placeLine, placePicker, ownOnly, options, empty, errorBox, link };
+  /**
+   * An approval's stages as a timeline: each stage, who was asked, what they
+   * decided and said - for the Approvals, Requisitions and voucher windows.
+   */
+  function approvalTimeline(ap) {
+    if (!ap) return "";
+    const P = {
+      approved: ["success", "ri-check-line", "Approved"],
+      rejected: ["danger", "ri-close-line", "Rejected"],
+      returned: ["danger", "ri-arrow-go-back-line", "Sent back"],
+      pending: ["warning", "ri-time-line", "Waiting"],
+      skipped: ["secondary", "ri-subtract-line", "Not needed"],
+      superseded: ["secondary", "ri-arrow-up-line", "Passed up"],
+    };
+    const S = { pending: "Not yet", active: "Now", approved: "Approved", rejected: "Stopped here", skipped: "Not needed", blocked: "Stuck - nobody holds the role" };
+    const stages = (ap.stages || [])
+      .map((st, i) => {
+        const people = st.people.length
+          ? st.people
+              .map((p) => {
+                const [c, icon, label] = P[p.status] || P.pending;
+                return `<div class="acc-tl-person"><span class="avatar avatar-xs avatar-rounded bg-${c} ${textOn(c)}"><i class="${icon}"></i></span><div class="min-w-0"><div><strong>${esc(p.name || "")}</strong>${p.for ? ` <small>for ${esc(p.for)}</small>` : ""}${p.escalated ? ' <span class="soft-chip soft-purple">passed up</span>' : ""}</div><small>${esc(label)}${p.decided_at ? ` · ${day(p.decided_at, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}${p.due_at ? ` · due ${day(p.due_at, { day: "numeric", month: "short" })}` : ""}</small>${p.comment ? `<div class="acc-tl-comment">"${esc(p.comment)}"</div>` : ""}</div></div>`;
+              })
+              .join("")
+          : `<small class="acc-sub">${st.blocked_reason ? esc(st.blocked_reason) : "Not reached yet"}</small>`;
+        return `<li class="acc-tl-stage is-${st.status}"><span class="acc-tl-dot">${i + 1}</span><div class="flex-fill min-w-0"><div class="d-flex justify-content-between gap-2"><strong>${esc(st.name)}</strong><span class="acc-sub">${esc(S[st.status] || st.status)}${st.type === "all" ? " · everyone" : ""}</span></div>${people}</div></li>`;
+      })
+      .join("");
+    return `<ol class="acc-tl">${stages}</ol>`;
+  }
+
+  return { approvalTimeline, esc, textOn, money, short, amount, day, num, KINDS, kind, tile, DOCS, doc, docPill, docTile, VOUCHER, voucherPill, methodChip, reversedChip, viewingBelow, placeLine, placePicker, ownOnly, options, empty, errorBox, link };
 })();
 
 window.AccountingUI = AccountingUI;

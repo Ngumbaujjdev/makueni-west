@@ -350,13 +350,40 @@ Churches only (the page and permissions exist at church level).
 ### Permissions
 `church.accounting.collections.record` (Church Treasurer, Church Administrator, Church Secretary, Usher Coordinator, Deacon, Elder), `church.accounting.collections.confirm` (Church Treasurer, Senior Pastor, Associate Pastor, Elder), `church.accounting.collections.read` (with either, and with reading the books). Banking needs `receipts.create`; reversing needs `journals.post`.
 
+## A4 - Approvals and requisitions (built 2026-10-09)
+
+One approval engine (`app/Approval/`) for every level and every kind of document; requisitions and payment vouchers are its first two subjects. Ported from erp-server, trimmed to churches, with its known bugs fixed.
+
+### Data
+- Definitions: `approval_workflows` (`subject_type` requisition | payment_voucher | `*`, `level` church | region | diocese or null for all, `applies_when` conditions e.g. amount bands, `match_priority`, `version`, active) → `approval_stages` (`sequence`, `type` single | all | quorum, `quorum`, `on_reject` terminate | return_previous | continue, `on_empty` block | skip | escalate, `sla_hours`, `escalate_after_hours`, `escalate_to`) → `approval_steps` (`resolver_type` role_here | role_above | permission_here | user, `resolver_config`).
+- Runtime: `approval_requests` (subject morph, place, requester, context, status pending | approved | rejected | returned | cancelled, the workflow's name) → `approval_request_stages` (a frozen `rule_snapshot`, so editing a rule never changes a request already running; status incl. blocked with a reason) → `approval_assignments` (due, reminded, escalated, superseded, delegated_from, escalated_from) → `approval_decisions` (approve | reject | return, with comment) and `approval_events` (the timeline). `approval_delegations`: who acts for whom, between dates, optionally for one kind of document.
+- `requisitions`: place, number `REQ`, requester, `kind` payment | purchase | advance, purpose, amount, needed_by, expense account, budget line, fund, payee, status draft | submitted | approved | returned | rejected | paid | cancelled, `payment_voucher_id`; quotes and papers as attachments.
+- `staff_advances` (the person, amount, issued, due, retired, returned, status open | part_retired | retired) and `advance_retirements`.
+- `payment_vouchers.requisition_id`; PV purpose gains `advance`.
+
+### Rules
+- Who approves is worked out from the requesting place: holders of a role here, the nearest region or diocese above's holders, holders of a permission here, or named people. The requester is always removed. A stage left empty skips, escalates to the place above, or blocks (the request shows why and can be retried after someone is assigned).
+- The rule chosen is the most specific match: a rule for this level beats one for all levels, then the higher priority, then the newest. Conditions are strict - a missing amount never matches "up to 50,000".
+- Deciding locks the request row, so two approvers deciding at once complete a stage once. Return and Reject need a comment.
+- Notices are sent only after the decision is saved: the bell at once, SMS and email by a queued job, each switchable in Settings (`approvals.notify_sms`, `approvals.notify_email`).
+- `approvals:escalate` (hourly): a reminder once a step is due, then, after the grace, the person named in `escalate_to` is added; on an "all" stage they replace the late approver, who is marked superseded.
+- Delegation is one hop, never to the requester, and ends on its date.
+- Default rules (seeded once by key; the diocese edits them on Approval rules): church - Senior Pastor up to 50,000, + a Church Committee Member to 200,000, + the Regional Overseer above; region - Regional Overseer, + Regional Treasurer, + Diocese Finance Officer; diocese - Diocese Finance Officer, + the Bishop above 50,000. SLA 48 hours, escalate after 24 more.
+- A requisition: Ask → approve → **Make the payment**, which prepares a payment voucher already authorised (nobody approves twice), then it is paid as any PV. An advance is paid to 1200 Staff advances; it is retired with receipts and any change (Dr expenses, Dr cash / Cr 1200). Someone with an advance overdue (`approvals.advance_days`, default 14) can't ask for another.
+- A payment voucher not from a requisition is routed when prepared; approved → authorised, rejected or returned → rejected with the comment. If no rule matches, A1's rule stands (anyone with authorise, never the preparer). Changing a voucher cancels its request and routes it again.
+- Approvers above the place see the document's details and files through the approval itself, not the place's books.
+
+### API
+`GET /api/approvals` (tabs waiting | mine | decided) · `GET /api/approvals/requests/{id}` (+ `/files/{media}`) · `POST /api/approvals/requests/{id}/approve|reject|return|cancel|retry` · `GET|POST /api/approvals/delegations`, `DELETE .../{id}` · `GET /api/approvals/people` · `GET|POST /api/approvals/workflows`, `PUT|DELETE .../{id}`.
+Under `/api/accounting`: `GET|POST requisitions` · `GET requisitions/options` · `GET|PUT requisitions/{id}` · `POST requisitions/{id}/approve|reject|return|cancel|pay` · requisition attachments · `POST advances/{id}/retire`.
+
+### Permissions
+`accounting.approvals.read` and `accounting.requisitions.create` for every role at a level; `accounting.requisitions.read` with reading the books; `diocese.accounting.approvalrules.manage` (Diocese Finance Officer). Approving needs no permission - being assigned is what lets someone act. Paying needs `payments.pay`.
+
 ## Later phases (outline - specified when built)
 - **A2 Reconciliation:** built 2026-10-09, see "A2 - Reconciliation" above.
 - **A3 Sunday collections:** built 2026-10-09, see "A3 - Sunday collections" above.
-- **A4 Approvals engine + requisitions:** the erp-server approval engine ported
-  (workflows by amount band, delegation, escalation, SMS and email); requisition
-  → PV; staff advances and their retirement. It replaces A1's single
-  "authorise" step.
+- **A4 Approvals engine + requisitions:** built 2026-10-09, see "A4 - Approvals and requisitions" above.
 - **A5 Procurement by threshold:** quotes, LPO, GRN, invoice, 3-way match,
   suppliers, the fixed asset register.
 - **A6 Between levels:** remittances accrued as Due to / Due from, paid, in
