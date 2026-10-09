@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
-use App\Enums\TerritoryType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Spatie\Activitylog\LogOptions;
+use App\Enums\TerritoryType;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class SuperAdminConfig extends Model
 {
@@ -60,26 +60,23 @@ class SuperAdminConfig extends Model
 
     public function canAccessTerritory(int $territoryId): bool
     {
-        if (! $this->global_access) {
+        if (!$this->global_access) {
             return false;
         }
 
         $restrictedTerritories = $this->restricted_territories ?? [];
-
-        return ! in_array($territoryId, $restrictedTerritories);
+        return !in_array($territoryId, $restrictedTerritories);
     }
 
     public function canAccessModule(int $moduleId): bool
     {
         $restrictedModules = $this->restricted_modules ?? [];
-
-        return ! in_array($moduleId, $restrictedModules);
+        return !in_array($moduleId, $restrictedModules);
     }
 
     public function getPreference(string $key, $default = null)
     {
         $preferences = $this->preferences ?? [];
-
         return $preferences[$key] ?? $default;
     }
 

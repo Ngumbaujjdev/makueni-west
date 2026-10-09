@@ -5,8 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
+use Carbon\Carbon;
 
 class ImpersonationSession extends Model
 {
@@ -39,7 +40,7 @@ class ImpersonationSession extends Model
         parent::boot();
 
         static::creating(function ($session) {
-            if (! $session->expires_at) {
+            if (!$session->expires_at) {
                 $session->expires_at = now()->addHour(); // Default 1 hour
             }
         });
@@ -84,19 +85,16 @@ class ImpersonationSession extends Model
 
     public function isCurrentlyActive(): bool
     {
-        return $this->is_active && ! $this->isExpired() && ! $this->ended_at;
+        return $this->is_active && !$this->isExpired() && !$this->ended_at;
     }
 
     public function getRemainingMinutes(): int
     {
-        if ($this->isExpired()) {
-            return 0;
-        }
-
+        if ($this->isExpired()) return 0;
         return now()->diffInMinutes($this->expires_at);
     }
 
-    public function endSession(User $endedBy, ?string $reason = null): bool
+    public function endSession(User $endedBy, string $reason = null): bool
     {
         return $this->update([
             'ended_at' => now(),
@@ -128,8 +126,8 @@ class ImpersonationSession extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true)
-            ->whereNull('ended_at')
-            ->where('expires_at', '>', now());
+                    ->whereNull('ended_at')
+                    ->where('expires_at', '>', now());
     }
 
     public function scopeExpired($query)

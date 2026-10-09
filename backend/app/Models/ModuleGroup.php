@@ -5,8 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
-use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class ModuleGroup extends Model
 {
@@ -19,12 +19,12 @@ class ModuleGroup extends Model
         'order',
         'territory_scope',
         'description',
-        'is_active',
+        'is_active'
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
-        'order' => 'integer',
+        'order' => 'integer'
     ];
 
     public function getActivitylogOptions(): LogOptions

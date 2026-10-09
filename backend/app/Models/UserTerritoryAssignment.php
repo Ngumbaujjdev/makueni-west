@@ -2,16 +2,16 @@
 
 namespace App\Models;
 
-use App\Enums\AssignmentType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Enums\AssignmentType;
 use OwenIt\Auditing\Contracts\Auditable;
 
 class UserTerritoryAssignment extends Model implements Auditable
 {
-    use HasFactory, \OwenIt\Auditing\Auditable, SoftDeletes;
+    use HasFactory, SoftDeletes, \OwenIt\Auditing\Auditable;
 
     protected $fillable = [
         'user_id', 'territory_id', 'role_id', 'assignment_type',
@@ -41,10 +41,10 @@ class UserTerritoryAssignment extends Model implements Auditable
         parent::boot();
 
         static::creating(function ($assignment) {
-            if (! $assignment->assigned_at) {
+            if (!$assignment->assigned_at) {
                 $assignment->assigned_at = now();
             }
-            if (! $assignment->effective_from) {
+            if (!$assignment->effective_from) {
                 $assignment->effective_from = now();
             }
         });
@@ -207,7 +207,7 @@ class UserTerritoryAssignment extends Model implements Auditable
         return $this->audits()
             ->where(function ($query) {
                 $query->where('event', 'territory_changed')
-                    ->orWhereJsonContains('new_values->territory_id', true);
+                      ->orWhereJsonContains('new_values->territory_id', true);
             })
             ->with('user:id,firstname,lastname,username')
             ->latest()
@@ -236,7 +236,7 @@ class UserTerritoryAssignment extends Model implements Auditable
         return $this->audits()
             ->where(function ($query) {
                 $query->where('event', 'role_changed')
-                    ->orWhereJsonContains('new_values->role_id', true);
+                      ->orWhereJsonContains('new_values->role_id', true);
             })
             ->with('user:id,firstname,lastname,username')
             ->latest()
@@ -265,8 +265,8 @@ class UserTerritoryAssignment extends Model implements Auditable
         return $this->audits()
             ->where(function ($query) {
                 $query->where('event', 'assignment_removed')
-                    ->orWhere('event', 'assignment_reactivated')
-                    ->orWhereJsonContains('new_values->is_active', true);
+                      ->orWhere('event', 'assignment_reactivated')
+                      ->orWhereJsonContains('new_values->is_active', true);
             })
             ->with('user:id,firstname,lastname,username')
             ->latest()
@@ -297,10 +297,10 @@ class UserTerritoryAssignment extends Model implements Auditable
         return $this->audits()
             ->where(function ($query) {
                 $query->where('event', 'permissions_updated')
-                    ->orWhereJsonContains('new_values->can_manage_users', true)
-                    ->orWhereJsonContains('new_values->can_manage_finances', true)
-                    ->orWhereJsonContains('new_values->can_see_children', true)
-                    ->orWhereJsonContains('new_values->can_see_siblings', true);
+                      ->orWhereJsonContains('new_values->can_manage_users', true)
+                      ->orWhereJsonContains('new_values->can_manage_finances', true)
+                      ->orWhereJsonContains('new_values->can_see_children', true)
+                      ->orWhereJsonContains('new_values->can_see_siblings', true);
             })
             ->with('user:id,firstname,lastname,username')
             ->latest()
@@ -333,15 +333,15 @@ class UserTerritoryAssignment extends Model implements Auditable
             ->latest()
             ->first();
 
-        if (! $lastAudit) {
+        if (!$lastAudit) {
             return null;
         }
 
-        if (! $lastAudit->user) {
+        if (!$lastAudit->user) {
             return 'System';
         }
 
-        return $lastAudit->user->full_name.' on '.$lastAudit->created_at->format('Y-m-d H:i:s');
+        return $lastAudit->user->full_name . ' on ' . $lastAudit->created_at->format('Y-m-d H:i:s');
     }
 
     /*
@@ -395,7 +395,7 @@ class UserTerritoryAssignment extends Model implements Auditable
 
     public function getRemainingDays(): ?int
     {
-        if (! $this->expires_at) {
+        if (!$this->expires_at) {
             return null;
         }
 
@@ -424,7 +424,7 @@ class UserTerritoryAssignment extends Model implements Auditable
 
     public function hasPermission(string $permission): bool
     {
-        return match ($permission) {
+        return match($permission) {
             'manage_users' => $this->can_manage_users,
             'manage_finances' => $this->can_manage_finances,
             'see_children' => $this->can_see_children,
@@ -447,7 +447,7 @@ class UserTerritoryAssignment extends Model implements Auditable
                 'manage_finances' => $this->can_manage_finances,
                 'see_children' => $this->can_see_children,
                 'see_siblings' => $this->can_see_siblings,
-            ],
+            ]
         ];
     }
 
@@ -465,10 +465,10 @@ class UserTerritoryAssignment extends Model implements Auditable
     public function scopeEffective($query)
     {
         return $query->where('is_active', true)
-            ->where('effective_from', '<=', now())
-            ->where(function ($q) {
-                $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
-            });
+                    ->where('effective_from', '<=', now())
+                    ->where(function($q) {
+                        $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                    });
     }
 
     public function scopeExpired($query)
