@@ -20,7 +20,7 @@ class Journal extends Model implements HasMedia
 
     public const TYPES = ['receipt' => 'Receipt', 'payment' => 'Payment', 'transfer' => 'Transfer', 'journal' => 'Journal', 'reversal' => 'Reversal', 'petty_cash' => 'Petty cash voucher'];
 
-    public const PREFIXES = ['receipt' => 'RCT', 'payment' => 'PAY', 'transfer' => 'TRF', 'journal' => 'JV', 'reversal' => 'REV', 'voucher' => 'PV', 'petty_cash' => 'PCV'];
+    public const PREFIXES = ['receipt' => 'RCT', 'payment' => 'PAY', 'transfer' => 'TRF', 'journal' => 'JV', 'reversal' => 'REV', 'voucher' => 'PV', 'petty_cash' => 'PCV', 'requisition' => 'REQ'];
 
     public const METHODS = ['cash' => 'Cash', 'mpesa' => 'M-Pesa', 'bank' => 'Bank', 'cheque' => 'Cheque'];
 

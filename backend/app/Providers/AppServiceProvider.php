@@ -85,6 +85,13 @@ class AppServiceProvider extends ServiceProvider
             'bank_statement_line' => 'App\Models\BankStatementLine',
             'collection' => 'App\Models\Collection',
             'collection_line' => 'App\Models\CollectionLine',
+            'requisition' => 'App\Models\Requisition',
+            'staff_advance' => 'App\Models\StaffAdvance',
+            'advance_retirement' => 'App\Models\AdvanceRetirement',
+            'approval_workflow' => 'App\Models\ApprovalWorkflow',
+            'approval_request' => 'App\Models\ApprovalRequest',
+            'approval_assignment' => 'App\Models\ApprovalAssignment',
+            'approval_delegation' => 'App\Models\ApprovalDelegation',
 
             // Fiscal period models
             'fiscal_year' => 'App\Models\FiscalYear',

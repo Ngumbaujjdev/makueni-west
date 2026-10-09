@@ -34,6 +34,9 @@ class AccountingAccessSeeder extends Seeder
         'reconciliation' => ['reconciliation.php', 'Reconciliation', 'Count the cash, match the bank and M-Pesa to their statements - and the places below', null],
         'close' => ['close.php', 'Month-end close', 'Close each month once every account is proven; the level above reopens', null],
         'collections' => ['collections.php', 'Collections', 'Sunday collections: counted by one, confirmed by another, receipted per fund, banked', ['church']],
+        'approvals' => ['approvals.php', 'Approvals', 'What waits for my approval, what I asked for, and who I hand it to while away', null],
+        'requisitions' => ['requisitions.php', 'Requisitions', 'Ask for money - to pay, to buy, or an advance - approved, then paid', null],
+        'rules' => ['approval-rules.php', 'Approval rules', 'Who approves what, by level and amount, and who it goes to when late', ['diocese']],
     ];
 
     /** Ability => [permission (after "{level}.") => the page it opens]. */
@@ -47,6 +50,7 @@ class AccountingAccessSeeder extends Seeder
             'accounting.reconciliation.read' => 'reconciliation',
             'accounting.periods.read' => 'close',
             'accounting.collections.read' => 'collections',
+            'accounting.requisitions.read' => 'requisitions',
         ],
         'receipt' => ['accounting.receipts.create' => 'receipts'],
         'prepare' => ['accounting.payments.prepare' => 'payments'],
@@ -62,7 +66,13 @@ class AccountingAccessSeeder extends Seeder
         'reopen' => ['accounting.periods.reopen' => 'close'],
         'collect' => ['accounting.collections.record' => 'collections', 'accounting.collections.read' => 'collections'],
         'confirm' => ['accounting.collections.confirm' => 'collections', 'accounting.collections.read' => 'collections'],
+        'approvals' => ['accounting.approvals.read' => 'approvals'],
+        'request' => ['accounting.requisitions.create' => 'requisitions'],
+        'rules' => ['accounting.approvalrules.manage' => 'rules'],
     ];
+
+    /** What every role at a level gets: their approvals, and asking for money. */
+    private const EVERYONE = ['approvals', 'request'];
 
     /** Who does what, per level - the standard separation of duties. */
     private const GRANTS = [
@@ -85,7 +95,7 @@ class AccountingAccessSeeder extends Seeder
             'Regional Committee Member' => ['read', 'below'],
         ],
         'diocese' => [
-            'Diocese Finance Officer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'chart', 'below', 'reconcile', 'petty', 'close', 'reopen'],
+            'Diocese Finance Officer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'chart', 'below', 'reconcile', 'petty', 'close', 'reopen', 'rules'],
             'Diocese Treasurer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'below', 'reconcile', 'petty', 'close', 'reopen'],
             'Bishop' => ['read', 'authorise', 'below'],
             'Diocese Administrator' => ['read', 'prepare', 'below'],
@@ -154,6 +164,13 @@ class AccountingAccessSeeder extends Seeder
                     continue;
                 }
                 $missing = collect($abilities)->flatMap(fn ($a) => $permissions[$a] ?? [])->reject(fn ($p) => $role->hasPermissionTo($p));
+                if ($missing->isNotEmpty()) {
+                    $role->givePermissionTo($missing->all());
+                    $granted += $missing->count();
+                }
+            }
+            foreach (Role::where('territory_level', $level)->get() as $role) {
+                $missing = collect(self::EVERYONE)->flatMap(fn ($a) => $permissions[$a] ?? [])->reject(fn ($p) => $role->hasPermissionTo($p));
                 if ($missing->isNotEmpty()) {
                     $role->givePermissionTo($missing->all());
                     $granted += $missing->count();
