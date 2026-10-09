@@ -39568,3 +39568,35 @@ a.mi-prof-about-value:hover { color: var(--primary-color); }
 .acc-stage-edit .form-label { margin-bottom: .2rem; font-size: .74rem; font-weight: 600; }
 .acc-who { display: flex; flex-direction: column; gap: .4rem; }
 .acc-who-picked, .acc-who-found { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .3rem; }
+
+/* ==========================================================================
+   Settings > View profile (2026-10-09): the whole profile, read-only
+   ========================================================================== */
+.pv-hero { overflow: hidden; }
+.pv-cover { height: 220px; background: rgb(var(--modal-band-rgb)); }
+.pv-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pv-hero-body { display: flex; gap: 1.25rem; align-items: flex-start; padding-top: 0; }
+.pv-logo { flex: 0 0 auto; width: 104px; height: 104px; margin-top: -52px; border: 4px solid var(--custom-white); border-radius: 1rem; background: var(--custom-white); object-fit: contain; box-shadow: 0 4px 14px rgba(13, 13, 13, .12); }
+.pv-logo.is-initials { display: inline-flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 700; }
+.pv-hero-text { flex: 1 1 auto; min-width: 0; padding-top: 1rem; }
+.pv-name { margin: 0 0 .4rem; font-size: 1.5rem; font-weight: 700; color: var(--v2-heading); }
+.pv-about { margin: .85rem 0 0; font-size: .95rem; line-height: 1.6; color: var(--default-text-color); white-space: pre-line; }
+.pv-times { margin: 0; padding: 0; list-style: none; }
+.pv-times li { display: flex; align-items: center; gap: .85rem; padding: .7rem 0; border-top: 1px solid var(--default-border); }
+.pv-times li:first-child { border-top: 0; padding-top: 0; }
+.pv-times li:last-child { padding-bottom: 0; }
+.pv-times strong { display: block; font-size: .92rem; color: var(--v2-heading); }
+.pv-times small { display: block; font-size: .78rem; color: var(--default-text-color); }
+.pv-day { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 3rem; height: 3rem; border-radius: .75rem; background: rgb(var(--success-rgb)); color: #fff; font-size: .85rem; text-transform: uppercase; }
+.pv-time { flex: 0 0 auto; font-weight: 700; color: var(--v2-heading); white-space: nowrap; }
+.pv-map { height: 240px; }
+.pv-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.pv-fact { display: flex; align-items: center; gap: .6rem; padding: .65rem .75rem; border: 1px solid var(--default-border); border-radius: .75rem; }
+.pv-fact strong { display: block; font-size: 1.15rem; line-height: 1.1; color: var(--v2-heading); }
+.pv-fact small { display: block; font-size: .76rem; color: var(--default-text-color); }
+@media (max-width: 575.98px) {
+  .pv-cover { height: 150px; }
+  .pv-hero-body { flex-direction: column; gap: .25rem; }
+  .pv-logo { width: 84px; height: 84px; margin-top: -42px; }
+  .pv-hero-text { padding-top: .25rem; }
+}

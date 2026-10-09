@@ -217,7 +217,7 @@
     const fact = (icon, t) => (t ? `<li><i class="${icon}"></i><span>${esc(t)}</span></li>` : "");
     const where = [v.address, v.town, v.sub_county, v.county].filter(Boolean).join(", ");
     $("#card-preview").innerHTML = `
-      <div class="card-header"><div class="card-title mb-0">How others see you</div></div>
+      <div class="card-header justify-content-between"><div class="card-title mb-0">How others see you</div>${SettingsRail.section("view") ? `<a class="fw-semibold mb-link fs-13" href="${esc(SettingsRail.hrefFor(SettingsRail.section("view")))}">See the full profile<i class="ri-arrow-right-line ms-1"></i></a>` : ""}</div>
       <div class="card-body">
         <div class="text-center">
           ${p.logo_url ? `<img class="settings-preview-logo" src="${esc(p.logo_url)}" alt="">` : `<span class="settings-preview-logo is-initials bg-purple text-white">${esc(initials(v.name || p.name))}</span>`}

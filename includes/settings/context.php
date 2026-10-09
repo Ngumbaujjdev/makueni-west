@@ -89,6 +89,7 @@ function settingsPageScripts(bool $withMap = true): void
     foreach ([
         'assets/js/pages/settings/fields.js',
         'assets/js/pages/settings/sections/overview.js',
+        'assets/js/pages/settings/sections/view.js',
         'assets/js/pages/settings/sections/profile.js',
         'assets/js/pages/settings/sections/service-times.js',
         'assets/js/pages/settings/sections/facilities.js',

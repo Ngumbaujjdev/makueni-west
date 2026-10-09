@@ -547,3 +547,25 @@ The same registry form and save path (`fields.js`; every input keeps its `data-k
 - **Message log tiles:** 2×2, so they're never squeezed. "Log only" is a pale pill; sent and failed are solid.
 - The rail lists a section's extra cards (Messages) once.
 
+
+### View profile (2026-10-09)
+The user had finished the setup checklist (8 of 8), but nothing showed the whole profile; there was only the small "Your place" card and the preview beside the Profile form. **Settings › View profile** (section `view`, read only, first under Our place, every level) shows everything together, as the diocese and visitors see it.
+
+**API:** `GET /settings/view` (`ProfileViewController`, needs `{level}.settings.hub.view.read`) returns:
+- `profile` (`PlaceProfile::present`);
+- `photos` in order;
+- `service_times` (church and diocese; `null` at a region), sorted, with the gathering's name;
+- `leaders`: name, initials and role only, never an email or phone;
+- `glance` (church only, totals): members, ministries, rooms and services a week;
+- `can`, so the page shows Change links only to those who can change each part.
+
+**Page** (`assets/js/pages/settings/sections/view.js`):
+- the first photo as the cover, the logo over it, the name, type, region and "Since", and the about text;
+- When we meet, Photos (a lightbox), Services online;
+- Find us (contacts and a read-only map with Directions), Our leaders, At a glance.
+
+**Links to it:** the Overview's "Your place" card has "See our full profile", the finished checklist has "See the profile", and the Profile preview has "See the full profile".
+
+- [x] A church sees its whole profile: photos in order, services by day, leaders by name and role only, and totals.
+- [x] A region sees its profile and leaders, with no service times or church totals.
+- [x] Someone who only reads Settings sees it with no Change links. Another church, or a role without Settings, is refused.
