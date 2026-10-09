@@ -91,6 +91,7 @@ class PeopleCareAccessSeeder extends Seeder
                 'assets.php' => ['What we own', 'What our things are worth and cost, with the receipts - the asset register.', ['assets']],
                 'reports.php' => ['Reports', 'The asset register, room by room, what we bought, repairs and what is borrowed - as PDF or Excel.', ['export']],
                 'repairs.php' => ['Repairs', 'What needs fixing, who is on it, and what it cost.', ['repairs']],
+                'teams.php' => ['Teams', 'Who serves on each duty - ushers, welcome, sound...', ['teams']],
                 'rota.php' => ['Duty rota', 'Who is on duty at each service.', ['rota']],
             ],
         ],

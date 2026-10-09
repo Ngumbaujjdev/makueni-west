@@ -85,7 +85,7 @@ class RotaController extends FacilitiesBase
         $to = CarbonImmutable::parse($d['to'], Facilities::TZ)->startOfDay()->min($from->addDays(62));
         $duties = collect($this->facilities->dutyList($church))->filter(fn ($x) => $x['team'] !== []);
         if ($duties->isEmpty()) {
-            return $this->unprocessable('team', 'No duty has a team yet - add the people for each duty in Settings > Facilities.');
+            return $this->unprocessable('team', 'No duty has a team yet - add the people for each duty on the Teams page.');
         }
         $rota = $this->facilities->rota($church, $from, $to);
         $filled = (array) $rota['cells'];

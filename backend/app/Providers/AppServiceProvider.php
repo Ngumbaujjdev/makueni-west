@@ -112,6 +112,7 @@ class AppServiceProvider extends ServiceProvider
             'equipment_loan' => 'App\Models\EquipmentLoan',
             'maintenance_job' => 'App\Models\MaintenanceJob',
             'duty_rota' => 'App\Models\DutyRota',
+            'duty_team_member' => 'App\Models\DutyTeamMember',
         ]);
 
         // Saved system settings (email server, ...) take over from .env -

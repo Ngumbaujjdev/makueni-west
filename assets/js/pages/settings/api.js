@@ -96,7 +96,6 @@ const SettingsAPI = (function () {
     facilityOptions: () => request("GET", "/facilities/options"),
     saveRoom: (id, body) => request(id ? "PUT" : "POST", id ? `/rooms/${id}` : "/rooms", body),
     removeRoom: (id) => request("DELETE", `/rooms/${id}`),
-    facilityPeople: (q) => request("GET", `/facilities/people?${new URLSearchParams({ q })}`),
     team: () => request("GET", "/settings/team"),
     addPerson: (body) => request("POST", "/settings/team", body),
     teamCheck: (phone, email) => request("GET", `/settings/team/check?${new URLSearchParams({ phone, email })}`),

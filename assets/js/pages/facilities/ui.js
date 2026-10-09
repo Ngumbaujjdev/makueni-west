@@ -20,6 +20,9 @@
  *   reportWindow()   - report a repair (anyone who sees the facilities)
  *   repairWindow()   - move a repair along, who is on it, what it cost
  *   rotaWindow()     - who is on one duty at one service
+ *   teamAddWindow()  - add people to a duty's team (the Teams page)
+ *   toTeamWindow()   - put the people ticked on the members list on a team
+ *   personTeams()    - the teams someone is on, on their member page
  * ============================================================================
  */
 const FacilitiesUI = (function () {
@@ -790,8 +793,8 @@ const FacilitiesUI = (function () {
           icon: "ri-team-line",
           color: duty.color,
           title: `The ${duty.label.toLowerCase()} team`,
-          help: team.length ? `Tap to put them on${duty.needed > 1 ? ` - ${duty.needed} are needed each service` : ""}` : "No team yet - set one in Settings > Facilities",
-          body: team.length ? '<div class="fx-team-pick" id="rtTeam"></div>' : `<a class="btn btn-sm btn-outline-primary" href="${window.FAC_CTX.settingsUrl}"><i class="ri-settings-3-line me-1"></i>Set up the teams</a>`,
+          help: team.length ? `Tap to put them on${duty.needed > 1 ? ` - ${duty.needed} are needed each service` : ""}` : "No team yet - add the people on the Teams page",
+          body: team.length ? '<div class="fx-team-pick" id="rtTeam"></div>' : `<a class="btn btn-sm btn-outline-primary" href="${window.FAC_CTX.baseUrl}/teams"><i class="ri-team-line me-1"></i>Go to Teams</a>`,
         })}
         ${N.step(2, { icon: duty.icon, color: duty.color, title: "Who is on duty", help: "Anyone else - from the register, or type a name", body: '<div id="rtWho"></div>' })}
       </div>`,
@@ -820,7 +823,127 @@ const FacilitiesUI = (function () {
     el.querySelector("#rtSave").addEventListener("click", () => N.submit(el, () => FacilitiesAPI.saveRota({ on: date, service, duty: duty.key, people: picked }), (d) => (onDone?.(d), null)));
   }
 
-  return { esc, num, money, short, day, ampm, iso, todayIso, minutes, tile, roomDot, conditionPill, statusPill, CONDITION, STATUS, options, personPicker, bookWindow, bookingWindow, roomsWindow, itemWindow, lendWindow, askRow, wireAsks, recordPurchase, linkWindow, reportWindow, repairWindow, recordCost, rotaWindow, fileViewer };
+  // ---------------------------------------------------------------- duty teams
+  const dutyTile = (d, size = "md") => tile(d.icon, d.color, size);
+
+  /** Add people to one duty's team: from the register (several at once), or typed names. */
+  function teamAddWindow(duty, { onDone } = {}) {
+    const picked = [];
+    const el = N.windowEl({
+      id: "fcModal",
+      title: `Add to ${duty.label}`,
+      subtitle: `${duty.members.length} on the team now`,
+      icon: duty.icon,
+      size: "modal-lg",
+      body: `<div class="mw-form">${N.step(1, {
+        icon: "ri-user-add-line",
+        color: duty.color,
+        title: "Who joins",
+        help: "Search the register and pick as many as you like - or type the name of someone not in it",
+        body: '<div id="taWho"></div>',
+      })}</div>`,
+      foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="taGo" disabled><i class="ri-check-line me-1"></i>Add them</button>`,
+    });
+    personPicker(el, { id: "taWho", picked, placeholder: "Search the register - or type a name and press Enter" });
+    const go = el.querySelector("#taGo");
+    el.querySelector("#taWho").addEventListener("change", () => {
+      go.disabled = !picked.length;
+      go.innerHTML = `<i class="ri-check-line me-1"></i>Add ${picked.length > 1 ? `these ${picked.length}` : "them"}`;
+    });
+    setTimeout(() => el.querySelector("#taWho [data-q]")?.focus(), 300);
+    go.addEventListener("click", () =>
+      N.submit(
+        el,
+        () => FacilitiesAPI.addToTeam(duty.key, { person_ids: picked.filter((p) => p.person_id).map((p) => p.person_id), names: picked.filter((p) => !p.person_id).map((p) => p.name) }),
+        (d) => {
+          onDone?.(d);
+          return {
+            title: d.added ? `${d.added} added to ${duty.label}` : `Already on ${duty.label}`,
+            facts: d.already ? [{ icon: "ri-information-line", text: `${d.already} ${d.already === 1 ? "was" : "were"} already on it`, color: "warning" }] : [],
+            actions: [
+              { label: "Add more", icon: "ri-user-add-line", run: () => (N.close(el), setTimeout(() => teamAddWindow(duty, { onDone }), 350)) },
+              { label: "Done", icon: "ri-check-line", primary: true, run: () => N.close(el) },
+            ],
+          };
+        },
+      ),
+    );
+  }
+
+  /** From the members list: put the people ticked there on one duty's team. */
+  async function toTeamWindow(ids, { onDone } = {}) {
+    const res = await FacilitiesAPI.teams();
+    if (!res.ok) return Toast.error(res.message);
+    const list = res.data.duties;
+    if (!list.length) return Toast.error("No duties are in use - set them up in Settings > Facilities.");
+    const el = N.windowEl({
+      id: "fcModal",
+      title: "Add to a duty team",
+      subtitle: `${ids.length} ${ids.length === 1 ? "person" : "people"} picked`,
+      icon: "ri-shield-user-line",
+      size: "modal-lg",
+      body: `<div class="mw-form">${N.step(1, {
+        icon: "ri-team-line",
+        color: "primary",
+        title: "Which team",
+        help: "Anyone already on it stays as they are",
+        body: `<div class="mw-ministries" role="radiogroup" aria-label="Team">${list.map((d, i) => `<label><input type="radio" name="ttDuty" value="${esc(d.key)}"${i === 0 ? " checked" : ""}><span>${dutyTile(d, "sm")}<span class="min-w-0"><strong>${esc(d.label)}</strong><small>${num(d.members.length)} on the team · ${d.needed} each service</small></span></span></label>`).join("")}</div>`,
+      })}</div>`,
+      foot: `<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="ttGo"><i class="ri-check-line me-1"></i>Add them</button>`,
+    });
+    el.querySelector("#ttGo").addEventListener("click", () => {
+      const d = list.find((x) => x.key === el.querySelector('input[name="ttDuty"]:checked').value);
+      N.submit(
+        el,
+        () => FacilitiesAPI.addToTeam(d.key, { person_ids: ids }),
+        (r) => {
+          onDone?.(r);
+          return {
+            title: r.added ? `${r.added} added to ${d.label}` : `Already on ${d.label}`,
+            facts: r.already ? [{ icon: "ri-information-line", text: `${r.already} ${r.already === 1 ? "was" : "were"} already on it`, color: "warning" }] : [],
+            actions: [{ label: "Done", icon: "ri-check-line", primary: true, run: () => N.close(el) }],
+          };
+        },
+      );
+    });
+  }
+
+  /**
+   * The teams someone is on, for their member page - drawn into el (a card
+   * body). Those who manage can put them on another team or take them off.
+   */
+  async function personTeams(el, personId, { teamsUrl = "", manage = false } = {}) {
+    const res = await FacilitiesAPI.personTeams(personId);
+    if (!res.ok) return (el.innerHTML = `<p class="mb-0 fw-semibold">${esc(res.message)}</p>`);
+    const all = res.data.duties;
+    const mine = all.filter((d) => d.member);
+    const others = all.filter((d) => !d.member);
+    const paint = () =>
+      (el.innerHTML = `${
+        mine.length
+          ? `<ul class="mb-mini-list">${mine
+              .map((d) => `<li>${dutyTile(d, "sm")}<div class="flex-fill min-w-0">${teamsUrl ? `<a class="fw-semibold mb-link" href="${teamsUrl}#team-${esc(d.key)}">${esc(d.label)}</a>` : `<strong>${esc(d.label)}</strong>`}<small class="d-block mb-sub">${d.member.away ? "Not taking turns - no longer active" : d.member.next ? `Next on ${day(d.member.next)}` : d.member.times ? `On duty ${d.member.times} ${d.member.times === 1 ? "time" : "times"} lately` : "Not on duty lately"}</small></div>${manage ? `<button type="button" class="btn btn-sm btn-icon btn-light border" data-off="${d.member.id}" aria-label="Take them off ${esc(d.label)}"><i class="ri-close-line"></i></button>` : ""}</li>`)
+              .join("")}</ul>`
+          : '<p class="mb-0 fw-semibold">Not on a duty team.</p>'
+      }${
+        manage && others.length
+          ? `<div class="dropdown mt-3"><button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="dropdown"><i class="ri-add-line me-1"></i>Add to a team</button><ul class="dropdown-menu">${others.map((d) => `<li><button type="button" class="dropdown-item d-flex align-items-center gap-2" data-join="${esc(d.key)}">${dutyTile(d, "xs")}${esc(d.label)}</button></li>`).join("")}</ul></div>`
+          : ""
+      }`);
+    paint();
+    el.onclick = async (e) => {
+      const join = e.target.closest("[data-join]");
+      const off = e.target.closest("[data-off]");
+      if (!join && !off) return;
+      (join || off).disabled = true;
+      const r = join ? await FacilitiesAPI.addToTeam(join.dataset.join, { person_ids: [personId] }) : await FacilitiesAPI.removeFromTeam(off.dataset.off);
+      if (!r.ok) return ((join || off).disabled = false), Toast.error(r.message);
+      Toast.success(r.message);
+      personTeams(el, personId, { teamsUrl, manage });
+    };
+  }
+
+  return { esc, num, money, short, day, ampm, iso, todayIso, minutes, tile, roomDot, conditionPill, statusPill, CONDITION, STATUS, options, personPicker, bookWindow, bookingWindow, roomsWindow, itemWindow, lendWindow, askRow, wireAsks, recordPurchase, linkWindow, reportWindow, repairWindow, recordCost, rotaWindow, fileViewer, dutyTile, teamAddWindow, toTeamWindow, personTeams };
 })();
 
 window.FacilitiesUI = FacilitiesUI;

@@ -75,6 +75,12 @@
     q.set("from", F.iso(state.from));
     history.replaceState(null, "", `${window.location.pathname}?${q}`);
     render();
+    // From the Teams page's "Fill the rota": open the window once.
+    if (q.get("fill") && CTX.can.manage) {
+      q.delete("fill");
+      history.replaceState(null, "", `${window.location.pathname}?${q}`);
+      fillWindow();
+    }
   }
 
   function copyWindow() {
@@ -115,7 +121,7 @@
           hint: "Each team takes turns; anyone already on a duty stays",
           body: teams.length
             ? `<ul class="fx-fill-list">${state.data.duties.map((d) => `<li><span class="avatar avatar-sm avatar-rounded bg-${d.color} ${d.color === "warning" || d.color === "secondary" ? "text-dark" : "text-white"}"><i class="${d.icon}"></i></span><span class="flex-fill">${F.esc(d.label)}<small>${d.team?.length ? `${d.team.length} on the team · ${d.needed} each service` : "No team - left as it is"}</small></span></li>`).join("")}</ul>`
-            : `<p class="mb-2 fw-semibold">No duty has a team yet.</p><a class="btn btn-sm btn-outline-primary" href="${CTX.settingsUrl}"><i class="ri-settings-3-line me-1"></i>Set up the teams</a>`,
+            : `<p class="mb-2 fw-semibold">No duty has a team yet.</p><a class="btn btn-sm btn-outline-primary" href="${CTX.baseUrl}/teams"><i class="ri-team-line me-1"></i>Go to Teams</a>`,
         },
       ]),
       run: async () => {

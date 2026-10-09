@@ -29,6 +29,7 @@ function membersPageContext(string $level, string $page): array
         'siteUrl' => SITE_URL,
         'careUrl' => SITE_URL . '/church/pastoral-care',
         'ministriesUrl' => SITE_URL . '/church/ministries',
+        'teamsUrl' => SITE_URL . '/church/facilities/teams',
         'userId' => (int) ((getAuthUser() ?? [])['id'] ?? 0),
         'messagesUrl' => SITE_URL . "/{$level}/messages/new",
         'place' => ['id' => (int) ($role['territory_id'] ?? 0), 'name' => $role['territory']['name'] ?? $role['territory_name'] ?? ''],
@@ -37,6 +38,9 @@ function membersPageContext(string $level, string $page): array
             'care_manage' => $level === 'church' && $can('pastoral.care.manage'),
             'ministries' => $level === 'church' && ($can('ministries.ministries.read') || $can('ministries.ministries.manage')),
             'ministries_manage' => $level === 'church' && $can('ministries.ministries.manage'),
+            // Duty teams (Facilities > Teams): who serves on ushering, welcome, sound...
+            'duty_teams' => $level === 'church' && ($can('facilities.teams.read') || $can('facilities.facilities.read') || $can('facilities.facilities.manage')),
+            'duty_teams_manage' => $level === 'church' && $can('facilities.facilities.manage'),
             'manage' => $level === 'church' && $can('members.members.manage'),
             'export' => $level === 'church' && $can('members.members.export'),
         ],
@@ -67,7 +71,7 @@ function membersPageScripts(string $page): void
     foreach (['assets/libs/select2/select2.min.js', 'assets/libs/flatpickr/flatpickr.min.js', 'assets/data-tables/1.12.1/js/jquery.dataTables.min.js', 'assets/data-tables/1.12.1/js/dataTables.bootstrap5.min.js', 'assets/data-tables/responsive/2.3.0/js/dataTables.responsive.min.js'] as $src) {
         echo '<script src="' . SITE_URL . "/{$src}\"></script>\n";
     }
-    foreach (['assets/js/utils/date-field.js', 'assets/js/pages/demographics/api-handler.js', 'assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/members/api.js', 'assets/js/pages/members/ui.js', 'assets/js/pages/members/list-kit.js', ...($page === 'member' ? ['assets/js/pages/care/api.js', 'assets/js/pages/care/ui.js'] : []), ...(in_array($page, ['list', 'member'], true) ? ['assets/js/pages/ministries/api.js', 'assets/js/pages/ministries/ui.js'] : []), "assets/js/pages/members/{$page}.js"] as $src) {
+    foreach (['assets/js/utils/date-field.js', 'assets/js/pages/demographics/api-handler.js', 'assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/members/api.js', 'assets/js/pages/members/ui.js', 'assets/js/pages/members/list-kit.js', ...($page === 'member' ? ['assets/js/pages/care/api.js', 'assets/js/pages/care/ui.js'] : []), ...(in_array($page, ['list', 'member'], true) ? ['assets/js/pages/ministries/api.js', 'assets/js/pages/ministries/ui.js', 'assets/js/pages/facilities/api.js', 'assets/js/pages/facilities/ui.js'] : []), "assets/js/pages/members/{$page}.js"] as $src) {
         echo '<script src="' . $v($src) . '"></script>' . "\n";
     }
 }
