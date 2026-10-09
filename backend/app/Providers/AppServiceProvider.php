@@ -83,6 +83,8 @@ class AppServiceProvider extends ServiceProvider
             'cash_count' => 'App\Models\CashCount',
             'bank_reconciliation' => 'App\Models\BankReconciliation',
             'bank_statement_line' => 'App\Models\BankStatementLine',
+            'collection' => 'App\Models\Collection',
+            'collection_line' => 'App\Models\CollectionLine',
 
             // Fiscal period models
             'fiscal_year' => 'App\Models\FiscalYear',

@@ -8,6 +8,8 @@ include __DIR__ . '/toolbar.php';
 
 <div class="card custom-card acc-start" id="startCard" hidden></div>
 
+<div class="card custom-card acc-lastsun" id="lastSunday" hidden></div>
+
 <div class="row" id="statCardsRow"></div>
 
 <div class="row">

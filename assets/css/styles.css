@@ -39524,3 +39524,20 @@ a.mi-prof-about-value:hover { color: var(--primary-color); }
   .acc-recstrip-diff { margin-left: 0; }
   .acc-den { grid-template-columns: 3.6rem .8rem minmax(0, 1fr) 4.5rem; }
 }
+
+/* ACCOUNTING A3 (2026-10-09) - Sunday collections */
+.acc-kinds { display: flex; flex-direction: column; gap: .45rem; }
+.acc-kind { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: .5rem; padding: .5rem .6rem; border: 1px solid var(--default-border); border-radius: .7rem; }
+.acc-kind-name { display: flex; flex-direction: column; min-width: 0; }
+.acc-kind-name strong { color: var(--v2-heading); }
+.acc-kind-name small { font-size: .72rem; color: var(--default-text-color); }
+.acc-kind-pick { display: grid; grid-template-columns: minmax(0, 1fr); gap: .35rem; }
+.acc-lastsun .card-body { padding: .9rem 1.25rem; }
+.acc-lastsun-kinds { display: flex; flex-wrap: wrap; gap: .4rem; }
+.acc-lastsun-kind { display: flex; flex-direction: column; padding: .35rem .65rem; border-radius: .6rem; background: rgba(var(--success-rgb), .08); }
+.acc-lastsun-kind small { font-size: .7rem; color: var(--default-text-color); }
+.acc-lastsun-kind strong { font-size: .88rem; color: var(--v2-heading); }
+@media (max-width: 767.98px) {
+  .acc-kind { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .acc-kind-name, .acc-kind-pick { grid-column: 1 / -1; }
+}

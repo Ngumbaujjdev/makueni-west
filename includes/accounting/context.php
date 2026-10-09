@@ -26,6 +26,7 @@ function accountingPageContext(string $level, string $page): array
         'chart' => 'chart.manage',
         'reconciliation', 'reconcile' => 'reconciliation.read',
         'close' => 'periods.read',
+        'collections' => 'collections.read',
     ][$page] ?? 'books.read'));
     $role = getCurrentRole() ?? [];
     $user = getAuthUser() ?? [];
@@ -53,6 +54,9 @@ function accountingPageContext(string $level, string $page): array
             'petty' => $can('pettycash.spend'),
             'close' => $can('periods.close'),
             'reopen' => $level !== 'church' && $can('periods.reopen'),
+            'collect' => $level === 'church' && $can('collections.record'),
+            'confirm' => $level === 'church' && $can('collections.confirm'),
+            'books' => $can('books.read'),
         ],
     ];
 }

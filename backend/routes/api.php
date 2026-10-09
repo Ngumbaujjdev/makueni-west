@@ -682,6 +682,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('periods', [$per, 'index']);
         Route::post('periods/close', [$per, 'close']);
         Route::post('periods/reopen', [$per, 'reopen']);
+        // A3 - Sunday collections (churches).
+        $col = \App\Http\Controllers\Api\Accounting\CollectionController::class;
+        Route::get('collections', [$col, 'index']);
+        Route::get('collections/options', [$col, 'options']);
+        Route::post('collections', [$col, 'store']);
+        Route::get('collections/{id}', [$col, 'show'])->whereNumber('id');
+        Route::put('collections/{id}', [$col, 'update'])->whereNumber('id');
+        Route::delete('collections/{id}', [$col, 'destroy'])->whereNumber('id');
+        Route::post('collections/{id}/confirm', [$col, 'confirm'])->whereNumber('id');
+        Route::post('collections/{id}/return', [$col, 'sendBack'])->whereNumber('id');
+        Route::post('collections/{id}/bank', [$col, 'bank'])->whereNumber('id');
+        Route::post('collections/{id}/reverse', [$col, 'reverse'])->whereNumber('id');
     });
 
     // Demographics (Church-level entry - Phase 3 of the Demographics module plan)

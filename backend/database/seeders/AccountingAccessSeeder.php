@@ -33,6 +33,7 @@ class AccountingAccessSeeder extends Seeder
         'chart' => ['chart.php', 'Chart of accounts', 'The standard accounts every church, region and diocese posts to', ['diocese']],
         'reconciliation' => ['reconciliation.php', 'Reconciliation', 'Count the cash, match the bank and M-Pesa to their statements - and the places below', null],
         'close' => ['close.php', 'Month-end close', 'Close each month once every account is proven; the level above reopens', null],
+        'collections' => ['collections.php', 'Collections', 'Sunday collections: counted by one, confirmed by another, receipted per fund, banked', ['church']],
     ];
 
     /** Ability => [permission (after "{level}.") => the page it opens]. */
@@ -45,6 +46,7 @@ class AccountingAccessSeeder extends Seeder
             'accounting.documents.read' => 'documents',
             'accounting.reconciliation.read' => 'reconciliation',
             'accounting.periods.read' => 'close',
+            'accounting.collections.read' => 'collections',
         ],
         'receipt' => ['accounting.receipts.create' => 'receipts'],
         'prepare' => ['accounting.payments.prepare' => 'payments'],
@@ -58,16 +60,21 @@ class AccountingAccessSeeder extends Seeder
         'petty' => ['accounting.pettycash.spend' => 'accounts'],
         'close' => ['accounting.periods.close' => 'close'],
         'reopen' => ['accounting.periods.reopen' => 'close'],
+        'collect' => ['accounting.collections.record' => 'collections', 'accounting.collections.read' => 'collections'],
+        'confirm' => ['accounting.collections.confirm' => 'collections', 'accounting.collections.read' => 'collections'],
     ];
 
     /** Who does what, per level - the standard separation of duties. */
     private const GRANTS = [
         'church' => [
-            'Church Treasurer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'reconcile', 'petty', 'close'],
-            'Senior Pastor' => ['read', 'authorise'],
-            'Associate Pastor' => ['read', 'authorise'],
-            'Church Administrator' => ['read', 'receipt', 'prepare', 'petty'],
-            'Church Secretary' => ['read', 'prepare', 'petty'],
+            'Church Treasurer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'reconcile', 'petty', 'close', 'collect', 'confirm'],
+            'Senior Pastor' => ['read', 'authorise', 'confirm'],
+            'Associate Pastor' => ['read', 'authorise', 'confirm'],
+            'Church Administrator' => ['read', 'receipt', 'prepare', 'petty', 'collect'],
+            'Church Secretary' => ['read', 'prepare', 'petty', 'collect'],
+            'Usher Coordinator' => ['collect'],
+            'Deacon' => ['collect'],
+            'Elder' => ['collect', 'confirm'],
             'Church Committee Member' => ['read'],
         ],
         'region' => [

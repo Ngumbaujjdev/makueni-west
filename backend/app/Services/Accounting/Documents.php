@@ -127,10 +127,17 @@ final class Documents
         if ($journal->source_type === 'payment_voucher') {
             throw ValidationException::withMessages(['journal' => ['This is a paid payment voucher - open the voucher to reverse it.']]);
         }
+        if ($journal->source_type === 'collection') {
+            throw ValidationException::withMessages(['journal' => ['This is a Sunday collection - open it under Collections to reverse it.']]);
+        }
 
         return DB::transaction(function () use ($journal, $user, $reason, $date) {
             $reversal = $this->ledger->reverse($journal, $user, $reason, $date);
             $this->bridge->journalReversed($journal, $user);
+            if ($journal->source_type === 'collection_banking') {
+                // The cash is back where it was kept - the collection can be banked again.
+                \App\Models\Collection::whereKey($journal->source_id)->where('banking_journal_id', $journal->id)->update(['banking_journal_id' => null]);
+            }
 
             return $reversal;
         });

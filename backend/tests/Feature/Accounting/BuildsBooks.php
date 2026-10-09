@@ -31,7 +31,7 @@ trait BuildsBooks
     protected function buildBooks(): void
     {
         $this->buildBudgetWorld();
-        $all = ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'reconcile', 'petty', 'close'];
+        $all = ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'reconcile', 'petty', 'close', 'collect', 'confirm'];
         $this->treasurer = $this->userWithRole('treasurer', 'Church Treasurer', 'church', $this->myChurch->id, $this->perms('church', $all));
         $this->authoriser = $this->userWithRole('senior', 'Senior Pastor', 'church', $this->myChurch->id, $this->perms('church', ['read', 'authorise']));
         $this->regionReader = $this->userWithRole('regtreasurer', 'Regional Treasurer', 'region', $this->region->id, $this->perms('region', [...$all, 'below', 'reopen', 'authorise']));
@@ -57,6 +57,8 @@ trait BuildsBooks
             'petty' => ['accounting.pettycash.spend'],
             'close' => ['accounting.periods.close'],
             'reopen' => ['accounting.periods.reopen'],
+            'collect' => ['accounting.collections.record', 'accounting.collections.read'],
+            'confirm' => ['accounting.collections.confirm', 'accounting.collections.read'],
         ];
 
         return collect($abilities)->flatMap(fn ($a) => array_map(fn ($p) => "{$level}.{$p}", $map[$a]))->all();
