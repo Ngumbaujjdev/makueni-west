@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\Settings;
 
 use App\Models\DutyRota;
+use App\Models\DutyTeamMember;
 use App\Models\Equipment;
-use App\Models\Person;
 use App\Models\Territory;
 use App\Services\Facilities\Facilities;
 use App\Services\Settings\Settings;
@@ -16,9 +16,11 @@ use Illuminate\Validation\Rule;
 
 /**
  * Settings > Facilities (docs/specs/people-and-care-spec.md, P5 round 3): a
- * church's duties - with the team for each and how many each service needs -
- * and its kinds of equipment. Kept in territories.metadata.facilities_setup (metadata.facilities is the church's amenities), like
- * Service times; until a church saves, the defaults are DutyRota::DUTIES and
+ * church's duties - and how many each service needs - and its kinds of
+ * equipment. Kept in territories.metadata.facilities_setup (metadata.facilities
+ * is the church's amenities), like Service times; who is on each duty's team
+ * is the Teams page's (round 4, duty_team_members). Until a church saves, the
+ * defaults are DutyRota::DUTIES and
  * Equipment::CATEGORIES. Rooms keep their own routes (/rooms), and the
  * section's other fields are the generic form (/settings/sections/facilities).
  */
@@ -46,9 +48,9 @@ class FacilitiesSetupController extends SettingsController
 
     /**
      * PUT /settings/facilities-setup {duties: [{key?, label, icon, colour,
-     * active, needed, team: [{person_id}|{name}]}], kinds: [{key?, label,
-     * icon, colour}]} - replaces both lists. A duty already on the rota is
-     * switched off rather than dropped; a kind still in use can't go.
+     * active, needed}], kinds: [{key?, label, icon, colour}]} - replaces both
+     * lists. A duty already on the rota is switched off rather than dropped;
+     * a kind still in use can't go. A duty that goes takes its team with it.
      */
     public function update(Request $request, Settings $settings): JsonResponse
     {
@@ -67,9 +69,6 @@ class FacilitiesSetupController extends SettingsController
             'duties.*.colour' => ['required', Rule::in(self::COLOURS)],
             'duties.*.active' => ['boolean'],
             'duties.*.needed' => ['required', 'integer', 'between:1,20'],
-            'duties.*.team' => ['present', 'array', 'max:60'],
-            'duties.*.team.*.person_id' => ['nullable', 'integer', Rule::exists('people', 'id')->where('territory_id', $place->id)->whereNull('anonymised_at')],
-            'duties.*.team.*.name' => ['nullable', 'string', 'max:120'],
             'kinds' => ['required', 'array', 'min:1', 'max:24'],
             'kinds.*.key' => ['nullable', 'string', 'max:40'],
             'kinds.*.label' => ['required', 'string', 'max:40'],
@@ -86,21 +85,11 @@ class FacilitiesSetupController extends SettingsController
         $duties = $this->keyed($request->input('duties'), 'duty');
         $kinds = $this->keyed($request->input('kinds'), 'kind');
 
-        // People on a team: the register's name is kept with the id (shown even if they move on).
-        $names = Person::whereIn('id', collect($duties)->flatMap(fn ($d) => array_column($d['team'], 'person_id'))->filter()->unique()->all() ?: [0])->get()->keyBy('id');
-        foreach ($duties as &$d) {
-            $d['team'] = collect($d['team'])->map(fn ($p) => ! empty($p['person_id']) && $names->has($p['person_id'])
-                ? ['person_id' => (int) $p['person_id'], 'name' => $names[$p['person_id']]->name]
-                : (trim((string) ($p['name'] ?? '')) !== '' ? ['person_id' => null, 'name' => trim($p['name'])] : null))
-                ->filter()->unique(fn ($p) => $p['person_id'] ? "p{$p['person_id']}" : 'n'.mb_strtolower($p['name']))->values()->all();
-        }
-        unset($d);
-
         // A duty on the rota stays, switched off, so the rota still reads.
         $used = DutyRota::where('territory_id', $place->id)->distinct()->pluck('duty')->all();
         foreach ($old['duties'] as $o) {
             if (in_array($o['key'], $used, true) && ! collect($duties)->contains('key', $o['key'])) {
-                $duties[] = ['key' => $o['key'], 'label' => $o['label'], 'icon' => $o['icon'], 'colour' => $o['colour'], 'active' => false, 'needed' => (int) ($o['needed'] ?? 1), 'team' => $o['team'] ?? []];
+                $duties[] = ['key' => $o['key'], 'label' => $o['label'], 'icon' => $o['icon'], 'colour' => $o['colour'], 'active' => false, 'needed' => (int) ($o['needed'] ?? 1)];
             }
         }
         // A kind with things in it can't go.
@@ -119,6 +108,7 @@ class FacilitiesSetupController extends SettingsController
         $place->metadata = $metadata;
         $place->updated_by = $request->user()->id;
         Territory::withoutAuditing(fn () => $place->save());
+        DutyTeamMember::where('territory_id', $place->id)->whereNotIn('duty', array_column($duties, 'key') ?: [''])->get()->each->delete();
         $this->facilities->forgetSetup($place->id);
         $settings->audit($place, self::SECTION, [
             'duties' => ['old' => collect($old['duties'])->pluck('label')->implode(', '), 'new' => collect($duties)->pluck('label')->implode(', ')],
@@ -145,7 +135,7 @@ class FacilitiesSetupController extends SettingsController
             $taken[$key] = true;
             $row = ['key' => $key, 'label' => trim($r['label']), 'icon' => $r['icon'], 'colour' => $r['colour']];
             if ($what === 'duty') {
-                $row += ['active' => (bool) ($r['active'] ?? true), 'needed' => (int) $r['needed'], 'team' => $r['team'] ?? []];
+                $row += ['active' => (bool) ($r['active'] ?? true), 'needed' => (int) $r['needed']];
             }
             $out[] = $row;
         }
@@ -168,9 +158,10 @@ class FacilitiesSetupController extends SettingsController
         $setup = $this->facilities->setup($place);
         $inUse = Equipment::where('territory_id', $place->id)->selectRaw('category, count(*) n')->groupBy('category')->pluck('n', 'category');
         $onRota = DutyRota::where('territory_id', $place->id)->selectRaw('duty, count(*) n')->groupBy('duty')->pluck('n', 'duty');
+        $teams = $this->facilities->teams($place);
 
         return [
-            'duties' => collect($setup['duties'])->map(fn ($d) => $d + ['on_rota' => (int) ($onRota[$d['key']] ?? 0)])->values()->all(),
+            'duties' => collect($setup['duties'])->map(fn ($d) => $d + ['on_rota' => (int) ($onRota[$d['key']] ?? 0), 'team_count' => ($teams[$d['key']] ?? collect())->count()])->values()->all(),
             'kinds' => collect($setup['kinds'])->map(fn ($k) => $k + ['items' => (int) ($inUse[$k['key']] ?? 0)])->values()->all(),
             'custom' => $setup['custom'],
             'icons' => Facilities::ICONS,

@@ -4,7 +4,6 @@ namespace Tests\Feature\Facilities;
 
 use App\Models\DutyRota;
 use App\Models\MaintenanceJob;
-use App\Models\Person;
 use App\Models\ReportRun;
 use App\Reports\Facilities\BoughtInYearReport;
 use App\Reports\Facilities\RepairsCostReport;
@@ -19,7 +18,7 @@ use Tests\TestCase;
 
 /**
  * People & care, P5 round 3 (docs/specs/people-and-care-spec.md): Settings >
- * Facilities - each church's duties with their teams and its kinds of
+ * Facilities - each church's duties and its kinds of
  * equipment - the rota filled from the teams in turn, and the asset reports
  * (room by room, bought in a year, repairs and their cost).
  */
@@ -46,34 +45,25 @@ class SetupTest extends TestCase
         $this->otherPastor = $this->userWithRole('otherpastor', 'Other Senior', 'church', $this->otherChurch->id, [...$f, 'church.facilities.facilities.manage', ...$settings]);
     }
 
-    private function person(string $name): int
-    {
-        [$first, $last] = explode(' ', $name);
-
-        return Person::create(['territory_id' => $this->myChurch->id, 'first_name' => $first, 'last_name' => $last, 'status' => 'member'])->id;
-    }
-
     private function loadSetup(): array
     {
         return $this->getJson('/api/settings/facilities-setup?territory_id='.$this->myChurch->id)->assertOk()->json('data');
     }
 
-    public function test_duties_with_teams_and_kinds_are_each_churches_own(): void
+    public function test_duties_and_kinds_are_each_churches_own(): void
     {
         Sanctum::actingAs($this->senior);
         $data = $this->loadSetup();
         $this->assertSame(['ushering', 'welcome', 'sound', 'security', 'cleaning'], array_column($data['duties'], 'key'));
         $this->assertFalse($data['custom']);
 
-        $ruth = $this->person('Ruth Mwende');
         $duties = $data['duties'];
-        $duties[0]['team'] = [['person_id' => $ruth], ['name' => 'John Kioko'], ['person_id' => $ruth]];
         $duties[0]['needed'] = 2;
-        $duties[] = ['label' => 'Media', 'icon' => 'ri-camera-line', 'colour' => 'info', 'active' => true, 'needed' => 1, 'team' => [['name' => 'Grace']]];
+        $duties[] = ['label' => 'Media', 'icon' => 'ri-camera-line', 'colour' => 'info', 'active' => true, 'needed' => 1];
         $kinds = [...$data['kinds'], ['label' => 'Decorations', 'icon' => 'ri-gift-line', 'colour' => 'pink']];
         $saved = $this->putJson('/api/settings/facilities-setup?territory_id='.$this->myChurch->id, ['duties' => $duties, 'kinds' => $kinds])->assertOk()->json('data');
         $this->assertSame('media', end($saved['duties'])['key']);
-        $this->assertSame([['person_id' => $ruth, 'name' => 'Ruth Mwende'], ['person_id' => null, 'name' => 'John Kioko']], array_map(fn ($p) => ['person_id' => $p['person_id'], 'name' => $p['name']], $saved['duties'][0]['team']));
+        $this->assertSame(2, $saved['duties'][0]['needed']);
         $this->assertSame('decorations', end($saved['kinds'])['key']);
 
         // The pages use them: a new kind can be picked, a new duty can be put on the rota.
@@ -102,8 +92,10 @@ class SetupTest extends TestCase
     {
         Sanctum::actingAs($this->senior);
         $data = $this->loadSetup();
-        $duties = array_map(fn ($d) => $d['key'] === 'ushering' ? ['team' => [['name' => 'A Usher'], ['name' => 'B Usher'], ['name' => 'C Usher']], 'needed' => 2] + $d : $d, $data['duties']);
+        $duties = array_map(fn ($d) => $d['key'] === 'ushering' ? ['needed' => 2] + $d : $d, $data['duties']);
         $this->putJson('/api/settings/facilities-setup?territory_id='.$this->myChurch->id, ['duties' => $duties, 'kinds' => $data['kinds']])->assertOk();
+        $this->postJson('/api/rota/fill', ['from' => '2026-11-01', 'to' => '2026-11-08'])->assertStatus(422);
+        $this->postJson('/api/facilities/teams/ushering/members', ['names' => ['A Usher', 'B Usher', 'C Usher']])->assertCreated();
 
         $sunday = CarbonImmutable::now('Africa/Nairobi')->next(CarbonImmutable::SUNDAY);
         $next = $sunday->addWeek();
