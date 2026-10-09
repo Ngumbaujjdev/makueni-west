@@ -330,6 +330,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('reference', [SettingsHubController::class, 'reference']);
         Route::get('sections/{section}', [SettingsSectionController::class, 'show']);
         Route::put('sections/{section}', [SettingsSectionController::class, 'update']);
+        Route::get('view', [\App\Http\Controllers\Api\Settings\ProfileViewController::class, 'show']);
         Route::get('profile', [SettingsProfileController::class, 'show']);
         Route::put('profile', [SettingsProfileController::class, 'update']);
         Route::post('profile/logo', [SettingsProfileController::class, 'uploadLogo']);

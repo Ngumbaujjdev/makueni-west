@@ -82,6 +82,16 @@ return [
             'kind' => 'custom',
             'sentence' => 'How complete your details are, and what still needs doing.',
         ],
+        'view' => [
+            'label' => 'View profile',
+            'icon' => 'ri-eye-line',
+            'colour' => 'primary',
+            'group' => 'our-place',
+            'levels' => ['church', 'region', 'diocese'],
+            'kind' => 'custom',
+            'actions' => ['read'],
+            'sentence' => 'Your whole profile in one place - as the diocese and visitors see it.',
+        ],
         'profile' => [
             'label' => 'Profile',
             'icon' => 'ri-community-line',
