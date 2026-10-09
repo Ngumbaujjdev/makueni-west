@@ -78,7 +78,7 @@
       icon: "ri-list-check-2",
       colour: "success",
       sub: "What others need to find and reach you",
-      actions: `<span class="soft-chip soft-${pct === 100 ? "success" : "warning"}">${done} of ${total} done</span>`,
+      actions: `<span class="soft-chip soft-${pct === 100 ? "success" : "warning"}">${done} of ${total} done</span>${pct === 100 && SettingsRail.section("view") ? `<a class="btn btn-sm btn-primary" href="${esc(href("view"))}" data-go="view"><i class="ri-eye-line me-1"></i>See the profile</a>` : ""}`,
       body: `
         <div class="progress progress-sm mb-3" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Setup progress">
           <div class="progress-bar bg-${barColour(pct)}" style="width: ${pct}%"></div>
@@ -125,7 +125,8 @@
           ${line("ri-global-line", p.website, p.website)}
           ${line("ri-map-pin-line", [p.address, p.town, p.county].filter(Boolean).join(", "))}
         </ul>
-        ${!p.phone && !p.email && !p.address ? `<div class="alert alert-primary mb-0 mt-2">No contact details yet. <a href="${esc(href("profile"))}" data-go="profile">Add them</a></div>` : ""}`,
+        ${!p.phone && !p.email && !p.address ? `<div class="alert alert-primary mb-0 mt-2">No contact details yet. <a href="${esc(href("profile"))}" data-go="profile">Add them</a></div>` : ""}
+        ${SettingsRail.section("view") ? `<a class="btn btn-primary w-100 mt-3" href="${esc(href("view"))}" data-go="view"><i class="ri-eye-line me-1"></i>See our full profile</a>` : ""}`,
     });
   }
 

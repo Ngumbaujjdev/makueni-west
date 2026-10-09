@@ -81,6 +81,7 @@ const SettingsAPI = (function () {
     section: (key) => request("GET", `/settings/sections/${encodeURIComponent(key)}`),
     saveSection: (key, body) => request("PUT", `/settings/sections/${encodeURIComponent(key)}`, body),
     profile: () => request("GET", "/settings/profile"),
+    profileView: () => request("GET", "/settings/view"),
     saveProfile: (body) => request("PUT", "/settings/profile", body),
     uploadLogo,
     removeLogo: () => request("DELETE", "/settings/profile/logo"),
