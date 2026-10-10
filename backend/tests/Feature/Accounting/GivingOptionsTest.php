@@ -75,7 +75,7 @@ class GivingOptionsTest extends TestCase
 
     private function conference(array $extra = []): array
     {
-        $row = ['label' => 'Region conference', 'suffix' => 'CONF', 'reach' => 'below', 'account_id' => $this->acc('4020')->id, 'fund_code' => 'RCONF', 'icon' => 'ri-community-line', 'colour' => 'info'];
+        $row = ['label' => 'Region conference', 'suffix' => 'CONF', 'reach' => 'below', 'account_id' => $this->acc('4020')->id, 'fund_id' => null, 'fund_code' => 'RCONF', 'icon' => 'ri-community-line', 'colour' => 'info'];
 
         return array_merge($row, $extra);
     }

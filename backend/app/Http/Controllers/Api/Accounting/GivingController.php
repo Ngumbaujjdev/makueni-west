@@ -55,6 +55,7 @@ class GivingController extends AccountingBase
                 'diocese_paybill' => $this->settings()->system('paybill.shortcode'),
                 'accounts' => app(GivingPurposes::class)->ownFor($place)->map(fn ($p) => ['purpose' => $p->key, 'label' => $p->label, 'account' => $p->suffix])->values(),
             ],
+            'purposes' => app(GivingPurposes::class)->present(app(GivingPurposes::class)->all()),
             'gifts' => $gifts->map(fn ($g) => [
                 'id' => $g->id, 'reference' => $g->reference, 'amount' => (float) $g->amount, 'purpose' => $g->purpose, 'purpose_label' => GivingPurposes::label($g->purpose, $g->purpose),
                 'giver' => $g->giver_name, 'phone' => $g->giver_phone, 'method' => $g->method, 'channel' => $g->channel, 'status' => $g->status, 'status_label' => Gift::STATUSES[$g->status],

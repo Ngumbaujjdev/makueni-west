@@ -29,7 +29,8 @@
 
   const ST = { paid: ["success", "ri-checkbox-circle-line"], pending: ["warning", "ri-time-line"], failed: ["danger", "ri-close-circle-line"], abandoned: ["secondary", "ri-close-line"], refunded: ["danger", "ri-arrow-go-back-line"] };
   const PO = { paid: ["success", "ri-checkbox-circle-line"], sent: ["primary", "ri-send-plane-line"], on_the_way: ["warning", "ri-time-line"], failed: ["danger", "ri-error-warning-line"] };
-  const PURPOSE_COLOR = { T: "primary", O: "success", TH: "pink", B: "warning", K: "purple" };
+  /** Each giving option's colour comes from its settings (A11). */
+  const purposeColour = (k) => ((data?.purposes || []).find((u) => u.key === k) || {}).colour || "secondary";
   const when = (iso) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "-");
   const sum = (arr, f = (g) => g.amount) => arr.reduce((t, g) => t + f(g), 0);
 
@@ -82,7 +83,7 @@
     ${K.checkCell(g.id, g.reference)}
     <td data-search="${esc(`${g.giver || ""} ${g.phone || ""} ${g.reference} ${g.receipt || ""}`)}"><div class="fw-semibold">${esc(g.giver || "Online giver")}</div><div class="acc-sub">${esc(g.reference)}${g.phone ? ` · ${esc(g.phone)}` : ""}</div></td>
     <td data-order="${g.paid_at || g.created_at}" class="text-nowrap">${when(g.paid_at || g.created_at)}</td>
-    <td class="d-none d-md-table-cell"><span class="badge bg-${PURPOSE_COLOR[g.purpose] || "secondary"} ${A.textOn(PURPOSE_COLOR[g.purpose] || "secondary")}">${esc(g.purpose_label)}</span><div class="acc-sub mt-1">${g.method === "mpesa" ? (g.channel === "payhero" || g.channel === "own_daraja" ? "M-Pesa · our paybill" : "M-Pesa") : "Card"}</div></td>
+    <td class="d-none d-md-table-cell"><span class="badge bg-${purposeColour(g.purpose)} ${A.textOn(purposeColour(g.purpose))}">${esc(g.purpose_label)}</span><div class="acc-sub mt-1">${g.method === "mpesa" ? (g.channel === "payhero" || g.channel === "own_daraja" ? "M-Pesa · our paybill" : "M-Pesa") : "Card"}</div></td>
     <td class="d-none d-lg-table-cell"><span class="badge bg-${ST[g.status][0]} ${A.textOn(ST[g.status][0])}"><i class="${ST[g.status][1]} me-1"></i>${esc(g.status_label)}</span>${g.disputed ? ' <span class="badge bg-danger">Disputed</span>' : ""}<div class="acc-sub mt-1">${g.status === "paid" ? `${g.receipt ? esc(g.receipt) : ""}${g.fee ? ` · fee ${A.money(g.fee)}` : ""}${g.split ? ` · share ${A.money(g.split)}` : ""}` : esc(g.result || "")}</div></td>
     <td class="text-end" data-order="${g.amount}"><strong>${A.money(g.amount)}</strong></td>
   </tr>`;

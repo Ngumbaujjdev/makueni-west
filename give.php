@@ -51,8 +51,6 @@ $code = strtoupper(preg_replace('/[^A-Za-z0-9-]/', '', $_GET['c'] ?? ''));
             const body = document.getElementById("giveBody");
             const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
             const money = (n) => "KES " + Number(n || 0).toLocaleString("en-GB", { maximumFractionDigits: 2 });
-            const COLORS = { T: "primary", O: "success", TH: "pink", B: "warning", K: "purple" };
-            const ICONS = { T: "ri-hand-heart-line", O: "ri-gift-line", TH: "ri-star-smile-line", B: "ri-building-2-line", K: "ri-group-line" };
             let page = null;
 
             async function call(method, path, data) {
@@ -111,7 +109,7 @@ $code = strtoupper(preg_replace('/[^A-Za-z0-9-]/', '', $_GET['c'] ?? ''));
                 body.innerHTML = `
                     <div class="d-flex align-items-center gap-3 mb-3"><img src="${esc(p.logo)}" alt="" class="give-logo" onerror="this.onerror=null;this.src='${CCI_LOGO}'"><div><h4 class="fw-bold mb-0">${esc(p.place.name)}</h4>${p.note ? `<div class="give-note">${esc(p.note)}</div>` : ""}</div></div>
                     <div class="give-step"><span>1</span>Giving for</div>
-                    <div class="acc-tiles mb-3">${p.purposes.map((u, i) => `<label class="acc-tile" style="--q: var(--${COLORS[u.key] || "primary"}-rgb)"><input type="radio" name="purpose" value="${u.key}"${i === 0 ? " checked" : ""}><span class="acc-tile-icon"><i class="${ICONS[u.key] || "ri-heart-line"}"></i></span><span class="acc-tile-text"><strong>${esc(u.label)}</strong></span></label>`).join("")}</div>
+                    <div class="acc-tiles mb-3">${p.purposes.map((u, i) => `<label class="acc-tile" style="--q: var(--${esc(u.colour || "primary")}-rgb)"><input type="radio" name="purpose" value="${esc(u.key)}"${i === 0 ? " checked" : ""}><span class="acc-tile-icon"><i class="${esc(u.icon || "ri-hand-heart-line")}"></i></span><span class="acc-tile-text"><strong>${esc(u.label)}</strong>${u.owner && u.owner.name !== p.place.name ? `<small>For ${esc(u.owner.name)}</small>` : ""}</span></label>`).join("")}</div>
                     <div id="gHowMuch">
                     <div class="give-step"><span>2</span>How much</div>
                     <div class="input-group input-group-lg mb-2"><span class="input-group-text">KES</span><input type="text" inputmode="decimal" class="form-control fw-semibold" id="gAmount" placeholder="0" aria-label="Amount"><div class="invalid-feedback"></div></div>
@@ -195,7 +193,12 @@ $code = strtoupper(preg_replace('/[^A-Za-z0-9-]/', '', $_GET['c'] ?? ''));
                 const panel = body.querySelector("#gPaybillPanel");
                 const purpose = body.querySelector('input[name="purpose"]:checked').value;
                 const label = p.purposes.find((u) => u.key === purpose)?.label || "Gift";
-                const account = (p.paybill.accounts.find((a) => a.label === label) || {}).account || "";
+                const account = (p.paybill.accounts.find((a) => a.purpose === purpose) || {}).account || "";
+                if (!account && !p.paybill.till) {
+                    // Another place's option can't go into this church's own paybill (A11).
+                    panel.innerHTML = `<div class="verify-result is-bad"><i class="ri-information-line"></i><div><strong>${esc(label)} can't be given by Pay Bill here</strong><span>Pick M-Pesa or Card above - it goes straight to the right place.</span></div></div>`;
+                    return renumber();
+                }
                 const box = (title, value) => `<div class="border rounded-3 p-3 d-flex align-items-center justify-content-between gap-2"><div><small class="d-block">${title}</small><span class="fs-3 fw-bold">${esc(value)}</span></div><button type="button" class="btn btn-sm btn-outline-primary" data-copy="${esc(value)}"><i class="ri-file-copy-line me-1"></i>Copy</button></div>`;
                 const me = remembered() || {};
                 panel.innerHTML = `

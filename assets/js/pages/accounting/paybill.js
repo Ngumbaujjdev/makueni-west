@@ -28,7 +28,9 @@
   let month = params.get("month") || new Date(new Date().getFullYear(), new Date().getMonth() - 1, 15).toISOString().slice(0, 7);
 
   const ST = { posted: ["success", "ri-checkbox-circle-line", "In the books"], to_sort: ["warning", "ri-question-line", "To sort"], returned: ["secondary", "ri-arrow-go-back-line", "Returned"] };
-  const PURPOSE_COLOR = { T: "primary", O: "success", TH: "pink", B: "warning", K: "purple" };
+  /** Each giving option's colour and icon come from its settings (A11). */
+  const purposeOf = (k) => (data?.purposes || []).find((u) => u.key === k) || {};
+  const purposeColour = (k) => purposeOf(k).colour || "secondary";
   const pill = (s) => `<span class="badge bg-${ST[s][0]} ${A.textOn(ST[s][0])}"><i class="${ST[s][1]} me-1"></i>${ST[s][2]}</span>`;
   const monthLabel = (m) => new Date(`${m}-15T12:00:00`).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
   const sum = (arr) => arr.reduce((t, p) => t + p.amount, 0);
@@ -61,7 +63,7 @@
     <td data-search="${esc(`${p.payer_name || ""} ${p.phone || ""} ${p.trans_id} ${p.bill_ref || ""} ${p.place?.name || ""}`)}"><div class="fw-semibold">${esc(p.payer_name || "M-Pesa payer")}</div><div class="acc-sub">${esc(p.trans_id)}${p.phone ? ` · ${esc(p.phone)}` : ""}</div></td>
     <td data-order="${p.paid_at}" class="text-nowrap">${when(p.paid_at)}</td>
     <td class="d-none d-md-table-cell"><span class="soft-chip soft-secondary">${esc(p.bill_ref || "-")}</span></td>
-    <td class="d-none d-lg-table-cell">${p.status === "posted" ? `${data.diocese ? `<div class="fw-semibold">${esc(p.place?.name || "")}</div>` : ""}<span class="badge bg-${PURPOSE_COLOR[p.purpose] || "secondary"} ${A.textOn(PURPOSE_COLOR[p.purpose] || "secondary")}">${esc(p.purpose_label || "")}</span>${p.receipt ? `<div class="acc-sub mt-1">${esc(p.receipt)}</div>` : ""}` : `${pill(p.status)}${p.note ? `<div class="acc-sub mt-1">${esc(p.note)}</div>` : ""}`}</td>
+    <td class="d-none d-lg-table-cell">${p.status === "posted" ? `${data.diocese ? `<div class="fw-semibold">${esc(p.place?.name || "")}</div>` : ""}<span class="badge bg-${purposeColour(p.purpose)} ${A.textOn(purposeColour(p.purpose))}">${esc(p.purpose_label || "")}</span>${p.receipt ? `<div class="acc-sub mt-1">${esc(p.receipt)}</div>` : ""}` : `${pill(p.status)}${p.note ? `<div class="acc-sub mt-1">${esc(p.note)}</div>` : ""}`}</td>
     <td class="text-end" data-order="${p.amount}"><strong>${A.money(p.amount)}</strong></td>
   </tr>`;
 
@@ -85,7 +87,7 @@
       searchPlaceholder: "Search name, phone, M-Pesa code, account...",
       pills: [
         ...(data.diocese ? [{ key: "to_sort", label: "To sort", icon: ST.to_sort[1], color: "warning", test: (p) => p.status === "to_sort" }] : []),
-        ...data.purposes.map((u) => ({ key: `p${u.key}`, label: u.label, icon: "ri-price-tag-3-line", color: PURPOSE_COLOR[u.key] || "secondary", test: (p) => p.purpose === u.key && p.status === "posted" })),
+        ...data.purposes.map((u) => ({ key: `p${u.key}`, label: u.label, icon: "ri-price-tag-3-line", color: u.colour || "secondary", test: (p) => p.purpose === u.key && p.status === "posted" })),
       ],
       sorts: [
         { key: "new", label: "Newest first", order: [[2, "desc"]] },
@@ -241,7 +243,7 @@
       go: '<i class="ri-send-plane-line me-1"></i>Send the prompt',
       body: K.parts([
         ...(forPlace ? [{ icon: "ri-community-line", title: "For", body: `<select class="form-select" id="aFor"><option value="">The diocese itself</option>${(data.places || []).map((t) => `<option value="${t.id}">${esc(t.name)} (${esc(t.code)})</option>`).join("")}</select>` }] : []),
-        { icon: "ri-price-tag-3-line", title: "Given for", body: `<div class="acc-tiles">${data.purposes.map((u, i) => `<label class="acc-tile" style="--q: var(--${PURPOSE_COLOR[u.key] || "primary"}-rgb)"><input type="radio" name="aPurpose" value="${u.key}"${i === 0 ? " checked" : ""}><span class="acc-tile-icon"><i class="ri-price-tag-3-line"></i></span><span class="acc-tile-text"><strong>${esc(u.label)}</strong></span></label>`).join("")}</div>` },
+        { icon: "ri-price-tag-3-line", title: "Given for", body: `<div class="acc-tiles">${data.purposes.map((u, i) => `<label class="acc-tile" style="--q: var(--${esc(u.colour || "primary")}-rgb)"><input type="radio" name="aPurpose" value="${esc(u.key)}"${i === 0 ? " checked" : ""}><span class="acc-tile-icon"><i class="${esc(u.icon || "ri-price-tag-3-line")}"></i></span><span class="acc-tile-text"><strong>${esc(u.label)}</strong></span></label>`).join("")}</div>` },
         { icon: "ri-phone-line", title: "Phone and amount", body: '<div class="row g-2"><div class="col-sm-7"><input type="tel" class="form-control" id="aPhone" placeholder="0712 345 678" autocomplete="off"></div><div class="col-sm-5"><div class="input-group"><span class="input-group-text">KES</span><input type="text" inputmode="decimal" class="form-control text-end" id="aAmount" placeholder="0"></div></div></div><div class="acc-sub mt-2" id="aWait"></div>' },
       ]),
       run: async () => {
