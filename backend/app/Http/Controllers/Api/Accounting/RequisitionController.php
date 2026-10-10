@@ -98,7 +98,9 @@ class RequisitionController extends AccountingBase
         }
         $r = $this->requisitions->create($place, $request->user(), $this->validated($request));
 
-        return $this->ok($this->present($r, $request->user(), true), $r->status === 'approved' ? "{$r->number} approved." : "{$r->number} sent for approval.", 201);
+        $who = $r->status === 'approved' ? null : app(\App\Approval\Services\Handover::class)->sentence($r);
+
+        return $this->ok($this->present($r, $request->user(), true), $r->status === 'approved' ? "{$r->number} approved." : "{$r->number} sent for approval".($who ? " - {$who}." : '.'), 201);
     }
 
     /** PUT /accounting/requisitions/{id} - the person who asked fixes it; it goes for approval again. */
@@ -110,7 +112,9 @@ class RequisitionController extends AccountingBase
         }
         $r = $this->requisitions->update($r, $request->user(), $this->validated($request));
 
-        return $this->ok($this->present($r, $request->user(), true), 'Sent for approval again.');
+        $who = app(\App\Approval\Services\Handover::class)->sentence($r);
+
+        return $this->ok($this->present($r, $request->user(), true), 'Sent for approval again'.($who ? " - {$who}." : '.'));
     }
 
     /** POST /accounting/requisitions/{id}/{approve|reject|return} {comment} */
