@@ -223,6 +223,9 @@ class ReportController extends Controller
             'record_id' => 'nullable|integer',
             'date_from' => ['nullable', 'date_format:Y-m-d', 'required_with:date_to'],
             'date_to' => ['nullable', 'date_format:Y-m-d', 'required_with:date_from', 'after_or_equal:date_from'],
+            // Accounting statements: with every place below added in; the trial balance before the year-end close.
+            'consolidated' => 'nullable|boolean',
+            'before_close' => 'nullable|boolean',
         ]);
         if ($validator->fails()) {
             return $this->fail(422, $validator->errors()->first(), $validator->errors()->toArray());
@@ -280,8 +283,8 @@ class ReportController extends Controller
             }
         }
 
-        $params = array_filter($request->only(['fiscal_year_id', 'years', 'demographic_id', 'metric', 'month', 'gathering_type_id', 'from', 'to', 'budget_id', 'line_id', 'activity_id', 'report_id', 'year', 'account_id', 'record_id', 'date_from', 'date_to']), fn ($v) => $v !== null && $v !== '');
-        foreach (['account' => ['account_id'], 'record' => ['record_id'], 'dates' => ['date_from', 'date_to']] as $input => $keys) {
+        $params = array_filter($request->only(['fiscal_year_id', 'years', 'demographic_id', 'metric', 'month', 'gathering_type_id', 'from', 'to', 'budget_id', 'line_id', 'activity_id', 'report_id', 'year', 'account_id', 'record_id', 'date_from', 'date_to', 'consolidated', 'before_close']), fn ($v) => $v !== null && $v !== '');
+        foreach (['account' => ['account_id'], 'record' => ['record_id'], 'dates' => ['date_from', 'date_to'], 'consolidated' => ['consolidated'], 'before_close' => ['before_close']] as $input => $keys) {
             if (! in_array($input, $report->inputs(), true)) {
                 foreach ($keys as $k) {
                     unset($params[$k]);

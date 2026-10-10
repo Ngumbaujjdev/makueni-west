@@ -123,6 +123,25 @@ class RemittancesTest extends TestCase
         $this->assertTrue($ledger->trialBalance($this->myChurch)['balanced']);
     }
 
+    public function test_added_together_at_the_diocese_the_share_is_counted_once(): void
+    {
+        $r = $this->sendAndPay();
+        $this->assertSame($this->diocese->id, JournalLine::where('journal_id', PaymentVoucher::find($r->payment_voucher_id)->journal_id)->where('debit', '>', 0)->value('for_territory_id'), 'the paying side names where it went');
+        $s = app(\App\Services\Accounting\Statements::class);
+        $from = now()->startOfYear()->toDateString();
+        $to = now()->toDateString();
+        $this->assertSame(8000.0, $s->position($this->diocese, $to, true)['in_transit'], 'sent, not yet received');
+
+        Sanctum::actingAs($this->dfo);
+        $this->postJson("/api/accounting/remittances/{$r->id}/confirm", ['into_account_id' => $this->cash()->id, 'received_on' => now()->toDateString()])->assertOk();
+        $ie = $s->incomeExpenditure($this->diocese, $from, $to, true);
+        $this->assertSame([100000.0, 0.0], [$ie['totals']['income'], $ie['totals']['expense']], 'the church\'s income, its share and the diocese\'s receipt of it cancel out');
+        $this->assertSame(['4100', '5700'], array_column($ie['eliminated'], 'code'));
+        $pos = $s->position($this->diocese, $to, true);
+        $this->assertSame([0.0, true], [$pos['in_transit'], $pos['totals']['balanced']]);
+        $this->getJson('/api/accounting/statements/funds?consolidated=1')->assertOk()->assertJsonPath('data.totals.balanced', true);
+    }
+
     public function test_the_board_and_statement_and_who_sees_what(): void
     {
         $r = $this->sendAndPay();

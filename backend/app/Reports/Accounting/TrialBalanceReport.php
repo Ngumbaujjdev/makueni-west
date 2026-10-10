@@ -2,15 +2,15 @@
 
 namespace App\Reports\Accounting;
 
-use App\Models\AccountingAccount;
-use App\Reports\ReportColumn;
 use App\Reports\ReportContext;
 use App\Reports\ReportData;
-use App\Reports\ReportSection;
-use App\Services\Accounting\Ledger;
 
-/** Every account's balance as at a date, debits beside credits - one section per kind, the two totals equal. */
-final class TrialBalanceReport extends AccountingReport
+/**
+ * Every account's balance as at a date, debits beside credits - one section
+ * per kind, the two totals equal. With every place below added in
+ * (consolidated), and before or after the year's closing journal (A9).
+ */
+final class TrialBalanceReport extends StatementReport
 {
     public function key(): string
     {
@@ -39,27 +39,25 @@ final class TrialBalanceReport extends AccountingReport
 
     public function inputs(): array
     {
-        return ['dates'];
+        return ['dates', 'consolidated', 'before_close'];
+    }
+
+    public function group(): ?string
+    {
+        return null;
     }
 
     public function build(ReportContext $context): ReportData
     {
         [, $to] = $this->dates($context);
-        $tb = app(Ledger::class)->trialBalance($context->territory, $to);
-        $sections = [];
-        foreach (AccountingAccount::TYPES as $type => $label) {
-            $rows = array_values(array_map(fn ($l) => [$l['code'], $l['name'], $l['debit'] ?: null, $l['credit'] ?: null], array_filter($tb['lines'], fn ($l) => $l['type'] === $type)));
-            if ($rows) {
-                $sections[] = new ReportSection($label, [ReportColumn::text('Code'), ReportColumn::text('Account', true), ReportColumn::money('Debit'), ReportColumn::money('Credit')], $rows);
-            }
-        }
-        $sections[] = new ReportSection('Totals', [ReportColumn::text(''), ReportColumn::text('All accounts', true), ReportColumn::money('Debit', null, true), ReportColumn::money('Credit', null, true)], [['All', $tb['balanced'] ? 'The books balance' : 'NOT BALANCED - check the journals', $tb['debit'], $tb['credit']]]);
+        $before = filter_var($context->param('before_close', false), FILTER_VALIDATE_BOOLEAN);
+        $tb = $this->statements()->trialBalance($context->territory, $to, $this->consolidated($context), $before);
 
         return new ReportData(
             kicker: $context->kicker('trial balance'),
-            title: 'Trial balance',
+            title: 'Trial balance'.($before ? ' before the year-end close' : ''),
             periodLabel: 'As at '.$this->day($to),
-            scopeLabel: $context->territory->name,
+            scopeLabel: $this->scope($context, $tb),
             tiles: [
                 ['label' => 'Debits', 'value' => $this->money($tb['debit']), 'tone' => 'primary'],
                 ['label' => 'Credits', 'value' => $this->money($tb['credit']), 'tone' => 'primary'],
@@ -67,7 +65,7 @@ final class TrialBalanceReport extends AccountingReport
                 ['label' => 'Accounts', 'value' => (string) count($tb['lines']), 'tone' => 'muted'],
             ],
             meta: ['As at' => $this->day($to), 'Prepared by' => $context->preparedBy()],
-            sections: $sections,
+            sections: $this->trialBalanceSections($tb),
             signatures: [['label' => 'Prepared by', 'name' => $context->preparedBy()], ['label' => 'Reviewed by']],
         );
     }

@@ -190,6 +190,9 @@ final class Periods
         if (! $p || $p->status !== 'closed') {
             throw ValidationException::withMessages(['month' => ['That month isn\'t closed.']]);
         }
+        if (\App\Models\AccountingYear::where('territory_id', $place->id)->where('year', $year)->where('status', 'closed')->exists()) {
+            throw ValidationException::withMessages(['month' => ["{$year} is closed - reopen the year first."]]);
+        }
         $later = AccountingPeriod::where('territory_id', $place->id)->where('status', 'closed')
             ->where(fn ($q) => $q->where('year', '>', $year)->orWhere(fn ($w) => $w->where('year', $year)->where('month', '>', $month)))->exists();
         if ($later) {

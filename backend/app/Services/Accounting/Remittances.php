@@ -233,7 +233,7 @@ final class Remittances
             'purpose' => "{$d->name} for {$span}",
             'lines' => array_values($lines),
             'pay_from_account_id' => (int) ($data['pay_from_account_id'] ?? 0),
-            'voucher_lines' => array_map(fn ($l) => ['account_id' => $account->id, 'budget_line_id' => $d->budget_line_id, 'amount' => $l['amount'], 'description' => "{$d->name} - ".$label($l['month'])], array_values($lines)),
+            'voucher_lines' => array_map(fn ($l) => ['account_id' => $account->id, 'budget_line_id' => $d->budget_line_id, 'amount' => $l['amount'], 'description' => "{$d->name} - ".$label($l['month']), 'for_territory_id' => $to->id], array_values($lines)),
         ]);
     }
 
@@ -260,7 +260,7 @@ final class Remittances
             'purpose' => mb_substr($purpose, 0, 255),
             'lines' => [['month' => now()->format('Y-m'), 'amount' => $amount, 'due' => null]],
             'pay_from_account_id' => (int) ($data['pay_from_account_id'] ?? 0),
-            'voucher_lines' => [['account_id' => $account->id, 'amount' => $amount, 'description' => "Support to {$to->name}: ".mb_substr($purpose, 0, 150)]],
+            'voucher_lines' => [['account_id' => $account->id, 'amount' => $amount, 'description' => "Support to {$to->name}: ".mb_substr($purpose, 0, 150), 'for_territory_id' => $to->id]],
         ]);
     }
 
