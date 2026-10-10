@@ -31,6 +31,7 @@ function accountingPageContext(string $level, string $page): array
         'requisitions' => 'requisitions.create',
         'approval-rules' => 'approvalrules.manage',
         'procurement' => 'procurement.read',
+        'remittances' => 'remittances.read',
     ][$page] ?? 'books.read'));
     $role = getCurrentRole() ?? [];
     $user = getAuthUser() ?? [];

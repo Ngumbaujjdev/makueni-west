@@ -44,7 +44,7 @@ trait BuildsBooks
     protected function perms(string $level, array $abilities): array
     {
         $map = [
-            'read' => ['accounting.books.read', 'accounting.accounts.read', 'accounting.cashbook.read', 'accounting.payments.read', 'accounting.documents.read'],
+            'read' => ['accounting.books.read', 'accounting.accounts.read', 'accounting.cashbook.read', 'accounting.payments.read', 'accounting.documents.read', 'accounting.remittances.read'],
             'receipt' => ['accounting.receipts.create'],
             'prepare' => ['accounting.payments.prepare'],
             'authorise' => ['accounting.payments.authorise'],

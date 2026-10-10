@@ -130,6 +130,9 @@ final class Documents
         if ($journal->source_type === 'collection') {
             throw ValidationException::withMessages(['journal' => ['This is a Sunday collection - open it under Collections to reverse it.']]);
         }
+        if ($journal->source_type === 'remittance') {
+            throw ValidationException::withMessages(['journal' => ['This confirms money from another place - undo the confirmation under Remittances.']]);
+        }
         if ($journal->source_type === 'supplier_invoice') {
             throw ValidationException::withMessages(['journal' => ['This is a supplier\'s bill - open it under Procurement to reverse it.']]);
         }

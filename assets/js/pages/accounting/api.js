@@ -193,6 +193,14 @@ const AccountingAPI = (function () {
     payBill: (id, payFrom) => request("POST", `/accounting/procurement/bills/${id}/pay`, { body: { pay_from_account_id: payFrom } }),
     reverseBill: (id, reason) => request("POST", `/accounting/procurement/bills/${id}/reverse`, { body: { reason } }),
     billFileUrl: (id) => fileUrl(`/accounting/procurement/bills/${id}/file`),
+    // A6 - remittances between levels
+    remittances: (year) => request("GET", "/accounting/remittances", { params: { year } }),
+    remittanceOptions: () => request("GET", "/accounting/remittances/options"),
+    remittance: (id) => request("GET", `/accounting/remittances/${id}`),
+    sendRemittance: (body) => request("POST", "/accounting/remittances", { body }),
+    remittanceAct: (id, act, body) => request("POST", `/accounting/remittances/${id}/${act}`, { body }),
+    remittanceBoard: (year) => request("GET", "/accounting/remittances/board", { params: { year } }),
+    remittanceStatement: (place, year) => request("GET", "/accounting/remittances/statement", { params: { place, year } }),
   };
 })();
 

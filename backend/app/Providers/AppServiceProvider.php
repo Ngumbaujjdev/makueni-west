@@ -97,6 +97,7 @@ class AppServiceProvider extends ServiceProvider
             'purchase_order' => 'App\Models\PurchaseOrder',
             'goods_received' => 'App\Models\GoodsReceived',
             'supplier_invoice' => 'App\Models\SupplierInvoice',
+            'remittance' => 'App\Models\Remittance',
 
             // Fiscal period models
             'fiscal_year' => 'App\Models\FiscalYear',

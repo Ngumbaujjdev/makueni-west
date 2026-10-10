@@ -411,13 +411,43 @@ Standard buying - quotations, a local purchase order (LPO), goods received (GRN)
 ### Permissions
 `{level}.accounting.procurement.manage` (Church Treasurer, Church Administrator; Regional Treasurer, Regional Secretary; Diocese Finance Officer, Diocese Treasurer, Diocese Administrator) and `{level}.accounting.procurement.read` (with reading the books). Paying a bill needs `payments.prepare` (to make the voucher) and `payments.pay`.
 
+## A6 - Remittances between levels (built 2026-10-10)
+
+Money between a church, its region and the diocese, on a cash basis in both sets of books: what is due is worked out from the books, sending it is a payment voucher like any other, and the receiving place confirms it into its own books. Nobody writes in another place's books.
+
+### What is due
+- The deductions that apply to a place (Budgets > Deductions, e.g. "Diocese share: 10% of Tithes received, every church") and are owned by another place - that place is who it is owed to.
+- Per month: a % of the money actually received in the books that month on the accounts of the rule's lines (or on all income except 4100 and 4110 - money from other places is never charged again), or the fixed monthly amount (from the month the rule was made, or the place's first entry if later).
+- Sent = what the place's remittances for that rule and month add up to, once their voucher is paid. Owed = due - sent. Nothing is posted for what is due; it is worked out each time.
+
+### Data
+- `remittances`: number `REM` (in the sender's books), `from_territory_id`, `to_territory_id`, `kind` share | support, `budget_deduction_id` (a share), purpose, amount, status waiting | sent | queried | confirmed | cancelled; the sending side - `payment_voucher_id`, `sent_journal_id`, `sent_on`, method, reference; the receiving side - `into_account_id`, `received_on`, `received_journal_id`, confirmed_by/at; `query_reason` / queried_by / at and the sender's `answer`.
+- `remittance_lines`: the month (`YYYY-MM`) and the amount, with what was due then (a share), so one payment can cover several months.
+- `payment_vouchers.purpose` gains `remittance`; `payment_vouchers.remittance_id`.
+
+### Rules
+- **Send the share** (whoever prepares payments): pick the rule, the months and amounts (owed is filled in), and where it is paid from. It makes a payment voucher - Dr the rule's paid-through account (e.g. 5700 Diocesan tithe) on its budget line, so Budgets' "sent" keeps working / Cr bank - approved like any payment. Paying the voucher sends the remittance: it is in transit, and the receiving place's treasurers get a bell.
+- **Send support down** (region or diocese, to a place below it): an amount, what it is for and the expense it is charged to (5600 Charitable activities by default) - the same voucher route.
+- **Confirm received** (the receiving place, whoever writes receipts): the account it reached and the date (not before it was sent). It posts the receiving place's receipt - Dr that account / Cr 4100 Church contributions (a share) or 4110 Diocesan allocations (support) - with the sending place on the line (`for_territory_id`), so the receiver's books show who sent what. Budgets follow through the bridge.
+- **Query** it ("not on our statement") with a reason; the sender answers and it is in transit again. A confirmation can be undone (its receipt is reversed) by the receiving place; its receipt can't be reversed from All documents.
+- The sender's payment can't be reversed once the receiver has confirmed it; reversing it before then puts the remittance back to waiting. Cancelling the voucher cancels the remittance.
+- **Month-end close** warns about: remittances sent and not confirmed, ones queried, money from others to confirm, a share still owed for the month - and (from A4 and A5) advances overdue and supplier bills past due.
+
+### Pages
+`remittances.php` at every level: **What we owe** (each rule by month: due, sent, confirmed, owed - with Send the share, and our remittances with where they stand), **Coming in** (to confirm, queried, confirmed), and for a region or the diocese **Places below** (per place for the year: due, sent, confirmed, in transit, owed, late) with each place's **statement** by month (print).
+
+### API (under `/api/accounting`)
+`GET remittances` · `GET remittances/options` · `POST remittances` · `GET remittances/{id}` · `POST remittances/{id}/confirm|query|answer|unconfirm` · `GET remittances/board` · `GET remittances/statement?place=&year=`.
+
+### Permissions
+`{level}.accounting.remittances.read` (with reading the books). Sending needs `payments.prepare` (the voucher, then approval and paying as usual); confirming, querying and undoing need `receipts.create` at the receiving place; the board and statements of places below need `below.read`.
+
 ## Later phases (outline - specified when built)
 - **A2 Reconciliation:** built 2026-10-09, see "A2 - Reconciliation" above.
 - **A3 Sunday collections:** built 2026-10-09, see "A3 - Sunday collections" above.
 - **A4 Approvals engine + requisitions:** built 2026-10-09, see "A4 - Approvals and requisitions" above.
 - **A5 Procurement by threshold:** built 2026-10-09, see "A5 - Procurement" above.
-- **A6 Between levels:** remittances accrued as Due to / Due from, paid, in
-  transit and confirmed; statements and inter-level reconciliation.
+- **A6 Between levels:** built 2026-10-10, see "A6 - Remittances between levels" above.
 - **A7 Payroll:** employees, monthly runs, Kenyan deductions with their rates in
   Settings, payslips.
 - **A8 The diocese M-Pesa paybill (Daraja C2B):** the account number is the

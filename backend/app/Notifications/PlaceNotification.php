@@ -26,6 +26,7 @@ class PlaceNotification extends Notification
         'followup' => ['icon' => 'ri-user-follow-line', 'colour' => 'success', 'label' => 'Follow-ups'],
         'booking' => ['icon' => 'ri-door-open-line', 'colour' => 'secondary', 'label' => 'Bookings'],
         'approval' => ['icon' => 'ri-shield-check-line', 'colour' => 'success', 'label' => 'Approvals'],
+        'remittance' => ['icon' => 'ri-exchange-funds-line', 'colour' => 'primary', 'label' => 'Money between places'],
     ];
 
     public function __construct(
