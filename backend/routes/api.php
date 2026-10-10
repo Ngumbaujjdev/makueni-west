@@ -898,6 +898,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/runs', [ReportController::class, 'runs']);
         Route::get('/runs/{uuid}', [ReportController::class, 'show']);
         Route::get('/runs/{uuid}/download', [ReportController::class, 'download']);
+        Route::post('/runs/{uuid}/now', [ReportController::class, 'now']);
     });
 
     // Gathering Categories (global, read-only - Sunday Service/Ministry Gathering/Special Event)

@@ -28,6 +28,10 @@ class GenerateReportJob implements ShouldQueue
 
     public function handle(ReportGenerator $generator): void
     {
+        // Built already ("Build it now" while no worker ran): the queued copy has nothing to do.
+        if ($this->run->fresh()?->status !== ReportRun::STATUS_QUEUED) {
+            return;
+        }
         try {
             $generator->generate($this->run);
         } catch (Throwable $e) {
