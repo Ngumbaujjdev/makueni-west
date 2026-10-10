@@ -741,6 +741,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         $stm = \App\Http\Controllers\Api\Accounting\StatementController::class;
         Route::get('statements/{kind}', [$stm, 'show'])->whereIn('kind', \App\Http\Controllers\Api\Accounting\StatementController::KINDS);
         Route::get('years', [$stm, 'years']);
+        // What a place has set up, and who holds each job here.
+        Route::get('setup', [\App\Http\Controllers\Api\Accounting\SetupController::class, 'index']);
         Route::post('years/{year}/close', [$stm, 'close'])->whereNumber('year');
         Route::post('years/{year}/reopen', [$stm, 'reopen'])->whereNumber('year');
         // A3 - Sunday collections (churches).

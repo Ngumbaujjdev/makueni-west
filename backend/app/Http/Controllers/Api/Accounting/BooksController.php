@@ -172,7 +172,18 @@ class BooksController extends AccountingBase
         if ($place instanceof JsonResponse) {
             return $place;
         }
-        $data = $request->validate($this->accountRules() + ['cash_kind' => ['required', 'in:bank,mpesa,airtel']]);
+        $data = $request->validate($this->accountRules() + ['cash_kind' => ['required_without:parent_id', 'nullable', 'in:bank,mpesa,airtel'], 'parent_id' => ['nullable', 'integer']],
+            ['cash_kind.required_without' => 'Add a bank or an M-Pesa account - or pick the standard account to put it under.']);
+        if (! empty($data['parent_id']) && empty($data['cash_kind'])) {
+            // Our own finer line under a standard income or expense account.
+            $parent = AccountingAccount::whereNull('territory_id')->find((int) $data['parent_id']);
+            if (! $parent) {
+                throw ValidationException::withMessages(['parent_id' => ['Pick a standard income or expense account to put it under.']]);
+            }
+            $account = $this->chart->addSubAccount($place, $parent, $data, $request->user()->id);
+
+            return $this->ok($this->books->presentAccount($account), "{$account->code} {$account->name} added under {$parent->name}.", 201);
+        }
         $this->assertNameFree($place, $data['name']);
         $account = $this->chart->addPlaceAccount($place, $data['cash_kind'], $data, $request->user()->id);
 
@@ -212,12 +223,23 @@ class BooksController extends AccountingBase
             'name' => ['required', 'string', 'max:150'],
             'type' => ['required', 'in:asset,liability,fund,income,expense'],
             'description' => ['nullable', 'string', 'max:255'],
+            'parent_id' => ['nullable', 'integer'],
+            'is_header' => ['nullable', 'boolean'],
         ], ['code.unique' => 'There\'s already an account with that code.', 'code.regex' => 'Use numbers, like 5240.']);
         $first = ['asset' => '1', 'liability' => '2', 'fund' => '3', 'income' => '4', 'expense' => '5'][$data['type']];
         if ($data['code'][0] !== $first) {
             throw ValidationException::withMessages(['code' => [AccountingAccount::TYPES[$data['type']]." codes start with {$first}."]]);
         }
-        $account = AccountingAccount::create($data + ['territory_id' => null, 'is_active' => true, 'display_order' => 9000, 'created_by' => $request->user()->id]);
+        // Under which header: a standard header of the same kind (one that only groups others).
+        $parent = ! empty($data['parent_id']) ? AccountingAccount::whereNull('territory_id')->where('is_header', true)->find((int) $data['parent_id']) : null;
+        if (! empty($data['parent_id']) && (! $parent || $parent->type !== $data['type'])) {
+            throw ValidationException::withMessages(['parent_id' => ['Pick a heading of the same kind - '.strtolower(AccountingAccount::TYPES[$data['type']]).'.']]);
+        }
+        $account = AccountingAccount::create([
+            'code' => $data['code'], 'name' => $data['name'], 'type' => $data['type'], 'description' => $data['description'] ?? null,
+            'parent_id' => $parent?->id, 'is_header' => (bool) ($data['is_header'] ?? false),
+            'territory_id' => null, 'is_active' => true, 'display_order' => $parent ? $parent->display_order : 9000, 'created_by' => $request->user()->id,
+        ]);
 
         return $this->ok($this->books->presentAccount($account), "{$account->code} {$account->name} added to the chart.", 201);
     }
