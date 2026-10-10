@@ -51,12 +51,13 @@ class DioceseReportPdf extends TCPDF
     ];
 
     /**
-     * Every PDF is set in Times (Times New Roman), the user's choice for easier
-     * reading (2026-10-10). Times reads smaller than Helvetica at the same size,
-     * so text under 10pt is set 10% larger (never past 10pt, so the hierarchy
-     * holds) and nothing goes below 7.5pt; titles keep their size.
+     * Every PDF is set in Helvetica, the clear sans the ifms-core reports use
+     * (the user's choice, 2026-10-10 - Times was tried in #298 and dropped).
+     * Small text is set 10% larger (never past 10pt, so headings stay above
+     * the body) and nothing goes below 7.5pt, for easier reading; titles keep
+     * their size.
      */
-    private const FONT = 'times';
+    private const FONT = 'helvetica';
 
     private const LM = 14;
 
@@ -846,10 +847,9 @@ class DioceseReportPdf extends TCPDF
         $this->SetFont(self::FONT, $style, $size >= 10 ? $size : max(7.5, min(10.0, round($size * 1.1, 1))));
     }
 
-    /** Times capitals are already wide - letterspacing is three quarters of what Helvetica needed. */
     private function spacing(float $points): void
     {
-        $this->SetFontSpacing($points * 0.75);
+        $this->SetFontSpacing($points);
     }
 
     private function contentWidth(): float
