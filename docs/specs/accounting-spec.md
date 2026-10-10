@@ -510,6 +510,42 @@ Under `/api/accounting/paybill`: `GET /` (payments, filters) · `GET to-sort` ·
 ### Permissions
 `diocese.accounting.paybill.manage` (Diocese Finance Officer, Diocese Treasurer): sort, settle, register, ask to pay for anyone. `{level}.accounting.paybill.read` with reading the books (a region or church sees its own paybill giving). A church treasurer asks to pay for their own church with `receipts.create`.
 
+## A10a - Online giving: Paystack and the giving page (built 2026-10-10)
+
+Members give from a public page - `give.php?c=SHR027` - by M-Pesa (the prompt on their phone, through the diocese paybill of A8) or by card / M-Pesa on Paystack's page. Paystack money for a church settles to the church's own bank through a **Paystack subaccount**, with the **diocese share split off at source**. Borrowed from v1-events' Paystack work, without its known faults (webhooks never verified, no row lock, no unique reference, an unscheduled sweep, floats * 100, plaintext keys).
+
+### Setup
+- **Settings > Online giving** (diocese): Paystack test or live, its secret and public keys (secrets, encrypted), and whether to SMS/email a giver their receipt.
+- **Gateways** (diocese finance officer): per church, a Paystack subaccount - the church's bank (from Paystack's Kenyan bank list, cached a day, one of each), account number and account name typed (Paystack can't look up a Kenyan account name) and which of the church's bank accounts it settles into. It is made on Paystack and stays **off until switched on**. A church without one still takes card gifts: they land in the diocese's Paystack account and are held and settled monthly like the paybill (A8).
+
+### Data
+- `payment_channels`: per place and provider - status pending | active | off, the Paystack `subaccount_code`, settlement bank code and name, account number and name, the place's bank account it settles into; (A10b) encrypted credentials and a callback key for PayHero or the place's own Daraja.
+- `gifts`: reference `GFT-...` (unique), the place, purpose (account + fund), amount, giver name, phone, email, method mpesa | paystack, provider reference (unique), status pending | paid | failed | abandoned, Paystack's fee, the diocese share split off, net, the journals, the share remittance, the M-Pesa request (STK), paid_at, the raw verification.
+- `paystack_settlements`: each Paystack payout recorded once (its id unique) - the place (or the diocese), amount, date, the transfer journal.
+- New standard account **1170 Online payments clearing** (asset): Paystack money paid but not yet settled to the bank.
+
+### Rules
+- **M-Pesa** on the giving page is "Ask to pay" through the diocese paybill (A8), with the place's account number (`SHR027T`); the gift is paid when that payment is, and posts exactly as A8.
+- **Paystack** (card, or M-Pesa on Paystack's page): a pending gift, then Paystack's hosted page. For a church with an active subaccount the payment goes to the subaccount, Paystack's fee is the church's (`bearer: subaccount`), and for a purpose the diocese share is charged on (e.g. tithe: 10% of tithes) that share is `transaction_charge` to the diocese.
+- **Completing a gift** - the signed webhook (`charge.success`; HMAC-SHA512 of the body with the secret key), the return from Paystack's page, or the sweep - always verifies with Paystack, checks the amount and currency, and completes it once (the gift row locked, its status checked again):
+  - church with a subaccount: church Dr 1170 (net) + Dr 5800 Bank charges (fee) + Dr the share's account, e.g. 5700 (the split, on its budget line) / Cr the purpose's income (gross, on its budget line); diocese Dr 1170 / Cr 4100 Church contributions (the split, with the church on the line); a **confirmed** share remittance, so Remittances shows it sent.
+  - no subaccount: diocese Dr 1170 / Cr 2400 held for the church (what arrived, after Paystack's fee); church Dr 1310 (the same) + Dr 5800 Bank charges (the fee) / Cr the purpose's income (gross) - settled monthly with the paybill money (A8).
+- **The sweep** (`payments:reconcile`, every 10 minutes): verifies Paystack gifts still pending after 10 minutes and completes them the same way; a gift pending for a day is abandoned.
+- **Settlements** (`payments:settlements`, daily): each Paystack payout - a church's subaccount into its chosen bank account, the diocese's own into its bank - is posted once as a transfer Dr bank / Cr 1170.
+- **The giver** gets an SMS (and an email when given) with the receipt number, from the church's sender.
+
+### Pages
+- Public `give.php?c={code}`: the church, purposes, amount, name, phone (and email for a card), "Pay with M-Pesa" or "Card or M-Pesa on Paystack"; a "check your phone" wait for M-Pesa; `give-thanks.php` after Paystack.
+- `giving.php` (every level): the place's gifts, its giving link (to copy and share) and how its Paystack is set up.
+- `gateways.php` (diocese): the churches' Paystack subaccounts - add, switch on/off - and the latest settlements.
+
+### API
+Public: `GET /api/give/{code}` · `POST /api/give/{code}` · `GET /api/give/status/{reference}` · `GET /api/give/callback?reference=` (redirects to the thanks page) · `POST /api/payments/paystack/webhook`.
+Under `/api/accounting`: `GET giving` · `GET gateways` · `GET gateways/banks` · `POST gateways/channels` · `PUT gateways/channels/{id}` (switch on/off, settles into).
+
+### Permissions
+`{level}.accounting.giving.read` with reading the books; `diocese.accounting.gateways.manage` (Diocese Finance Officer, Diocese Treasurer).
+
 ## Later phases (outline - specified when built)
 - **A2 Reconciliation:** built 2026-10-09, see "A2 - Reconciliation" above.
 - **A3 Sunday collections:** built 2026-10-09, see "A3 - Sunday collections" above.

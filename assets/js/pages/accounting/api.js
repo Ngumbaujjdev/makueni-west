@@ -201,6 +201,12 @@ const AccountingAPI = (function () {
     remittanceAct: (id, act, body) => request("POST", `/accounting/remittances/${id}/${act}`, { body }),
     remittanceBoard: (year) => request("GET", "/accounting/remittances/board", { params: { year } }),
     remittanceStatement: (place, year) => request("GET", "/accounting/remittances/statement", { params: { place, year } }),
+    // A10 - online giving and gateways
+    giving: () => request("GET", "/accounting/giving"),
+    gateways: () => request("GET", "/accounting/gateways"),
+    gatewayBanks: (place) => request("GET", "/accounting/gateways/banks", { params: { place } }),
+    saveChannel: (body) => request("POST", "/accounting/gateways/channels", { body }),
+    updateChannel: (id, body) => request("PUT", `/accounting/gateways/channels/${id}`, { body }),
     // A8 - the diocese paybill
     paybill: () => request("GET", "/accounting/paybill"),
     sortPayment: (id, body) => request("POST", `/accounting/paybill/payments/${id}/sort`, { body }),
