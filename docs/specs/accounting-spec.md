@@ -643,3 +643,22 @@ How each place gets its card money, and seeing it arrive - borrowed from v1-even
 - **Budgets are untouched:** while it writes, no budget counts as "in use", so nothing is copied into the 2025 or January–March 2026 budgets.
 - **The leaders' role start dates** (they were added in August 2026) are moved back while it writes, so the approval rules find them, then put back. They are kept in the church's metadata (`accounting_demo_roles`) first, so even a crash is put right on the next run or removal.
 - **Removal:** what it made is recorded as id ranges in the church's metadata (`accounting_demo`), and the remover deletes only those rows at those places.
+
+## Redesign (2026-10-10)
+The user found the pages bare. The redesign ships in five parts:
+- **R0:** the shared look.
+- **R1:** record pages with a journey.
+- **R2:** an Approvals board.
+- **R3:** accounts, and how they link to Budgets.
+- **R4:** documents and reports on the diocese PDF engine (Settings › Documents & PDF).
+- **R5:** a page-by-page polish.
+
+**R0, the shared look:**
+- **Amounts are always written in full:** `KES 2,225,662.00`, never "2.2m" or "37k". `AccountingUI.short()` now returns the full amount.
+- **Card figures** come from `AccountingUI.figure()`: a small "KES" and the number in tabular figures. A card's sparkline sits under its figure.
+- **Tables** have more padding, amounts on one line, and a row that opens the record.
+- **View windows** get a hero strip: the amount, where it stands, and three facts. Each part is its own panel on a soft background.
+- **The journey** (`AccountingUI.journey(steps)`) shows a record's steps as a lane: done green, now gold (pulsing), next grey, stopped red, blocked (nobody holds the role) dashed.
+  - `approvalSteps(approval)` turns the approval engine's stages into steps.
+  - `nextCard()` says what happens next in plain words. It is solid gold when it is the viewer's turn.
+  - The voucher window uses all three: Prepared → each approval stage → Paid → In the books.

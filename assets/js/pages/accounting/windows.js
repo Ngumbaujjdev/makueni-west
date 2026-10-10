@@ -472,13 +472,13 @@ const AccountingWindows = (function () {
   // ------------------------------------------------------------ views
 
   /** A plain view window (no form): header band, body, footer buttons. */
-  function viewFrame({ title, subtitle, icon, body, foot }) {
+  function viewFrame({ title, subtitle, icon, body, foot, hero }) {
     document.getElementById(ID)?.remove();
     document.body.insertAdjacentHTML(
       "beforeend",
       `<div class="modal fade app-modal acc-modal" id="${ID}" tabindex="-1" aria-labelledby="${ID}Title"><div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable modal-fullscreen-sm-down"><div class="modal-content">
         <div class="modal-header"><span class="app-modal-icon"><i class="${icon}"></i></span><div class="flex-fill min-w-0"><h5 class="modal-title" id="${ID}Title">${esc(title)}</h5><div class="app-modal-subtitle">${esc(subtitle)}</div></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
-        <div class="modal-body" id="${ID}Body">${body}</div>
+        <div class="modal-body" id="${ID}Body">${hero ? heroStrip(hero) : ""}${body}</div>
         <div class="modal-footer" id="${ID}Foot">${foot}</div>
       </div></div></div>`,
     );
@@ -487,6 +487,10 @@ const AccountingWindows = (function () {
     bootstrap.Modal.getOrCreateInstance(el).show();
     return el;
   }
+
+  /** The strip at the top of a view window: the amount in full, where it stands, and three facts. */
+  const heroStrip = ({ amount, label = "Amount", status = "", facts = [] }) =>
+    `<div class="acc-hero"><div class="acc-hero-main"><span class="acc-hero-label">${esc(label)}</span><div class="acc-hero-amount">${A.figure(amount)}</div>${status ? `<div class="mt-2">${status}</div>` : ""}</div><div class="acc-hero-facts">${facts.filter(Boolean).map(([k, v]) => `<div><span>${esc(k)}</span><strong>${v || "-"}</strong></div>`).join("")}</div></div>`;
 
   const factGrid = (facts) => `<div class="acc-facts">${facts.filter(Boolean).map(([k, v]) => `<div><span>${esc(k)}</span><strong>${v || "-"}</strong></div>`).join("")}</div>`;
   const part = (icon, title, body, extra = "") => `<section class="app-modal-part"><div class="app-modal-part-head"><i class="${icon}"></i>${esc(title)}${extra}</div>${body}</section>`;
@@ -537,11 +541,12 @@ const AccountingWindows = (function () {
     const body =
       status +
       source +
-      part("ri-information-line", "Details", factGrid([["Date", A.day(j.date)], [j.doc_type === "payment" ? "Paid to" : "From", esc(j.party_name)], j.party_phone && ["Phone", esc(j.party_phone)], ["How", j.method_label || "-"], ["Reference", esc(j.reference)], ["Posted by", esc(j.posted_by)], j.narration && ["Note", esc(j.narration)]])) +
+      part("ri-information-line", "Details", factGrid([j.party_phone && ["Phone", esc(j.party_phone)], ["Reference", esc(j.reference)], ["Posted by", esc(j.posted_by)], j.narration && ["Note", esc(j.narration)]])) +
       part("ri-scales-3-line", "In the books", lines) +
       filesPart(j.files, { canAdd: own && (j.can.receipt || j.can.journal || j.can.pay || j.can.prepare), canRemove: own && (j.can.receipt || j.can.journal) });
     const foot = `${j.can.reverse ? '<button type="button" class="btn btn-outline-danger me-auto" data-reverse><i class="ri-arrow-go-back-line me-1"></i>Reverse</button>' : ""}${j.doc_type === "receipt" ? '<button type="button" class="btn btn-outline-primary" data-print><i class="ri-printer-line me-1"></i>Print receipt</button>' : ""}<button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>`;
-    const el = viewFrame({ title: `${A.doc(j.doc_type).label} ${j.number}`, subtitle: `${A.money(j.amount)} · ${j.place.name}`, icon: A.doc(j.doc_type).icon, body, foot });
+    const hero = { amount: j.amount, status: `${A.docPill(j.doc_type)}${j.status === "reversed" ? ` ${A.reversedChip()}` : ""}`, facts: [["Date", A.day(j.date)], [j.doc_type === "payment" ? "Paid to" : j.doc_type === "receipt" ? "Received from" : "From", esc(j.party_name)], ["How", esc(j.method_label || "-")]] };
+    const el = viewFrame({ title: `${A.doc(j.doc_type).label} ${j.number}`, subtitle: j.place.name, icon: A.doc(j.doc_type).icon, body, foot, hero });
     wireFilesView(el, { add: (f) => API.addJournalFile(j.id, f), remove: (m) => API.removeJournalFile(j.id, m), openUrl: (m) => API.journalFileUrl(j.id, m), reload: () => viewJournal(id, { onChange }) });
     el.querySelector("[data-print]")?.addEventListener("click", () => printReceipt(j));
     el.querySelector("[data-reverse]")?.addEventListener("click", () =>
@@ -592,6 +597,41 @@ const AccountingWindows = (function () {
     w.document.close();
   }
 
+  const HOW = { cash: "Cash", mpesa: "M-Pesa", bank: "Bank", cheque: "Cheque" };
+  const how = (m) => HOW[m] || m || "";
+
+  /** A voucher's journey: prepared, each approval stage (or "Authorised"), paid, in the books. */
+  function voucherSteps(v) {
+    const authorised = ["authorised", "paid"].includes(v.status);
+    const steps = [{ title: "Prepared", state: "done", icon: "ri-edit-line", who: v.prepared_by, when: v.prepared_at }];
+    if (v.approval) steps.push(...A.approvalSteps(v.approval));
+    else if (v.status === "rejected") steps.push({ title: "Sent back", state: "stopped", who: v.rejected_by, when: v.rejected_at, note: v.reject_reason });
+    else steps.push({ title: "Authorised", state: authorised ? "done" : v.status === "prepared" ? "now" : "next", icon: "ri-shield-check-line", who: v.authorised_by || (v.status === "prepared" ? "Waiting for the authoriser" : ""), when: v.authorised_at });
+    if (v.status === "cancelled") steps.push({ title: "Cancelled", state: "stopped", note: "It will not be paid" });
+    else {
+      steps.push({ title: "Paid", state: v.status === "paid" ? "done" : v.status === "authorised" ? "now" : "next", icon: "ri-hand-coin-line", who: v.status === "paid" ? v.paid_by : v.status === "authorised" ? "Waiting for the treasurer" : "", when: v.paid_on });
+      steps.push({ title: "In the books", state: v.journal_number ? "done" : "next", icon: "ri-book-2-line", who: v.journal_number || "" });
+    }
+    return steps;
+  }
+
+  /** What happens next on a voucher, in one sentence. */
+  function voucherNext(v) {
+    const c = v.can;
+    if (v.status === "paid") return A.nextCard({ tone: "done", title: `Paid on ${A.day(v.paid_on)}`, text: `${how(v.method)}${v.reference ? ` ${v.reference}` : ""} - posted as ${v.journal_number || "a payment"}. Nothing more to do.` });
+    if (v.status === "cancelled") return A.nextCard({ tone: "stopped", title: "Cancelled", text: "This voucher will not be paid." });
+    if (v.status === "rejected") return A.nextCard({ tone: "stopped", title: `Sent back${v.rejected_by ? ` by ${v.rejected_by}` : ""}`, text: `${v.reject_reason || ""} Whoever prepared it can change it and send it again.`.trim() });
+    if (v.status === "prepared") {
+      const who = v.approval?.waiting_on?.join(", ");
+      return c.authorise_this
+        ? A.nextCard({ tone: "mine", title: "Check it and approve", text: "Look at what it pays for and the invoice below, then approve it or send it back with a note." })
+        : A.nextCard({ tone: "wait", title: `Waiting for ${who || "the authoriser"}`, text: v.approval?.stage ? `Stage: ${v.approval.stage.name}.` : "Someone other than whoever prepared it must authorise it." });
+    }
+    return c.pay_this
+      ? A.nextCard({ tone: "mine", title: "Authorised - pay it", text: `Pay ${A.money(v.amount)} to ${v.payee_name} from ${v.pay_from?.name || "the account"}, then it posts to the books.` })
+      : A.nextCard({ tone: "wait", title: "Authorised - waiting to be paid", text: `The treasurer pays it from ${v.pay_from?.name || "the account"}.` });
+  }
+
   /** A payment voucher: where it stands, what it pays for, and the next step. */
   async function viewVoucher(id, { onChange } = {}) {
     const res = await API.voucher(id);
@@ -602,8 +642,6 @@ const AccountingWindows = (function () {
       onChange?.();
       viewVoucher(id, { onChange });
     };
-    const step = (on, done, icon, title, who, when) => `<li class="acc-step${done ? " is-done" : ""}${on ? " is-on" : ""}"><span class="acc-step-dot"><i class="${icon}"></i></span><div><strong>${esc(title)}</strong><small>${who ? esc(who) : ""}${when ? ` · ${A.day(when)}` : ""}</small></div></li>`;
-    const steps = `<ol class="acc-steps">${step(false, true, "ri-edit-line", "Prepared", v.prepared_by, v.prepared_at)}${v.status === "rejected" ? step(true, false, "ri-arrow-go-back-line", "Sent back", v.rejected_by, v.rejected_at) : step(v.status === "prepared", ["authorised", "paid"].includes(v.status), "ri-shield-check-line", "Authorised", v.authorised_by, v.authorised_at)}${step(v.status === "authorised", v.status === "paid", "ri-hand-coin-line", "Paid", v.paid_by, v.paid_on)}</ol>`;
     const alert =
       v.status === "rejected" ? `<div class="alert alert-danger mb-3"><strong>Sent back:</strong> ${esc(v.reject_reason)}</div>` : v.status === "cancelled" ? '<div class="alert alert-secondary mb-3">Cancelled - it will not be paid.</div>' : c.own_voucher && v.status === "prepared" && c.authorise ? '<div class="alert alert-info mb-3"><i class="ri-information-line me-1"></i>You prepared this voucher, so someone else must authorise it.</div>' : "";
     const lines = `<div class="table-responsive"><table class="table acc-lines-table mb-0"><thead><tr><th>Charged to</th><th class="d-none d-sm-table-cell">Fund</th><th class="text-end">KES</th></tr></thead><tbody>${v.lines
@@ -611,8 +649,8 @@ const AccountingWindows = (function () {
       .join("")}</tbody><tfoot><tr><th>Total</th><th class="d-none d-sm-table-cell"></th><th class="text-end">${A.amount(v.amount)}</th></tr></tfoot></table></div>`;
     const body =
       alert +
-      (v.approval ? part("ri-route-line", "Approval", A.approvalTimeline(v.approval), `<small>${esc(v.approval.workflow || "")}</small>`) : steps) +
-      part("ri-information-line", "Details", factGrid([["Pay to", esc(v.payee_name)], v.payee_phone && ["Phone", esc(v.payee_phone)], ["For", esc(v.narration)], ["Date", A.day(v.date)], ["Pay from", esc(v.pay_from?.name)], v.authorise_note && ["Authoriser's note", esc(v.authorise_note)], v.status === "paid" && ["Paid by", `${esc(v.method || "")} ${esc(v.reference || "")}`], v.journal_number && ["In the books", esc(v.journal_number)]])) +
+      part("ri-route-line", "Where it stands", A.journey(voucherSteps(v)) + voucherNext(v), v.approval?.workflow ? `<small>${esc(v.approval.workflow)}</small>` : "") +
+      part("ri-information-line", "Details", factGrid([v.payee_phone && ["Phone", esc(v.payee_phone)], ["For", esc(v.narration)], v.authorise_note && ["Authoriser's note", esc(v.authorise_note)], v.status === "paid" && ["Paid by", `${esc(how(v.method))} ${esc(v.reference || "")}`], v.journal_number && ["In the books", esc(v.journal_number)]])) +
       part("ri-list-check-2", "What it pays for", lines) +
       filesPart(v.files, { canAdd: c.own && (c.prepare || c.pay || c.journal), canRemove: c.own && v.status !== "paid" && (c.prepare || c.pay), label: "Invoice, quote and receipt" });
     const btn = (key, cls, icon, label) => `<button type="button" class="btn ${cls}" data-act="${key}"><i class="${icon} me-1"></i>${label}</button>`;
@@ -625,7 +663,8 @@ const AccountingWindows = (function () {
       c.pay_this ? btn("pay", "btn-primary", "ri-hand-coin-line", "Pay") : "",
       '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>',
     ].join("");
-    const el = viewFrame({ title: `Voucher ${v.number}`, subtitle: `${A.money(v.amount)} to ${v.payee_name} · ${A.VOUCHER[v.status].label}`, icon: "ri-file-list-3-line", body, foot });
+    const hero = { amount: v.amount, status: A.voucherPill(v.status, true), facts: [["Pay to", esc(v.payee_name)], ["Date", A.day(v.date)], ["Pay from", esc(v.pay_from?.name)]] };
+    const el = viewFrame({ title: `Voucher ${v.number}`, subtitle: v.narration, icon: "ri-file-list-3-line", body, foot, hero });
     wireFilesView(el, { add: (f) => API.addVoucherFile(v.id, f), remove: (m) => API.removeVoucherFile(v.id, m), openUrl: (m) => API.voucherFileUrl(v.id, m), reload: () => viewVoucher(id, { onChange }) });
     el.querySelector("#" + ID + "Foot").addEventListener("click", async (e) => {
       const b = e.target.closest("[data-act]");
@@ -837,7 +876,7 @@ const AccountingWindows = (function () {
     });
   }
 
-  return { receipt, voucher, transfer, journal, account, viewJournal, viewVoucher, close, countCash, pettySpend, setFloat, topUp, reasonWindow, cashTiles };
+  return { receipt, voucher, transfer, journal, account, viewJournal, viewVoucher, voucherSteps, voucherNext, viewFrame, heroStrip, part, factGrid, filesPart, close, countCash, pettySpend, setFloat, topUp, reasonWindow, cashTiles };
 })();
 
 window.AccountingWindows = AccountingWindows;

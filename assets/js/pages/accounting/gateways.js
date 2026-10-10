@@ -185,7 +185,7 @@
 
   function payouts() {
     const paid = po.places.reduce((t, p) => t + p.paid, 0);
-    $("gwPayoutsFigure").textContent = `${A.short(paid)} ${PERIODS[period].toLowerCase()}`;
+    $("gwPayoutsFigure").textContent = `${A.money(paid)} ${PERIODS[period].toLowerCase()}`;
     $("gwPeriods").innerHTML = Object.entries(PERIODS).map(([k, l]) => `<button type="button" class="btn btn-sm ${k === period ? "btn-primary" : "btn-outline-primary"}" data-period="${k}">${l}</button>`).join("");
     poKit?.destroy();
     poKit = K.listTable({

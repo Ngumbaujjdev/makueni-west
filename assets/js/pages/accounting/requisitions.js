@@ -45,10 +45,10 @@
     const ym = new Date().toISOString().slice(0, 7);
     const out = data.advances.filter((a) => a.status === "open");
     K.statRow($("statCardsRow"), [
-      { icon: "ri-time-line", label: "Waiting for approval", sub: A.short(sum(of("submitted"))), value: A.num(of("submitted").length), color: "warning" },
-      { icon: "ri-shield-check-line", label: "Approved - to pay", sub: A.short(sum(of("approved"))), value: A.num(of("approved").length), color: "primary" },
-      { icon: "ri-checkbox-circle-line", label: "Paid this month", sub: `${A.num(of("paid").filter((r) => (r.requested_at || "").startsWith(ym)).length)} requisitions`, value: A.short(sum(of("paid").filter((r) => (r.requested_at || "").startsWith(ym)))), color: "success" },
-      { icon: "ri-wallet-3-line", label: "Advances out", sub: out.some((a) => a.overdue) ? `${out.filter((a) => a.overdue).length} overdue` : "None overdue", value: A.short(out.reduce((t, a) => t + a.outstanding, 0)), color: "purple" },
+      { icon: "ri-time-line", label: "Waiting for approval", sub: A.money(sum(of("submitted"))), value: A.num(of("submitted").length), color: "warning" },
+      { icon: "ri-shield-check-line", label: "Approved - to pay", sub: A.money(sum(of("approved"))), value: A.num(of("approved").length), color: "primary" },
+      { icon: "ri-checkbox-circle-line", label: "Paid this month", sub: `${A.num(of("paid").filter((r) => (r.requested_at || "").startsWith(ym)).length)} requisitions`, value: A.figure(sum(of("paid").filter((r) => (r.requested_at || "").startsWith(ym)))), color: "success" },
+      { icon: "ri-wallet-3-line", label: "Advances out", sub: out.some((a) => a.overdue) ? `${out.filter((a) => a.overdue).length} overdue` : "None overdue", value: A.figure(out.reduce((t, a) => t + a.outstanding, 0)), color: "purple" },
     ]);
     $("rqFigure").textContent = `${of("submitted").length} waiting`;
     $("advFigure").textContent = out.length ? `${out.length} out` : "None out";
@@ -104,7 +104,7 @@
     $("advRows").innerHTML = data.advances.length
       ? data.advances
           .map(
-            (a) => `<tr><td><span class="fw-semibold">${esc(a.holder)}</span>${a.overdue ? ' <span class="badge bg-danger">Overdue</span>' : ""}</td><td>${esc(a.purpose)}<div class="acc-sub">Account for it by ${A.day(a.due_on)}</div></td><td class="d-none d-md-table-cell">${A.day(a.issued_on)}</td><td class="text-end">${A.money(a.amount)}</td><td class="text-end"><strong class="${a.outstanding > 0 ? "text-danger" : "text-success"}">${A.money(a.outstanding)}</strong><div class="acc-sub">spent ${A.short(a.spent)} · back ${A.short(a.returned)}</div></td><td class="text-end">${a.status === "open" && data.can.retire && !A.viewingBelow() ? `<button type="button" class="btn btn-sm btn-primary" data-retire="${a.id}"><i class="ri-receipt-2-line me-1"></i>Account for it</button>` : a.status === "retired" ? '<span class="badge bg-success">Accounted for</span>' : ""}</td></tr>`,
+            (a) => `<tr><td><span class="fw-semibold">${esc(a.holder)}</span>${a.overdue ? ' <span class="badge bg-danger">Overdue</span>' : ""}</td><td>${esc(a.purpose)}<div class="acc-sub">Account for it by ${A.day(a.due_on)}</div></td><td class="d-none d-md-table-cell">${A.day(a.issued_on)}</td><td class="text-end">${A.money(a.amount)}</td><td class="text-end"><strong class="${a.outstanding > 0 ? "text-danger" : "text-success"}">${A.money(a.outstanding)}</strong><div class="acc-sub">spent ${A.money(a.spent)} · back ${A.money(a.returned)}</div></td><td class="text-end">${a.status === "open" && data.can.retire && !A.viewingBelow() ? `<button type="button" class="btn btn-sm btn-primary" data-retire="${a.id}"><i class="ri-receipt-2-line me-1"></i>Account for it</button>` : a.status === "retired" ? '<span class="badge bg-success">Accounted for</span>' : ""}</td></tr>`,
           )
           .join("")
       : `<tr><td colspan="6">${A.empty("ri-wallet-3-line", "No advances", "A requisition for a cash advance shows here once it's paid.")}</td></tr>`;

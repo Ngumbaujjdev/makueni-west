@@ -49,7 +49,7 @@ $breadcrumbs = match ($accCtx['page']) {
         <?php include __DIR__ . '/../sidebar.php' ?>
 
         <div class="main-content app-content">
-            <div class="container-fluid">
+            <div class="container-fluid acc-page acc-page-<?= $accCtx['page'] ?>">
                 <?php include __DIR__ . '/../page-header.php' ?>
                 <?php include __DIR__ . "/body-{$accCtx['page']}.php" ?>
             </div>

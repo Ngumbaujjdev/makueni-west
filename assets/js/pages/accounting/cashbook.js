@@ -49,10 +49,10 @@
   function stats() {
     const k = A.kind(book.account.cash_kind);
     K.statRow($("cbStats"), [
-      { icon: "ri-skip-back-line", label: "Brought forward", sub: `On ${A.day(book.from)}`, value: A.money(book.opening), color: "secondary" },
-      { icon: "ri-arrow-down-circle-line", label: "Money in", sub: `${book.rows.filter((r) => r.in).length} receipts and transfers in`, value: A.money(book.in), color: "success" },
-      { icon: "ri-arrow-up-circle-line", label: "Money out", sub: `${book.rows.filter((r) => r.out).length} payments and transfers out`, value: A.money(book.out), color: "danger" },
-      { icon: k.icon, label: "Carried forward", sub: `On ${A.day(book.to)}`, value: A.money(book.closing), color: k.color },
+      { icon: "ri-skip-back-line", label: "Brought forward", sub: `On ${A.day(book.from)}`, value: A.figure(book.opening), color: "secondary" },
+      { icon: "ri-arrow-down-circle-line", label: "Money in", sub: `${book.rows.filter((r) => r.in).length} receipts and transfers in`, value: A.figure(book.in), color: "success" },
+      { icon: "ri-arrow-up-circle-line", label: "Money out", sub: `${book.rows.filter((r) => r.out).length} payments and transfers out`, value: A.figure(book.out), color: "danger" },
+      { icon: k.icon, label: "Carried forward", sub: `On ${A.day(book.to)}`, value: A.figure(book.closing), color: k.color },
     ]);
   }
 

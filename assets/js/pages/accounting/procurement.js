@@ -47,13 +47,13 @@
     const ym = new Date().toISOString().slice(0, 7);
     const month = data.orders.filter((o) => o.status !== "cancelled" && o.date.startsWith(ym));
     K.statRow($("statCardsRow"), [
-      { icon: "ri-shield-check-line", label: "Approved - to order", sub: A.short(sum(data.to_order)), value: A.num(data.to_order.length), color: "primary" },
+      { icon: "ri-shield-check-line", label: "Approved - to order", sub: A.money(sum(data.to_order)), value: A.num(data.to_order.length), color: "primary" },
       { icon: "ri-truck-line", label: "Goods to come", sub: open.some((o) => o.late) ? `${open.filter((o) => o.late).length} late` : "None late", value: A.num(open.length), color: "warning" },
-      { icon: "ri-file-list-2-line", label: "Owed to suppliers", sub: owed.some((b) => b.overdue) ? `${owed.filter((b) => b.overdue).length} overdue` : `${owed.length} bills`, value: A.short(sum(owed)), color: "danger" },
-      { icon: "ri-shopping-cart-2-line", label: "Ordered this month", sub: `${month.length} orders`, value: A.short(sum(month)), color: "success" },
+      { icon: "ri-file-list-2-line", label: "Owed to suppliers", sub: owed.some((b) => b.overdue) ? `${owed.filter((b) => b.overdue).length} overdue` : `${owed.length} bills`, value: A.figure(sum(owed)), color: "danger" },
+      { icon: "ri-shopping-cart-2-line", label: "Ordered this month", sub: `${month.length} orders`, value: A.figure(sum(month)), color: "success" },
     ]);
     $("prOrdersFigure").textContent = `${open.length} open`;
-    $("prBillsFigure").textContent = owed.length ? `${A.short(sum(owed))} owed` : "Nothing owed";
+    $("prBillsFigure").textContent = owed.length ? `${A.money(sum(owed))} owed` : "Nothing owed";
     $("prSuppliersFigure").textContent = `${data.suppliers.filter((s) => s.is_active).length} active`;
   }
 

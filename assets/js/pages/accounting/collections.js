@@ -50,9 +50,9 @@
     const last = posted[0];
     const waiting = data.items.filter((c) => c.status === "counted").length;
     K.statRow($("statCardsRow"), [
-      { icon: "ri-hand-heart-line", label: "Given this month", sub: `${A.num(month.length)} ${month.length === 1 ? "collection" : "collections"} receipted`, value: A.short(sum(month)), color: "success", delta: UI.periodDelta(sum(month), sum(prev)), series: data.monthly, trim: true },
-      { icon: "ri-sun-line", label: "Last service", sub: last ? `${last.title}, ${A.day(last.date, { day: "numeric", month: "short" })}` : "None yet", value: last ? A.short(last.total) : "-", color: "primary" },
-      { icon: "ri-bank-line", label: "Cash not banked", sub: data.unbanked.count ? `From ${data.unbanked.count} ${data.unbanked.count === 1 ? "collection" : "collections"}` : "All banked", value: A.short(data.unbanked.total), color: "purple" },
+      { icon: "ri-hand-heart-line", label: "Given this month", sub: `${A.num(month.length)} ${month.length === 1 ? "collection" : "collections"} receipted`, value: A.figure(sum(month)), color: "success", delta: UI.periodDelta(sum(month), sum(prev)), series: data.monthly, trim: true },
+      { icon: "ri-sun-line", label: "Last service", sub: last ? `${last.title}, ${A.day(last.date, { day: "numeric", month: "short" })}` : "None yet", value: last ? A.figure(last.total) : "-", color: "primary" },
+      { icon: "ri-bank-line", label: "Cash not banked", sub: data.unbanked.count ? `From ${data.unbanked.count} ${data.unbanked.count === 1 ? "collection" : "collections"}` : "All banked", value: A.figure(data.unbanked.total), color: "purple" },
       { icon: "ri-time-line", label: "Waiting to confirm", sub: "A second person checks each count", value: A.num(waiting), color: "warning" },
     ]);
   }
@@ -74,9 +74,9 @@
     ${K.checkCell(c.id, c.title)}
     <td data-search="${esc(`${c.title} ${c.kinds.map((k) => k.label).join(" ")} ${c.counted_by || ""} ${c.journal?.number || ""}`)}" data-order="${esc(c.title.toLowerCase())}"><div class="d-flex align-items-center gap-2"><span class="avatar avatar-sm avatar-rounded bg-${STATUS[c.status].color} ${A.textOn(STATUS[c.status].color)}"><i class="ri-hand-coin-line"></i></span><div class="min-w-0"><div class="fw-semibold">${esc(c.title)}</div><div class="acc-sub">${c.journal ? esc(c.journal.number) : `Counted by ${esc(c.counted_by || "")}`}</div></div></div></td>
     <td data-order="${c.date}${String(c.id).padStart(8, "0")}" class="text-nowrap">${A.day(c.date)}</td>
-    <td class="d-none d-lg-table-cell"><div class="d-flex flex-wrap gap-1">${c.kinds.map((k) => `<span class="soft-chip soft-primary">${esc(k.label)} ${A.short(k.cash + k.mpesa).replace("KES ", "")}</span>`).join("")}</div></td>
+    <td class="d-none d-lg-table-cell"><div class="d-flex flex-wrap gap-1">${c.kinds.map((k) => `<span class="soft-chip soft-primary">${esc(k.label)} ${A.money(k.cash + k.mpesa).replace("KES ", "")}</span>`).join("")}</div></td>
     <td class="d-none d-md-table-cell">${pill(c.status)}${c.status === "posted" ? `<div class="acc-sub mt-1">${c.banked ? `Banked ${A.day(c.banked.date, { day: "numeric", month: "short" })}` : c.cash_total > 0 ? "Cash not banked yet" : "All by M-Pesa"}</div>` : ""}</td>
-    <td class="text-end" data-order="${c.total}"><strong>${A.money(c.total)}</strong><div class="acc-sub">Cash ${A.short(c.cash_total)} · M-Pesa ${A.short(c.mpesa_total)}</div></td>
+    <td class="text-end" data-order="${c.total}"><strong>${A.money(c.total)}</strong><div class="acc-sub">Cash ${A.money(c.cash_total)} · M-Pesa ${A.money(c.mpesa_total)}</div></td>
   </tr>`;
 
   async function load() {

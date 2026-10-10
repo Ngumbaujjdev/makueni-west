@@ -19,9 +19,9 @@
     const live = items.filter((j) => j.status !== "reversed" && j.doc_type !== "reversal");
     const sum = (t) => live.filter((j) => j.doc_type === t).reduce((s, j) => s + j.amount, 0);
     PeopleKit.statRow($("statCardsRow"), [
-      { icon: "ri-arrow-down-circle-line", label: "Receipts", sub: `${A.num(live.filter((j) => j.doc_type === "receipt").length)} written`, value: A.short(sum("receipt")), color: "success" },
-      { icon: "ri-arrow-up-circle-line", label: "Payments", sub: `${A.num(live.filter((j) => j.doc_type === "payment").length)} paid`, value: A.short(sum("payment")), color: "danger" },
-      { icon: "ri-arrow-left-right-line", label: "Transfers", sub: "Between our own accounts", value: A.short(sum("transfer")), color: "primary" },
+      { icon: "ri-arrow-down-circle-line", label: "Receipts", sub: `${A.num(live.filter((j) => j.doc_type === "receipt").length)} written`, value: A.figure(sum("receipt")), color: "success" },
+      { icon: "ri-arrow-up-circle-line", label: "Payments", sub: `${A.num(live.filter((j) => j.doc_type === "payment").length)} paid`, value: A.figure(sum("payment")), color: "danger" },
+      { icon: "ri-arrow-left-right-line", label: "Transfers", sub: "Between our own accounts", value: A.figure(sum("transfer")), color: "primary" },
       { icon: "ri-file-list-3-line", label: "Documents", sub: `${A.num(items.filter((j) => j.status === "reversed").length)} reversed`, value: A.num(items.length), color: "purple" },
     ]);
   }

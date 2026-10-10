@@ -28,9 +28,9 @@
     const waiting = d.vouchers.prepared.count;
     const toPay = d.vouchers.authorised.count;
     K.statRow($("statCardsRow"), [
-      { icon: "ri-safe-2-line", label: "Money we hold", sub: `In ${d.cash.length} ${d.cash.length === 1 ? "account" : "accounts"}, today`, value: A.short(held), color: "primary", series: { labels: m.labels, data: cumulative(m, held) } },
-      { icon: "ri-arrow-down-circle-line", label: "Received", sub: d.month.label, value: A.short(d.month.in), color: "success", delta: UI.periodDelta(d.month.in, d.last_month.in), series: { labels: last(m.labels), data: last(m.in) }, trim: true },
-      { icon: "ri-arrow-up-circle-line", label: "Spent", sub: d.month.label, value: A.short(d.month.out), color: "danger", delta: invert(UI.periodDelta(d.month.out, d.last_month.out)), series: { labels: last(m.labels), data: last(m.out) }, trim: true },
+      { icon: "ri-safe-2-line", label: "Money we hold", sub: `In ${d.cash.length} ${d.cash.length === 1 ? "account" : "accounts"}, today`, value: A.figure(held), color: "primary", series: { labels: m.labels, data: cumulative(m, held) } },
+      { icon: "ri-arrow-down-circle-line", label: "Received", sub: d.month.label, value: A.figure(d.month.in), color: "success", delta: UI.periodDelta(d.month.in, d.last_month.in), series: { labels: last(m.labels), data: last(m.in) }, trim: true },
+      { icon: "ri-arrow-up-circle-line", label: "Spent", sub: d.month.label, value: A.figure(d.month.out), color: "danger", delta: invert(UI.periodDelta(d.month.out, d.last_month.out)), series: { labels: last(m.labels), data: last(m.out) }, trim: true },
       { icon: "ri-file-list-3-line", label: "Payments waiting", sub: toPay ? `${toPay} authorised - to pay` : "None waiting to be paid", value: A.num(waiting + toPay), color: "warning", bar: { pct: waiting + toPay ? Math.round((toPay / (waiting + toPay)) * 100) : 0, text: waiting ? `${waiting} to authorise` : "All authorised" } },
     ]);
   }
@@ -68,7 +68,7 @@
     const m = d.monthly;
     const css = getComputedStyle(document.documentElement);
     const rgb = (v) => `rgb(${css.getPropertyValue(v).trim()})`;
-    $("chartChips").innerHTML = `<span class="soft-chip soft-success">This year in · ${esc(A.short(d.year.in))}</span> <span class="soft-chip soft-danger">Out · ${esc(A.short(d.year.out))}</span>`;
+    $("chartChips").innerHTML = `<span class="soft-chip soft-success">This year in · ${esc(A.money(d.year.in))}</span> <span class="soft-chip soft-danger">Out · ${esc(A.money(d.year.out))}</span>`;
     chart = new ApexCharts($("inOutChart"), {
       chart: { type: "bar", height: 280, toolbar: { show: false }, fontFamily: "Inter, sans-serif" },
       series: [
@@ -79,7 +79,7 @@
       plotOptions: { bar: { columnWidth: "55%", borderRadius: 3 } },
       dataLabels: { enabled: false },
       xaxis: { categories: m.labels.map((l) => l.split(" ")[0]), axisBorder: { show: false } },
-      yaxis: { min: 0, max: Math.max(...m.in, ...m.out) > 0 ? undefined : 1000, tickAmount: 4, labels: { formatter: (v) => (!Number.isFinite(v) ? "" : v >= 1000 ? `${Math.round(v / 1000)}k` : Math.round(v)) } },
+      yaxis: { min: 0, max: Math.max(...m.in, ...m.out) > 0 ? undefined : 1000, tickAmount: 4, labels: { formatter: (v) => (!Number.isFinite(v) ? "" : Math.round(v).toLocaleString("en-GB")) } },
       grid: { borderColor: "rgba(0,0,0,0.06)", strokeDashArray: 3 },
       legend: { position: "top", horizontalAlign: "right" },
       tooltip: { y: { formatter: (v) => A.money(v) } },
@@ -93,8 +93,8 @@
       ? `<div class="acc-fund-list">${funds
           .map(
             (f) => `<div class="acc-fund"><span class="avatar avatar-sm avatar-rounded bg-${f.restricted ? "warning text-dark" : "success text-white"}"><i class="${f.restricted ? "ri-lock-line" : "ri-hand-heart-line"}"></i></span>
-            <div class="flex-fill min-w-0"><div class="fw-semibold">${esc(f.name)}</div><div class="acc-sub">In ${esc(A.short(f.in))} · out ${esc(A.short(f.out))}</div></div>
-            <strong class="${f.in - f.out < 0 ? "text-danger" : ""}">${A.short(f.in - f.out)}</strong></div>`,
+            <div class="flex-fill min-w-0"><div class="fw-semibold">${esc(f.name)}</div><div class="acc-sub">In ${esc(A.money(f.in))} · out ${esc(A.money(f.out))}</div></div>
+            <strong class="${f.in - f.out < 0 ? "text-danger" : ""}">${A.money(f.in - f.out)}</strong></div>`,
           )
           .join("")}</div>`
       : A.empty("ri-hand-heart-line", "Nothing yet", "Receipts show here by fund.");
@@ -104,7 +104,7 @@
     const max = Math.max(1, ...rows.map((r) => r.total));
     el.innerHTML = rows.length
       ? `<div class="acc-top">${rows
-          .map((r) => `<div class="acc-top-row"><div class="d-flex justify-content-between gap-2"><span class="fw-semibold text-truncate">${esc(r.name)}</span><strong>${A.short(r.total)}</strong></div><div class="progress progress-xs"><div class="progress-bar bg-${color}" style="width:${Math.round((r.total / max) * 100)}%"></div></div></div>`)
+          .map((r) => `<div class="acc-top-row"><div class="d-flex justify-content-between gap-2"><span class="fw-semibold text-truncate">${esc(r.name)}</span><strong>${A.money(r.total)}</strong></div><div class="progress progress-xs"><div class="progress-bar bg-${color}" style="width:${Math.round((r.total / max) * 100)}%"></div></div></div>`)
           .join("")}</div>`
       : A.empty(color === "success" ? "ri-arrow-down-circle-line" : "ri-arrow-up-circle-line", "Nothing yet", "It fills in as money is recorded.");
   }
@@ -132,12 +132,12 @@
       el.hidden = true;
       return;
     }
-    const kinds = c.last ? c.last.kinds.map((k) => `<span class="acc-lastsun-kind"><small>${esc(k.label)}</small><strong>${A.short(k.amount)}</strong></span>`).join("") : "";
+    const kinds = c.last ? c.last.kinds.map((k) => `<span class="acc-lastsun-kind"><small>${esc(k.label)}</small><strong>${A.money(k.amount)}</strong></span>`).join("") : "";
     el.innerHTML = `<div class="card-body d-flex flex-wrap align-items-center gap-3">
       <span class="avatar avatar-md avatar-rounded bg-success text-white"><i class="ri-hand-heart-line fs-18"></i></span>
       <div class="min-w-0"><div class="acc-sub">${c.last ? `${esc(c.last.title)} · ${A.day(c.last.date, { weekday: "short", day: "numeric", month: "short" })}` : "Collections"}</div><div class="fs-18 fw-bold">${c.last ? A.money(c.last.total) : "-"}</div></div>
       <div class="acc-lastsun-kinds">${kinds}</div>
-      <div class="ms-auto d-flex flex-wrap gap-2 align-items-center">${c.waiting ? `<span class="soft-chip soft-warning"><i class="ri-time-line"></i>${c.waiting} waiting to confirm</span>` : ""}${c.unbanked.count ? `<span class="soft-chip soft-purple"><i class="ri-bank-line"></i>${A.short(c.unbanked.total)} not banked</span>` : ""}<a class="btn btn-sm btn-outline-primary" href="${CTX.baseUrl}/collections.php">Collections<i class="ri-arrow-right-line ms-1"></i></a></div>
+      <div class="ms-auto d-flex flex-wrap gap-2 align-items-center">${c.waiting ? `<span class="soft-chip soft-warning"><i class="ri-time-line"></i>${c.waiting} waiting to confirm</span>` : ""}${c.unbanked.count ? `<span class="soft-chip soft-purple"><i class="ri-bank-line"></i>${A.money(c.unbanked.total)} not banked</span>` : ""}<a class="btn btn-sm btn-outline-primary" href="${CTX.baseUrl}/collections.php">Collections<i class="ri-arrow-right-line ms-1"></i></a></div>
     </div>`;
     el.hidden = false;
   }

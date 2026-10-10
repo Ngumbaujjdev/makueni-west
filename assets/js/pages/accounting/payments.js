@@ -26,10 +26,10 @@
     const ym = new Date().toISOString().slice(0, 7);
     const paidMonth = of("paid").filter((v) => (v.paid_on || "").startsWith(ym));
     K.statRow($("statCardsRow"), [
-      { icon: "ri-time-line", label: "Waiting to be authorised", sub: A.short(sum(of("prepared"))), value: A.num(of("prepared").length), color: "warning" },
-      { icon: "ri-shield-check-line", label: "Authorised - to pay", sub: A.short(sum(of("authorised"))), value: A.num(of("authorised").length), color: "primary" },
+      { icon: "ri-time-line", label: "Waiting to be authorised", sub: A.money(sum(of("prepared"))), value: A.num(of("prepared").length), color: "warning" },
+      { icon: "ri-shield-check-line", label: "Authorised - to pay", sub: A.money(sum(of("authorised"))), value: A.num(of("authorised").length), color: "primary" },
       { icon: "ri-arrow-go-back-line", label: "Sent back", sub: "To fix and send again", value: A.num(of("rejected").length), color: "danger" },
-      { icon: "ri-checkbox-circle-line", label: "Paid this month", sub: `${A.num(paidMonth.length)} vouchers`, value: A.short(sum(paidMonth)), color: "success" },
+      { icon: "ri-checkbox-circle-line", label: "Paid this month", sub: `${A.num(paidMonth.length)} vouchers`, value: A.figure(sum(paidMonth)), color: "success" },
     ]);
   }
 

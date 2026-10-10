@@ -38,10 +38,10 @@
     const paid = data.gifts.filter((g) => g.status === "paid");
     const month = paid.filter((g) => (g.paid_at || "").startsWith(ym));
     K.statRow($("statCardsRow"), [
-      { icon: "ri-hand-heart-line", label: "Given online this month", sub: `${month.length} gifts`, value: A.short(sum(month)), color: "success" },
-      { icon: "ri-smartphone-line", label: "By M-Pesa", sub: OWN[data.mpesa.route] ? `Straight to our own ${ownChannel()?.till ? "till" : "paybill"}` : "Through the diocese paybill", value: A.short(sum(month.filter((g) => g.method === "mpesa"))), color: "primary" },
-      { icon: "ri-bank-card-line", label: "By card (Paystack)", sub: `Fees ${A.short(sum(month, (g) => g.fee))} this month`, value: A.short(sum(month.filter((g) => g.method === "paystack"))), color: "purple" },
-      { icon: "ri-percent-line", label: "Diocese share split off", sub: "At source on card tithes", value: A.short(sum(month, (g) => g.split)), color: "warning" },
+      { icon: "ri-hand-heart-line", label: "Given online this month", sub: `${month.length} gifts`, value: A.figure(sum(month)), color: "success" },
+      { icon: "ri-smartphone-line", label: "By M-Pesa", sub: OWN[data.mpesa.route] ? `Straight to our own ${ownChannel()?.till ? "till" : "paybill"}` : "Through the diocese paybill", value: A.figure(sum(month.filter((g) => g.method === "mpesa"))), color: "primary" },
+      { icon: "ri-bank-card-line", label: "By card (Paystack)", sub: `Fees ${A.money(sum(month, (g) => g.fee))} this month`, value: A.figure(sum(month.filter((g) => g.method === "paystack"))), color: "purple" },
+      { icon: "ri-percent-line", label: "Diocese share split off", sub: "At source on card tithes", value: A.figure(sum(month, (g) => g.split)), color: "warning" },
     ]);
   }
 
@@ -83,7 +83,7 @@
     <td data-search="${esc(`${g.giver || ""} ${g.phone || ""} ${g.reference} ${g.receipt || ""}`)}"><div class="fw-semibold">${esc(g.giver || "Online giver")}</div><div class="acc-sub">${esc(g.reference)}${g.phone ? ` · ${esc(g.phone)}` : ""}</div></td>
     <td data-order="${g.paid_at || g.created_at}" class="text-nowrap">${when(g.paid_at || g.created_at)}</td>
     <td class="d-none d-md-table-cell"><span class="badge bg-${PURPOSE_COLOR[g.purpose] || "secondary"} ${A.textOn(PURPOSE_COLOR[g.purpose] || "secondary")}">${esc(g.purpose_label)}</span><div class="acc-sub mt-1">${g.method === "mpesa" ? (g.channel === "payhero" || g.channel === "own_daraja" ? "M-Pesa · our paybill" : "M-Pesa") : "Card"}</div></td>
-    <td class="d-none d-lg-table-cell"><span class="badge bg-${ST[g.status][0]} ${A.textOn(ST[g.status][0])}"><i class="${ST[g.status][1]} me-1"></i>${esc(g.status_label)}</span>${g.disputed ? ' <span class="badge bg-danger">Disputed</span>' : ""}<div class="acc-sub mt-1">${g.status === "paid" ? `${g.receipt ? esc(g.receipt) : ""}${g.fee ? ` · fee ${A.short(g.fee)}` : ""}${g.split ? ` · share ${A.short(g.split)}` : ""}` : esc(g.result || "")}</div></td>
+    <td class="d-none d-lg-table-cell"><span class="badge bg-${ST[g.status][0]} ${A.textOn(ST[g.status][0])}"><i class="${ST[g.status][1]} me-1"></i>${esc(g.status_label)}</span>${g.disputed ? ' <span class="badge bg-danger">Disputed</span>' : ""}<div class="acc-sub mt-1">${g.status === "paid" ? `${g.receipt ? esc(g.receipt) : ""}${g.fee ? ` · fee ${A.money(g.fee)}` : ""}${g.split ? ` · share ${A.money(g.split)}` : ""}` : esc(g.result || "")}</div></td>
     <td class="text-end" data-order="${g.amount}"><strong>${A.money(g.amount)}</strong></td>
   </tr>`;
 
@@ -114,10 +114,10 @@
 
   function payoutRows() {
     const st = po.stats;
-    $("gvPayoutsFigure").textContent = `${A.short(st.paid)} in ${po.year}`;
+    $("gvPayoutsFigure").textContent = `${A.money(st.paid)} in ${po.year}`;
     $("gvYears").innerHTML = [0, 1, 2].map((n) => new Date().getFullYear() - n).map((y) => `<button type="button" class="btn btn-sm ${y === po.year ? "btn-primary" : "btn-outline-primary"}" data-year="${y}">${y}</button>`).join("");
     $("gvPayoutsSub").textContent = po.own_paystack ? "Card money Paystack paid to our bank - open one to see the gifts it carried" : "We have no Paystack of our own yet - the diocese holds our card and paybill money and settles it monthly";
-    $("gvPayoutFacts").innerHTML = `<div class="acc-facts"><div><span>Paid to our bank in ${po.year}</span><strong>${A.money(st.paid)}</strong></div><div><span>Payouts</span><strong>${st.count}${st.count ? ` · about ${A.short(st.average)} each` : ""}</strong></div><div><span>Last payout</span><strong>${st.last ? `${A.money(st.last.amount)} · ${A.day(st.last.date)}` : "None yet"}</strong></div><div><span>${po.own_paystack ? "On the way" : "Held by the diocese"}</span><strong>${A.money(po.own_paystack ? st.on_the_way : st.held || 0)}</strong></div>${st.failed ? `<div><span>Failed</span><strong class="text-danger">${st.failed} - check our bank details</strong></div>` : ""}</div>`;
+    $("gvPayoutFacts").innerHTML = `<div class="acc-facts"><div><span>Paid to our bank in ${po.year}</span><strong>${A.money(st.paid)}</strong></div><div><span>Payouts</span><strong>${st.count}${st.count ? ` · about ${A.money(st.average)} each` : ""}</strong></div><div><span>Last payout</span><strong>${st.last ? `${A.money(st.last.amount)} · ${A.day(st.last.date)}` : "None yet"}</strong></div><div><span>${po.own_paystack ? "On the way" : "Held by the diocese"}</span><strong>${A.money(po.own_paystack ? st.on_the_way : st.held || 0)}</strong></div>${st.failed ? `<div><span>Failed</span><strong class="text-danger">${st.failed} - check our bank details</strong></div>` : ""}</div>`;
     $("gvPayoutRows").innerHTML = po.payouts.length
       ? po.payouts.map((p) => `<tr${p.kind === "paystack" ? ` data-payout="${p.id}" class="acc-row"` : ""}>
           <td class="text-nowrap"><div class="fw-semibold">${A.day(p.date)}</div><div class="acc-sub">${p.kind === "paystack" ? "Paystack" : "From the diocese"}</div></td>
