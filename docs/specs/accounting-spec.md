@@ -899,3 +899,12 @@ The user found the pages bare. The redesign ships in five parts:
 - `GET give/status/{reference}` adds, for a paid gift: `receipt_url`, `paid_at`, `mpesa_code` (the paybill code, or Paystack's `receipt_number` for M-Pesa through Paystack), `giver`, `phone` (masked) and `lines`.
 - `GET give/receipt/{reference}` (public, 30 a minute) returns the receipt as a diocese PDF (`GiftReceipt`), built straight away because the giver has no login. A gift that isn't paid gets 404.
 - The SMS ends with "Receipt: {frontend}/give-thanks?ref=…", and the email links to it too.
+
+**A10 - every option through Paystack (2026-10-10):**
+- When Paystack is on, the giving page's "Pay with" tiles are M-Pesa, Airtel Money, Card and Pesalink, all opening Paystack's secure page, plus Pay Bill (yourself, from the M-Pesa menu). The paybill's own M-Pesa prompt shows only when Paystack is off.
+- `POST give/{code}` takes `pay` (`mpesa|airtel|card|pesalink`) with `method: paystack`. `Giving::PAY` maps it to Paystack's `channels`:
+  - M-Pesa and Airtel → `mobile_money` (Paystack's page can't narrow to one provider, so the giver taps theirs there);
+  - Card → `card`;
+  - Pesalink → no filter, because Paystack accepts no channel name for it (tried `bank_transfer`, `bank`, `pesalink`, `eft` in test mode: "No active channel").
+- M-Pesa and Airtel through Paystack: the phone must be a Kenyan mobile and the cap is KES 250,000. The email is optional, because the receipt comes by our SMS; Paystack still needs an email, so the diocese's mail-from address stands in.
+- How it was paid (`GiftReceipt::paidWith`): `mpesa`, `airtel`, `card` or `bank`, read from Paystack's verify (its channel, and the provider named in `authorization.bank`/`brand`). It drives `status.paid_with`, the thanks page's logo, the PDF's "Paid by" and the gift's trail.
