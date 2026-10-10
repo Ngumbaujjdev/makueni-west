@@ -65,7 +65,7 @@ final class Paybill
     {
         $code = self::code($place);
         $out = ['' => ['label' => 'Any ('.$this->purposes->default()->label.')', 'account' => $code]];
-        foreach ($this->purposes->active() as $p) {
+        foreach ($this->purposes->forPlace($place) as $p) {
             $out[$p->key] = ['label' => $p->label, 'account' => $code.$p->suffix];
         }
 
@@ -111,7 +111,7 @@ final class Paybill
     }
 
     /** Every place's account code => the place (cached for the request). @return array<string, Territory> */
-    private function codes(): array
+    public function codes(): array
     {
         static $codes = null;
         if ($codes === null || app()->runningUnitTests()) {
@@ -212,34 +212,47 @@ final class Paybill
 
                     return;
                 }
-                if ($payment->channel_id && $place && $payment->purpose) {
+                $purpose = $this->purposes->find($payment->purpose);
+                if ($payment->channel_id && $place && $purpose) {
+                    // A church's own paybill takes only what is the church's own (A11): another place's option waits to be sorted.
+                    if (! $this->purposes->visibleAt($purpose, $place) || (int) $this->purposes->booksFor($purpose->key, $place)->id !== (int) $place->id) {
+                        $payment->update(['note' => mb_substr("{$purpose->label} is ".($purpose->owner?->name ?? 'another place')."'s - paid into {$place->name}'s own paybill. Sort it.", 0, 255)]);
+
+                        return;
+                    }
                     $this->postOwn($payment, $place);
 
                     return;
                 }
-                if (! $place || ! $payment->purpose) {
+                $problem = ! $place ? 'No place has that account number.' : (! $purpose ? 'The account number has no purpose we know.'
+                    : (! $this->purposes->visibleAt($purpose, $place) ? "{$purpose->label} isn't one of {$place->name}'s giving options." : null));
+                if ($problem) {
                     $j = $this->ledger->post($diocese, $head("Paybill payment to sort ({$payment->bill_ref})"), [
                         ['account_id' => $paybill->id, 'debit' => $amount],
                         ['account_id' => $this->chart->account('paybill_to_sort')->id, 'credit' => $amount, 'memo' => "Account {$payment->bill_ref}"],
                     ], null);
-                    $payment->update(['diocese_journal_id' => $j->id, 'note' => $place ? 'The account number has no purpose we know.' : 'No place has that account number.']);
+                    $payment->update(['diocese_journal_id' => $j->id, 'note' => mb_substr($problem, 0, 255)]);
 
                     return;
                 }
                 [$account, $fund] = $this->target($payment->purpose);
-                $label = GivingPurposes::label($payment->purpose);
+                // An option a place above owns is its money: booked in its books, the place it was given at named (A11).
+                $books = $this->purposes->booksFor($payment->purpose, $place);
+                $owner = (int) $books->id !== (int) $place->id ? $books->id : null;
+                $label = GivingPurposes::label($payment->purpose).($owner ? " given at {$place->name}" : '');
+                $place = $books;
                 if ((int) $place->id === (int) $diocese->id) {
                     $j = $this->ledger->post($diocese, $head("{$label} by M-Pesa paybill"), [
                         ['account_id' => $paybill->id, 'debit' => $amount],
                         ['account_id' => $account->id, 'credit' => $amount, 'fund_id' => $fund?->id, 'budget_line_id' => $this->chart->budgetLineFor($diocese, $account->id)?->id, 'memo' => $label],
                     ], null);
                     $this->bridge->journalPosted($j, null);
-                    $payment->update(['status' => 'posted', 'diocese_journal_id' => $j->id, 'account_id' => $account->id, 'fund_id' => $fund?->id, 'note' => null]);
+                    $payment->update(['status' => 'posted', 'diocese_journal_id' => $j->id, 'owner_territory_id' => $owner, 'account_id' => $account->id, 'fund_id' => $fund?->id, 'note' => null]);
 
                     return;
                 }
                 [$dj, $pj] = $this->postForPlace($payment, $place, $paybill, $account, $fund, $label, $head);
-                $payment->update(['status' => 'posted', 'diocese_journal_id' => $dj->id, 'place_journal_id' => $pj->id, 'account_id' => $account->id, 'fund_id' => $fund?->id, 'note' => null]);
+                $payment->update(['status' => 'posted', 'diocese_journal_id' => $dj->id, 'place_journal_id' => $pj->id, 'owner_territory_id' => $owner, 'account_id' => $account->id, 'fund_id' => $fund?->id, 'note' => null]);
             });
         } catch (Throwable $e) {
             report($e);
@@ -431,10 +444,10 @@ final class Paybill
             if ($payment->channel_id) {
                 // It came into a church's own paybill: it can only go into that church's books.
                 $purpose = (string) ($data['purpose'] ?? '');
-                if (! $this->purposes->usable($purpose)) {
-                    throw ValidationException::withMessages(['purpose' => ['Pick what it was given for.']]);
-                }
                 $place = Territory::findOrFail(PaymentChannel::findOrFail($payment->channel_id)->territory_id);
+                if (! $this->purposes->usableAt($purpose, $place) || (int) $this->purposes->booksFor($purpose, $place)->id !== (int) $place->id) {
+                    throw ValidationException::withMessages(['purpose' => ['Pick one of the church\'s own giving options - its own paybill money is its own.']]);
+                }
                 $payment->update(['territory_id' => $place->id, 'purpose' => $purpose]);
                 $this->postOwn($payment, $place, $user);
                 $payment->update(['note' => isset($data['note']) ? (mb_substr(trim((string) $data['note']), 0, 255) ?: null) : null, 'sorted_by' => $user->id, 'sorted_at' => now()]);
@@ -468,11 +481,17 @@ final class Paybill
                 throw ValidationException::withMessages(['purpose' => ['Pick what it was given for.']]);
             }
             [$account, $fund] = $this->target($purpose);
-            $label = GivingPurposes::label($purpose);
-            $place = $to === 'diocese' ? $diocese : Territory::whereIn('territory_type', ['church', 'region'])->find((int) ($data['territory_id'] ?? 0));
-            if (! $place) {
+            $given = $to === 'diocese' ? $diocese : Territory::whereIn('territory_type', ['church', 'region'])->find((int) ($data['territory_id'] ?? 0));
+            if (! $given) {
                 throw ValidationException::withMessages(['territory_id' => ['Pick the church it was for.']]);
             }
+            if (! $this->purposes->visibleAt($this->purposes->find($purpose), $given)) {
+                throw ValidationException::withMessages(['purpose' => [GivingPurposes::label($purpose)." isn't one of {$given->name}'s giving options."]]);
+            }
+            // An option a place above owns goes into its books (A11).
+            $place = $this->purposes->booksFor($purpose, $given);
+            $owner = (int) $place->id !== (int) $given->id ? $place->id : null;
+            $label = GivingPurposes::label($purpose).($owner ? " given at {$given->name}" : '');
             if ((int) $place->id === (int) $diocese->id) {
                 $j = $this->ledger->post($diocese, $head("{$label} by M-Pesa paybill (sorted)"), [
                     ['account_id' => ($paybill ?? $this->chart->account('paybill_to_sort'))->id, 'debit' => (float) $payment->amount],
@@ -484,7 +503,7 @@ final class Paybill
                 [$dj, $pj] = $this->postForPlace($payment, $place, $paybill, $account, $fund, $label, $head);
                 $fields = ($paybill ? ['diocese_journal_id' => $dj->id] : ['sort_journal_id' => $dj->id]) + ['place_journal_id' => $pj->id];
             }
-            $payment->update($fields + ['status' => 'posted', 'territory_id' => $place->id, 'purpose' => $purpose, 'account_id' => $account->id, 'fund_id' => $fund?->id,
+            $payment->update($fields + ['status' => 'posted', 'territory_id' => $given->id, 'owner_territory_id' => $owner, 'purpose' => $purpose, 'account_id' => $account->id, 'fund_id' => $fund?->id,
                 'note' => isset($data['note']) ? (mb_substr(trim((string) $data['note']), 0, 255) ?: null) : null, 'sorted_by' => $user->id, 'sorted_at' => now()]);
 
             return $payment->fresh();
@@ -507,11 +526,12 @@ final class Paybill
         if ($amount < 1 || $amount > 250000) {
             throw ValidationException::withMessages(['amount' => ['M-Pesa takes 1 to 250,000 shillings at a time.']]);
         }
-        if (! $this->purposes->usable($purpose)) {
+        if (! $this->purposes->usableAt($purpose, $place)) {
             throw ValidationException::withMessages(['purpose' => ['Pick what it is for.']]);
         }
         $ref = $this->purposes->accountNumber($place, $purpose);
-        $channel = $this->mpesaChannel($place);
+        // A church's own paybill takes only its own money; another place's option goes through the diocese paybill (A11).
+        $channel = (int) $this->purposes->booksFor($purpose, $place)->id === (int) $place->id ? $this->mpesaChannel($place) : null;
         if ($channel) {
             return $this->askOwn($channel, $place, $user, $phone, $amount, $purpose, $ref, $name);
         }

@@ -68,7 +68,7 @@ class ProcurementController extends AccountingBase
             'suppliers' => $this->suppliers($place, true),
             'accounts' => $this->chart->usable($place)->filter(fn ($a) => $a->type === 'expense')->sortBy('code')
                 ->map(fn ($a) => ['id' => $a->id, 'code' => $a->code, 'name' => $a->name])->values(),
-            'funds' => \App\Models\AccountingFund::where('is_active', true)->orderBy('display_order')->get(['id', 'code', 'name', 'is_restricted']),
+            'funds' => app(\App\Services\Accounting\Funds::class)->present(app(\App\Services\Accounting\Funds::class)->forPlace($place)),
             'limits' => ['one_quote' => Procurement::oneQuoteLimit(), 'quotes' => Procurement::quotesNeeded()],
             'church' => $place->territory_type->value === 'church',
             'today' => now()->toDateString(),

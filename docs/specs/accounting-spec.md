@@ -736,6 +736,12 @@ What a giver gives for (Tithe, Offering, a region's conference...) and the funds
   - The diocese as owner: diocese income.
   - An owned option paid into a church's own paybill waits in To sort.
 
+**Part 2 (built 2026-10-10):** owners and place funds.
+- `Funds` service (`forPlace`, `usableIds`, `present`, `inUse`, `save`); `Ledger::checkLines` refuses a fund that isn't the place's ("One of the funds isn't one of this place's"); every fund list (options, accounts, procurement, requisitions, collections, the dashboard's by-fund) is per place. `Statements::fundOf` maps equity accounts from standard funds only; `fundInfo` carries `owner`.
+- `GivingPurposes` adds `visibleAt`, `usableAt`, `forPlace` (less hidden), `ownFor` (what a church's own paybill takes), `booksFor`, `hidden`/`hide`, `inUse`, `save`.
+- Posting: Paybill (C2B, STK, sort) and Paystack (`Giving::start/complete/post`) book an owned option in the owner's books, "given at {place}" in the narration; payouts and the owner's Paybill list match on `COALESCE(owner_territory_id, territory_id)`. Ask to pay for another place's option always uses the diocese paybill.
+- API: `GET/PUT settings/giving-options` (section `givingoptions`; levels church, region, diocese; permissions `{level}.settings.hub.givingoptions.read|update`; changers Senior Pastor / Church Administrator / Church Treasurer, Regional Overseer / Regional Treasurer, Bishop / Diocese Administrator / Diocese Finance Officer / Diocese Treasurer). GET gives `own`, `standard` (diocese), `inherited` (with `shown`), `funds {own, inherited}`, `accounts`, `fund_choices`, `icons`, `colours`; PUT takes `purposes`, `funds`, `hidden`, and for the diocese `standard` + `default`. A new option can name a fund saved in the same PUT by `fund_code`. Changes are kept in the settings history.
+
 **Part 1 (built 2026-10-10):** the table, `App\Services\Accounting\GivingPurposes` (`all`, `active`, `find`, `usable`, static `label`, `default`, `byWord`, `target`, `accountNumber`, `present`) and every reader switched to it - the parser, account numbers, Ask to pay, claims, the giving page, receipts, SMS and lists. `Paybill::PURPOSES/SUFFIX/WORDS` are gone.
 
 ## Later phases (outline - specified when built)

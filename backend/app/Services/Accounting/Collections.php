@@ -188,7 +188,7 @@ final class Collections
     public function options(Territory $place, ?string $date = null): array
     {
         $this->chart->ensureStandard();
-        $funds = \App\Models\AccountingFund::pluck('id', 'code');
+        $funds = \App\Models\AccountingFund::whereNull('territory_id')->pluck('id', 'code');
         $acc = fn ($code) => AccountingAccount::whereNull('territory_id')->where('code', $code)->value('id');
         $date ??= now()->toDateString();
 

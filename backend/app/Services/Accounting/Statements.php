@@ -451,13 +451,14 @@ final class Statements
 
     private function fundInfo(AccountingFund $f): array
     {
-        return ['fund_id' => $f->id, 'code' => $f->code, 'name' => $f->name, 'restricted' => (bool) $f->is_restricted];
+        return ['fund_id' => $f->id, 'code' => $f->code, 'name' => $f->name, 'restricted' => (bool) $f->is_restricted, 'owner' => $f->territory_id ? Territory::whereKey($f->territory_id)->value('name') : null];
     }
 
     /** A fund's own account (3100 Building fund) belongs to that fund; income and spending to the fund on the line. */
     private function fundOf(AccountingAccount $a, $lineFund, int $general): int
     {
-        $this->byEquity ??= AccountingFund::whereNotNull('equity_account_id')->pluck('id', 'equity_account_id')->all();
+        // Standard funds only: a place's own funds share 3900 Other funds and are told apart by the fund on the line (A11).
+        $this->byEquity ??= AccountingFund::whereNull('territory_id')->whereNotNull('equity_account_id')->pluck('id', 'equity_account_id')->all();
 
         return $a->type === 'fund' && isset($this->byEquity[$a->id]) ? (int) $this->byEquity[$a->id] : (int) ($lineFund ?: $general);
     }

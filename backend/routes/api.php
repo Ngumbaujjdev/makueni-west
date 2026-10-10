@@ -369,6 +369,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::put('service-times', [SettingsServiceTimesController::class, 'update']);
         Route::get('facilities-setup', [\App\Http\Controllers\Api\Settings\FacilitiesSetupController::class, 'show']);
         Route::put('facilities-setup', [\App\Http\Controllers\Api\Settings\FacilitiesSetupController::class, 'update']);
+        Route::get('giving-options', [\App\Http\Controllers\Api\Settings\GivingOptionsController::class, 'show']);
+        Route::put('giving-options', [\App\Http\Controllers\Api\Settings\GivingOptionsController::class, 'update']);
         Route::get('team', [SettingsTeamController::class, 'index']);
         Route::get('team/check', [SettingsTeamController::class, 'check'])->middleware('throttle:30,1');
         Route::post('team', [SettingsTeamController::class, 'store']);

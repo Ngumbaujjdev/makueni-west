@@ -55,7 +55,7 @@ class CollectionController extends AccountingBase
         return $this->ok($this->collections->options($place, $date) + [
             'cash' => $cash,
             'accounts' => $income,
-            'funds' => \App\Models\AccountingFund::where('is_active', true)->orderBy('display_order')->get(['id', 'code', 'name', 'is_restricted']),
+            'funds' => app(\App\Services\Accounting\Funds::class)->present(app(\App\Services\Accounting\Funds::class)->forPlace($place)),
             'today' => now()->toDateString(),
             'denominations' => \App\Models\CashCount::DENOMINATIONS,
         ]);

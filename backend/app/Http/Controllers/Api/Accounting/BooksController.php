@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\Accounting;
 
 use App\Models\AccountingAccount;
-use App\Models\AccountingFund;
 use App\Models\BudgetLine;
 use App\Models\Journal;
 use App\Models\PaymentVoucher;
@@ -124,7 +123,7 @@ class BooksController extends AccountingBase
             'income' => $usable->where('type', 'income')->map($pick)->values(),
             'expense' => $usable->where('type', 'expense')->map($pick)->values(),
             'other' => $usable->filter(fn ($a) => ! $a->cash_kind && in_array($a->type, ['asset', 'liability', 'fund'], true))->map($pick)->values(),
-            'funds' => AccountingFund::where('is_active', true)->orderBy('display_order')->get(['id', 'code', 'name', 'is_restricted', 'description']),
+            'funds' => app(\App\Services\Accounting\Funds::class)->present(app(\App\Services\Accounting\Funds::class)->forPlace($place), true),
             'budget_lines' => $lines->map(fn ($l) => [
                 'id' => $l->id, 'name' => $l->name, 'kind' => $l->budgetCategory?->slug,
                 'account_id' => $l->account_id ?? $this->chart->forBudgetLine($l)->id,
@@ -147,7 +146,7 @@ class BooksController extends AccountingBase
             'can' => AccountingAccess::abilities($request->user(), $place),
             'cash' => $this->books->cashPosition($place),
             'chart' => $this->books->chartFor($place)->values(),
-            'funds' => AccountingFund::orderBy('display_order')->get(['id', 'code', 'name', 'is_restricted', 'description', 'is_active']),
+            'funds' => app(\App\Services\Accounting\Funds::class)->present(app(\App\Services\Accounting\Funds::class)->forPlace($place, false), true),
         ]);
     }
 

@@ -49,6 +49,7 @@ final class Chart
         '3100' => ['Building fund', 'fund', ['key' => 'building_fund', 'about' => 'Kept for building only']],
         '3200' => ['KYS fund', 'fund', ['key' => 'kys_fund', 'about' => 'Kingdom Youth Summit']],
         '3300' => ['Conference fund', 'fund', ['key' => 'conference_fund', 'about' => 'Kept for conferences']],
+        '3900' => ['Other funds', 'fund', ['key' => 'other_funds', 'about' => 'The funds places set up themselves - each kept apart by its fund']],
 
         '4000' => ['Tithes', 'income', ['line' => 'tithes']],
         '4010' => ['Offerings', 'income', ['line' => 'offerings']],
@@ -124,7 +125,7 @@ final class Chart
             return;
         }
         $this->ensured = true;
-        if (AccountingAccount::whereNull('territory_id')->count() >= count(self::STANDARD) && AccountingFund::count() >= count(self::FUNDS)
+        if (AccountingAccount::whereNull('territory_id')->count() >= count(self::STANDARD) && AccountingFund::whereNull('territory_id')->count() >= count(self::FUNDS)
             && ! BudgetLine::whereNull('account_id')->whereIn('slug', $this->lineSlugs())->exists()) {
             return;
         }
@@ -153,7 +154,7 @@ final class Chart
             }
             $order = 0;
             foreach (self::FUNDS as $code => [$name, $restricted, $equity, $about]) {
-                $fund = AccountingFund::firstOrNew(['code' => $code]);
+                $fund = AccountingFund::firstOrNew(['territory_id' => null, 'code' => $code]);
                 $fund->fill(['is_restricted' => $restricted, 'equity_account_id' => $ids[$equity] ?? null, 'display_order' => $order += 10]);
                 if (! $fund->exists) {
                     $fund->fill(['name' => $name, 'description' => $about, 'is_active' => true]);
@@ -184,7 +185,7 @@ final class Chart
     {
         $this->ensureStandard();
 
-        return AccountingFund::where('code', 'GEN')->firstOrFail();
+        return AccountingFund::whereNull('territory_id')->where('code', 'GEN')->firstOrFail();
     }
 
     /** The account a budget line posts to: its own, or Other income / Other expenses. */
