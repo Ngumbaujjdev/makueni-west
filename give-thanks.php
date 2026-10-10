@@ -35,6 +35,10 @@ $ref = strtoupper(preg_replace('/[^A-Za-z0-9-]/', '', $_GET['ref'] ?? ''));
             const body = document.getElementById("thanksBody");
             const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
             const money = (n) => "KES " + Number(n || 0).toLocaleString("en-GB", { maximumFractionDigits: 2 });
+            const IMG = <?= json_encode(SITE_URL . '/assets/images/payments/') ?>;
+            const paidWith = (m) => m === "mpesa"
+                ? `<span class="acc-logo acc-logo-lg"><img src="${IMG}mpesa.svg" alt="M-Pesa"></span>`
+                : `<span class="acc-logo acc-logo-lg is-card"><img src="${IMG}visa.svg" alt="Visa"><img src="${IMG}mastercard.svg" alt="Mastercard"></span>`;
             let tries = 0;
             async function tick() {
                 let d = null;
@@ -43,11 +47,13 @@ $ref = strtoupper(preg_replace('/[^A-Za-z0-9-]/', '', $_GET['ref'] ?? ''));
                     d = r.ok ? (await r.json()).data : null;
                 } catch (e) {}
                 if (d && d.status === "paid") {
-                    body.innerHTML = `<div class="verify-result is-good mb-3"><i class="ri-checkbox-circle-fill"></i><div><strong>Thank you - ${esc(d.place)} has received your ${esc((d.purpose || "gift").toLowerCase())} of ${money(d.amount)}.</strong><span>${d.receipt ? `Receipt ${esc(d.receipt)} · ` : ""}Reference ${esc(d.reference)}</span></div></div><p>God bless you.</p><a class="btn btn-outline-primary" href="give.php?c=${encodeURIComponent(d.code || "")}">Give again</a>`;
+                    body.innerHTML = `<div class="verify-result is-good mb-3"><i class="ri-checkbox-circle-fill"></i><div><strong>Thank you - ${esc(d.place)} has received your ${esc((d.purpose || "gift").toLowerCase())} of ${money(d.amount)}.</strong><span>${d.receipt ? `Receipt ${esc(d.receipt)} · ` : ""}Reference ${esc(d.reference)}</span></div></div>
+                        <div class="d-flex align-items-center gap-2 mb-3">${paidWith(d.paid_with)}<span>Paid ${d.paid_with === "mpesa" ? "by M-Pesa" : "by card"} · ${money(d.amount)}</span></div>
+                        <p>God bless you. Your receipt is on its way.</p><a class="btn btn-outline-primary" href="give.php?c=${encodeURIComponent(d.code || "")}">Give again</a>`;
                     return;
                 }
                 if (d && (d.status === "failed" || d.status === "abandoned")) {
-                    body.innerHTML = `<div class="verify-result is-bad mb-3"><i class="ri-close-circle-line"></i><div><strong>Not paid</strong><span>${esc(d.result || "The payment didn't go through.")}</span></div></div><a class="btn btn-primary" href="give.php?c=${encodeURIComponent(d.code || "")}">Try again</a>`;
+                    body.innerHTML = `<div class="verify-result is-bad mb-3"><i class="ri-close-circle-line"></i><div><strong>Not paid</strong><span>${esc(d.result || "The payment didn't go through.")}</span></div></div><p class="small">If you were charged, contact the church treasurer with the reference <strong>${esc(d.reference)}</strong>.</p><a class="btn btn-primary" href="give.php?c=${encodeURIComponent(d.code || "")}">Try again</a>`;
                     return;
                 }
                 if (!d && !REF) {
