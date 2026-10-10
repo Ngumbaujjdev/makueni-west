@@ -68,7 +68,7 @@ const SettingsFields = (function () {
         return `<input type="password" class="form-control" id="${id}" data-key="${esc(field.key)}" autocomplete="new-password" placeholder="${field.secret_set ? "Leave blank to keep the saved one" : "Not set"}"${dis}>`;
       default: {
         const type = ["email", "tel", "url", "number", "time"].includes(field.type) ? field.type : "text";
-        return `<input type="${type}" class="form-control" id="${id}" data-key="${esc(field.key)}" value="${esc(val)}"${dis}>`;
+        return `<input type="${type}"${type === "number" ? ' step="any"' : ""} class="form-control" id="${id}" data-key="${esc(field.key)}" value="${esc(val)}"${dis}>`;
       }
     }
   }

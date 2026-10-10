@@ -130,6 +130,9 @@ final class Documents
         if ($journal->source_type === 'collection') {
             throw ValidationException::withMessages(['journal' => ['This is a Sunday collection - open it under Collections to reverse it.']]);
         }
+        if ($journal->source_type === 'payroll_run') {
+            throw ValidationException::withMessages(['journal' => ['This posts a payroll - a posted payroll is corrected next month or with a journal.']]);
+        }
         if ($journal->source_type === 'remittance') {
             throw ValidationException::withMessages(['journal' => ['This confirms money from another place - undo the confirmation under Remittances.']]);
         }

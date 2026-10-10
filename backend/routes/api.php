@@ -744,6 +744,20 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('remittances/{id}/unconfirm', [$rem, 'unconfirm'])->whereNumber('id');
         Route::post('remittances/{id}/query', [$rem, 'query'])->whereNumber('id');
         Route::post('remittances/{id}/answer', [$rem, 'answer'])->whereNumber('id');
+        // A7 - payroll.
+        $pay = \App\Http\Controllers\Api\Accounting\PayrollController::class;
+        Route::get('payroll', [$pay, 'index']);
+        Route::post('payroll/employees', [$pay, 'saveEmployee']);
+        Route::put('payroll/employees/{id}', [$pay, 'saveEmployee'])->whereNumber('id');
+        Route::post('payroll/runs', [$pay, 'start']);
+        Route::get('payroll/runs/{id}', [$pay, 'show'])->whereNumber('id');
+        Route::put('payroll/runs/{id}/payslips/{slip}', [$pay, 'updateSlip'])->whereNumber(['id', 'slip']);
+        Route::post('payroll/runs/{id}/payslips', [$pay, 'addSlip'])->whereNumber('id');
+        Route::delete('payroll/runs/{id}/payslips/{slip}', [$pay, 'removeSlip'])->whereNumber(['id', 'slip']);
+        Route::post('payroll/runs/{id}/pay', [$pay, 'pay'])->whereNumber('id');
+        Route::put('payroll/runs/{id}/references', [$pay, 'references'])->whereNumber('id');
+        Route::post('payroll/runs/{id}/{act}', [$pay, 'act'])->whereNumber('id')->whereIn('act', ['recalculate', 'submit', 'cancel']);
+        Route::post('payroll/runs/{id}/{decision}', [$pay, 'decide'])->whereNumber('id')->whereIn('decision', ['approve', 'reject', 'return']);
     });
 
     // Approvals (docs/specs/accounting-spec.md, A4) - my inbox, decisions, delegations, the rules.

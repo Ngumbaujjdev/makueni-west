@@ -36,10 +36,11 @@ final class PaymentVouchers
                 'payee_phone' => $data['payee_phone'] ?? null,
                 'pay_from_account_id' => $from->id,
                 'narration' => trim($data['narration']),
-                'purpose' => in_array($data['purpose'] ?? 'payment', ['imprest_topup', 'advance', 'bill', 'remittance'], true) ? $data['purpose'] : 'payment',
+                'purpose' => in_array($data['purpose'] ?? 'payment', ['imprest_topup', 'advance', 'bill', 'remittance', 'payroll'], true) ? $data['purpose'] : 'payment',
                 'requisition_id' => $data['requisition_id'] ?? null,
                 'supplier_invoice_id' => $data['supplier_invoice_id'] ?? null,
                 'remittance_id' => $data['remittance_id'] ?? null,
+                'payroll_payment_id' => $data['payroll_payment_id'] ?? null,
                 'amount' => $total,
                 'status' => ($data['status'] ?? 'prepared') === 'authorised' ? 'authorised' : 'prepared',
                 'authorised_by' => ($data['status'] ?? '') === 'authorised' ? ($data['authorised_by'] ?? null) : null,
@@ -180,6 +181,9 @@ final class PaymentVouchers
             if ($pv->remittance_id) {
                 app(Remittances::class)->voucherPaid($pv->fresh());
             }
+            if ($pv->payroll_payment_id) {
+                app(Payroll::class)->voucherChanged($pv->fresh());
+            }
 
             return $pv->fresh('lines');
         });
@@ -204,6 +208,9 @@ final class PaymentVouchers
             if ($pv->remittance_id) {
                 app(Remittances::class)->voucherUnpaid($pv);
             }
+            if ($pv->payroll_payment_id) {
+                app(Payroll::class)->voucherChanged($pv->fresh());
+            }
 
             return $pv->fresh('lines');
         });
@@ -221,6 +228,9 @@ final class PaymentVouchers
         }
         if ($pv->remittance_id) {
             app(Remittances::class)->voucherCancelled($pv);
+        }
+        if ($pv->payroll_payment_id) {
+            app(Payroll::class)->voucherChanged($pv->fresh());
         }
 
         return $pv->fresh('lines');
