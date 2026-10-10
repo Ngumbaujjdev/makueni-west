@@ -31,6 +31,9 @@ final class Daraja
         private readonly string $key,
         private readonly string $secret,
         private readonly ?string $passkey = null,
+        private readonly ?string $initiator = null,
+        private readonly ?string $credential = null,
+        private readonly ?string $initiatorPassword = null,
     ) {}
 
     /** The diocese paybill, from Settings > Paybill. */
@@ -44,7 +47,8 @@ final class Daraja
         }
 
         return new self($s->system('paybill.environment') === 'production' ? 'production' : 'sandbox', (string) $s->system('paybill.shortcode'),
-            (string) $s->system('paybill.consumer_key'), (string) $s->system('paybill.consumer_secret'), $s->system('paybill.passkey') ?: null);
+            (string) $s->system('paybill.consumer_key'), (string) $s->system('paybill.consumer_secret'), $s->system('paybill.passkey') ?: null,
+            $s->system('paybill.initiator_name') ?: null, $s->system('paybill.security_credential') ?: null, $s->system('paybill.initiator_password') ?: null);
     }
 
     /** A church's own Daraja app (A10b), from its encrypted channel. */
@@ -92,12 +96,100 @@ final class Daraja
         return (array) $r->json();
     }
 
-    /** Send the confirmation and validation addresses to Safaricom. A payment completes even when we can't be reached. */
+    /**
+     * Send the confirmation and validation addresses to Safaricom. A payment
+     * completes even when we can't be reached. Some apps are refused on v1
+     * ("Invalid Access Token") and accepted on v2.
+     */
     public function registerUrls(string $confirmationUrl, string $validationUrl): array
     {
-        return $this->post('/mpesa/c2b/v1/registerurl', [
-            'ShortCode' => $this->shortcode, 'ResponseType' => 'Completed', 'ConfirmationURL' => $confirmationUrl, 'ValidationURL' => $validationUrl,
+        $body = ['ShortCode' => $this->shortcode, 'ResponseType' => 'Completed', 'ConfirmationURL' => $confirmationUrl, 'ValidationURL' => $validationUrl];
+        try {
+            return $this->post('/mpesa/c2b/v1/registerurl', $body);
+        } catch (RuntimeException $e) {
+            if (! str_contains(strtolower($e->getMessage()), 'access token')) {
+                throw $e;
+            }
+
+            return $this->post('/mpesa/c2b/v2/registerurl', $body);
+        }
+    }
+
+    // ------------------------------------------------------------ checking payments (A10f)
+
+    /** Can a payment be checked by its code? Needs an API operator and its credential. */
+    public function canCheck(): bool
+    {
+        return (bool) $this->initiator && ($this->credential || ($this->initiatorPassword && is_file($this->certificatePath())));
+    }
+
+    private function certificatePath(): string
+    {
+        return storage_path("app/daraja/{$this->environment}.cer");
+    }
+
+    /**
+     * The operator's password encrypted with Safaricom's public certificate
+     * (RSA, PKCS#1 v1.5) - as generated on the Daraja portal, or made here from
+     * the password and the certificate uploaded for this environment.
+     */
+    public function securityCredential(): string
+    {
+        if ($this->credential) {
+            return $this->credential;
+        }
+        $cert = is_file($this->certificatePath()) ? file_get_contents($this->certificatePath()) : false;
+        if (! $this->initiatorPassword || ! $cert || ! openssl_public_encrypt($this->initiatorPassword, $out, $cert, OPENSSL_PKCS1_PADDING)) {
+            throw new RuntimeException('Checking payments isn\'t set up - add the API operator\'s security credential in Settings, Paybill.');
+        }
+
+        return base64_encode($out);
+    }
+
+    /**
+     * Ask Safaricom about a payment by its M-Pesa code. The answer comes later,
+     * to $resultUrl (or $timeoutUrl); this only says the question was taken.
+     *
+     * @return array{OriginatorConversationID?: string, ConversationID?: string, ResponseCode?: string}
+     */
+    public function transactionStatus(string $code, string $resultUrl, string $timeoutUrl, string $remarks = 'Payment check'): array
+    {
+        if (! $this->initiator) {
+            throw new RuntimeException('Checking payments isn\'t set up - add the API operator in Settings, Paybill.');
+        }
+
+        return $this->post('/mpesa/transactionstatus/v1/query', [
+            'Initiator' => $this->initiator, 'SecurityCredential' => $this->securityCredential(), 'CommandID' => 'TransactionStatusQuery',
+            'TransactionID' => strtoupper($code), 'PartyA' => $this->shortcode, 'IdentifierType' => '4',
+            'ResultURL' => $resultUrl, 'QueueTimeOutURL' => $timeoutUrl, 'Remarks' => mb_substr($remarks, 0, 100), 'Occasion' => 'Giving',
         ]);
+    }
+
+    /** Pull Transactions, once: where Safaricom may send the paybill's payments of the last 48 hours. */
+    public function pullRegister(string $nominatedNumber, string $callbackUrl): array
+    {
+        return $this->post('/pulltransactions/v1/register', ['ShortCode' => $this->shortcode, 'RequestType' => 'Pull', 'NominatedNumber' => self::phone($nominatedNumber), 'CallBackURL' => $callbackUrl]);
+    }
+
+    /** The paybill's payments in a window (at most the last 48 hours), a page at a time. @return array<int, array> */
+    public function pullQuery(string $from, string $to, int $offset = 0): array
+    {
+        $out = $this->post('/pulltransactions/v1/query', ['ShortCode' => $this->shortcode, 'StartDate' => $from, 'EndDate' => $to, 'OffSetValue' => (string) $offset]);
+
+        return array_values(array_filter((array) (($out['Response'][0] ?? null) ?: []), 'is_array'));
+    }
+
+    /** Transaction Status result parameters -> [Key => Value]. */
+    public static function resultParameters(array $result): array
+    {
+        $out = [];
+        foreach ((array) ($result['ResultParameters']['ResultParameter'] ?? []) as $p) {
+            if (isset($p['Key'])) {
+                $out[$p['Key']] = $p['Value'] ?? null;
+            }
+        }
+
+        return $out;
     }
 
     /** Sandbox only: a test C2B payment. */

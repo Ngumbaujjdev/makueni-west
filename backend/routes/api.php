@@ -76,6 +76,8 @@ Route::prefix('give')->group(function () {
     $give = \App\Http\Controllers\Api\Payments\GiveController::class;
     Route::get('callback', [$give, 'callback'])->middleware('throttle:60,1');
     Route::get('status/{reference}', [$give, 'status'])->middleware('throttle:60,1');
+    Route::get('claim/{id}', [$give, 'claimStatus'])->whereNumber('id')->middleware('throttle:60,1');
+    Route::post('{code}/claim', [$give, 'claim'])->middleware('throttle:5,1');
     Route::get('{code}', [$give, 'show'])->middleware('throttle:60,1');
     Route::post('{code}', [$give, 'store'])->middleware('throttle:10,1');
 });
@@ -89,6 +91,9 @@ Route::prefix('payments/daraja/{key}')->middleware('throttle:600,1')->group(func
     Route::post('validation', [$daraja, 'validation']);
     Route::post('confirmation', [$daraja, 'confirmation']);
     Route::post('stk', [$daraja, 'stk']);
+    Route::post('status-result', [$daraja, 'statusResult']);
+    Route::post('status-timeout', [$daraja, 'statusTimeout']);
+    Route::post('pull', [$daraja, 'pull']);
 });
 
 Route::prefix('auth')->group(function () {
@@ -786,8 +791,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         $tx = \App\Http\Controllers\Api\Accounting\TransactionController::class;
         Route::get('transactions', [$tx, 'index']);
         Route::post('transactions/check-waiting', [$tx, 'checkWaiting']);
-        Route::get('transactions/{source}/{id}', [$tx, 'show'])->whereIn('source', ['gift', 'prompt', 'paybill'])->whereNumber('id');
-        Route::post('transactions/{source}/{id}/check', [$tx, 'check'])->whereIn('source', ['gift', 'prompt', 'paybill'])->whereNumber('id');
+        Route::post('transactions/check-code', [$tx, 'checkCode']);
+        Route::get('transactions/{source}/{id}', [$tx, 'show'])->whereIn('source', ['gift', 'prompt', 'paybill', 'claim'])->whereNumber('id');
+        Route::post('transactions/{source}/{id}/check', [$tx, 'check'])->whereIn('source', ['gift', 'prompt', 'paybill', 'claim'])->whereNumber('id');
         Route::get('giving/payouts', [$po, 'index']);
         Route::get('giving/payouts/{id}', [$po, 'show'])->whereNumber('id');
         Route::get('giving/payout-options', [$po, 'options']);
