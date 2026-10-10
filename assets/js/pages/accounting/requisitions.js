@@ -450,7 +450,7 @@
       if (e.target.closest("[data-first]")) return ask();
       if (e.target.closest("input, .pp-check")) return;
       const tr = e.target.closest("tr[data-id]");
-      if (tr) view(Number(tr.dataset.id));
+      if (tr) window.location.href = A.link("record.php", { type: "requisition", id: tr.dataset.id });
     });
     $("advRows").addEventListener("click", (e) => {
       const b = e.target.closest("[data-retire]");

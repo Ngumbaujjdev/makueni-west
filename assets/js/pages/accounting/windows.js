@@ -616,20 +616,20 @@ const AccountingWindows = (function () {
   }
 
   /** What happens next on a voucher, in one sentence. */
-  function voucherNext(v) {
+  function voucherNext(v, actions = "") {
     const c = v.can;
     if (v.status === "paid") return A.nextCard({ tone: "done", title: `Paid on ${A.day(v.paid_on)}`, text: `${how(v.method)}${v.reference ? ` ${v.reference}` : ""} - posted as ${v.journal_number || "a payment"}. Nothing more to do.` });
     if (v.status === "cancelled") return A.nextCard({ tone: "stopped", title: "Cancelled", text: "This voucher will not be paid." });
-    if (v.status === "rejected") return A.nextCard({ tone: "stopped", title: `Sent back${v.rejected_by ? ` by ${v.rejected_by}` : ""}`, text: `${v.reject_reason || ""} Whoever prepared it can change it and send it again.`.trim() });
+    if (v.status === "rejected") return A.nextCard({ actions, tone: "stopped", title: `Sent back${v.rejected_by ? ` by ${v.rejected_by}` : ""}`, text: `${v.reject_reason || ""} Whoever prepared it can change it and send it again.`.trim() });
     if (v.status === "prepared") {
       const who = v.approval?.waiting_on?.join(", ");
       return c.authorise_this
-        ? A.nextCard({ tone: "mine", title: "Check it and approve", text: "Look at what it pays for and the invoice below, then approve it or send it back with a note." })
-        : A.nextCard({ tone: "wait", title: `Waiting for ${who || "the authoriser"}`, text: v.approval?.stage ? `Stage: ${v.approval.stage.name}.` : "Someone other than whoever prepared it must authorise it." });
+        ? A.nextCard({ actions, tone: "mine", title: "Check it and approve", text: "Look at what it pays for and the invoice below, then approve it or send it back with a note." })
+        : A.nextCard({ actions, tone: "wait", title: `Waiting for ${who || "the authoriser"}`, text: v.approval?.stage ? `Stage: ${v.approval.stage.name}.` : "Someone other than whoever prepared it must authorise it." });
     }
     return c.pay_this
-      ? A.nextCard({ tone: "mine", title: "Authorised - pay it", text: `Pay ${A.money(v.amount)} to ${v.payee_name} from ${v.pay_from?.name || "the account"}, then it posts to the books.` })
-      : A.nextCard({ tone: "wait", title: "Authorised - waiting to be paid", text: `The treasurer pays it from ${v.pay_from?.name || "the account"}.` });
+      ? A.nextCard({ actions, tone: "mine", title: "Authorised - pay it", text: `Pay ${A.money(v.amount)} to ${v.payee_name} from ${v.pay_from?.name || "the account"}, then it posts to the books.` })
+      : A.nextCard({ actions, tone: "wait", title: "Authorised - waiting to be paid", text: `The treasurer pays it from ${v.pay_from?.name || "the account"}.` });
   }
 
   /** A payment voucher: where it stands, what it pays for, and the next step. */

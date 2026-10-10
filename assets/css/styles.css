@@ -39713,3 +39713,48 @@ a.mi-prof-about-value:hover { color: var(--primary-color); }
 }
 .acc-page .acc-fund > strong, .acc-page .acc-top-row strong, .acc-page .acc-cash-row strong, .acc-page .acc-lastsun-kind strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .acc-page .acc-table td.d-md-table-cell, .acc-page .acc-table td.d-lg-table-cell { min-width: 9.5rem; }
+
+/* ACCOUNTING REDESIGN R1 (2026-10-10) - a record's own page (record.php) */
+.acc-rec-hero .card-body { padding: 1.4rem 1.5rem; }
+.acc-rec-top { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 1rem 1.25rem; }
+.acc-rec-kind { font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--default-text-color); }
+.acc-rec-number { margin: .1rem 0 .2rem; font-size: 1.25rem; font-weight: 700; color: var(--v2-heading); overflow-wrap: anywhere; }
+.acc-rec-title { margin: 0 0 .55rem; font-size: .9rem; color: var(--v2-heading); }
+.acc-rec-amount { display: flex; flex-direction: column; align-items: flex-end; margin-left: auto; text-align: right; }
+.acc-rec-amount > span { font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--default-text-color); }
+.acc-rec-amount .acc-figure { font-size: 1.85rem; font-weight: 700; color: var(--v2-heading); }
+.acc-rec-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem 1.25rem; margin-top: 1.25rem; padding-top: 1.1rem; border-top: 1px dashed var(--default-border); }
+.acc-rec-facts div { display: flex; flex-direction: column; min-width: 0; }
+.acc-rec-facts span { font-size: .68rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--default-text-color); }
+.acc-rec-facts strong { font-size: .9rem; font-weight: 600; color: var(--v2-heading); overflow-wrap: anywhere; }
+.acc-rec-card .card-header { justify-content: space-between; }
+.acc-rec-icon { display: inline-grid; place-items: center; width: 1.85rem; height: 1.85rem; border-radius: .55rem; background: rgba(var(--primary-rgb), .12); font-size: .95rem; color: rgb(var(--primary-rgb)); }
+.acc-rec-card .acc-journey { padding: .25rem 0 0; }
+
+/* The documents a record is chained to */
+.acc-chain { position: relative; display: flex; flex-direction: column; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+.acc-chain li { position: relative; }
+.acc-chain li + li::before { content: ""; position: absolute; top: -.5rem; left: 1.6rem; width: 2px; height: .5rem; background: var(--default-border); }
+.acc-chain-item { display: flex; align-items: center; gap: .65rem; width: 100%; padding: .6rem .7rem; border: 1px solid var(--default-border); border-radius: .75rem; background: #fff; text-align: left; color: var(--v2-heading); text-decoration: none; }
+a.acc-chain-item:hover, button.acc-chain-item:hover { border-color: rgba(var(--primary-rgb), .5); background: rgba(var(--primary-rgb), .03); color: var(--v2-heading); }
+.acc-chain-label { display: block; font-size: .66rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--default-text-color); }
+.acc-chain-item strong { font-size: .84rem; }
+.acc-chain-item small { display: block; font-size: .72rem; color: var(--default-text-color); }
+.acc-chain-amount { flex-shrink: 0; font-size: .8rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* What happened (the template's timeline, compact) */
+.acc-activity { position: relative; display: flex; flex-direction: column; gap: 1rem; margin: 0; padding: 0; list-style: none; }
+.acc-activity::before { content: ""; position: absolute; top: .4rem; bottom: .4rem; left: .74rem; width: 2px; background: var(--default-border); }
+.acc-activity li { position: relative; display: flex; gap: .7rem; }
+.acc-activity .avatar { z-index: 1; flex-shrink: 0; box-shadow: 0 0 0 3px #fff; }
+.acc-act-text { font-size: .84rem; color: var(--v2-heading); }
+.acc-act-note { margin-top: .2rem; font-size: .8rem; font-style: italic; color: var(--v2-heading); }
+.acc-activity small { font-size: .72rem; color: var(--default-text-color); }
+
+@media (max-width: 767.98px) {
+  .acc-rec-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .acc-rec-amount { align-items: flex-start; margin-left: 0; text-align: left; }
+}
+.acc-jtext small { white-space: nowrap; }
+.acc-jtext .acc-jnote { white-space: normal; }
+.acc-chain-num { overflow-wrap: anywhere; }

@@ -184,6 +184,7 @@ const AccountingAPI = (function () {
     quoteFileUrl: (rid, qid) => fileUrl(`/accounting/requisitions/${rid}/quotes/${qid}/file`),
     raiseOrder: (rid, body) => request("POST", `/accounting/requisitions/${rid}/order`, { body }),
     order: (id) => request("GET", `/accounting/procurement/orders/${id}`),
+    trail: (type, id) => request("GET", `/accounting/trail/${type}/${id}`),
     receiveGoods: (id, body, files) => request("POST", `/accounting/procurement/orders/${id}/receive`, { form: formOf(body, { "files[]": files }) }),
     postBill: (id, body, file) => request("POST", `/accounting/procurement/orders/${id}/bill`, { form: formOf(body, { file }) }),
     closeOrder: (id, reason) => request("POST", `/accounting/procurement/orders/${id}/close`, { body: { reason } }),

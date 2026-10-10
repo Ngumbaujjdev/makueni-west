@@ -12,11 +12,13 @@ require_once __DIR__ . '/../permission-check.php';
 
 /**
  * @param string $level church | region | diocese
- * @param string $page  index | accounts | cashbook | receipts | payments | journals | documents | chart | reconciliation | reconcile | close
+ * @param string $page  index | accounts | cashbook | receipts | payments | journals | documents | chart | reconciliation | reconcile | close | record | ...
  */
 function accountingPageContext(string $level, string $page): array
 {
-    requirePermission("{$level}.accounting." . ([
+    // A record's page: anyone who reads the books, asks for money or approves (the API checks the record itself).
+    $recordReader = $page === 'record' && (hasGlobalAccess() || hasPermission("{$level}.accounting.books.read") || hasPermission("{$level}.accounting.requisitions.create") || hasPermission("{$level}.accounting.approvals.read"));
+    $recordReader || requirePermission("{$level}.accounting." . ([
         'accounts' => 'accounts.read',
         'cashbook' => 'cashbook.read',
         'receipts' => 'receipts.create',

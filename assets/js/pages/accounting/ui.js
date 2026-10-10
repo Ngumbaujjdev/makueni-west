@@ -227,7 +227,7 @@ const AccountingUI = (function () {
    * gold, like the screenshot's "Do first"), wait (someone else), done, stopped.
    */
   function nextCard({ tone = "wait", title, text, actions = "" }) {
-    const T = { mine: ["ri-flashlight-line", "Your turn"], wait: ["ri-hourglass-line", "Waiting"], done: ["ri-checkbox-circle-line", "Done"], stopped: ["ri-arrow-go-back-line", "Stopped"] }[tone];
+    const T = { mine: ["ri-flashlight-line", "Your turn"], wait: ["ri-time-line", "Waiting"], done: ["ri-checkbox-circle-line", "Done"], stopped: ["ri-arrow-go-back-line", "Stopped"] }[tone];
     return `<div class="acc-next is-${tone}"><span class="acc-next-icon"><i class="${T[0]}"></i></span><div class="acc-next-text"><span class="acc-next-tag">${T[1]}</span><strong>${esc(title)}</strong>${text ? `<p>${esc(text)}</p>` : ""}</div>${actions ? `<div class="acc-next-actions">${actions}</div>` : ""}</div>`;
   }
 

@@ -662,3 +662,22 @@ The user found the pages bare. The redesign ships in five parts:
   - `approvalSteps(approval)` turns the approval engine's stages into steps.
   - `nextCard()` says what happens next in plain words. It is solid gold when it is the viewer's turn.
   - The voucher window uses all three: Prepared → each approval stage → Paid → In the books.
+
+**R1, record pages:**
+- **The page.** `record.php?type=voucher|requisition|payroll|order|remittance|collection&id=` is one page for every record that moves through steps. It shows:
+  - the hero: kind, number, what it is for, the amount in full, the status and four facts;
+  - "Where it stands": the journey plus "what happens next", with the button to act;
+  - its lines (what it pays for, payslips, the items ordered, the months, what was given);
+  - in the side column: Linked documents, Papers, and What happened.
+- **Journeys:**
+  - **Voucher:** prepared → each approval stage → paid → in the books.
+  - **Requisition:** asked → stages → quotes → ordered → received → billed → paid (a purchase); → paid (a payment); → advance given → accounted for (an advance).
+  - **Payroll:** started → submitted → stages → paid.
+  - **Order:** requisition → ordered → received → billed → paid.
+  - **Remittance:** owed → voucher → sent → confirmed (or queried).
+  - **Collection:** counted → confirmed → in the books → banked.
+- **Lists:** rows on Payment vouchers, Requisitions, Payroll, Procurement, Remittances and Collections open the record page. The `?voucher=` and other links still open the window. A step is taken in the same window the list uses; requisition decisions are made right on the page.
+- **`GET accounting/trail/{type}/{id}`** (`App\Services\Accounting\Trail`) returns two things:
+  - `events`, newest first, each with `at`, `who`, `text`, `icon`, `tone` and `note`. They come from the record's own who/when columns, the approval engine's events and decisions (the columns are left out when the engine ran), deliveries, bills, payments and files added. A plain date counts as the end of that day.
+  - `links`: the documents chained to it, each with `type`, `id`, `label`, `number`, `status`, `status_label`, `amount`, `date` and `opens`.
+  Whoever may read the books where the record sits can see it; a remittance can be seen from either side. Anyone else gets 404.

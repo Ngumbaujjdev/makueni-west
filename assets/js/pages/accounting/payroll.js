@@ -341,7 +341,7 @@
     $("startBtn")?.addEventListener("click", startRun);
     $("pyRunRows").addEventListener("click", (e) => {
       const tr = e.target.closest("tr[data-id]");
-      if (tr) runWindow(Number(tr.dataset.id));
+      if (tr) window.location.href = A.link("record.php", { type: "payroll", id: tr.dataset.id });
     });
     $("pyPeopleRows").addEventListener("click", (e) => {
       if (e.target.closest("[data-firstperson]")) return personWindow();

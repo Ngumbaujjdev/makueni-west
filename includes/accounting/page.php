@@ -5,13 +5,17 @@ $titles = [
     'index' => 'Accounting', 'accounts' => 'Cash & bank', 'cashbook' => 'Cashbook', 'receipts' => 'Receipts',
     'payments' => 'Payment vouchers', 'journals' => 'Journals', 'documents' => 'All documents', 'chart' => 'Chart of accounts',
     'reconciliation' => 'Reconciliation', 'reconcile' => 'Reconcile', 'close' => 'Month-end close', 'collections' => 'Collections',
-    'approvals' => 'Approvals', 'requisitions' => 'Requisitions', 'approval-rules' => 'Approval rules', 'procurement' => 'Procurement', 'remittances' => 'Remittances', 'payroll' => 'Payroll', 'paybill' => 'Paybill', 'giving' => 'Online giving', 'gateways' => 'Gateways',
+    'approvals' => 'Approvals', 'requisitions' => 'Requisitions', 'approval-rules' => 'Approval rules', 'procurement' => 'Procurement', 'remittances' => 'Remittances', 'payroll' => 'Payroll', 'paybill' => 'Paybill', 'giving' => 'Online giving', 'gateways' => 'Gateways', 'record' => 'Record',
 ];
+// A record's page sits under the list it belongs to.
+$recordLists = ['voucher' => ['payments', 'Payment vouchers'], 'requisition' => ['requisitions', 'Requisitions'], 'payroll' => ['payroll', 'Payroll'], 'order' => ['procurement', 'Procurement'], 'remittance' => ['remittances', 'Remittances'], 'collection' => ['collections', 'Collections']];
+$recordList = $recordLists[$_GET['type'] ?? ''] ?? ['documents', 'All documents'];
 $pageTitle = $titles[$accCtx['page']];
 $pageIcon = 'ri-bank-line';
 $breadcrumbs = match ($accCtx['page']) {
     'index' => ['Home' => $accCtx['homeUrl'], 'Accounting' => null],
     'reconcile' => ['Home' => $accCtx['homeUrl'], 'Accounting' => $accCtx['baseUrl'] . '/', 'Reconciliation' => $accCtx['baseUrl'] . '/reconciliation.php', $pageTitle => null],
+    'record' => ['Home' => $accCtx['homeUrl'], 'Accounting' => $accCtx['baseUrl'] . '/', $recordList[1] => $accCtx['baseUrl'] . "/{$recordList[0]}.php", $pageTitle => null],
     default => ['Home' => $accCtx['homeUrl'], 'Accounting' => $accCtx['baseUrl'] . '/', $pageTitle => null],
 };
 ?>

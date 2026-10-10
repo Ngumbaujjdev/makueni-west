@@ -649,6 +649,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('overview', [$books, 'overview']);
         Route::get('places', [$books, 'places']);
         Route::get('options', [$books, 'options']);
+        Route::get('trail/{type}/{id}', [\App\Http\Controllers\Api\Accounting\TrailController::class, 'show'])->whereIn('type', ['voucher', 'requisition', 'payroll', 'order', 'remittance', 'collection'])->whereNumber('id');
         Route::get('accounts', [$books, 'accounts']);
         Route::post('accounts', [$books, 'storeAccount']);
         Route::put('accounts/{id}', [$books, 'updateAccount'])->whereNumber('id');
