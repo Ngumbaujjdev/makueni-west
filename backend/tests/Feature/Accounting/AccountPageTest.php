@@ -38,6 +38,14 @@ class AccountPageTest extends TestCase
         $this->assertCount(2, $page['movements']);
         $this->assertEquals(2500, $page['movements'][0]['in'], 'newest first');
         $this->assertCount(12, $page['series']['in']);
+
+        // A statement: the newest line ends at today's balance, each earlier one before the next moved it.
+        $m = $page['movements'];
+        $this->assertEquals($page['balance'], $m[0]['balance_after']);
+        $this->assertEquals($m[0]['balance_after'] - ($m[0]['in'] - $m[0]['out']), $m[1]['balance_after']);
+        $this->assertSame('in', $m[0]['direction']);
+        $this->assertSame('receipt', $m[0]['doc_type']);
+        $this->assertSame(2, $page['year_count']);
     }
 
     public function test_an_income_account_reads_received_and_another_church_gets_nothing(): void

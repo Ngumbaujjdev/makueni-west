@@ -124,22 +124,40 @@ final class Books
         $lastMonth = $idx[$today->subMonth()->format('Y-m')] ?? -1;
         $yearFrom = $idx[$today->format('Y').'-01'] ?? 0;
 
-        $lines = JournalLine::with('journal')->where('territory_id', $place->id)->where('account_id', $a->id)
+        $lines = JournalLine::with('journal.media')->where('territory_id', $place->id)->where('account_id', $a->id)
             ->orderByDesc('date')->orderByDesc('journal_id')->orderByDesc('line_no')->limit(15)->get();
-        $others = JournalLine::with('account:id,code,name')->whereIn('journal_id', $lines->pluck('journal_id')->unique())
+        $others = JournalLine::with('account:id,code,name,cash_kind')->whereIn('journal_id', $lines->pluck('journal_id')->unique())
             ->where('account_id', '!=', $a->id)->get()->groupBy('journal_id');
-        $movements = $lines->map(fn ($l) => [
-            'journal_id' => $l->journal_id,
-            'date' => $l->date->toDateString(),
-            'number' => $l->journal->number,
-            'doc_type' => $l->journal->doc_type,
-            'party' => $l->journal->party_name,
-            'details' => $l->journal->narration,
-            'against' => ($others[$l->journal_id] ?? collect())->map(fn ($o) => $o->account?->name)->unique()->values()->all(),
-            'in' => round($debitNormal ? (float) $l->debit : (float) $l->credit, 2),
-            'out' => round($debitNormal ? (float) $l->credit : (float) $l->debit, 2),
-            'reversed' => $l->journal->status === 'reversed',
-        ])->values()->all();
+        // A statement: newest first, each with the balance right after it, worked back from today's.
+        $running = $this->ledger->balance($place, $a);
+        $movements = [];
+        foreach ($lines as $l) {
+            $in = round($debitNormal ? (float) $l->debit : (float) $l->credit, 2);
+            $out = round($debitNormal ? (float) $l->credit : (float) $l->debit, 2);
+            $j = $l->journal;
+            $movements[] = [
+                'journal_id' => $l->journal_id,
+                'date' => $l->date->toDateString(),
+                'number' => $j->number,
+                'doc_type' => $j->doc_type,
+                'party' => $j->party_name,
+                'details' => $j->narration,
+                'method' => $j->method,
+                'method_label' => $j->method ? (Journal::METHODS[$j->method] ?? $j->method) : null,
+                'source' => $j->source_type,
+                'source_id' => $j->source_id,
+                'status' => $j->status,
+                'attachments' => $j->getMedia('attachments')->count(),
+                'against' => ($others[$l->journal_id] ?? collect())->map(fn ($o) => ['name' => $o->account?->name, 'cash_kind' => $o->account?->cash_kind])->unique('name')->values()->all(),
+                'direction' => $in > 0 ? 'in' : 'out',
+                'in' => $in,
+                'out' => $out,
+                'balance_after' => round($running, 2),
+                'reversed' => $j->status === 'reversed',
+            ];
+            $running -= $in - $out;
+        }
+        $yearCount = JournalLine::where('territory_id', $place->id)->where('account_id', $a->id)->where('date', '>=', $today->startOfYear()->toDateString())->count();
 
         $rec = $a->cash_kind ? \App\Models\BankReconciliation::where('territory_id', $place->id)->where('account_id', $a->id)->orderByDesc('statement_date')->orderByDesc('id')->first() : null;
         $budget = app(\App\Services\Budgets\BudgetBook::class)->budgetInUseOn($place->territory_type->value, $place->id, $today->toDateString());
@@ -164,6 +182,7 @@ final class Books
             'this_year' => $sum(fn ($k) => $k >= $yearFrom),
             'series' => $series,
             'movements' => $movements,
+            'year_count' => $yearCount,
             'reconciled' => $rec ? ['id' => $rec->id, 'date' => $rec->statement_date?->toDateString(), 'status' => $rec->status] : null,
             'budget' => $budget ? ['id' => $budget->id, 'name' => $budget->name] : null,
             'budget_lines' => $budgetLines,
