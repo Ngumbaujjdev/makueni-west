@@ -39986,3 +39986,22 @@ a.acc-chain-item:hover, button.acc-chain-item:hover { border-color: rgba(var(--p
   .acc-st-row { flex-wrap: wrap; }
   .acc-st-money { width: 100%; flex-direction: row; justify-content: space-between; align-items: center; padding-left: 3.25rem; }
 }
+
+/* ===========================================================================
+   ACCOUNTING REDESIGN R4 (2026-10-10) - the Reports page and the PDF buttons
+   =========================================================================== */
+.acc-rp-group + .acc-rp-group { margin-top: .75rem; }
+.acc-rp-card .fs-15 { color: var(--v2-heading); }
+.acc-rp-card.is-coming { background: #f8f9fc; }
+.acc-rp-card.is-coming .avatar { opacity: .75; }
+.acc-rp-range { display: flex; flex-direction: column; gap: .5rem; }
+.acc-rp-dates { display: flex; align-items: center; gap: .4rem; }
+.acc-rp-dates span { font-size: .8rem; color: var(--default-text-color); }
+.acc-rp-docs { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: .6rem; }
+.acc-rp-doc { display: flex; align-items: center; gap: .65rem; padding: .7rem .8rem; border: 1px solid var(--default-border); border-radius: .8rem; color: var(--v2-heading); text-decoration: none; }
+.acc-rp-doc:hover { border-color: rgba(var(--primary-rgb), .5); background: rgba(var(--primary-rgb), .03); color: var(--v2-heading); }
+.acc-rp-doc small { display: block; font-size: .74rem; color: var(--default-text-color); }
+.acc-rec-pdfs { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .35rem; margin-top: .6rem; }
+@media (max-width: 767.98px) { .acc-rec-pdfs { justify-content: flex-start; } }
+.acc-rp-range .btn-group { flex-wrap: wrap; }
+.acc-rp-range .btn { white-space: nowrap; }

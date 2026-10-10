@@ -74,6 +74,7 @@
       files: v.files,
       fileUrl: (m) => API.voucherFileUrl(v.id, m),
       list: ["payments", "Payment vouchers"],
+      pdfs: [{ label: "Voucher (PDF)", key: "accounting.voucher", params: { record_id: v.id }, title: `Voucher ${v.number}` }],
     };
   }
 
@@ -149,6 +150,7 @@
       fileUrl: (m) => API.requisitionFileUrl(r.id, m),
       decide: async (decision, comment) => API.decideRequisition(r.id, decision, comment),
       list: ["requisitions", "Requisitions"],
+      pdfs: r.voucher ? [{ label: "Voucher (PDF)", key: "accounting.voucher", params: { record_id: r.voucher.id }, title: `Voucher ${r.voucher.number}` }] : [],
     };
   }
 
@@ -192,6 +194,7 @@
       decide: p.approval?.can?.decide ? (d, comment) => API.decideApproval(p.approval.id, d, comment) : null,
       files: [],
       list: ["payroll", "Payroll"],
+      pdfs: [{ label: "Payslips (PDF)", key: "accounting.payslips", params: { record_id: p.id }, title: `Payslips ${p.label}` }, { label: "Register (PDF)", key: "accounting.payroll", params: { record_id: p.id }, title: `Payroll register ${p.label}` }],
     };
   }
 
@@ -239,6 +242,7 @@
       sections: [{ icon: "ri-list-check-2", title: "What was ordered", html: lines }, deliveries && { icon: "ri-truck-line", title: "Deliveries", html: deliveries }],
       files: [],
       list: ["procurement", "Procurement"],
+      pdfs: [{ label: "LPO (PDF)", key: "accounting.lpo", params: { record_id: o.id }, title: `LPO ${o.number}` }],
     };
   }
 
@@ -282,6 +286,7 @@
       sections: [lines && { icon: "ri-calendar-2-line", title: "Months", html: lines }],
       files: [],
       list: ["remittances", "Remittances"],
+      pdfs: [{ label: "Advice (PDF)", key: "accounting.remittance", params: { record_id: m.id }, title: `Remittance ${m.number}` }],
     };
   }
 
@@ -324,6 +329,7 @@
       sections: [{ icon: "ri-list-check-2", title: "What was given", html: lines }, c.notes && { icon: "ri-sticky-note-line", title: "Notes", html: `<p class="mb-0">${esc(c.notes)}</p>` }],
       files: [],
       list: ["collections", "Collections"],
+      pdfs: [{ label: "Collection sheet (PDF)", key: "accounting.collection", params: { record_id: c.id }, title: `${c.title} - ${A.day(c.date)}` }],
     };
   }
 
@@ -390,7 +396,7 @@
       <div class="acc-rec-top">
         <span class="avatar avatar-lg avatar-rounded bg-${rec.color || "primary"} ${A.textOn(rec.color || "primary")} flex-shrink-0"><i class="${rec.icon} fs-22"></i></span>
         <div class="min-w-0 flex-fill"><span class="acc-rec-kind">${esc(rec.kind)}</span><h4 class="acc-rec-number">${esc(rec.number)}</h4><p class="acc-rec-title">${esc(rec.title || "")}</p><div>${rec.status}</div></div>
-        <div class="acc-rec-amount${rec.dir ? ` is-${rec.dir}` : ""}"><span>${esc(rec.amountLabel || "Amount")}</span>${A.figure(rec.amount)}</div>
+        <div class="acc-rec-amount${rec.dir ? ` is-${rec.dir}` : ""}"><span>${esc(rec.amountLabel || "Amount")}</span>${A.figure(rec.amount)}${(rec.pdfs || []).length ? `<div class="acc-rec-pdfs">${rec.pdfs.map((p, i) => `<button type="button" class="btn btn-sm ${i ? "btn-outline-primary" : "btn-primary"}" data-pdf="${i}"><i class="ri-file-pdf-2-line me-1"></i>${esc(p.label)}</button>`).join("")}</div>` : ""}</div>
       </div>
       <div class="acc-rec-facts">${rec.facts.map(([k, v]) => `<div><span>${esc(k)}</span><strong>${v || "-"}</strong></div>`).join("")}</div>
     </div></div>`;
@@ -454,6 +460,11 @@
   function init() {
     $("recApp").addEventListener("click", async (e) => {
       if (e.target.closest("[data-open]")) return current?.open?.();
+      const pdfBtn = e.target.closest("[data-pdf]");
+      if (pdfBtn) {
+        const p = current.pdfs[Number(pdfBtn.dataset.pdf)];
+        return A.pdf(p.key, p.params, p.title);
+      }
       const d = e.target.closest("[data-decide]");
       if (d && current?.decide) return decide(current, d.dataset.decide);
       const j = e.target.closest("[data-journal]");

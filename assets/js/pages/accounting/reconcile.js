@@ -418,30 +418,8 @@
 
   // ------------------------------------------------------------ print
 
-  function print() {
-    if (!rec) return;
-    const r = rec;
-    const open = r.book.filter((l) => !l.cleared);
-    const list = (rows, key) => rows.map((l) => `<tr><td>${A.day(l.date)}</td><td>${esc(l.number)}</td><td>${esc(l.party || l.details || "")}</td><td style="text-align:right">${A.amount(l[key])}</td></tr>`).join("") || '<tr><td colspan="4">None</td></tr>';
-    const w = window.open("", "_blank");
-    if (!w) return Toast.error("Allow pop-ups to print.");
-    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Bank reconciliation</title><style>body{font-family:Inter,Arial,sans-serif;color:#0D0D0D;max-width:760px;margin:28px auto;padding:0 16px;font-size:13px}h1{font-size:18px;margin:0}h2{font-size:14px;margin:18px 0 6px}table{width:100%;border-collapse:collapse}td,th{padding:6px;border-bottom:1px solid #ddd;text-align:left}.sum td{font-weight:600}.sig{margin-top:44px;display:flex;justify-content:space-between}.sig div{border-top:1px solid #0D0D0D;padding-top:6px;width:44%}</style></head><body>
-      <h1>Christian Church International - ${esc(r.place.name)}</h1>
-      <div>Bank reconciliation statement - <b>${esc(r.account.name)}</b>${r.account.number_masked ? ` (${esc(r.account.number_masked)})` : ""} as at <b>${A.day(r.statement_date)}</b></div>
-      <table style="margin-top:14px" class="sum"><tbody>
-        <tr><td>Balance per statement</td><td style="text-align:right">${A.amount(r.statement_balance) || "0.00"}</td></tr>
-        <tr><td>Add: deposits in transit</td><td style="text-align:right">${A.amount(r.in_transit) || "0.00"}</td></tr>
-        <tr><td>Less: unpresented payments</td><td style="text-align:right">(${A.amount(r.unpresented) || "0.00"})</td></tr>
-        <tr><td>Balance per cashbook</td><td style="text-align:right">${A.amount(r.book_balance) || "0.00"}</td></tr>
-        <tr><td>Difference</td><td style="text-align:right">${A.amount(r.difference) || "0.00"}</td></tr>
-      </tbody></table>
-      <h2>Deposits in transit</h2><table><tbody>${list(open.filter((l) => l.in), "in")}</tbody></table>
-      <h2>Unpresented payments</h2><table><tbody>${list(open.filter((l) => l.out), "out")}</tbody></table>
-      <div class="sig"><div>Prepared by: ${esc(r.prepared_by || "")}</div><div>Signed off by: ${esc(r.approved_by || "")}</div></div>
-      <script>window.onload=()=>window.print()<\/script></body></html>`);
-    w.document.close();
-  }
-
+  /** The reconciliation statement: the diocese PDF (accounting.reconciliation). */
+  const print = () => rec && A.pdf("accounting.reconciliation", { record_id: rec.id }, `Reconciliation - ${rec.account.name}`);
   async function init() {
     $("printBtn").addEventListener("click", print);
     A.ownOnly();

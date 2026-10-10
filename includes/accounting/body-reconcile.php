@@ -1,5 +1,5 @@
 <?php
-$accButtons = '<a class="btn btn-outline-primary" href="' . $accCtx['baseUrl'] . '/reconciliation.php" data-keep-place><i class="ri-arrow-left-line me-1"></i>Reconciliation</a><button type="button" class="btn btn-outline-primary" id="printBtn"><i class="ri-printer-line me-1"></i>Print statement</button>';
+$accButtons = '<a class="btn btn-outline-primary" href="' . $accCtx['baseUrl'] . '/reconciliation.php" data-keep-place><i class="ri-arrow-left-line me-1"></i>Reconciliation</a><button type="button" class="btn btn-outline-primary" id="printBtn"><i class="ri-file-pdf-2-line me-1"></i>Statement (PDF)</button>';
 include __DIR__ . '/toolbar.php';
 ?>
 <div id="recApp">

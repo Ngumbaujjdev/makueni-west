@@ -347,20 +347,8 @@
     if (window.DateField) DateField.enhance(el.querySelector("#bkDate"), { quick: ["today", "yesterday"] });
   }
 
-  /** The collection sheet, signed by both counters. */
-  function sheet(c) {
-    const w = window.open("", "_blank");
-    if (!w) return Toast.error("Allow pop-ups to print.");
-    const den = c.denominations ? Object.entries(c.denominations).sort((a, b) => Number(b[0]) - Number(a[0])).map(([d, q]) => `<tr><td>${Number(d).toLocaleString("en-GB")}</td><td>${q}</td><td style="text-align:right">${A.amount(Number(d) * q)}</td></tr>`).join("") : "";
-    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Collection sheet</title><style>body{font-family:Inter,Arial,sans-serif;color:#0D0D0D;max-width:700px;margin:28px auto;padding:0 16px;font-size:13px}h1{font-size:18px;margin:0}h2{font-size:14px;margin:18px 0 6px}table{width:100%;border-collapse:collapse}td,th{padding:6px;border-bottom:1px solid #ddd;text-align:left}.tot td{font-weight:700;border-top:2px solid #0D0D0D}.sig{margin-top:44px;display:flex;justify-content:space-between;gap:16px}.sig div{border-top:1px solid #0D0D0D;padding-top:6px;flex:1}</style></head><body>
-      <h1>Christian Church International - ${esc(c.place.name)}</h1><div>COLLECTION SHEET - <b>${esc(c.title)}</b>, ${A.day(c.date)}${c.journal ? ` · Receipt ${esc(c.journal.number)}` : ""}</div>
-      <h2>What was given</h2><table><thead><tr><th>Kind</th><th>Fund</th><th style="text-align:right">Cash</th><th style="text-align:right">M-Pesa</th><th style="text-align:right">Total</th></tr></thead><tbody>${c.lines.map((l) => `<tr><td>${esc(l.label)}</td><td>${esc(l.fund?.name || "")}</td><td style="text-align:right">${A.amount(l.cash)}</td><td style="text-align:right">${A.amount(l.mpesa)}</td><td style="text-align:right">${A.amount(l.cash + l.mpesa)}</td></tr>`).join("")}<tr class="tot"><td>Total</td><td></td><td style="text-align:right">${A.amount(c.cash_total) || "0.00"}</td><td style="text-align:right">${A.amount(c.mpesa_total) || "0.00"}</td><td style="text-align:right">${A.amount(c.total)}</td></tr></tbody></table>
-      ${den ? `<h2>Notes and coins</h2><table><thead><tr><th>Note / coin</th><th>How many</th><th style="text-align:right">KES</th></tr></thead><tbody>${den}</tbody></table>` : ""}
-      <div class="sig"><div>Counted by: ${esc(c.counted_by || "")}</div><div>With: ${esc((c.witnesses || []).join(", "))}</div><div>Confirmed by: ${esc(c.confirmed_by || "")}</div></div>
-      <script>window.onload=()=>window.print()<\/script></body></html>`);
-    w.document.close();
-  }
-
+  /** The collection sheet, signed by both counters: the diocese PDF (accounting.collection). */
+  const sheet = (c) => A.pdf("accounting.collection", { record_id: c.id }, `${c.title} - ${A.day(c.date)}`);
   function init() {
     $("countBtn")?.addEventListener("click", () => countWindow());
     $("waitList").addEventListener("click", (e) => {

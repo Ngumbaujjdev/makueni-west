@@ -194,7 +194,8 @@
     const btn = (k, cls, icon, label) => `<button type="button" class="btn ${cls}" data-act="${k}"><i class="${icon} me-1"></i>${label}</button>`;
     const foot = [
       own && c.cancel ? btn("cancel", "btn-outline-danger me-auto", "ri-close-circle-line", "Cancel") : "",
-      btn("print", "btn-outline-primary", "ri-printer-line", "Payslips"),
+      btn("print", "btn-outline-primary", "ri-file-pdf-2-line", "Payslips (PDF)"),
+      btn("register", "btn-outline-primary", "ri-file-pdf-2-line", "Register (PDF)"),
       btn("csv", "btn-outline-primary", "ri-download-2-line", "Register"),
       own && ["posted", "paid"].includes(r.status) && c.pay ? btn("refs", "btn-outline-primary", "ri-hashtag", "References") : "",
       own && c.edit ? btn("recalculate", "btn-outline-secondary", "ri-refresh-line", "Recalculate") : "",
@@ -247,6 +248,7 @@
       if (pay) return payWindow(r);
       if (!act) return;
       if (act === "print") return printSlips(r);
+      if (act === "register") return A.pdf("accounting.payroll", { record_id: r.id }, `Payroll register ${r.label}`);
       if (act === "csv") return register(r);
       if (act === "refs") return referencesWindow(r, again);
       if (act === "cancel" && !confirm(`Cancel the payroll for ${r.label}?`)) return;
@@ -324,21 +326,8 @@
   // ------------------------------------------------------------ outputs
 
   /** Every payslip of the run, one to a page. */
-  function printSlips(r) {
-    const w = window.open("", "_blank");
-    if (!w) return Toast.error("Allow pop-ups to print.");
-    const row = (k, v, b = false) => (v ? `<tr${b ? ' class="tot"' : ""}><td>${esc(k)}</td><td style="text-align:right">${A.amount(v)}</td></tr>` : "");
-    const slips = r.payslips
-      .map(
-        (p) => `<section style="page-break-after:always"><h1>Christian Church International - ${esc(r.place?.name || "")}</h1><h2>PAYSLIP - ${esc(r.label)}</h2>
-        <div class="meta"><div><b>Name:</b> ${esc(p.name)}</div><div><b>Position:</b> ${esc(p.position || "-")}</div><div><b>Paid by:</b> ${esc(METHOD[p.pay_method])} ${esc(p.pay_to || "")}</div><div><b>Reference:</b> ${esc(p.reference || "-")}</div></div>
-        <table><tbody>${row("Basic pay", p.basic)}${(p.allowances || []).map((a) => row(a.name, a.amount)).join("")}${row("Pay", p.gross, true)}${row(p.other_note || "Deduction", p.other)}${row("NET PAY", p.net, true)}</tbody></table></section>`,
-      )
-      .join("");
-    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Payslips ${esc(r.label)}</title><style>body{font-family:Inter,Arial,sans-serif;color:#0D0D0D;max-width:640px;margin:32px auto;padding:0 16px}h1{font-size:18px;margin:0}h2{font-size:14px;font-weight:600;margin:4px 0 18px}table{width:100%;border-collapse:collapse;margin:16px 0}td{padding:7px 8px;border-bottom:1px solid #ddd;font-size:14px}.tot td{font-weight:700;border-top:2px solid #0D0D0D}.meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:14px}</style></head><body>${slips}<script>window.onload=()=>window.print()<\/script></body></html>`);
-    w.document.close();
-  }
-
+  /** The month's payslips: the diocese PDF (accounting.payslips). */
+  const printSlips = (r) => A.pdf("accounting.payslips", { record_id: r.id }, `Payslips ${r.label}`);
   /** The run register, as a CSV. */
   function register(r) {
     const cols = ["Name", "Position", "Paid by", "Paid to", "Basic", "Allowances", "Pay", "Deduction", "Deduction for", "Net", "Reference"];

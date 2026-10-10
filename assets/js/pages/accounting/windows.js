@@ -544,7 +544,7 @@ const AccountingWindows = (function () {
       part("ri-information-line", "Details", factGrid([j.party_phone && ["Phone", esc(j.party_phone)], ["Reference", esc(j.reference)], ["Posted by", A.person(j.posted_by)], j.narration && ["Note", esc(j.narration)]]), "", "primary") +
       part("ri-scales-3-line", "In the books", lines, "", "purple") +
       filesPart(j.files, { canAdd: own && (j.can.receipt || j.can.journal || j.can.pay || j.can.prepare), canRemove: own && (j.can.receipt || j.can.journal) });
-    const foot = `${j.can.reverse ? '<button type="button" class="btn btn-outline-danger me-auto" data-reverse><i class="ri-arrow-go-back-line me-1"></i>Reverse</button>' : ""}${j.doc_type === "receipt" ? '<button type="button" class="btn btn-outline-primary" data-print><i class="ri-printer-line me-1"></i>Print receipt</button>' : ""}<button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>`;
+    const foot = `${j.can.reverse ? '<button type="button" class="btn btn-outline-danger me-auto" data-reverse><i class="ri-arrow-go-back-line me-1"></i>Reverse</button>' : ""}${j.doc_type === "receipt" ? '<button type="button" class="btn btn-outline-primary" data-print><i class="ri-file-pdf-2-line me-1"></i>Receipt (PDF)</button>' : ""}<button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>`;
     const dir = { receipt: "in", payment: "out", bill: "out", payroll: "out" }[j.doc_type] || "";
     const hero = { amount: j.amount, dir, status: `${A.docPill(j.doc_type)}${j.status === "reversed" ? ` ${A.reversedChip()}` : ""}`, facts: [["Date", A.dateChip(j.date)], [j.doc_type === "payment" ? "Paid to" : j.doc_type === "receipt" ? "Received from" : "From", esc(j.party_name)], ["How", A.methodChip(j.method, j.method_label) || "-"]] };
     const el = viewFrame({ title: `${A.doc(j.doc_type).label} ${j.number}`, subtitle: j.place.name, icon: A.doc(j.doc_type).icon, body, foot, hero, tone: A.doc(j.doc_type).color });
@@ -582,22 +582,8 @@ const AccountingWindows = (function () {
     setTimeout(() => el.querySelector("#accReason")?.focus(), 350);
   }
 
-  /** The official receipt, printed from the browser. */
-  function printReceipt(j) {
-    const w = window.open("", "_blank");
-    if (!w) return Toast.error("Allow pop-ups to print.");
-    const what = j.lines.filter((l) => l.credit > 0).map((l) => `<tr><td>${esc(l.account.name)}${l.memo ? ` - ${esc(l.memo)}` : ""}${l.fund && l.fund.code !== "GEN" ? ` (${esc(l.fund.name)})` : ""}</td><td style="text-align:right">${A.amount(l.credit)}</td></tr>`).join("");
-    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Receipt ${esc(j.number)}</title><style>body{font-family:Inter,Arial,sans-serif;color:#0D0D0D;max-width:640px;margin:32px auto;padding:0 16px}h1{font-size:20px;margin:0}h2{font-size:14px;font-weight:600;margin:4px 0 18px}table{width:100%;border-collapse:collapse;margin:16px 0}td,th{padding:8px;border-bottom:1px solid #ddd;font-size:14px;text-align:left}.tot td{font-weight:700;border-top:2px solid #0D0D0D}.meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:14px}.sig{margin-top:48px;display:flex;justify-content:space-between;font-size:13px}.sig div{border-top:1px solid #0D0D0D;padding-top:6px;width:42%}</style></head><body>
-      <h1>Christian Church International - ${esc(j.place.name)}</h1><h2>OFFICIAL RECEIPT No. ${esc(j.number)}</h2>
-      <div class="meta"><div><b>Date:</b> ${A.day(j.date)}</div><div><b>Received from:</b> ${esc(j.party_name || "-")}</div><div><b>Paid by:</b> ${esc(j.method_label || "-")}</div><div><b>Reference:</b> ${esc(j.reference || "-")}</div></div>
-      <table><thead><tr><th>For</th><th style="text-align:right">KES</th></tr></thead><tbody>${what}<tr class="tot"><td>Total</td><td style="text-align:right">${A.amount(j.amount)}</td></tr></tbody></table>
-      ${j.narration ? `<p style="font-size:13px">${esc(j.narration)}</p>` : ""}
-      ${j.status === "reversed" ? '<p style="color:#F23535;font-weight:700">REVERSED - this receipt is no longer valid.</p>' : ""}
-      <div class="sig"><div>Received by: ${esc(j.posted_by || "")}</div><div>Signature</div></div>
-      <script>window.onload=()=>window.print()<\/script></body></html>`);
-    w.document.close();
-  }
-
+  /** The official receipt: the diocese PDF (accounting.receipt). */
+  const printReceipt = (j) => A.pdf("accounting.receipt", { record_id: j.id }, `Receipt ${j.number}`);
   const HOW = { cash: "Cash", mpesa: "M-Pesa", airtel: "Airtel Money", bank: "Bank", cheque: "Cheque", card: "Card" };
   const how = (m) => HOW[m] || m || "";
 
@@ -662,6 +648,7 @@ const AccountingWindows = (function () {
       c.reject_this ? btn("reject", "btn-outline-danger", "ri-arrow-go-back-line", "Send back") : "",
       c.authorise_this ? btn("authorise", "btn-success", "ri-shield-check-line", v.approval && v.approval.status === "pending" ? "Approve" : "Authorise") : "",
       c.pay_this ? btn("pay", "btn-primary", "ri-hand-coin-line", "Pay") : "",
+      btn("pdf", "btn-outline-primary", "ri-file-pdf-2-line", "Voucher (PDF)"),
       '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>',
     ].join("");
     const hero = { amount: v.amount, dir: "out", status: A.voucherPill(v.status, true), facts: [["Pay to", esc(v.payee_name)], ["Date", A.dateChip(v.date)], ["Pay from", A.accountChip(v.pay_from)]] };
@@ -671,6 +658,7 @@ const AccountingWindows = (function () {
       const b = e.target.closest("[data-act]");
       if (!b) return;
       const act = b.dataset.act;
+      if (act === "pdf") return A.pdf("accounting.voucher", { record_id: v.id }, `Voucher ${v.number}`);
       if (act === "edit") return voucher({ voucher: v, onDone: () => onChange?.() });
       if (act === "reject") return reasonWindow({ title: `Send ${v.number} back`, subtitle: "Say what needs fixing - whoever prepared it can change it and send it again", go: "Send back", placeholder: "e.g. Attach the invoice", run: (r) => API.reject(v.id, r), onDone: reload });
       if (act === "reverse") return reasonWindow({ title: `Reverse the payment on ${v.number}`, subtitle: "The money goes back into the account; the voucher can be paid again", go: "Reverse payment", run: (r) => API.reversePayment(v.id, r), onDone: reload });
