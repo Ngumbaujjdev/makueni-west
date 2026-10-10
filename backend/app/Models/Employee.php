@@ -6,8 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Someone a place pays (docs/specs/accounting-spec.md, A7): their position,
- * how they are paid, basic pay and allowances. ID number, KRA PIN, NSSF and
- * SHIF numbers are encrypted at rest and only ever shown masked.
+ * how they are paid, basic pay and allowances. ID number and KRA PIN are
+ * encrypted at rest and only ever shown masked.
  */
 class Employee extends Model implements \OwenIt\Auditing\Contracts\Auditable
 {
@@ -16,20 +16,20 @@ class Employee extends Model implements \OwenIt\Auditing\Contracts\Auditable
     public const METHODS = ['mpesa' => 'M-Pesa', 'bank' => 'Bank', 'cash' => 'Cash'];
 
     /** The personal numbers - kept out of the audit trail too. */
-    public const PRIVATE = ['id_number', 'kra_pin', 'nssf_no', 'shif_no'];
+    public const PRIVATE = ['id_number', 'kra_pin'];
 
     protected $auditExclude = self::PRIVATE;
 
     protected $fillable = [
         'territory_id', 'user_id', 'name', 'phone', 'email', 'position', 'start_date', 'end_date', 'pay_method', 'pay_to',
-        'basic_pay', 'allowances', 'statutory', 'id_number', 'kra_pin', 'nssf_no', 'shif_no', 'is_active', 'created_by',
+        'basic_pay', 'allowances', 'id_number', 'kra_pin', 'is_active', 'created_by',
     ];
 
     protected $hidden = self::PRIVATE;
 
     protected $casts = [
-        'start_date' => 'date', 'end_date' => 'date', 'basic_pay' => 'decimal:2', 'allowances' => 'array', 'statutory' => 'boolean', 'is_active' => 'boolean',
-        'id_number' => 'encrypted', 'kra_pin' => 'encrypted', 'nssf_no' => 'encrypted', 'shif_no' => 'encrypted',
+        'start_date' => 'date', 'end_date' => 'date', 'basic_pay' => 'decimal:2', 'allowances' => 'array', 'is_active' => 'boolean',
+        'id_number' => 'encrypted', 'kra_pin' => 'encrypted',
     ];
 
     /** "•••• 5678" - the last four only, never the whole number. */

@@ -37,7 +37,7 @@ final class Chart
         '2100' => ['Suppliers payable', 'liability', ['key' => 'suppliers_payable', 'about' => 'Bills received, not yet paid']],
         '2200' => ['Due to the diocese', 'liability', ['key' => 'due_to_diocese']],
         '2210' => ['Due to the region', 'liability', ['key' => 'due_to_region']],
-        '2300' => ['Payroll deductions payable', 'liability', ['key' => 'payroll_deductions', 'about' => 'PAYE, NSSF, SHIF and Housing Levy held to pay over']],
+        '2300' => ['Payroll deductions payable', 'liability', ['key' => 'payroll_deductions', 'about' => 'Deductions held from pay (e.g. SACCO, loans) to pay over']],
         '2310' => ['Net pay payable', 'liability', ['key' => 'net_pay']],
         '2400' => ['Money held for others', 'liability', ['key' => 'held_for_others', 'about' => 'Collected on behalf of someone else, to pass on']],
 

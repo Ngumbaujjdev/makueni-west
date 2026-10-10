@@ -7,7 +7,6 @@ use App\Models\JournalLine;
 use App\Models\PayrollRun;
 use App\Models\User;
 use App\Services\Accounting\Ledger;
-use App\Services\Accounting\PayrollCalculator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -15,9 +14,9 @@ use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
- * Payroll (docs/specs/accounting-spec.md, A7): Kenyan deductions from the
- * rates in Settings, a run approved and posted, net pay and each authority
- * paid - and salaries and personal numbers kept private.
+ * Payroll (docs/specs/accounting-spec.md, A7): pay less any other deduction -
+ * the churches don't deduct PAYE, NSSF, SHIF or the Housing Levy - a run
+ * approved and posted, the staff paid; salaries and personal numbers private.
  */
 class PayrollTest extends TestCase
 {
@@ -41,25 +40,13 @@ class PayrollTest extends TestCase
 
         return $this->postJson('/api/accounting/payroll/employees', array_replace([
             'name' => 'Grace Mwende', 'position' => 'Church secretary', 'pay_method' => 'mpesa', 'pay_to' => '0712345678', 'basic_pay' => 90000,
-            'allowances' => [['name' => 'House', 'amount' => 10000]], 'statutory' => true,
+            'allowances' => [['name' => 'House', 'amount' => 10000]],
         ], $over))->assertCreated()->json('data.id');
     }
 
-    public function test_the_deductions_match_the_published_examples(): void
+    public function test_a_run_is_approved_posted_and_the_staff_are_paid(): void
     {
-        $c = app(PayrollCalculator::class);
-        $a = $c->compute(100000);
-        $this->assertEquals([6000, 2750, 1500, 89750, 19308.35], [$a['nssf'], $a['shif'], $a['ahl'], $a['taxable'], $a['paye']]);
-        $this->assertEquals(731.25, $c->compute(30000)['paye']);
-        $this->assertEquals(6480, $c->compute(200000)['nssf'], 'NSSF stops at the upper earnings limit');
-        $this->assertEquals(300, $c->compute(8000)['shif'], 'SHIF has a minimum');
-        $this->assertEquals(0, $c->compute(15000)['paye'], 'relief covers the tax on low pay');
-        $this->assertEquals(0, $c->compute(50000, false)['paye'] + $c->compute(50000, false)['nssf'], 'allowance-only: no deductions');
-    }
-
-    public function test_a_run_is_approved_posted_and_everyone_is_paid(): void
-    {
-        $grace = $this->employee(['id_number' => '23456789', 'kra_pin' => 'A012345678Z']);
+        $this->employee(['id_number' => '23456789', 'kra_pin' => 'A012345678Z']);
         $this->employee(['name' => 'Peter Kioko', 'position' => 'Caretaker', 'basic_pay' => 30000, 'allowances' => []]);
         $this->employee(['name' => 'Old Hand', 'basic_pay' => 20000, 'allowances' => [], 'end_date' => now()->subMonths(2)->toDateString()]);
         $month = now()->format('Y-m');
@@ -68,51 +55,50 @@ class PayrollTest extends TestCase
         $this->assertCount(2, $run['payslips'], 'someone who left is not paid');
         $this->postJson('/api/accounting/payroll/runs', ['month' => $month])->assertStatus(422);
         $slip = collect($run['payslips'])->firstWhere('name', 'Grace Mwende');
-        $this->assertEquals(19308.35, $slip['paye']);
+        $this->assertEquals(100000, $slip['net'], 'no PAYE, NSSF, SHIF or Housing Levy - pay is paid in full');
+        $this->assertArrayNotHasKey('paye', $slip);
 
-        // A figure typed over is marked; Recalculate puts the worked-out one back.
-        $this->putJson("/api/accounting/payroll/runs/{$run['id']}/payslips/{$slip['id']}", ['overrides' => ['paye' => 19000], 'other' => 2000, 'other_note' => 'SACCO'])->assertOk();
-        $this->assertTrue(DB::table('payslips')->where('id', $slip['id'])->value('manual') == 1);
-        $this->postJson("/api/accounting/payroll/runs/{$run['id']}/recalculate")->assertOk();
-        $this->assertEquals(19308.35, DB::table('payslips')->where('id', $slip['id'])->value('paye'));
+        // Another deduction (a SACCO) comes off; Recalculate re-reads pay and keeps it.
+        $this->putJson("/api/accounting/payroll/runs/{$run['id']}/payslips/{$slip['id']}", ['other' => 200000])->assertStatus(422);
+        $this->putJson("/api/accounting/payroll/runs/{$run['id']}/payslips/{$slip['id']}", ['other' => 2000, 'other_note' => 'SACCO'])->assertOk()->assertJsonPath('data.net', 128000);
+        Employee::where('name', 'Peter Kioko')->update(['basic_pay' => 31000]);
+        $this->postJson("/api/accounting/payroll/runs/{$run['id']}/recalculate")->assertOk()->assertJsonPath('data.net', 129000);
+        $this->assertEquals(2000, DB::table('payslips')->where('id', $slip['id'])->value('other'));
+        Employee::where('name', 'Peter Kioko')->update(['basic_pay' => 30000]);
+        $this->postJson("/api/accounting/payroll/runs/{$run['id']}/recalculate")->assertOk()->assertJsonPath('data.net', 128000);
 
         $this->postJson("/api/accounting/payroll/runs/{$run['id']}/submit")->assertOk()->assertJsonPath('data.status', 'submitted');
         $this->postJson("/api/accounting/payroll/runs/{$run['id']}/approve")->assertStatus(422);
         Sanctum::actingAs($this->authoriser);
         $this->postJson("/api/accounting/payroll/runs/{$run['id']}/approve")->assertOk()->assertJsonPath('data.status', 'posted');
 
-        // Posted: Dr salaries (gross + employer) / Cr net pay payable / Cr deductions payable.
+        // Posted: Dr salaries / Cr net pay payable / Cr deductions payable (the SACCO).
         $r = PayrollRun::find($run['id']);
         $ledger = app(Ledger::class);
-        $this->assertEquals(130000 + (float) $r->employer, $ledger->balance($this->myChurch, $this->acc('5000')));
-        $this->assertEquals((float) $r->net, $ledger->balance($this->myChurch, $this->acc('2310')));
-        $this->assertEquals(round((float) $r->deductions + (float) $r->employer, 2), $ledger->balance($this->myChurch, $this->acc('2300')));
+        $this->assertEquals(130000, $ledger->balance($this->myChurch, $this->acc('5000')));
+        $this->assertEquals(128000, $ledger->balance($this->myChurch, $this->acc('2310')));
+        $this->assertEquals(2000, $ledger->balance($this->myChurch, $this->acc('2300')));
         $this->assertTrue($ledger->trialBalance($this->myChurch)['balanced']);
         $this->postJson('/api/accounting/journals/'.$r->journal_id.'/reverse', ['reason' => 'x'])->assertForbidden();
 
-        // Net pay, then each authority - vouchers already authorised by the approver.
+        // The staff are paid by one voucher, a line per person, already authorised by the approver.
         Sanctum::actingAs($this->treasurer);
-        foreach (['net', 'paye', 'nssf', 'shif', 'ahl'] as $kind) {
-            $pv = $this->postJson("/api/accounting/payroll/runs/{$r->id}/pay", ['kind' => $kind, 'pay_from_account_id' => $this->cash()->id])->assertCreated()->json('data.voucher_id');
-            $this->assertSame($this->authoriser->id, \App\Models\PaymentVoucher::find($pv)->authorised_by);
-            $this->postJson("/api/accounting/payroll/runs/{$r->id}/pay", ['kind' => $kind, 'pay_from_account_id' => $this->cash()->id])->assertStatus(422);
-            if ($kind === 'paye') {
-                // A cancelled voucher frees it to be paid again.
-                $this->postJson("/api/accounting/payment-vouchers/{$pv}/cancel")->assertOk();
-                $pv = $this->postJson("/api/accounting/payroll/runs/{$r->id}/pay", ['kind' => 'paye', 'pay_from_account_id' => $this->cash()->id])->assertCreated()->json('data.voucher_id');
-            }
-            $this->postJson("/api/accounting/payment-vouchers/{$pv}/pay", ['paid_on' => now()->toDateString()])->assertOk();
-            $this->assertSame($kind === 'ahl' ? 'paid' : 'posted', $r->fresh()->status);
-        }
+        $pay = fn () => $this->postJson("/api/accounting/payroll/runs/{$r->id}/pay", ['pay_from_account_id' => $this->cash()->id]);
+        $pv = $pay()->assertCreated()->json('data.voucher_id');
+        $this->assertSame($this->authoriser->id, \App\Models\PaymentVoucher::find($pv)->authorised_by);
+        $pay()->assertStatus(422);
+        // A cancelled voucher frees it to be paid again.
+        $this->postJson("/api/accounting/payment-vouchers/{$pv}/cancel")->assertOk();
+        $pv = $pay()->assertCreated()->json('data.voucher_id');
+        $this->postJson("/api/accounting/payment-vouchers/{$pv}/pay", ['paid_on' => now()->toDateString()])->assertOk();
+        $this->assertSame('paid', $r->fresh()->status);
         $this->assertEquals(0, $ledger->balance($this->myChurch, $this->acc('2310')));
-        $this->assertEquals(2000, $ledger->balance($this->myChurch, $this->acc('2300')), 'only the SACCO deduction is left - paid with an ordinary voucher');
         $this->assertSame(2, JournalLine::where('territory_id', $this->myChurch->id)->where('account_id', $this->acc('2310')->id)->where('debit', '>', 0)->count(), 'a line per person');
 
-        // Reversing a payment opens it again.
-        $netPv = \App\Models\PayrollPayment::where('payroll_run_id', $r->id)->where('kind', 'net')->value('payment_voucher_id');
-        $this->postJson("/api/accounting/payment-vouchers/{$netPv}/reverse", ['reason' => 'Wrong M-Pesa number'])->assertOk();
+        // Reversing the payment opens it again.
+        $this->postJson("/api/accounting/payment-vouchers/{$pv}/reverse", ['reason' => 'Wrong M-Pesa number'])->assertOk();
         $this->assertSame('posted', $r->fresh()->status);
-        $this->postJson("/api/accounting/payment-vouchers/{$netPv}/pay", ['paid_on' => now()->toDateString()])->assertOk();
+        $this->postJson("/api/accounting/payment-vouchers/{$pv}/pay", ['paid_on' => now()->toDateString()])->assertOk();
         $this->assertSame('paid', $r->fresh()->status);
 
         $this->putJson("/api/accounting/payroll/runs/{$r->id}/references", ['refs' => [$slip['id'] => 'QWE123ABC']])->assertOk();
@@ -121,13 +107,13 @@ class PayrollTest extends TestCase
 
     public function test_salaries_and_personal_numbers_stay_private(): void
     {
-        $id = $this->employee(['id_number' => '23456789', 'kra_pin' => 'A012345678Z', 'nssf_no' => '2001234567', 'shif_no' => 'SHA9988776']);
+        $id = $this->employee(['id_number' => '23456789', 'kra_pin' => 'A012345678Z']);
         $raw = DB::table('employees')->where('id', $id)->first();
         $this->assertNotSame('23456789', $raw->id_number, 'encrypted at rest');
         $this->assertSame('A012345678Z', Employee::find($id)->kra_pin);
 
         $body = $this->getJson('/api/accounting/payroll')->assertOk()->getContent();
-        foreach (['23456789', 'A012345678Z', '2001234567', 'SHA9988776'] as $secret) {
+        foreach (['23456789', 'A012345678Z'] as $secret) {
             $this->assertStringNotContainsString($secret, $body);
         }
         $this->assertStringContainsString('6789', $body);

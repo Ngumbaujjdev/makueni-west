@@ -5,13 +5,11 @@ namespace App\Http\Controllers\Api\Accounting;
 use App\Approval\Services\ApprovalService;
 use App\Approval\Services\Inbox;
 use App\Models\Employee;
-use App\Models\PayrollPayment;
 use App\Models\PayrollRun;
 use App\Models\Payslip;
 use App\Models\Territory;
 use App\Services\Accounting\Chart;
 use App\Services\Accounting\Payroll;
-use App\Services\Accounting\PayrollCalculator;
 use App\Support\AccountingAccess;
 use App\Support\PlaceAccess;
 use Illuminate\Http\JsonResponse;
@@ -20,14 +18,14 @@ use Illuminate\Http\Request;
 /**
  * Payroll (docs/specs/accounting-spec.md, A7). Salaries are private: only
  * whoever runs payroll (payroll.manage) and those given payroll.read see it,
- * plus whoever a run is waiting on through the approval engine. ID, KRA,
- * NSSF and SHIF numbers leave the API masked, always.
+ * plus whoever a run is waiting on through the approval engine. ID numbers
+ * and KRA PINs leave the API masked, always.
  */
 class PayrollController extends AccountingBase
 {
-    public function __construct(private Payroll $payroll, private PayrollCalculator $calc, private Chart $chart, private ApprovalService $engine, private Inbox $inbox) {}
+    public function __construct(private Payroll $payroll, private Chart $chart, private ApprovalService $engine, private Inbox $inbox) {}
 
-    /** GET /accounting/payroll - the people, the runs, the rates in use. */
+    /** GET /accounting/payroll - the people and the runs. */
     public function index(Request $request): JsonResponse
     {
         $place = $this->placeFor($request);
@@ -41,7 +39,6 @@ class PayrollController extends AccountingBase
             'can' => $this->can($request, $place),
             'employees' => Employee::where('territory_id', $place->id)->orderByDesc('is_active')->orderBy('name')->get()->map(fn ($e) => $this->presentEmployee($e))->values(),
             'runs' => $runs->map(fn ($r) => $this->presentRun($r, $request->user()))->values(),
-            'rates' => collect(PayrollCalculator::DEFAULTS)->keys()->mapWithKeys(fn ($k) => [substr($k, 8) => $this->calc->rate($k)]),
             'cash' => $this->chart->cashAccounts($place)->map(fn ($a) => ['id' => $a->id, 'code' => $a->code, 'name' => $a->name, 'cash_kind' => $a->cash_kind])->values(),
             'next_month' => $this->nextMonth($place),
         ]);
@@ -71,12 +68,9 @@ class PayrollController extends AccountingBase
             'allowances' => ['nullable', 'array', 'max:10'],
             'allowances.*.name' => ['nullable', 'string', 'max:60'],
             'allowances.*.amount' => ['nullable', 'numeric', 'min:0'],
-            'statutory' => ['nullable', 'boolean'],
             'is_active' => ['nullable', 'boolean'],
             'id_number' => ['nullable', 'string', 'max:20'],
             'kra_pin' => ['nullable', 'string', 'max:20'],
-            'nssf_no' => ['nullable', 'string', 'max:20'],
-            'shif_no' => ['nullable', 'string', 'max:20'],
         ], ['name.required' => 'Who is it?', 'basic_pay.required' => 'Enter their basic pay.']);
         $e = $this->payroll->saveEmployee($place, $request->user(), $data, $e);
 
@@ -121,8 +115,6 @@ class PayrollController extends AccountingBase
             'allowances.*.amount' => ['nullable', 'numeric', 'min:0'],
             'other' => ['nullable', 'numeric', 'min:0'],
             'other_note' => ['nullable', 'string', 'max:150'],
-            'overrides' => ['nullable', 'array'],
-            'overrides.*' => ['nullable', 'numeric', 'min:0'],
         ]);
         $this->payroll->updateSlip($run, $p, $data);
 
@@ -170,7 +162,7 @@ class PayrollController extends AccountingBase
         };
 
         return $this->ok($this->presentRun($run, $request->user(), true), [
-            'recalculate' => 'Worked out again with what each person is paid now.',
+            'recalculate' => 'Read again from what each person is paid now.',
             'submit' => $run->status === 'posted' ? 'Approved and posted.' : 'Sent for approval.',
             'cancel' => 'Cancelled.',
         ][$act]);
@@ -189,7 +181,7 @@ class PayrollController extends AccountingBase
         return $this->ok($this->presentRun($run, $request->user(), true), ['approve' => $run->status === 'posted' ? 'Approved - it is posted and ready to pay.' : 'Approved - it moves to the next stage.', 'reject' => 'Rejected - it is a draft again.', 'return' => 'Sent back for changes.'][$decision]);
     }
 
-    /** POST /accounting/payroll/runs/{id}/pay {kind: net|paye|nssf|shif|ahl, pay_from_account_id} */
+    /** POST /accounting/payroll/runs/{id}/pay {pay_from_account_id} - the staff's voucher, already authorised. */
     public function pay(Request $request, int $id): JsonResponse
     {
         [$run, $place, $deny] = $this->run($request, $id, true);
@@ -199,8 +191,8 @@ class PayrollController extends AccountingBase
         if (! AccountingAccess::can($request->user(), $place, 'prepare')) {
             return $this->forbidden('Your role can\'t make payments here.');
         }
-        $data = $request->validate(['kind' => ['required', 'in:net,paye,nssf,shif,ahl'], 'pay_from_account_id' => ['required', 'integer']]);
-        $pv = $this->payroll->pay($run, $request->user(), $data['kind'], (int) $data['pay_from_account_id']);
+        $data = $request->validate(['pay_from_account_id' => ['required', 'integer']]);
+        $pv = $this->payroll->pay($run, $request->user(), (int) $data['pay_from_account_id']);
 
         return $this->ok(['voucher_id' => $pv->id, 'voucher_number' => $pv->number], "Voucher {$pv->number} is ready to pay - it is already authorised.", 201);
     }
@@ -227,9 +219,9 @@ class PayrollController extends AccountingBase
             'start_date' => $e->start_date?->toDateString(), 'end_date' => $e->end_date?->toDateString(),
             'pay_method' => $e->pay_method, 'pay_method_label' => Employee::METHODS[$e->pay_method], 'pay_to' => $e->pay_to,
             'basic_pay' => (float) $e->basic_pay, 'allowances' => $e->allowances ?? [], 'gross' => round((float) $e->basic_pay + array_sum(array_column($e->allowances ?? [], 'amount')), 2),
-            'statutory' => $e->statutory, 'is_active' => $e->is_active,
+            'is_active' => $e->is_active,
             // Masked, always - the full numbers never leave the server.
-            'id_number' => Employee::mask($e->id_number), 'kra_pin' => Employee::mask($e->kra_pin), 'nssf_no' => Employee::mask($e->nssf_no), 'shif_no' => Employee::mask($e->shif_no),
+            'id_number' => Employee::mask($e->id_number), 'kra_pin' => Employee::mask($e->kra_pin),
         ];
     }
 
@@ -243,7 +235,7 @@ class PayrollController extends AccountingBase
         $draft = in_array($run->status, ['draft', 'returned'], true);
         $out = [
             'id' => $run->id, 'month' => $run->month, 'label' => $run->label(), 'status' => $run->status, 'status_label' => PayrollRun::STATUSES[$run->status],
-            'gross' => (float) $run->gross, 'deductions' => (float) $run->deductions, 'net' => (float) $run->net, 'employer' => (float) $run->employer,
+            'gross' => (float) $run->gross, 'deductions' => (float) $run->deductions, 'net' => (float) $run->net,
             'people' => $run->payslips()->count(), 'decision_note' => $run->decision_note,
             'can' => [
                 'edit' => $manage && $draft,
@@ -254,8 +246,7 @@ class PayrollController extends AccountingBase
             ],
         ];
         if ($full) {
-            $amounts = in_array($run->status, ['posted', 'paid'], true) ? $this->payroll->amounts($run) : [];
-            $payments = PayrollPayment::with('voucher')->where('payroll_run_id', $run->id)->get();
+            $payment = $this->payroll->openPayment($run);
             $run->loadMissing(['preparer', 'approver']);
             $out += [
                 'prepared_by' => $run->preparer?->full_name,
@@ -265,17 +256,10 @@ class PayrollController extends AccountingBase
                 'place' => $this->placeInfo($place),
                 'payslips' => $run->payslips()->get()->map(fn ($p) => [
                     'id' => $p->id, 'employee_id' => $p->employee_id, 'name' => $p->name, 'position' => $p->position, 'pay_method' => $p->pay_method, 'pay_to' => $p->pay_to,
-                    'statutory' => $p->statutory, 'basic' => (float) $p->basic, 'allowances' => $p->allowances ?? [], 'gross' => (float) $p->gross,
-                    'nssf' => (float) $p->nssf, 'shif' => (float) $p->shif, 'ahl' => (float) $p->ahl, 'taxable' => (float) $p->taxable, 'paye' => (float) $p->paye,
-                    'other' => (float) $p->other, 'other_note' => $p->other_note, 'total_deductions' => (float) $p->total_deductions, 'net' => (float) $p->net,
-                    'employer_nssf' => (float) $p->employer_nssf, 'employer_ahl' => (float) $p->employer_ahl, 'manual' => $p->manual, 'reference' => $p->reference,
+                    'basic' => (float) $p->basic, 'allowances' => $p->allowances ?? [], 'gross' => (float) $p->gross,
+                    'other' => (float) $p->other, 'other_note' => $p->other_note, 'net' => (float) $p->net, 'reference' => $p->reference,
                 ])->values(),
-                'payments' => collect(PayrollPayment::KINDS)->map(function ($meta, $kind) use ($amounts, $payments) {
-                    $p = $payments->where('kind', $kind)->first(fn ($x) => $x->voucher && $x->voucher->status !== 'cancelled');
-
-                    return ['kind' => $kind, 'label' => $meta[0], 'to' => $meta[1], 'amount' => $amounts[$kind] ?? 0,
-                        'voucher' => $p?->voucher ? ['id' => $p->voucher->id, 'number' => $p->voucher->number, 'status' => $p->voucher->status] : null];
-                })->values(),
+                'payment' => $payment?->voucher ? ['id' => $payment->voucher->id, 'number' => $payment->voucher->number, 'status' => $payment->voucher->status] : null,
                 'approval' => $req ? $this->inbox->present($req, $user, true) : null,
             ];
         }
