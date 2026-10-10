@@ -257,6 +257,7 @@ class PaymentVoucherController extends AccountingBase
             'date' => ['required', 'date'],
             'payee_name' => ['required', 'string', 'max:150'],
             'payee_phone' => ['nullable', 'string', 'max:30'],
+            ...\App\Support\PayTo::rules(),
             'pay_from_account_id' => ['required', 'integer'],
             'narration' => ['required', 'string', 'max:255'],
         ] + $this->lineRules(), ['payee_name.required' => 'Who is being paid?', 'narration.required' => 'Say what the payment is for.', 'lines.required' => 'Add what is being paid for.']);

@@ -34,6 +34,8 @@ final class PaymentVouchers
                 'date' => $data['date'],
                 'payee_name' => trim($data['payee_name']),
                 'payee_phone' => $data['payee_phone'] ?? null,
+                // Where to pay: given on the voucher, or copied from the supplier / requisition it pays.
+                'payee' => \App\Support\PayTo::from($data['payee'] ?? null),
                 'pay_from_account_id' => $from->id,
                 'narration' => trim($data['narration']),
                 'purpose' => in_array($data['purpose'] ?? 'payment', ['imprest_topup', 'advance', 'bill', 'remittance', 'payroll'], true) ? $data['purpose'] : 'payment',
@@ -80,6 +82,8 @@ final class PaymentVouchers
                 'date' => $data['date'],
                 'payee_name' => trim($data['payee_name']),
                 'payee_phone' => $data['payee_phone'] ?? null,
+                // Where to pay: kept unless the change gives it.
+                'payee' => array_key_exists('payee', $data) ? \App\Support\PayTo::from($data['payee']) : $pv->payee,
                 'pay_from_account_id' => $from->id,
                 'narration' => trim($data['narration']),
                 'amount' => $total,

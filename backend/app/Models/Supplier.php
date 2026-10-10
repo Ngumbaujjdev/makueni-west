@@ -13,9 +13,9 @@ class Supplier extends Model implements \OwenIt\Auditing\Contracts\Auditable
 {
     use \OwenIt\Auditing\Auditable;
 
-    protected $fillable = ['territory_id', 'name', 'phone', 'email', 'kra_pin', 'pay_details', 'notes', 'is_active', 'created_by'];
+    protected $fillable = ['territory_id', 'name', 'phone', 'email', 'kra_pin', 'pay_details', 'payee', 'notes', 'is_active', 'created_by'];
 
-    protected $casts = ['is_active' => 'boolean'];
+    protected $casts = ['payee' => 'array', 'is_active' => 'boolean'];
 
     /** Has anything been quoted, ordered or billed from them? */
     public function isUsed(): bool

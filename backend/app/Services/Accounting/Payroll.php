@@ -58,8 +58,10 @@ final class Payroll
             'position' => $this->clean($data['position'] ?? null, 100),
             'start_date' => $data['start_date'] ?? null,
             'end_date' => $data['end_date'] ?? null,
-            'pay_method' => in_array($data['pay_method'] ?? 'mpesa', array_keys(Employee::METHODS), true) ? $data['pay_method'] : 'mpesa',
+            'pay_method' => in_array($data['pay_method'] ?? '', array_keys(Employee::METHODS), true) ? $data['pay_method'] : ($e?->pay_method ?? 'mpesa'),
             'pay_to' => $this->clean($data['pay_to'] ?? null, 150),
+            // Where to pay them, in a shape the treasurer can pay from; it decides the method and the one-line "pay to".
+            'payee' => array_key_exists('payee', $data) ? \App\Support\PayTo::from($data['payee']) : $e?->payee,
             'basic_pay' => round(max((float) ($data['basic_pay'] ?? 0), 0), 2),
             'allowances' => $allowances,
             'is_active' => array_key_exists('is_active', $data) ? (bool) $data['is_active'] : ($e?->is_active ?? true),
@@ -69,6 +71,10 @@ final class Payroll
             if (($v = $this->clean($data[$key] ?? null, 40)) !== null) {
                 $fields[$key] = strtoupper($v);
             }
+        }
+        if ($fields['payee']) {
+            $fields['pay_method'] = $fields['payee']['method'];
+            $fields['pay_to'] = mb_substr((string) \App\Support\PayTo::describe($fields['payee']), 0, 150);
         }
         if ((float) $fields['basic_pay'] + array_sum(array_column($allowances, 'amount')) <= 0) {
             throw ValidationException::withMessages(['basic_pay' => ['Enter what they are paid a month.']]);
@@ -113,7 +119,7 @@ final class Payroll
     private function slipFor(Employee $e, float $other = 0, ?string $otherNote = null): array
     {
         return $this->worked([
-            'employee_id' => $e->id, 'name' => $e->name, 'position' => $e->position, 'pay_method' => $e->pay_method, 'pay_to' => $e->pay_to,
+            'employee_id' => $e->id, 'name' => $e->name, 'position' => $e->position, 'pay_method' => $e->pay_method, 'pay_to' => $e->pay_to, 'payee' => $e->payee,
             'basic' => (float) $e->basic_pay, 'allowances' => $e->allowances ?? [], 'other' => $other, 'other_note' => $otherNote,
         ]);
     }

@@ -247,6 +247,40 @@ const AccountingWindows = (function () {
 
   // ------------------------------------------------------------ voucher
 
+  // ------------------------------------------------------------ where to pay (payee details)
+
+  /** The ways to be paid - the real marks for M-Pesa and Airtel (a paybill or till is M-Pesa too). */
+  const PAYEE = { mpesa: ["M-Pesa", "mpesa"], airtel: ["Airtel Money", "airtel"], paybill: ["Paybill", "mpesa"], till: ["Till", "mpesa"], bank: ["Bank", "bank"], cash: ["Cash", "cash"] };
+
+  /** A method chooser, then just that method's fields. p: an id prefix; cur: the saved {method, ...}. */
+  function payeeFields(p, cur = null, { optional = true } = {}) {
+    const m = cur?.method || "";
+    const inp = (id, ph, v, type = "text") => `<div class="col-sm-6"><input type="${type}" class="form-control" id="${p}${id}" placeholder="${ph}" value="${esc(v || "")}"><div class="invalid-feedback"></div></div>`;
+    const row = (methods, body) => `<div class="row g-2 mt-0" data-payee-row="${p}" data-methods="${methods}" hidden>${body}</div>`;
+    return `<div class="acc-tiles" data-payee="${p}">${optional ? `<label class="acc-tile" style="--q: var(--secondary-rgb)"><input type="radio" name="${p}Method" value=""${m ? "" : " checked"}><span class="acc-tile-icon"><i class="ri-question-line"></i></span><span class="acc-tile-text"><strong>Not given</strong></span></label>` : ""}${Object.entries(PAYEE)
+      .map(([k, [label, logo]]) => `<label class="acc-tile" style="--q: var(--primary-rgb)"><input type="radio" name="${p}Method" value="${k}"${m === k ? " checked" : ""}>${A.methodLogo(logo, "sm")}<span class="acc-tile-text"><strong>${label}</strong></span></label>`)
+      .join("")}</div>
+      ${row("mpesa airtel", inp("Phone", "Their number, e.g. 0712 345 678", cur?.phone ? String(cur.phone).replace(/^254/, "0") : "", "tel"))}
+      ${row("paybill", inp("PbNo", "Paybill number", cur?.paybill_number) + inp("PbAcc", "Account number", cur?.paybill_account))}
+      ${row("till", inp("Till", "Till number", cur?.till_number))}
+      ${row("bank", inp("Bank", "Bank, e.g. KCB", cur?.bank_name) + inp("Branch", "Branch (optional)", cur?.bank_branch) + inp("BankAcc", "Account number", cur?.bank_account) + inp("BankName", "Account name, as the bank has it", cur?.bank_account_name))}`;
+  }
+  function wirePayee(el, p) {
+    const show = () => {
+      const m = el.querySelector(`input[name="${p}Method"]:checked`)?.value || "";
+      el.querySelectorAll(`[data-payee-row="${p}"]`).forEach((r) => (r.hidden = !m || !r.dataset.methods.split(" ").includes(m)));
+    };
+    el.querySelectorAll(`input[name="${p}Method"]`).forEach((r) => r.addEventListener("change", show));
+    show();
+  }
+  /** {method, ...} for the server, or null when not given. */
+  function readPayee(el, p) {
+    const m = el.querySelector(`input[name="${p}Method"]:checked`)?.value || "";
+    if (!m) return null;
+    const v = (id) => el.querySelector(`#${p}${id}`)?.value.trim() || null;
+    return { method: m, phone: v("Phone"), paybill_number: v("PbNo"), paybill_account: v("PbAcc"), till_number: v("Till"), bank_name: v("Bank"), bank_branch: v("Branch"), bank_account: v("BankAcc"), bank_account_name: v("BankName") };
+  }
+
   async function voucher({ voucher: pv = null, onDone } = {}) {
     const o = await A.options();
     if (!o) return;
@@ -258,6 +292,7 @@ const AccountingWindows = (function () {
       icon: "ri-file-list-3-line",
       parts: [
         { title: "Pay to", body: `<div class="row g-2"><div class="col-sm-7"><input type="text" class="form-control" id="pvPayee" data-field="payee_name" maxlength="150" placeholder="Who is being paid?" value="${esc(pv?.payee_name || "")}"></div><div class="col-sm-5"><input type="tel" class="form-control" id="pvPhone" maxlength="30" placeholder="Phone (optional)" value="${esc(pv?.payee_phone || "")}"></div><div class="col-12"><input type="text" class="form-control" id="pvWhat" data-field="narration" maxlength="255" placeholder="What is it for? e.g. October electricity" value="${esc(pv?.narration || "")}"></div></div>` },
+        { title: "How to pay them", hint: "Optional - so whoever pays knows where", body: payeeFields("pvTo", pv?.payee) },
         { title: "Pay from which account?", body: cashTiles(o.cash, pv?.pay_from?.id || o.cash[0]?.id, "pvFrom") },
         { title: "Charge it to", hint: "The expense (or advance, bill...) it is for", body: linesBlock("voucher") },
         { title: "Date and papers", body: `<div class="row g-2"><div class="col-sm-5"><input type="date" class="form-control" id="pvDate" data-field="date" value="${esc(pv?.date || o.today)}"></div><div class="col-sm-7">${filePick("Attach the invoice or quote (optional)")}</div></div>` },
@@ -273,6 +308,7 @@ const AccountingWindows = (function () {
         };
         wireLines(el, o, payFor, pv ? pv.lines.map((l) => ({ account_id: l.account.id, fund_id: l.fund?.id, amount: l.amount, memo: l.description })) : [{ account_id: firstExpense }], upd);
         el.querySelector("#pvPayee").addEventListener("input", upd);
+        wirePayee(el, "pvTo");
         dateField(el, "#pvDate", ["today", "yesterday"]);
         wireFiles(el);
         upd();
@@ -282,6 +318,7 @@ const AccountingWindows = (function () {
           date: val(el, "#pvDate"),
           payee_name: val(el, "#pvPayee"),
           payee_phone: val(el, "#pvPhone") || null,
+          payee: readPayee(el, "pvTo"),
           narration: val(el, "#pvWhat"),
           pay_from_account_id: Number(el.querySelector('input[name="pvFrom"]:checked')?.value),
           lines: readLines(el).filter((l) => l.account_id || l.amount).map(({ name, memo, ...l }) => ({ ...l, description: memo })),
@@ -637,7 +674,7 @@ const AccountingWindows = (function () {
     const body =
       alert +
       part("ri-route-line", "Where it stands", A.journey(voucherSteps(v)) + voucherNext(v), v.approval?.workflow ? `<small>${esc(v.approval.workflow)}</small>` : "", "warning") +
-      part("ri-information-line", "Details", factGrid([v.payee_phone && ["Phone", esc(v.payee_phone)], ["For", esc(v.narration)], v.authorise_note && ["Authoriser's note", esc(v.authorise_note)], v.status === "paid" && ["Paid by", `${A.methodChip(v.method)} ${esc(v.reference || "")}`], v.journal_number && ["In the books", esc(v.journal_number)]]), "", "primary") +
+      part("ri-information-line", "Details", factGrid([v.payee_phone && ["Phone", esc(v.payee_phone)], v.payee_text && ["Pay by", `${A.methodChip({ paybill: "mpesa", till: "mpesa" }[v.payee?.method] || v.payee?.method, v.payee_text)}`], ["For", esc(v.narration)], v.authorise_note && ["Authoriser's note", esc(v.authorise_note)], v.status === "paid" && ["Paid by", `${A.methodChip(v.method)} ${esc(v.reference || "")}`], v.journal_number && ["In the books", esc(v.journal_number)]]), "", "primary") +
       part("ri-list-check-2", "What it pays for", lines, "", "purple") +
       filesPart(v.files, { canAdd: c.own && (c.prepare || c.pay || c.journal), canRemove: c.own && v.status !== "paid" && (c.prepare || c.pay), label: "Invoice, quote and receipt" });
     const btn = (key, cls, icon, label) => `<button type="button" class="btn ${cls}" data-act="${key}"><i class="${icon} me-1"></i>${label}</button>`;
@@ -865,7 +902,7 @@ const AccountingWindows = (function () {
     });
   }
 
-  return { receipt, voucher, transfer, journal, account, viewJournal, viewVoucher, voucherSteps, voucherNext, viewFrame, heroStrip, part, factGrid, filesPart, close, countCash, pettySpend, setFloat, topUp, reasonWindow, cashTiles };
+  return { payeeFields, wirePayee, readPayee, receipt, voucher, transfer, journal, account, viewJournal, viewVoucher, voucherSteps, voucherNext, viewFrame, heroStrip, part, factGrid, filesPart, close, countCash, pettySpend, setFloat, topUp, reasonWindow, cashTiles };
 })();
 
 window.AccountingWindows = AccountingWindows;

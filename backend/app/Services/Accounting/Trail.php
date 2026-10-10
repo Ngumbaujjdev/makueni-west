@@ -35,14 +35,25 @@ class Trail
         'order' => PurchaseOrder::class,
         'remittance' => Remittance::class,
         'collection' => Collection::class,
+        // Payee details / detail pages (docs/specs/accounting-spec.md): these carry a summary too - they have no page of their own.
+        'bill' => SupplierInvoice::class,
+        'receipt' => Journal::class,
+        'gift' => \App\Models\Gift::class,
+        'supplier' => \App\Models\Supplier::class,
+        'employee' => \App\Models\Employee::class,
     ];
+
+    /** The types whose trail also carries the record's summary. */
+    public const SUMMARISED = ['bill', 'receipt', 'gift', 'supplier', 'employee'];
 
     /** The record, or null. */
     public function find(string $type, int $id): ?Model
     {
         $class = self::TYPES[$type] ?? null;
+        $record = $class ? $class::find($id) : null;
 
-        return $class ? $class::find($id) : null;
+        // "receipt" is any posted document in the books (a receipt, payment, transfer, journal...).
+        return $record;
     }
 
     /** The places whose books show the record (a remittance shows on both sides). */
@@ -65,6 +76,11 @@ class Trail
             $record instanceof PurchaseOrder => $this->orderEvents($record),
             $record instanceof Remittance => $this->remittanceEvents($record),
             $record instanceof Collection => $this->collectionEvents($record),
+            $record instanceof SupplierInvoice => $this->billEvents($record),
+            $record instanceof Journal => $this->journalEvents($record),
+            $record instanceof \App\Models\Gift => $this->giftEvents($record),
+            $record instanceof \App\Models\Supplier => $this->supplierEvents($record),
+            $record instanceof \App\Models\Employee => $this->employeeEvents($record),
         };
         $events = array_merge($events, $this->approvalEvents($record), $this->fileEvents($record));
         $events = array_values(array_filter($events, fn ($e) => $e && $e['at']));
@@ -75,7 +91,108 @@ class Trail
         return [
             'events' => array_map(fn ($e) => array_diff_key($e, ['order' => 1]), $events),
             'links' => array_values(array_filter($this->links($record))),
+        ] + (($summary = $this->summary($record)) ? ['summary' => $summary] : []);
+    }
+
+    // ------------------------------------------------------------ bill, receipt, gift, supplier, staff
+
+    /** {title, number, amount, status, status_label, date, facts: [[label, value]], lines: [[label, amount]]} for the record pages without one of their own. */
+    private function summary(Model $record): ?array
+    {
+        $pay = fn (?array $p, ?string $fallback = null) => \App\Support\PayTo::describe($p) ?? $fallback;
+        $f = fn (array $facts) => array_values(array_filter($facts, fn ($x) => $x && $x[1] !== null && $x[1] !== ''));
+
+        return match (true) {
+            $record instanceof SupplierInvoice => [
+                'title' => "Bill from {$record->supplier?->name}", 'number' => $record->number, 'amount' => (float) $record->amount, 'status' => $record->status,
+                'status_label' => (defined(SupplierInvoice::class.'::STATUSES') ? SupplierInvoice::STATUSES[$record->status] ?? null : null) ?? ucfirst((string) $record->status),
+                'date' => $record->date?->toDateString(),
+                'facts' => $f([['Supplier', $record->supplier?->name], ['Their invoice', $record->supplier_ref], ['Order', $record->order?->number], ['Due on', $record->due_on?->format('j M Y')],
+                    ['Pay to', $pay($record->supplier?->payee, $record->supplier?->pay_details)], ['Entered by', $this->name($record->posted_by)]]),
+                'lines' => $record->lines()->get()->map(fn ($l) => [$l->description ?? 'Item', (float) $l->amount])->all(),
+            ],
+            $record instanceof Journal => [
+                'title' => ucfirst(str_replace('_', ' ', (string) $record->doc_type)).($record->party_name ? " - {$record->party_name}" : ''), 'number' => $record->number,
+                'amount' => (float) $record->amount, 'status' => $record->status, 'status_label' => $record->status === 'reversed' ? 'Reversed' : 'In the books', 'date' => $record->date?->toDateString(),
+                'facts' => $f([['From / to', $record->party_name], ['Phone', $record->party_phone], ['Method', $record->method ? ucfirst($record->method) : null], ['Reference', $record->reference],
+                    ['What for', $record->narration], ['Posted by', $this->name($record->posted_by)]]),
+                'lines' => $record->lines()->with('account')->get()->map(fn ($l) => [trim(($l->account?->code ?? '').' '.($l->account?->name ?? '')).($l->memo ? " - {$l->memo}" : ''), (float) ($l->debit ?: -$l->credit)])->all(),
+            ],
+            $record instanceof \App\Models\Gift => [
+                'title' => 'Gift'.($record->giver_name ? " from {$record->giver_name}" : ''), 'number' => $record->reference, 'amount' => (float) $record->amount, 'status' => $record->status,
+                'status_label' => \App\Models\Gift::STATUSES[$record->status] ?? $record->status, 'date' => ($record->paid_at ?? $record->created_at)?->toDateString(),
+                'facts' => $f([['For', Paybill::PURPOSES[$record->purpose][0] ?? $record->purpose], ['Giver', $record->giver_name], ['Phone', $record->giver_phone], ['Email', $record->giver_email],
+                    ['Paid by', $record->method === 'mpesa' ? 'M-Pesa' : 'Card or M-Pesa on Paystack'], ['Reference', $record->provider_ref],
+                    ['Fee', (float) $record->fee ? $this->money($record->fee) : null], ['Diocese share', (float) $record->split ? $this->money($record->split) : null], ['Why', in_array($record->status, ['failed', 'abandoned', 'refunded'], true) ? $record->result : null]]),
+                'lines' => [],
+            ],
+            $record instanceof \App\Models\Supplier => [
+                'title' => $record->name, 'number' => null, 'amount' => (float) SupplierInvoice::where('supplier_id', $record->id)->where('status', 'posted')->sum('amount'),
+                'status' => $record->is_active ? 'active' : 'off', 'status_label' => $record->is_active ? 'Active' : 'Not used now', 'date' => $record->created_at?->toDateString(),
+                'facts' => $f([['Pay to', $pay($record->payee, $record->pay_details)], ['Phone', $record->phone], ['Email', $record->email], ['KRA PIN', $record->kra_pin], ['Notes', $record->notes]]),
+                'lines' => [],
+            ],
+            $record instanceof \App\Models\Employee => [
+                'title' => $record->name, 'number' => $record->position, 'amount' => (float) $record->basic_pay + array_sum(array_column((array) $record->allowances, 'amount')),
+                'status' => $record->is_active ? 'active' : 'off', 'status_label' => $record->is_active ? 'On the payroll' : 'Left', 'date' => $record->start_date?->toDateString(),
+                'facts' => $f([['Pay to', $pay($record->payee, $record->pay_to)], ['Phone', $record->phone], ['Email', $record->email], ['Started', $record->start_date?->format('j M Y')], ['Left', $record->end_date?->format('j M Y')]]),
+                'lines' => array_merge([['Basic pay', (float) $record->basic_pay]], array_map(fn ($a) => [$a['name'], (float) $a['amount']], (array) $record->allowances)),
+            ],
+            default => null,
+        };
+    }
+
+    private function billEvents(SupplierInvoice $b): array
+    {
+        $v = $b->voucher;
+
+        return [
+            $this->event($b->created_at, $this->name($b->posted_by), "Entered the bill for {$this->money($b->amount)} from {$b->supplier?->name}", 'ri-file-list-2-line', 'warning', $b->supplier_ref ? "Their invoice {$b->supplier_ref}" : null, 1),
+            $v ? $this->event($v->prepared_at ?? $v->created_at, $this->name($v->prepared_by), "Voucher {$v->number} made to pay it", 'ri-edit-line', 'primary', null, 2) : null,
+            $v ? $this->event($v->paid_at ?? $v->paid_on, $this->name($v->paid_by), 'Paid', 'ri-hand-coin-line', 'success', null, 3) : null,
         ];
+    }
+
+    private function journalEvents(Journal $j): array
+    {
+        return [
+            $this->event($j->posted_at ?? $j->created_at, $this->name($j->posted_by), "Posted {$j->number} for {$this->money($j->amount)}", 'ri-book-2-line', 'primary', $j->narration, 1),
+            $j->reversed_by_id ? $this->event(Journal::find($j->reversed_by_id)?->created_at, $this->name(Journal::find($j->reversed_by_id)?->posted_by), 'Reversed', 'ri-arrow-go-back-line', 'danger', $j->reverse_reason, 2) : null,
+        ];
+    }
+
+    private function giftEvents(\App\Models\Gift $g): array
+    {
+        return [
+            $this->event($g->created_at, null, 'Started on the giving page'.($g->giver_name ? " by {$g->giver_name}" : ''), 'ri-hand-heart-line', 'primary', null, 1),
+            $this->event($g->paid_at, null, "Paid {$this->money($g->amount)}".($g->provider_ref ? " - {$g->provider_ref}" : ''), 'ri-checkbox-circle-line', 'success', null, 2),
+            in_array($g->status, ['failed', 'abandoned'], true) ? $this->event($g->updated_at, null, 'Not paid', 'ri-close-circle-line', 'danger', $g->result, 3) : null,
+            $this->event($g->disputed_at, null, 'Disputed by the giver\'s bank', 'ri-error-warning-line', 'danger', null, 4),
+            $this->event($g->refunded_at, null, "Refunded {$this->money($g->refunded_amount)}", 'ri-arrow-go-back-line', 'danger', null, 5),
+        ];
+    }
+
+    private function supplierEvents(\App\Models\Supplier $s): array
+    {
+        $out = [$this->event($s->created_at, $this->name($s->created_by), "Added {$s->name} as a supplier", 'ri-store-2-line', 'primary', null, 1)];
+        foreach (PurchaseOrder::where('supplier_id', $s->id)->latest('id')->limit(15)->get() as $o) {
+            $out[] = $this->event($o->created_at, $this->name($o->issued_by), "Order {$o->number} for {$this->money($o->amount)}", 'ri-shopping-cart-2-line', 'primary', null, 2);
+        }
+        foreach (SupplierInvoice::where('supplier_id', $s->id)->latest('id')->limit(15)->get() as $b) {
+            $out[] = $this->event($b->created_at, $this->name($b->posted_by), "Bill {$b->number} for {$this->money($b->amount)}", 'ri-file-list-2-line', 'warning', null, 3);
+        }
+
+        return $out;
+    }
+
+    private function employeeEvents(\App\Models\Employee $e): array
+    {
+        $out = [$this->event($e->created_at, $this->name($e->created_by), "Added {$e->name} to the payroll", 'ri-user-add-line', 'primary', null, 1)];
+        foreach (\App\Models\Payslip::where('employee_id', $e->id)->with('run')->latest('id')->limit(24)->get() as $p) {
+            $out[] = $this->event($p->created_at, null, 'Payslip for '.($p->run?->month ?? '').": {$this->money($p->net)} net", 'ri-file-user-line', 'success', null, 2);
+        }
+
+        return $out;
     }
 
     // ------------------------------------------------------------------ events
@@ -266,12 +383,12 @@ class Trail
             'type' => $type,
             'id' => $m->getKey(),
             'label' => $label,
-            'number' => $m->number ?? ($m instanceof PayrollRun ? "Payroll {$m->month}" : ($m instanceof Collection ? $m->title : null)),
+            'number' => $m->number ?? $m->reference ?? ($m instanceof PayrollRun ? "Payroll {$m->month}" : ($m instanceof Collection ? $m->title : ($m->name ?? null))),
             'status' => $status,
             'status_label' => $statuses[$status] ?? ($status ? ucfirst(str_replace('_', ' ', $status)) : null),
             'amount' => isset($m->amount) ? (float) $m->amount : (isset($m->net) ? (float) $m->net : (isset($m->total) ? (float) $m->total : null)),
             'date' => ($m->date ?? $m->paid_on ?? $m->created_at)?->toDateString(),
-            'opens' => in_array($type, ['voucher', 'requisition', 'payroll', 'order', 'remittance', 'collection', 'journal'], true),
+            'opens' => in_array($type, ['voucher', 'requisition', 'payroll', 'order', 'remittance', 'collection', 'journal', ...self::SUMMARISED], true),
         ];
     }
 
@@ -294,6 +411,34 @@ class Trail
                 $this->link('journal', $record->journal, 'Receipt in the books'),
                 $this->link('journal', $record->bankingJournal, 'Banked'),
             ],
+            $record instanceof SupplierInvoice => [
+                $this->link('order', $record->order, 'Purchase order'),
+                $this->link('requisition', $record->order?->requisition, 'Requisition'),
+                $this->link('supplier', $record->supplier, 'Supplier'),
+                $this->link('journal', Journal::find($record->journal_id), 'Bill in the books'),
+                $this->link('voucher', $record->voucher, 'Payment voucher'),
+                $this->link('journal', $record->voucher?->journal, 'Payment in the books'),
+            ],
+            $record instanceof Journal => [
+                $this->link('journal', $record->reversed_by_id ? Journal::find($record->reversed_by_id) : null, 'Its reversal'),
+                $this->link('journal', $record->reverses_id ? Journal::find($record->reverses_id) : null, 'What it reverses'),
+                $record->source_type === 'gift' ? $this->link('gift', \App\Models\Gift::find($record->source_id), 'Online gift') : null,
+                $record->source_type === 'collection' ? $this->link('collection', Collection::find($record->source_id), 'Collection') : null,
+                $record->source_type === 'payment_voucher' ? $this->link('voucher', PaymentVoucher::find($record->source_id), 'Payment voucher') : null,
+                $record->source_type === 'supplier_invoice' ? $this->link('bill', SupplierInvoice::find($record->source_id), "Supplier's bill") : null,
+            ],
+            $record instanceof \App\Models\Gift => [
+                $this->link('receipt', Journal::find($record->journal_id), 'Receipt in our books'),
+                $this->link('receipt', Journal::find($record->diocese_journal_id), 'In the diocese\'s books'),
+                $this->link('remittance', $record->remittance_id ? Remittance::find($record->remittance_id) : null, 'Diocese share'),
+            ],
+            $record instanceof \App\Models\Supplier => [
+                ...PurchaseOrder::where('supplier_id', $record->id)->latest('id')->limit(10)->get()->map(fn ($o) => $this->link('order', $o, 'Purchase order'))->all(),
+                ...SupplierInvoice::where('supplier_id', $record->id)->latest('id')->limit(10)->get()->map(fn ($b) => $this->link('bill', $b, "Supplier's bill"))->all(),
+            ],
+            $record instanceof \App\Models\Employee => \App\Models\Payslip::where('employee_id', $record->id)->with('run')->latest('id')->limit(12)->get()
+                ->map(fn ($p) => $this->link('payroll', $p->run, 'Payroll '.($p->run?->month ?? '')))->all(),
+            default => [],
         };
     }
 

@@ -174,6 +174,7 @@
             <div class="row g-2"><div class="col-sm-8"><select class="form-select" id="rkAccount"><option value="">Pick what it will be spent on</option>${o.accounts.map(opt).join("")}</select><div class="acc-sub mt-1" id="rkLeft"></div></div><div class="col-sm-4"><select class="form-select" id="rkFund">${o.funds.map((f) => `<option value="${f.id}"${String(existing?.fund_id || "") === String(f.id) || (!existing?.fund_id && f.code === "GEN") ? " selected" : ""} data-color="${f.is_restricted ? "warning" : "success"}">${esc(f.name)}</option>`).join("")}</select></div></div></section>
           <section class="att-entry-section mb-0"><div class="att-entry-title"><span>4</span>Details</div>
             <div class="row g-2"><div class="col-sm-6" data-not-advance><input type="text" class="form-control" id="rkPayee" maxlength="150" placeholder="Pay to (optional)" value="${esc(existing?.payee_name || "")}"></div><div class="col-sm-6" data-not-advance><input type="tel" class="form-control" id="rkPhone" maxlength="30" placeholder="Their phone (optional)" value="${esc(existing?.payee_phone || "")}"></div>
+            <div class="col-12" data-not-advance><div class="acc-sub mb-1">How to pay them (optional)</div>${W.payeeFields("rkTo", existing?.payee)}</div>
             <div class="col-sm-6"><input type="date" class="form-control" id="rkNeeded" min="${o.today}" value="${existing?.needed_by || ""}" aria-label="Needed by"></div>
             <div class="col-sm-6">${existing ? "" : '<label class="budget-receipt-pick mb-0"><i class="ri-attachment-2"></i><span id="rkFileName">Attach a quote or invoice (optional)</span><input type="file" id="rkFile" accept="image/jpeg,image/png,image/webp,application/pdf" multiple hidden></label>'}</div></div></section>
         </div>
@@ -184,6 +185,7 @@
     );
     const el = document.getElementById("rkWindow");
     el.addEventListener("hidden.bs.modal", () => el.remove());
+    W.wirePayee(el, "rkTo");
     const kind = () => el.querySelector('input[name="rkKind"]:checked').value;
     const upd = () => {
       el.querySelectorAll("[data-not-advance]").forEach((x) => (x.hidden = kind() === "advance"));
@@ -215,6 +217,7 @@
         fund_id: k === "advance" ? null : Number(el.querySelector("#rkFund").value) || null,
         payee_name: k === "advance" ? null : el.querySelector("#rkPayee").value.trim() || null,
         payee_phone: k === "advance" ? null : el.querySelector("#rkPhone").value.trim() || null,
+        payee: k === "advance" ? null : W.readPayee(el, "rkTo"),
         needed_by: el.querySelector("#rkNeeded").value || null,
       });
       if (r.ok) for (const f of [...(el.querySelector("#rkFile")?.files || [])]) await API.addRequisitionFile(r.data.id, f);

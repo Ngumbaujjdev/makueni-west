@@ -22,6 +22,13 @@ class TrailController extends AccountingBase
         if (! $record || ! collect($this->trail->places($record))->contains(fn ($p) => AccountingAccess::canRead($request->user(), $p))) {
             return $this->notFound('That record isn\'t in the books.');
         }
+        // A person on the payroll - their pay and where it goes - only for whoever sees the payroll there.
+        if ($record instanceof \App\Models\Employee) {
+            $place = \App\Models\Territory::find($record->territory_id);
+            if (! $place || ! (AccountingAccess::can($request->user(), $place, 'payroll') || AccountingAccess::can($request->user(), $place, 'payrollread'))) {
+                return $this->notFound('That record isn\'t in the books.');
+            }
+        }
 
         return $this->ok($this->trail->for($record));
     }
