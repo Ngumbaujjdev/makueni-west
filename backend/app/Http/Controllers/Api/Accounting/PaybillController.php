@@ -139,6 +139,15 @@ class PaybillController extends AccountingBase
             return $this->notFound('That request isn\'t yours.');
         }
 
+        if ($r->status === 'pending' && $r->created_at->lt(now()->subSeconds(25))) {
+            try {
+                $this->paybill->checkPrompt($r);
+                $r = $r->fresh();
+            } catch (Throwable $e) {
+                report($e);
+            }
+        }
+
         return $this->ok($this->presentRequest($r));
     }
 
