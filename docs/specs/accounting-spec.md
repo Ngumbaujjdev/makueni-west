@@ -470,6 +470,46 @@ A simple register of the people a place pays, a monthly run, approval through th
 ### Permissions
 `{level}.accounting.payroll.manage` (Church Treasurer; Regional Treasurer; Diocese Finance Officer, Diocese Treasurer) and `{level}.accounting.payroll.read` (with manage; and Senior Pastor, Regional Overseer, Bishop). Salaries are not in the general read bundle. Paying needs `payments.prepare`. Approving needs no permission - being assigned is what lets someone act.
 
+## A8 - The diocese M-Pesa paybill (built 2026-10-10)
+
+One diocese paybill (Safaricom Daraja C2B) that members of every church pay into, with the church's code as the account number. The diocese holds the money and settles each church monthly, netting the diocese share. "Ask to pay" sends an M-Pesa prompt (STK) to a member's phone.
+
+### Setup (Settings > Paybill, diocese)
+- Sandbox or live, the shortcode, the Daraja app's consumer key and secret and the STK passkey (secrets, encrypted), a callback key made for us (part of the callback address, so only Safaricom knows it), whether to accept callbacks only from Safaricom's published addresses, the purpose used when an account number has none (Offering), and whether to SMS a thank-you to the giver.
+- **Register the URLs** (diocese finance officer) sends the confirmation and validation addresses to Safaricom (`ResponseType: Completed`, so a payment completes even if we can't be reached). In sandbox, **Simulate a payment** sends a test C2B payment.
+- The paybill is a money account in the diocese books (M-Pesa, `1150-xx`, its shortcode as the number), made on first use; it is reconciled monthly like any other with the portal statement (A2) - every receipt carries the M-Pesa code as its reference, so the import matches them.
+
+### The account number
+`{place code}{purpose}`: the place's short code without the dash (`SHR027` for CCI-MWD-SHR-027, `SHR` for a region, `MWD` for the diocese), optionally followed by a purpose - `T`/`TITHE` (4000 Tithes), `OFF`/`O` (4010 Offerings; shown as `OFF`, since a lone O reads as a zero), `TH`/`THANKS` (4020 Thanksgiving), `B`/`BLD` (4020, Building fund), `KYS`/`K` (4020, KYS fund). Spaces, dashes and case don't matter; a short number is padded (`SHR27` = `SHR027`).
+
+### Data
+- `mpesa_payments`: `trans_id` (the M-Pesa code, unique), `kind` c2b | stk, shortcode, amount, phone (as Safaricom sends it - masked in production), payer name, `bill_ref` (as typed), `paid_at`, the place it was for, the purpose (account + fund), status posted | to_sort | returned, the diocese and place journals, sorted by/at with a note, and the raw payload.
+- `mpesa_requests`: each "Ask to pay" (STK) - the place, account number, amount, phone, who asked, Safaricom's checkout id (unique), status pending | paid | failed, the result, the payment it became.
+- `payment_events`: every callback as it arrived - provider, kind, whether the key and address checked out, the raw payload, handled | ignored | failed with the error. Nothing is lost and anything can be looked into.
+- `paybill_settlements`: a month's settlement for a place - held, share netted, net paid, its remittance (the net) and the share remittance, the netting journals, status prepared | paid | cancelled.
+- New standard accounts: **1310 Held by the diocese for us** (asset, the place's side), **2410 Paybill payments to sort** (liability, the diocese's side). 2400 Held for others is the diocese's side of what it holds for places.
+- `Remittance` gains kind **settlement** (diocese to a place; confirming it posts Dr bank / Cr 1310).
+
+### Rules
+- **A payment** (C2B confirmation, or the STK callback for an "Ask to pay") is recorded once per M-Pesa code - a repeat is acknowledged and ignored; Safaricom always gets `ResultCode 0` back (rejecting would lose a giver's money).
+  - **For a place**: diocese books Dr paybill / Cr 2400 Held for others (with the place on the line); the place's books Dr 1310 / Cr the purpose's income and fund, on its budget line - **the church sees its giving the same day**. Both have the M-Pesa code as reference and the payer as party.
+  - **For the diocese** (`MWD`): Dr paybill / Cr the purpose's income.
+  - **No place matched, or it couldn't be posted** (e.g. that month is closed): Dr paybill / Cr 2410 (when it can be posted) and it waits **To sort**.
+- **Sorting** (whoever runs the paybill): give it to a place and purpose (Dr 2410 / Cr 2400 + the place's receipt), make it diocese income (Dr 2410 / Cr income), or mark it returned to the payer (a payment voucher Dr 2410 / Cr paybill, paid as usual).
+- **Ask to pay** (the paybill page; a church treasurer for its own church): an STK prompt with the account number filled in. Its callback becomes the payment; a failure or cancel is kept on the request only. If Safaricom also sends the C2B confirmation for it, the M-Pesa code makes it one payment.
+- **Settle the month** (whoever runs the paybill): for each place, what the diocese holds for it up to the month's end, less the diocese share it still owes (capped at what is held), is paid to it.
+  - The share is netted at once: diocese Dr 2400 / Cr 4100 Church contributions (with the place); place Dr 5700 Diocesan tithe (on its budget line) / Cr 1310; and a **confirmed** share remittance for those months, so Remittances shows it sent.
+  - The net is a remittance of kind settlement with a payment voucher (Dr 2400 / Cr the bank) approved and paid as usual; the place confirms it reached its account (Dr bank / Cr 1310) or queries it, as in A6.
+  - A settlement not yet paid can be cancelled: the netting is reversed and the voucher cancelled.
+- **Month-end close** warns about payments still to sort (diocese) and paybill money held for places not settled for an earlier month.
+
+### API
+Public (no sign-in; the callback key is in the path, wrong key = 404): `POST /api/payments/daraja/{key}/confirmation`, `POST /api/payments/daraja/{key}/validation`, `POST /api/payments/daraja/{key}/stk`.
+Under `/api/accounting/paybill`: `GET /` (payments, filters) · `GET to-sort` · `POST payments/{id}/sort` · `POST ask` (STK) · `GET requests/{id}` · `GET settlements?month=` · `POST settlements {month, places}` · `POST settlements/{id}/cancel` · `POST setup/register` · `POST setup/simulate` (sandbox) · `GET mine` (a place: its paybill giving, held balance, account numbers).
+
+### Permissions
+`diocese.accounting.paybill.manage` (Diocese Finance Officer, Diocese Treasurer): sort, settle, register, ask to pay for anyone. `{level}.accounting.paybill.read` with reading the books (a region or church sees its own paybill giving). A church treasurer asks to pay for their own church with `receipts.create`.
+
 ## Later phases (outline - specified when built)
 - **A2 Reconciliation:** built 2026-10-09, see "A2 - Reconciliation" above.
 - **A3 Sunday collections:** built 2026-10-09, see "A3 - Sunday collections" above.
@@ -477,8 +517,7 @@ A simple register of the people a place pays, a monthly run, approval through th
 - **A5 Procurement by threshold:** built 2026-10-09, see "A5 - Procurement" above.
 - **A6 Between levels:** built 2026-10-10, see "A6 - Remittances between levels" above.
 - **A7 Payroll:** built 2026-10-10, see "A7 - Payroll" above.
-- **A8 The diocese M-Pesa paybill (Daraja C2B):** the account number is the
-  church code + purpose; a unique TransID; a To-sort queue; STK Pay now.
+- **A8 The diocese M-Pesa paybill:** built 2026-10-10, see "A8 - The diocese M-Pesa paybill" above.
 - **A9 Financial statements:** I&E, financial position, receipts & payments,
   changes in funds, consolidation, year-end close, the audit pack.
 - **A10 Church gateways:** Paystack subaccounts, PayHero, churches' own Daraja,
