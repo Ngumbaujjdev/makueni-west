@@ -126,6 +126,22 @@ class GivingOptionsController extends SettingsController
         ] + (SettingsAccess::level($place) === 'diocese' ? ['standard' => $all->whereNull('territory_id')->map(fn ($p) => $p->label.($p->is_active ? '' : ' (off)').($p->is_default ? ' (default)' : ''))->implode(', ')] : []);
     }
 
+    /** What each standard income account is, in a treasurer's words. Money between places isn't something to give for. */
+    private const KINDS = [
+        '4000' => ['group' => 'Giving', 'about' => 'A tenth given by members', 'between' => false],
+        '4010' => ['group' => 'Giving', 'about' => 'Sunday and service offerings', 'between' => false],
+        '4020' => ['group' => 'Giving', 'about' => 'Thanksgiving, appeals and one-off collections', 'between' => false],
+        '4030' => ['group' => 'Giving', 'about' => 'Gifts from friends and well-wishers', 'between' => false],
+        '4040' => ['group' => 'Fundraising', 'about' => 'Harambees, dinners and other fundraisers', 'between' => false],
+        '4050' => ['group' => 'Fundraising', 'about' => 'Money from partners for a purpose', 'between' => false],
+        '4100' => ['group' => 'Between places', 'about' => 'Shares sent up by the places below', 'between' => true],
+        '4110' => ['group' => 'Between places', 'about' => 'Support sent down by the diocese', 'between' => true],
+        '4120' => ['group' => 'Between places', 'about' => 'Support sent down by the region', 'between' => true],
+        '4200' => ['group' => 'Other income', 'about' => 'Hall or property hire', 'between' => false],
+        '4210' => ['group' => 'Other income', 'about' => 'Interest and returns', 'between' => false],
+        '4900' => ['group' => 'Other income', 'about' => 'Anything else that comes in', 'between' => false],
+    ];
+
     private function payload(Request $request, Territory $place): array
     {
         $this->purposes->forget();
@@ -154,7 +170,9 @@ class GivingOptionsController extends SettingsController
                 'inherited' => $this->funds->present($funds->filter(fn ($f) => (int) $f->territory_id !== (int) $place->id && $f->is_active)),
             ],
             'own_counts' => AccountingFund::where('territory_id', $place->id)->get()->mapWithKeys(fn ($f) => [$f->id => $this->funds->inUse($f)]),
-            'accounts' => AccountingAccount::whereNull('territory_id')->where('type', 'income')->where('is_header', false)->where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
+            // In plain words for the page: what kind of money each is, grouped - the code stays for the finance officer.
+            'accounts' => AccountingAccount::whereNull('territory_id')->where('type', 'income')->where('is_header', false)->where('is_active', true)->orderBy('code')->get(['id', 'code', 'name', 'description'])
+                ->map(fn ($a) => ['id' => $a->id, 'code' => $a->code, 'name' => $a->name] + (self::KINDS[$a->code] ?? ['group' => 'Other income', 'about' => $a->description ?: 'Other money coming in', 'between' => false])),
             'fund_choices' => $this->funds->present($this->funds->forPlace($place)),
             'icons' => GivingPurposes::ICONS,
             'colours' => GivingPurposes::COLOURS,
