@@ -36,9 +36,12 @@ $ref = strtoupper(preg_replace('/[^A-Za-z0-9-]/', '', $_GET['ref'] ?? ''));
             const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
             const money = (n) => "KES " + Number(n || 0).toLocaleString("en-GB", { maximumFractionDigits: 2 });
             const IMG = <?= json_encode(SITE_URL . '/assets/images/payments/') ?>;
-            const paidWith = (m) => m === "mpesa"
-                ? `<span class="acc-logo acc-logo-lg"><img src="${IMG}mpesa.svg" alt="M-Pesa"></span>`
-                : `<span class="acc-logo acc-logo-lg is-card"><img src="${IMG}visa.svg" alt="Visa"><img src="${IMG}mastercard.svg" alt="Mastercard"></span>`;
+            const PAID = { mpesa: "M-Pesa", airtel: "Airtel Money", card: "Card", bank: "Pesalink (bank)" };
+            const paidWith = (m) => m === "mpesa" || m === "airtel"
+                ? `<span class="acc-logo acc-logo-lg"><img src="${IMG}${m === "airtel" ? "airtel-money" : "mpesa"}.svg" alt="${PAID[m]}"></span>`
+                : m === "bank"
+                  ? `<span class="acc-logo acc-logo-lg is-icon bg-info"><i class="ri-bank-line"></i></span>`
+                  : `<span class="acc-logo acc-logo-lg is-card"><img src="${IMG}visa.svg" alt="Visa"><img src="${IMG}mastercard.svg" alt="Mastercard"></span>`;
             let tries = 0;
             async function tick() {
                 let d = null;
@@ -57,7 +60,7 @@ $ref = strtoupper(preg_replace('/[^A-Za-z0-9-]/', '', $_GET['ref'] ?? ''));
                             <div class="give-receipt-facts">
                                 ${d.giver ? `<div><span>Received from</span><strong>${esc(d.giver)}</strong></div>` : ""}
                                 <div><span>For</span><strong>${esc(d.purpose || "Gift")}</strong></div>
-                                <div><span>Paid by</span><strong class="d-flex align-items-center gap-2">${paidWith(d.paid_with)}${d.paid_with === "mpesa" ? "M-Pesa" : "Card"}</strong></div>
+                                <div><span>Paid by</span><strong class="d-flex align-items-center gap-2">${paidWith(d.paid_with)}${PAID[d.paid_with] || "Card"}</strong></div>
                                 ${d.mpesa_code ? `<div><span>M-Pesa code</span><strong>${esc(d.mpesa_code)}</strong></div>` : ""}
                                 <div><span>Date</span><strong>${esc(when)}</strong></div>
                                 <div><span>Our reference</span><strong>${esc(d.reference)}</strong></div>
