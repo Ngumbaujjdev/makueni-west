@@ -10,7 +10,8 @@ use App\Support\PlaceRoles;
 /**
  * "While I'm away, X approves for me." One hop only; never to the person
  * asking; a delegation for this kind of document beats one for everything.
- * Applied when someone is assigned (or escalated to), not afterwards.
+ * Applied when someone is assigned (or escalated to), not afterwards - and
+ * only to someone who can approve at the request's place (Handover).
  */
 final class DelegationResolver
 {
@@ -24,6 +25,13 @@ final class DelegationResolver
             ->orderByRaw('subject_type IS NULL')->orderByDesc('id')->first();
         $to = $d?->delegate;
         if (! $to || $to->id === $approver->id || (int) $to->id === (int) $request->requested_by || ! PlaceRoles::usable($to)) {
+            return [$approver, null];
+        }
+        // Only to someone who can approve at this place (or the place above) - never across to another church.
+        $place = \App\Models\Territory::find($request->territory_id);
+        if (! $place || ! app(Handover::class)->eligible($to, $place)) {
+            \Illuminate\Support\Facades\Log::info("Hand-over from user {$approver->id} to {$to->id} ignored on request {$request->id}: they can't approve at that place.");
+
             return [$approver, null];
         }
 

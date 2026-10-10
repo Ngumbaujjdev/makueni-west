@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Accounting;
 
 use App\Approval\Resolvers\Registry;
 use App\Approval\Services\ApprovalService;
+use App\Approval\Services\Handover;
 use App\Approval\Services\Inbox;
 use App\Approval\Services\WorkflowBuilder;
 use App\Models\ApprovalDelegation;
@@ -128,17 +129,17 @@ class ApprovalController extends AccountingBase
 
     // ------------------------------------------------------------ delegations
 
-    /** GET /approvals/delegations - mine, and people I could hand to (my place's leaders and the place above). */
+    /**
+     * GET /approvals/delegations - mine, and the people I could hand to: at my
+     * place, someone whose role can authorise there; or at the place just
+     * above (my region, or the diocese) - never a pastor of another church.
+     */
     public function delegations(Request $request): JsonResponse
     {
         $user = $request->user();
         $place = PlaceAccess::acting($user);
-        $people = collect();
-        if ($place) {
-            $ids = [$place->id, ...array_map(fn ($t) => $t->id, PlaceAccess::ancestors($place))];
-            $people = User::whereHas('activeAssignments', fn ($q) => $q->whereIn('territory_id', $ids))->where('id', '!=', $user->id)->orderBy('firstname')->get()
-                ->map(fn ($u) => ['id' => $u->id, 'name' => $u->full_name]);
-        }
+        $people = $place ? app(Handover::class)->candidates($place, $user)
+            ->map(fn ($c) => ['id' => $c['user']->id, 'name' => $c['user']->full_name, 'role' => $c['role'], 'place' => $c['place']->name, 'same_place' => (int) $c['place']->id === (int) $place->id]) : collect();
 
         return $this->ok([
             'items' => ApprovalDelegation::with('delegate')->where('delegator_id', $user->id)->orderByDesc('starts_at')->get()->map(fn ($d) => [
@@ -161,6 +162,10 @@ class ApprovalController extends AccountingBase
         ], ['ends_at.after_or_equal' => 'It must end on or after the day it starts.']);
         if ((int) $data['delegate_id'] === (int) $request->user()->id) {
             throw ValidationException::withMessages(['delegate_id' => ['Pick someone else.']]);
+        }
+        $place = PlaceAccess::acting($request->user());
+        if (! $place || ! app(Handover::class)->eligible(User::findOrFail($data['delegate_id']), $place)) {
+            throw ValidationException::withMessages(['delegate_id' => ['Pick someone at '.($place?->name ?? 'your place').' or the place above who can approve there.']]);
         }
         $d = ApprovalDelegation::create($data + [
             'delegator_id' => $request->user()->id, 'is_active' => true, 'created_by' => $request->user()->id,

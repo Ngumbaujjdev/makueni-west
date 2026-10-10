@@ -59,7 +59,9 @@ class PaymentVoucherController extends AccountingBase
         }
         $pv = $this->vouchers->prepare($place, $request->user(), $this->validated($request));
 
-        return $this->ok($this->present($request, $pv, $place), "Voucher {$pv->number} prepared - it now needs authorising.", 201);
+        $who = app(\App\Approval\Services\Handover::class)->sentence($pv);
+
+        return $this->ok($this->present($request, $pv, $place), "Voucher {$pv->number} prepared - ".($who ? "sent for approval, {$who}." : 'it now needs authorising.'), 201);
     }
 
     /** PUT /accounting/payment-vouchers/{id} */

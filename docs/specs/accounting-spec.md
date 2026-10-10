@@ -380,6 +380,11 @@ Under `/api/accounting`: `GET|POST requisitions` Â· `GET requisitions/options` Â
 ### Permissions
 `accounting.approvals.read` and `accounting.requisitions.create` for every role at a level; `accounting.requisitions.read` with reading the books; `diocese.accounting.approvalrules.manage` (Diocese Finance Officer). Approving needs no permission - being assigned is what lets someone act. Paying needs `payments.pay`.
 
+### A4 addendum - handing over, and who it went to (2026-10-10)
+- **"Away? Hand over"** offers only people **at the same place** who take part in approvals there, and at the place **just above** only the roles the active rules pass work up to (e.g. the Regional Overseer) or who can authorise payments there - never a pastor of another church who sits at the diocese. Each shows role and place. Saving checks the same, and a hand-over to someone no longer allowed at a request's place is ignored when the request is assigned.
+- **Sending** a voucher, requisition or payroll for approval says who it waits for: "sent for approval - waiting for Benson Manoo (Senior Pastor)", or that nobody holds the role yet.
+
+
 ## A5 - Procurement (built 2026-10-09)
 
 Standard buying - quotations, a local purchase order (LPO), goods received (GRN), the supplier's invoice matched three ways, then payment - but only for bigger purchases. Small ones stay a requisition paid straight away. Every level.

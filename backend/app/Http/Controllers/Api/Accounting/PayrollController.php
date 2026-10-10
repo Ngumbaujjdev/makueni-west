@@ -163,7 +163,7 @@ class PayrollController extends AccountingBase
 
         return $this->ok($this->presentRun($run, $request->user(), true), [
             'recalculate' => 'Read again from what each person is paid now.',
-            'submit' => $run->status === 'posted' ? 'Approved and posted.' : 'Sent for approval.',
+            'submit' => $run->status === 'posted' ? 'Approved and posted.' : 'Sent for approval'.(($who = app(\App\Approval\Services\Handover::class)->sentence($run)) ? " - {$who}." : '.'),
             'cancel' => 'Cancelled.',
         ][$act]);
     }
