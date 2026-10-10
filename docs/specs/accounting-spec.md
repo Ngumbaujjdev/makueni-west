@@ -695,3 +695,27 @@ The user found the pages bare. The redesign ships in five parts:
   - `events`, newest first, each with `at`, `who`, `text`, `icon`, `tone` and `note`. They come from the record's own who/when columns, the approval engine's events and decisions (the columns are left out when the engine ran), deliveries, bills, payments and files added. A plain date counts as the end of that day.
   - `links`: the documents chained to it, each with `type`, `id`, `label`, `number`, `status`, `status_label`, `amount`, `date` and `opens`.
   Whoever may read the books where the record sits can see it; a remittance can be seen from either side. Anyone else gets 404.
+
+**R2: approvals board, account pages, lighter windows:**
+- **Approvals:**
+  - **"Who holds what":** a lane per person waited on, with the last seven days and each waiting request as a block from the day it was asked to today. Blocks are coloured by kind and show Your turn, Waiting, Overdue or Stuck. On a phone it becomes a list per person.
+  - **The tab lists as an activity feed:** "Stephen Mutisya asks KES 12,000.00 for …". The oldest item waiting on you is a solid gold "Do first" card. Approve (with an optional note) and Send back work right in the list.
+  - **"This month":** waiting, approved, sent back or rejected, and the average time to decide.
+  - **"Recent activity".**
+  - **Opening a request** goes to its record page, which now has Approve / Send back / Reject for vouchers and payroll too (through the approval engine). `?request=` links from the bell and SMS go there as well.
+  - **New `GET approvals/board?territory_id=`** returns `open[]` (each with `record` {type, id} and `overdue`), `stats` and `activity[]` (built by `Trail::approvalSentence`). Every approval in the inbox now carries `record`.
+- **Accounts:**
+  - **`account.php?id=`:** each account's own page. It shows:
+    - the balance in full;
+    - money in and out this month (against last month) and this year, plus a 12-month chart;
+    - the 15 latest movements, each opening its document;
+    - the last reconciliation;
+    - the budget lines that post to it, with planned and actual when a budget is in use.
+  - "In" means whatever makes the account bigger: Spent for an expense, Received for income.
+  - **`GET accounting/accounts/{id}`** (`Books::accountPage`). Cash & bank cards, chart rows and the Overview's "Where the money is" open it.
+  - **Chart pill counts** follow "Only accounts with money".
+- **Windows:** a white header with a coloured top line and icon; calmer text; colour only on the key data (amount by direction, status, people as initials, dates, accounts). Record pages follow the same rules.
+- **Lists:**
+  - The status column on Payment vouchers, Requisitions, Payroll, Procurement, Remittances and Collections is now a compact journey (`AccountingUI.mini`).
+  - Payroll months get a month tile.
+  - The remittance record page offers "Pay by M-Pesa" when the share can be paid that way (A6b).
