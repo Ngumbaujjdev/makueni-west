@@ -26,11 +26,11 @@ use Throwable;
  */
 final class Transactions
 {
-    public const SOURCES = ['gift', 'prompt', 'paybill'];
+    public const SOURCES = ['gift', 'prompt', 'paybill', 'claim'];
 
     public const STATUSES = [
         'paid' => 'Paid', 'pending' => 'Waiting', 'failed' => 'Not paid', 'abandoned' => 'Abandoned', 'refunded' => 'Refunded',
-        'to_sort' => 'To sort', 'returned' => 'Returned',
+        'to_sort' => 'To sort', 'returned' => 'Returned', 'checking' => 'Checking with Safaricom', 'waiting' => 'Claimed - to check',
     ];
 
     private const ROUTES = [
@@ -107,6 +107,11 @@ final class Transactions
             $rows->push($this->paybillRow($p, $p->territory_id ? ($places[$p->territory_id] ?? Territory::find($p->territory_id)?->name) : null, $tNumbers[$p->place_journal_id ?? $p->diocese_journal_id] ?? null));
         }
 
+        // "I paid - here's my code" claims not (yet) confirmed: a confirmed one is its paybill payment above (A10f).
+        foreach (\App\Models\PaymentClaim::whereIn('territory_id', $ids)->whereBetween('created_at', [$from, $to])->where('status', '!=', 'confirmed')->orderByDesc('id')->limit(2000)->get() as $c) {
+            $rows->push($this->claimRow($c, $places[$c->territory_id] ?? null));
+        }
+
         return $rows->sortByDesc('when')->values();
     }
 
@@ -157,6 +162,20 @@ final class Transactions
         ];
     }
 
+    private function claimRow(\App\Models\PaymentClaim $c, ?string $place): array
+    {
+        $status = $c->status === 'failed' ? 'failed' : ($c->status === 'checking' ? 'checking' : 'waiting');
+
+        return [
+            'key' => "claim-{$c->id}", 'source' => 'claim', 'id' => $c->id, 'kind' => 'Paid by Pay Bill - claimed', 'reference' => $c->trans_id,
+            'when' => $c->created_at?->toIso8601String(), 'paid_at' => null,
+            'payer' => ['name' => $c->giver_name, 'phone' => $c->giver_phone, 'email' => null],
+            'place' => ['id' => $c->territory_id, 'name' => $place], 'purpose' => Paybill::PURPOSES[$c->purpose][0] ?? $c->purpose,
+            'method' => 'mpesa', 'route' => 'Diocese paybill', 'amount' => (float) ($c->amount ?? 0), 'fee' => 0.0, 'status' => $status, 'status_label' => self::STATUSES[$status],
+            'reason' => $c->result, 'disputed' => false, 'code' => $c->trans_id, 'account_ref' => null, 'receipt' => null,
+        ];
+    }
+
     private function purposeOf(?string $ref): string
     {
         $parsed = $this->paybill->parse($ref);
@@ -189,6 +208,7 @@ final class Transactions
             'gift' => Gift::find($id),
             'prompt' => MpesaRequest::find($id),
             'paybill' => MpesaPayment::find($id),
+            'claim' => \App\Models\PaymentClaim::find($id),
             default => null,
         };
 
@@ -216,6 +236,12 @@ final class Transactions
             $needles = array_filter([$model->checkout_request_id]);
             $money = null;
             $journals = array_filter([$pay?->place_journal_id, $pay?->diocese_journal_id]);
+        } elseif ($source === 'claim') {
+            $row = $this->claimRow($model, $place);
+            $steps = [['at' => $model->created_at, 'what' => 'Claimed: "I paid by Pay Bill"', 'detail' => "Code {$model->trans_id}".($model->giver_phone ? " from {$model->giver_phone}" : ''), 'tone' => 'primary']];
+            $needles = array_filter([$model->originator_id, $model->conversation_id]);
+            $money = null;
+            $journals = [];
         } else {
             $row = $this->paybillRow($model, $place, Journal::find($model->place_journal_id ?? $model->diocese_journal_id)?->number);
             $steps = [['at' => $model->paid_at, 'what' => 'Paid into the paybill', 'detail' => "Account number {$model->bill_ref}", 'tone' => 'success']];
@@ -249,7 +275,7 @@ final class Transactions
         return $row + [
             'money' => $money,
             'steps' => array_map(fn ($s) => ['at' => $s['at'] ? CarbonImmutable::parse($s['at'])->toIso8601String() : null] + $s, $steps),
-            'can_check' => $row['status'] === 'pending',
+            'can_check' => in_array($row['status'], ['pending', 'waiting', 'checking'], true),
         ];
     }
 
@@ -267,6 +293,12 @@ final class Transactions
             }
             $model = $model->mpesa_request_id ? MpesaRequest::find($model->mpesa_request_id) : null;
             $source = 'prompt';
+        }
+        if ($source === 'claim' && in_array($model->status, ['waiting', 'checking', 'failed'], true)) {
+            // Ask Safaricom again about the same claim.
+            app(PaybillClaims::class)->claim(Territory::findOrFail($model->territory_id), ['code' => $model->trans_id, 'purpose' => $model->purpose, 'name' => $model->giver_name, 'phone' => $model->giver_phone], null, auth()->user() ?? User::find($model->claimed_by), true);
+
+            return;
         }
         if ($source === 'prompt' && $model?->status === 'pending') {
             \Illuminate\Support\Facades\Cache::forget("prompt-check:{$model->id}");

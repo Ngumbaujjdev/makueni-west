@@ -91,6 +91,43 @@ class DarajaController extends Controller
         return $this->accepted();
     }
 
+    /** Safaricom's answer to "is this M-Pesa code ours?" (Transaction Status, A10f) - or its time-out. */
+    public function statusResult(Request $request, string $key): JsonResponse
+    {
+        return $this->claimAnswer($request, $key, false);
+    }
+
+    public function statusTimeout(Request $request, string $key): JsonResponse
+    {
+        return $this->claimAnswer($request, $key, true);
+    }
+
+    private function claimAnswer(Request $request, string $key, bool $timedOut): JsonResponse
+    {
+        $event = $this->event($request, $key, $timedOut ? 'status_timeout' : 'status_result');
+        if (! $event || $this->channel) {
+            return $this->notFoundKey();
+        }
+        try {
+            $claim = app(\App\Services\Accounting\PaybillClaims::class)->answered((array) $request->json('Result', []), $timedOut);
+            $event->update(['status' => $claim ? 'handled' : 'ignored', 'subject_type' => $claim ? 'payment_claim' : null, 'subject_id' => $claim?->id, 'error' => $claim ? ($claim->status === 'failed' ? $claim->result : null) : 'No claim of ours matches it.']);
+        } catch (Throwable $e) {
+            report($e);
+            $event->update(['status' => 'failed', 'error' => mb_substr($e->getMessage(), 0, 500)]);
+        }
+
+        return $this->accepted();
+    }
+
+    /** Pull Transactions' address (A10f) - logged; the payments themselves are fetched by payments:pull. */
+    public function pull(Request $request, string $key): JsonResponse
+    {
+        $event = $this->event($request, $key, 'pull');
+        $event?->update(['status' => 'handled']);
+
+        return $event ? $this->accepted() : $this->notFoundKey();
+    }
+
     /** Log the call; null when the key (or, if asked, the caller's address) is wrong. */
     private function event(Request $request, string $key, string $kind): ?PaymentEvent
     {

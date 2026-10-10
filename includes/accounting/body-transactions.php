@@ -1,6 +1,7 @@
 <?php
 // Transactions (docs/specs/accounting-spec.md, A10e): every attempt to pay, failed ones included.
-$accButtons = '<button type="button" class="btn btn-outline-primary" id="txCheckAll" hidden data-own-only><i class="ri-refresh-line me-1"></i>Check the waiting ones</button>';
+$accButtons = '<button type="button" class="btn btn-outline-primary" id="txCheckAll" hidden data-own-only><i class="ri-refresh-line me-1"></i>Check the waiting ones</button>'
+    . '<button type="button" class="btn btn-primary" id="txCheckCode" hidden data-own-only><i class="ri-shield-check-line me-1"></i>Check an M-Pesa code</button>';
 include __DIR__ . '/toolbar.php';
 ?>
 <div class="row" id="statCardsRow"></div>

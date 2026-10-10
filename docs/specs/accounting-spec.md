@@ -642,6 +642,19 @@ One list of every attempt to pay, the way v1-events shows its transactions - fai
 
 API (under `/api/accounting`): `GET transactions?from&to&status&method&source&q&place_id&page&per`, `GET transactions/{gift|prompt|paybill}/{id}`, `POST transactions/{source}/{id}/check`, `POST transactions/check-waiting`.
 
+## A10f - "I paid by Pay Bill": checking a payment with Safaricom (built 2026-10-10)
+
+- **The giving page has three choices:** the M-Pesa prompt, **Pay Bill** (yourself, from the M-Pesa menu) and card. Pay Bill shows the business number (or till) and the **account number for the purpose picked** (e.g. `SHR001OFF`) with Copy buttons and the phone steps, then **"I've paid - confirm it"**: the M-Pesa code, full name and the number paid from. The amount isn't asked - Safaricom's answer carries it.
+- **Checking a code** (`POST /api/give/{code}/claim`, 5 a minute per address; `GET /api/give/claim/{id}?code=` - the code must match):
+  - A code we already have (its callback came) is answered at once with its receipt.
+  - Otherwise Safaricom is asked - Daraja **Transaction Status** (`/mpesa/transactionstatus/v1/query`, initiator + security credential). The answer comes to `/api/payments/daraja/{key}/status-result` (or `/status-timeout`), logged in `payment_events`.
+  - A **completed** payment **into our paybill** with that code is recorded once (unique M-Pesa code) through the paybill's normal recording, for the place and purpose claimed - into both books like any paybill payment. Not found, not completed, or paid elsewhere: the claim says why.
+  - Until an API operator is set (or when Safaricom can't be reached), the claim **waits for the treasurer** - shown on Transactions as "Claimed - to check", where it can be asked again.
+- **The treasurer**: "Check an M-Pesa code" on Transactions (`POST /api/accounting/transactions/check-code {code, purpose, place_id?}`), the same check.
+- **Lost callbacks** - `payments:pull` (hourly): Daraja **Pull Transactions** fetches the paybill's payments of the last 3 hours and records any we don't have (account-number matching as usual; the rest waits To sort). Live paybill only, once Safaricom approves Pull; `--register` does the one-time registration with the paybill's nominated phone.
+- **Settings, Paybill, "Checking payments with Safaricom"**: the API operator's name, its **security credential** (generated on the Daraja portal) - or its password with Safaricom's certificate uploaded to `storage/app/daraja/{sandbox|production}.cer` - and the paybill's nominated phone. C2B registration falls back to v2 when v1 refuses the app.
+- `payment_claims`: code, place, purpose, giver, amount, status (checking | waiting | confirmed | failed), result, Safaricom's conversation ids, the payment it became.
+
 ## Later phases (outline - specified when built)
 - **A2 Reconciliation:** built 2026-10-09, see "A2 - Reconciliation" above.
 - **A3 Sunday collections:** built 2026-10-09, see "A3 - Sunday collections" above.

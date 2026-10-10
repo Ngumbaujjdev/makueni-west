@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api\Payments;
 use App\Http\Controllers\Controller;
 use App\Models\Gift;
 use App\Models\Journal;
+use App\Models\PaymentClaim;
 use App\Models\Territory;
 use App\Services\Accounting\Giving;
 use App\Services\Accounting\Paybill;
+use App\Services\Accounting\PaybillClaims;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -83,6 +85,36 @@ class GiveController extends Controller
             'receipt' => $gift->status === 'paid' ? Journal::find($gift->journal_id)?->number : null,
             'result' => $gift->status === 'failed' ? $gift->result : null,
         ]]);
+    }
+
+    /** POST /give/{code}/claim {code, purpose, name, phone} - "I paid by Pay Bill - here's my M-Pesa code" (A10f). */
+    public function claim(Request $request, string $code): JsonResponse
+    {
+        $place = $this->giving->placeFor($code);
+        if (! $place) {
+            return $this->missing();
+        }
+        $data = $request->validate(['code' => ['required', 'string', 'max:20'], 'purpose' => ['required', 'string', 'max:3'], 'name' => ['nullable', 'string', 'max:150'], 'phone' => ['nullable', 'string', 'max:20']],
+            ['code.required' => 'Enter the M-Pesa code from your confirmation message.']);
+        $claim = app(PaybillClaims::class)->claim($place, $data, $request->ip());
+
+        return response()->json(['success' => true, 'data' => app(PaybillClaims::class)->present($claim), 'message' => match ($claim->status) {
+            'confirmed' => 'Received - thank you.',
+            'checking' => 'Checking with Safaricom...',
+            'waiting' => 'Thank you - the church treasurer will confirm it.',
+            default => (string) $claim->result,
+        }], 201);
+    }
+
+    /** GET /give/claim/{id}?code= - where a claim stands (the code must match: claims aren't browsable). */
+    public function claimStatus(Request $request, int $id): JsonResponse
+    {
+        $claim = PaymentClaim::find($id);
+        if (! $claim || PaybillClaims::cleanCode($request->query('code')) !== $claim->trans_id) {
+            return $this->missing('We can\'t find that check.');
+        }
+
+        return response()->json(['success' => true, 'data' => app(PaybillClaims::class)->present($claim)]);
     }
 
     /** GET /give/callback?reference= - back from Paystack's page: check it, then the thanks page. */

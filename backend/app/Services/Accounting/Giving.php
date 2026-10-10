@@ -55,7 +55,9 @@ final class Giving
         $own = $this->paybill->mpesaChannel($place);
         $paybill = $own
             ? ['number' => $own->account_number, 'till' => $own->account_name === 'Till', 'accounts' => collect(Paybill::PURPOSES)->map(fn ($p, $k) => ['label' => $p[0], 'account' => Paybill::SUFFIX[$k]])->values()->all()]
-            : ($paybillReady ? ['number' => $this->settings->system('paybill.shortcode'), 'till' => false, 'accounts' => array_values($this->paybill->accountNumbers($place))] : null);
+            : ($paybillReady ? ['number' => $this->settings->system('paybill.shortcode'), 'till' => false, 'accounts' => array_values($this->paybill->accountNumbers($place)),
+                // "I've paid - here's my code" is checked against the diocese paybill (A10f).
+                'claim' => true] : null);
 
         return [
             'place' => ['name' => $place->name, 'code' => Paybill::code($place), 'level' => $place->territory_type->value],

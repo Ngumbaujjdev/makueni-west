@@ -28,7 +28,7 @@ class TransactionController extends AccountingBase
         }
         $f = $request->validate([
             'from' => ['nullable', 'date'], 'to' => ['nullable', 'date'], 'status' => ['nullable', 'in:paid,pending,failed,refunded,to_sort,returned'],
-            'method' => ['nullable', 'in:mpesa,card'], 'source' => ['nullable', 'in:gift,prompt,paybill'], 'q' => ['nullable', 'string', 'max:100'],
+            'method' => ['nullable', 'in:mpesa,card'], 'source' => ['nullable', 'in:gift,prompt,paybill,claim'], 'q' => ['nullable', 'string', 'max:100'],
             'place_id' => ['nullable', 'integer'], 'page' => ['nullable', 'integer', 'min:1'], 'per' => ['nullable', 'integer', 'min:1', 'max:1000'],
         ]);
 
@@ -79,6 +79,29 @@ class TransactionController extends AccountingBase
         $done = $this->transactions->checkWaiting($this->transactions->scope($place, $request->integer('place_id') ?: null));
 
         return $this->ok($done, $done['checked'] ? "Checked {$done['checked']} - {$done['paid']} paid, {$done['failed']} not paid, the rest still waiting." : 'Nothing has been waiting more than two minutes.');
+    }
+
+    /** POST /accounting/transactions/check-code {code, purpose, place_id?} - a treasurer checks an M-Pesa code with Safaricom (A10f). */
+    public function checkCode(Request $request): JsonResponse
+    {
+        $place = $this->place($request);
+        if ($place instanceof JsonResponse) {
+            return $place;
+        }
+        $data = $request->validate(['code' => ['required', 'string', 'max:20'], 'purpose' => ['required', 'string', 'max:3'], 'place_id' => ['nullable', 'integer']],
+            ['code.required' => 'Enter the M-Pesa code.', 'purpose.required' => 'Pick what it was given for.']);
+        $for = ! empty($data['place_id']) && in_array((int) $data['place_id'], $this->transactions->scope($place), true) ? Territory::findOrFail((int) $data['place_id']) : $place;
+        if (! $this->canCheck($request, $for)) {
+            return $this->forbidden('Whoever writes receipts there checks a payment.');
+        }
+        $claims = app(\App\Services\Accounting\PaybillClaims::class);
+        $claim = $claims->claim($for, $data, $request->ip(), $request->user());
+
+        return $this->ok($claims->present($claim), match ($claim->status) {
+            'confirmed' => 'We have it - '.($claims->present($claim)['receipt'] ? 'receipt '.$claims->present($claim)['receipt'] : 'in the books').'.',
+            'checking' => 'Asked Safaricom - the answer comes in a few seconds; it shows under Transactions.',
+            default => (string) $claim->result,
+        }, 201);
     }
 
     /** @return array{0: mixed, 1: ?JsonResponse} */
