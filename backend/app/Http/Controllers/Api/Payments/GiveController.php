@@ -7,12 +7,14 @@ use App\Models\Gift;
 use App\Models\Journal;
 use App\Models\PaymentClaim;
 use App\Models\Territory;
+use App\Services\Accounting\GiftReceipt;
 use App\Services\Accounting\Giving;
 use App\Services\Accounting\Paybill;
 use App\Services\Accounting\PaybillClaims;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Throwable;
 
 /**
@@ -84,7 +86,23 @@ class GiveController extends Controller
             'purpose' => Paybill::PURPOSES[$gift->purpose][0] ?? null, 'place' => $place?->name, 'code' => $place ? Paybill::code($place) : null,
             'receipt' => $gift->status === 'paid' ? Journal::find($gift->journal_id)?->number : null,
             'result' => $gift->status === 'failed' ? $gift->result : null,
-        ]]);
+        ] + ($gift->status === 'paid' ? app(GiftReceipt::class)->summary($gift) + ['receipt_url' => url('/api/give/receipt/'.rawurlencode($gift->reference))] : [])]);
+    }
+
+    /** GET /give/receipt/{reference} - the giver's receipt as a PDF (a paid gift only). */
+    public function receipt(string $reference): Response|JsonResponse
+    {
+        $gift = Gift::where('reference', $reference)->where('status', 'paid')->first();
+        if (! $gift) {
+            return $this->missing('We can\'t find a paid gift with that reference.');
+        }
+        $number = Journal::find($gift->journal_id)?->number ?? $gift->reference;
+
+        return response(app(GiftReceipt::class)->pdf($gift), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="Receipt-'.preg_replace('/[^A-Za-z0-9-]/', '-', $number).'.pdf"',
+            'Cache-Control' => 'private, no-store',
+        ]);
     }
 
     /** POST /give/{code}/claim {code, purpose, name, phone} - "I paid by Pay Bill - here's my M-Pesa code" (A10f). */
