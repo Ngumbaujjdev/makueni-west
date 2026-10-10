@@ -129,6 +129,18 @@ final class Periods
         if ($in->isNotEmpty()) {
             $warnings[] = 'KES '.number_format((float) $in->sum('amount'), 2).' from other places is waiting for you to confirm it reached you.';
         }
+        // A8 - the diocese paybill.
+        if ($place->territory_type->value === 'diocese') {
+            if ($toSort = \App\Models\MpesaPayment::where('status', 'to_sort')->where('paid_at', '<=', $end->endOfDay())->count()) {
+                $warnings[] = "{$toSort} paybill ".($toSort === 1 ? 'payment is' : 'payments are').' still to sort - under Paybill.';
+            }
+            $held = $this->chart->account('held_for_others')->id;
+            $paid = \App\Models\JournalLine::where('territory_id', $place->id)->where('account_id', $held)->whereNotNull('for_territory_id')->whereBetween('date', [$s, $e])->where('credit', '>', 0)->distinct()->pluck('for_territory_id');
+            $settled = \App\Models\PaybillSettlement::where('month', $start->format('Y-m'))->where('status', '!=', 'cancelled')->pluck('territory_id');
+            if (($left = $paid->diff($settled)->count()) && $start->format('Y-m') < now()->format('Y-m')) {
+                $warnings[] = "{$left} ".($left === 1 ? 'place\'s' : 'places\'').' paybill money for '.$start->format('F').' is not settled yet.';
+            }
+        }
         $owed = collect(app(Remittances::class)->owing($place, $year))->sum(fn ($r) => collect($r['months'])->firstWhere('month', $start->format('Y-m'))['owed'] ?? 0);
         if ($owed > 0.009) {
             $warnings[] = 'KES '.number_format($owed, 2).' of the '.$start->format('F').' share is not sent yet.';

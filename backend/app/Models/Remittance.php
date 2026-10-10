@@ -15,7 +15,7 @@ class Remittance extends Model implements \OwenIt\Auditing\Contracts\Auditable
 {
     use \OwenIt\Auditing\Auditable;
 
-    public const KINDS = ['share' => 'Share sent up', 'support' => 'Support sent down'];
+    public const KINDS = ['share' => 'Share sent up', 'support' => 'Support sent down', 'settlement' => 'Paybill money settled'];
 
     public const STATUSES = ['waiting' => 'Waiting to be paid', 'sent' => 'Sent - in transit', 'queried' => 'Queried', 'confirmed' => 'Confirmed received', 'cancelled' => 'Cancelled'];
 

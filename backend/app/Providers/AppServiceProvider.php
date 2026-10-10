@@ -100,6 +100,9 @@ class AppServiceProvider extends ServiceProvider
             'remittance' => 'App\Models\Remittance',
             'employee' => 'App\Models\Employee',
             'payroll_run' => 'App\Models\PayrollRun',
+            'mpesa_payment' => 'App\Models\MpesaPayment',
+            'mpesa_request' => 'App\Models\MpesaRequest',
+            'paybill_settlement' => 'App\Models\PaybillSettlement',
 
             // Fiscal period models
             'fiscal_year' => 'App\Models\FiscalYear',

@@ -310,6 +310,18 @@ return [
             'sentence' => 'When a purchase is big enough to need quotations and a purchase order, for every church, region and the diocese.',
         ],
 
+        // The diocese paybill (docs/specs/accounting-spec.md, A8) - Safaricom Daraja, for every place.
+        'paybill' => [
+            'label' => 'Paybill',
+            'icon' => 'ri-smartphone-line',
+            'colour' => 'success',
+            'group' => 'money',
+            'levels' => ['diocese'],
+            'kind' => 'form',
+            'grants' => ['update' => ['diocese' => ['Diocese Finance Officer', 'Diocese Treasurer']]],
+            'sentence' => 'The diocese M-Pesa paybill members pay into with their church\'s code as the account number. Register its addresses with Safaricom from Accounting, Paybill.',
+        ],
+
         // Existing settings pages, shown inside the hub (S3). 'permission' is
         // the page's own read permission ("{level}." is added); 'absorbs' is
         // the page's menu row, which SettingsHubSeeder moves under Settings.
@@ -452,6 +464,18 @@ return [
         // Procurement (A5) - read by App\Services\Accounting\Procurement.
         'procurement.one_quote_limit' => ['section' => 'procurement', 'card' => 'Buying', 'label' => 'Above this, a purchase needs an order (KES)', 'type' => 'number', 'rules' => ['required', 'integer', 'between:0,100000000'], 'default' => 50000, 'levels' => ['diocese'], 'help' => 'Up to this, an approved purchase is paid straight away with its receipt.', 'used_by' => 'Requisitions and Procurement'],
         'procurement.quotes_needed' => ['section' => 'procurement', 'card' => 'Buying', 'label' => 'Quotations needed above it', 'type' => 'number', 'rules' => ['required', 'integer', 'between:1,5'], 'default' => 3, 'levels' => ['diocese'], 'used_by' => 'Procurement'],
+
+        // Paybill (A8) - read by App\Services\Payments\Daraja and App\Services\Accounting\Paybill.
+        'paybill.environment' => ['section' => 'paybill', 'card' => 'The Daraja app', 'label' => 'Safaricom', 'type' => 'select', 'options' => ['sandbox' => 'Sandbox - for testing', 'production' => 'Live - real money'], 'rules' => ['required'], 'default' => 'sandbox', 'levels' => ['diocese'], 'used_by' => 'Accounting, Paybill'],
+        'paybill.shortcode' => ['section' => 'paybill', 'card' => 'The Daraja app', 'label' => 'Paybill number (shortcode)', 'rules' => ['nullable', 'regex:/^\d{5,7}$/'], 'default' => null, 'levels' => ['diocese']],
+        'paybill.consumer_key' => ['section' => 'paybill', 'card' => 'The Daraja app', 'label' => 'Consumer key', 'type' => 'secret', 'secret' => true, 'rules' => ['nullable', 'string', 'max:200'], 'default' => null, 'levels' => ['diocese']],
+        'paybill.consumer_secret' => ['section' => 'paybill', 'card' => 'The Daraja app', 'label' => 'Consumer secret', 'type' => 'secret', 'secret' => true, 'rules' => ['nullable', 'string', 'max:200'], 'default' => null, 'levels' => ['diocese']],
+        'paybill.passkey' => ['section' => 'paybill', 'card' => 'The Daraja app', 'label' => 'Lipa na M-Pesa passkey', 'type' => 'secret', 'secret' => true, 'rules' => ['nullable', 'string', 'max:200'], 'default' => null, 'levels' => ['diocese'], 'help' => 'For "Ask to pay" (the M-Pesa prompt on a phone).'],
+        'paybill.callback_base' => ['section' => 'paybill', 'card' => 'Where Safaricom reaches us', 'label' => 'Our public address', 'type' => 'url', 'rules' => ['nullable', 'url', 'max:255'], 'default' => null, 'levels' => ['diocese'], 'span' => 12, 'help' => 'The https address of this system\'s API as the internet sees it, e.g. https://api.makueniwest.org. Safaricom sends every payment there.'],
+        'paybill.callback_key' => ['section' => 'paybill', 'card' => 'Where Safaricom reaches us', 'label' => 'Callback key', 'type' => 'secret', 'secret' => true, 'rules' => ['nullable', 'string', 'min:24', 'max:80', 'regex:/^[A-Za-z0-9]+$/'], 'default' => null, 'levels' => ['diocese'], 'help' => 'Part of the address, so only Safaricom knows it. Made for you when you register the addresses; change it only to cut off an old one.'],
+        'paybill.safaricom_only' => ['section' => 'paybill', 'card' => 'Where Safaricom reaches us', 'label' => 'Accept payments only from Safaricom\'s published addresses', 'type' => 'switch', 'default' => false, 'levels' => ['diocese'], 'help' => 'Leave off behind a proxy that hides the caller\'s address.'],
+        'paybill.default_purpose' => ['section' => 'paybill', 'card' => 'Payments', 'label' => 'When the account number has no purpose, count it as', 'type' => 'select', 'options' => ['O' => 'Offering', 'T' => 'Tithe', 'TH' => 'Thanksgiving'], 'rules' => ['required'], 'default' => 'O', 'levels' => ['diocese']],
+        'paybill.thank_sms' => ['section' => 'paybill', 'card' => 'Payments', 'label' => 'SMS the giver a thank-you with the receipt number', 'type' => 'switch', 'default' => true, 'levels' => ['diocese'], 'help' => 'Sent from the church\'s own sender where it has one.'],
 
         // Security (S4b) - read by User::verifyPin, the password rules in AuthController and Sanctum.
         'security.pin_attempts' => ['section' => 'security', 'card' => 'Employee code + PIN', 'label' => 'Wrong PINs before it locks', 'type' => 'number', 'rules' => ['required', 'integer', 'between:1,10'], 'default' => 3, 'levels' => ['diocese'], 'used_by' => 'Sign-in with employee code and PIN'],

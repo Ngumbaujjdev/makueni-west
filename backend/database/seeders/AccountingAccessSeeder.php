@@ -32,11 +32,12 @@ class AccountingAccessSeeder extends Seeder
         'accounts' => ['accounts.php', 'Cash & bank', 'Cash at hand, the bank and M-Pesa with their balances; the chart of accounts', null],
         'collections' => ['collections.php', 'Collections', 'Sunday collections: counted by one, confirmed by another, receipted per fund, banked', ['church']],
         'receipts' => ['receipts.php', 'Receipts', 'Write official receipts for money received - tithes, offerings, contributions', null],
+        'paybill' => ['paybill.php', 'Paybill', 'The diocese M-Pesa paybill: giving by church code, what waits to be sorted, monthly settlements', null],
         'requisitions' => ['requisitions.php', 'Requisitions', 'Ask for money - to pay, to buy, or an advance - approved, then paid', null],
         'approvals' => ['approvals.php', 'Approvals', 'What waits for my approval, what I asked for, and who I hand it to while away', null],
         'procurement' => ['procurement.php', 'Procurement', 'Bigger purchases: quotations, the order, goods received, the supplier\'s bill, then payment', null],
         'payments' => ['payments.php', 'Payment vouchers', 'Prepare, authorise and pay - every payment with its papers', null],
-        'payroll' => ['payroll.php', 'Payroll', 'The people this place pays, the monthly run with PAYE, NSSF, SHIF and the Housing Levy, payslips and paying it', null],
+        'payroll' => ['payroll.php', 'Payroll', 'The people this place pays, the monthly run, payslips and paying the staff', null],
         'remittances' => ['remittances.php', 'Remittances', 'The share sent up and support sent down - due from the books, sent by voucher, confirmed by the place receiving it', null],
         'cashbook' => ['cashbook.php', 'Cashbook', 'Every shilling in and out of one account, with the running balance', null],
         'journals' => ['journals.php', 'Journals', 'Opening balances and corrections, in balanced journals', null],
@@ -61,6 +62,7 @@ class AccountingAccessSeeder extends Seeder
             'accounting.requisitions.read' => 'requisitions',
             'accounting.procurement.read' => 'procurement',
             'accounting.remittances.read' => 'remittances',
+            'accounting.paybill.read' => 'paybill',
         ],
         'receipt' => ['accounting.receipts.create' => 'receipts'],
         'prepare' => ['accounting.payments.prepare' => 'payments'],
@@ -82,6 +84,7 @@ class AccountingAccessSeeder extends Seeder
         'procure' => ['accounting.procurement.manage' => 'procurement', 'accounting.procurement.read' => 'procurement'],
         'payroll' => ['accounting.payroll.manage' => 'payroll', 'accounting.payroll.read' => 'payroll'],
         'payrollread' => ['accounting.payroll.read' => 'payroll'],
+        'paybill' => ['accounting.paybill.manage' => 'paybill', 'accounting.paybill.read' => 'paybill'],
     ];
 
     /** What every role at a level gets: their approvals, and asking for money. */
@@ -108,8 +111,8 @@ class AccountingAccessSeeder extends Seeder
             'Regional Committee Member' => ['read', 'below'],
         ],
         'diocese' => [
-            'Diocese Finance Officer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'chart', 'below', 'reconcile', 'petty', 'close', 'reopen', 'rules', 'procure', 'payroll'],
-            'Diocese Treasurer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'below', 'reconcile', 'petty', 'close', 'reopen', 'procure', 'payroll'],
+            'Diocese Finance Officer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'chart', 'below', 'reconcile', 'petty', 'close', 'reopen', 'rules', 'procure', 'payroll', 'paybill'],
+            'Diocese Treasurer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'below', 'reconcile', 'petty', 'close', 'reopen', 'procure', 'payroll', 'paybill'],
             'Bishop' => ['read', 'authorise', 'below', 'payrollread'],
             'Diocese Administrator' => ['read', 'prepare', 'below', 'procure'],
             'Diocese Secretary' => ['read', 'prepare', 'below'],

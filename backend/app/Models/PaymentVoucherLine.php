@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /** What a payment voucher pays for: the account it is charged to, the fund and an amount. */
 class PaymentVoucherLine extends Model
 {
-    protected $fillable = ['payment_voucher_id', 'account_id', 'fund_id', 'budget_line_id', 'description', 'amount'];
+    protected $fillable = ['payment_voucher_id', 'account_id', 'fund_id', 'budget_line_id', 'for_territory_id', 'description', 'amount'];
 
     protected $casts = ['amount' => 'decimal:2'];
 

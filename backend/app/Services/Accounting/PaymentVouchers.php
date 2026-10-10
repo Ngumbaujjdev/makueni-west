@@ -155,7 +155,7 @@ final class PaymentVouchers
             $pv = PaymentVoucher::whereKey($pv->id)->lockForUpdate()->firstOrFail();
             $this->assertStatus($pv, ['authorised'], 'Only an authorised voucher can be paid.');
             $lines = $pv->lines()->get()->map(fn ($l) => [
-                'account_id' => $l->account_id, 'debit' => $l->amount, 'fund_id' => $l->fund_id, 'budget_line_id' => $l->budget_line_id, 'memo' => $l->description,
+                'account_id' => $l->account_id, 'debit' => $l->amount, 'fund_id' => $l->fund_id, 'budget_line_id' => $l->budget_line_id, 'memo' => $l->description, 'for_territory_id' => $l->for_territory_id,
             ])->all();
             $lines[] = ['account_id' => $from->id, 'credit' => $pv->amount];
             $journal = $this->ledger->post($place, [
@@ -257,6 +257,8 @@ final class PaymentVouchers
                 'account_id' => $account->id,
                 'fund_id' => $this->docs->fund($l['fund_id'] ?? null, "lines.{$i}.fund_id"),
                 'budget_line_id' => $this->docs->budgetLine($place, $account, $l['budget_line_id'] ?? null, "lines.{$i}.budget_line_id"),
+                // Set only by the system (e.g. paybill money paid out to a place) - never from a form.
+                'for_territory_id' => isset($l['for_territory_id']) ? (int) $l['for_territory_id'] : null,
                 'description' => isset($l['description']) ? mb_substr(trim((string) $l['description']), 0, 255) : null,
                 'amount' => $amount,
             ];
