@@ -213,6 +213,12 @@ class Submodule extends Model implements Auditable
         return $query->where('is_active', true);
     }
 
+    /** The menu's order: pages with a set place first, in it; the rest after, A-Z. */
+    public function scopeMenuOrder($query)
+    {
+        return $query->orderByRaw('`order` = 0')->orderBy('order')->orderBy('title');
+    }
+
     public function scopeByModule($query, $moduleId)
     {
         return $query->where('module_id', $moduleId);
