@@ -85,6 +85,20 @@ const ReportCenter = (function () {
     "budget.line": "purple",
     "budget.rollup": "pink",
     "budget.contributions": "purple",
+    "accounting.cashbook": "primary",
+    "accounting.trial_balance": "purple",
+    "accounting.receipt": "success",
+    "accounting.voucher": "danger",
+    "accounting.receipts": "success",
+    "accounting.vouchers": "danger",
+    "accounting.collections": "success",
+    "accounting.remittances": "info",
+    "accounting.lpo": "purple",
+    "accounting.payslips": "pink",
+    "accounting.payroll": "pink",
+    "accounting.remittance": "info",
+    "accounting.collection": "success",
+    "accounting.reconciliation": "primary",
   };
   const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const GROUP_SHORT = { "demographics.spiritual": "All four" };
@@ -541,6 +555,10 @@ const ReportCenter = (function () {
           updateSummary();
         }),
       );
+    } else if (report.inputs.includes("record") || report.inputs.includes("account") || report.inputs.includes("dates")) {
+      // Accounting: the one document, or an account and a date range - set by the page that opened it.
+      $("rpPeriodTitle").textContent = report.inputs.includes("record") ? "Document" : "Period";
+      wrap.innerHTML = `<span class="soft-chip soft-primary rp-period-chip"><i class="${report.inputs.includes("record") ? "ri-file-list-3-line" : "ri-calendar-2-line"}"></i>${esc(accountingLabel(report))}</span>`;
     } else if (report.inputs.includes("budget")) {
       $("rpPeriodTitle").textContent = report.inputs.includes("line") ? "Budget line" : "Budget";
       wrap.innerHTML = `<span class="soft-chip soft-purple rp-period-chip"><i class="ri-wallet-3-line"></i>${esc(state.lockedTitle || "The budget you're viewing")}</span>`;
@@ -587,9 +605,18 @@ const ReportCenter = (function () {
     return state.params.from === state.params.to ? fmt(state.params.from) : `${fmt(state.params.from)} - ${fmt(state.params.to)}`;
   }
 
+  /** "Equity Bank · 1 Oct 2026 - 10 Oct 2026", "Receipt SHR-001/RCT/…" - what an accounting export covers. */
+  function accountingLabel(report) {
+    const day = (d) => new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    const range = state.params.date_from && state.params.date_to ? (state.params.date_from === state.params.date_to ? day(state.params.date_to) : `${day(state.params.date_from)} - ${day(state.params.date_to)}`) : "This month";
+    if (report.inputs.includes("record")) return state.lockedTitle || "The document you're viewing";
+    return report.inputs.includes("account") ? `${state.params.account_label || "The account"} · ${range}` : range;
+  }
+
   function periodText() {
     const report = current();
     if (!report) return "";
+    if (report.inputs.includes("record") || report.inputs.includes("account") || report.inputs.includes("dates")) return accountingLabel(report);
     if (report.inputs.includes("fiscal_month") && state.params.from && state.params.to) return rangeLabel();
     if (report.inputs.includes("fiscal_year")) {
       if (state.params.fiscal_year_id === "all") return "All time";
@@ -624,6 +651,12 @@ const ReportCenter = (function () {
       delete body.fiscal_year_id;
     } else if (report.inputs.includes("fiscal_month") && state.params.month && state.params.fiscal_year_id !== "all") body.month = state.params.month;
     if (report.inputs.includes("gathering_type") && state.params.gathering_type_id) body.gathering_type_id = state.params.gathering_type_id;
+    if (report.inputs.includes("account")) body.account_id = state.params.account_id;
+    if (report.inputs.includes("record")) body.record_id = state.params.record_id;
+    if (report.inputs.includes("dates") && state.params.date_from && state.params.date_to) {
+      body.date_from = state.params.date_from;
+      body.date_to = state.params.date_to;
+    }
     return body;
   }
 
@@ -929,7 +962,7 @@ const ReportCenter = (function () {
       if (!trigger) return;
       e.preventDefault();
       const params = {};
-      ["fiscal_year_id", "year", "month", "from", "to", "years", "demographic_id", "submission_label", "metric", "gathering_type_id", "budget_id", "line_id", "activity_id", "report_id"].forEach((k) => {
+      ["fiscal_year_id", "year", "month", "from", "to", "years", "demographic_id", "submission_label", "metric", "gathering_type_id", "budget_id", "line_id", "activity_id", "report_id", "account_id", "account_label", "record_id", "date_from", "date_to"].forEach((k) => {
         const v = trigger.dataset[k.replace(/_([a-z])/g, (_, c) => c.toUpperCase())];
         if (v) params[k] = /^\d+$/.test(v) ? Number(v) : v;
       });

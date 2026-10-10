@@ -310,7 +310,18 @@ const AccountingUI = (function () {
     return `<span class="acc-acct"><span class="acc-acct-tile bg-${m.color} ${textOn(m.color)}"><i class="${m.icon}"></i></span><span>${esc(acc.name)}</span></span>`;
   }
 
-  return { approvalTimeline, methodLogo, dateTile, since, signedAmount, sourceRecord, person, avatar, personColor, initials, dateChip, accountChip, journey, mini, approvalSteps, nextCard, esc, textOn, money, short, figure, amount, day, num, KINDS, kind, tile, DOCS, doc, docPill, docTile, VOUCHER, voucherPill, methodChip, reversedChip, viewingBelow, placeLine, placePicker, ownOnly, options, empty, errorBox, link };
+  /**
+   * A diocese PDF (Redesign R4): the export window, locked to one Accounting
+   * report, for the place being viewed - the letterhead, QR and page numbers
+   * come from the report engine (Settings > Documents & PDF).
+   */
+  function pdf(reportKey, params = {}, title = null) {
+    if (typeof ReportCenter === "undefined") return Toast.error("Reports are still loading - try again in a moment.");
+    const below = new URLSearchParams(window.location.search).get("territory_id");
+    ReportCenter.open({ territoryId: Number(below) || CTX.place.id, reportKey, module: "accounting", params, locked: true, title });
+  }
+
+  return { pdf, approvalTimeline, methodLogo, dateTile, since, signedAmount, sourceRecord, person, avatar, personColor, initials, dateChip, accountChip, journey, mini, approvalSteps, nextCard, esc, textOn, money, short, figure, amount, day, num, KINDS, kind, tile, DOCS, doc, docPill, docTile, VOUCHER, voucherPill, methodChip, reversedChip, viewingBelow, placeLine, placePicker, ownOnly, options, empty, errorBox, link };
 })();
 
 window.AccountingUI = AccountingUI;

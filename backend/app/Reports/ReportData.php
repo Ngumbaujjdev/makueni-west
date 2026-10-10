@@ -27,6 +27,15 @@ final class ReportData
         public array $insights = [],
         /** @var ReportChart[] drawn into the PDF after the details panel */
         public array $charts = [],
+        /**
+         * A cover page before the report (a book such as the cashbook):
+         * {title, subtitle?, lines?: [label => value], logo_path?: absolute PNG/JPEG path}.
+         */
+        public ?array $cover = null,
+        /** Signature boxes after the tables: [{label, name?, date?}] - a voucher, a receipt, a count. */
+        public array $signatures = [],
+        /** 'P' or 'L' to fix the orientation; null picks it from the tables. */
+        public ?string $orientation = null,
     ) {}
 
     /** @return ReportChart[] the charts with something to draw */

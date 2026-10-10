@@ -25,6 +25,7 @@ function accountingPageContext(string $level, string $page): array
         'payments' => 'payments.read',
         'journals' => 'journals.post',
         'documents' => 'documents.read',
+        'reports' => 'reports.read',
         'chart' => 'chart.manage',
         'reconciliation', 'reconcile' => 'reconciliation.read',
         'close' => 'periods.read',

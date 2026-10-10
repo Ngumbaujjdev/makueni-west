@@ -1,6 +1,6 @@
 <?php
 $c = $accCtx['can'];
-$accButtons = '<button type="button" class="btn btn-outline-primary" id="printBtn"><i class="ri-printer-line me-1"></i>Print</button><button type="button" class="btn btn-outline-primary" id="csvBtn"><i class="ri-file-excel-2-line me-1"></i>Excel (CSV)</button>'
+$accButtons = '<button type="button" class="btn btn-outline-primary" id="printBtn"><i class="ri-file-pdf-2-line me-1"></i>Cashbook (PDF)</button><button type="button" class="btn btn-outline-primary" id="csvBtn"><i class="ri-file-excel-2-line me-1"></i>Excel (CSV)</button>'
     . ($c['receipt'] ? '<button type="button" class="btn btn-primary" id="receiptBtn" data-own-only><i class="ri-bill-line me-1"></i>Write a receipt</button>' : '');
 include __DIR__ . '/toolbar.php';
 ?>

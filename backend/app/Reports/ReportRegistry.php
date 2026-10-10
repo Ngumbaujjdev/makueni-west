@@ -70,6 +70,20 @@ final class ReportRegistry
         \App\Reports\Facilities\RoomByRoomReport::class,
         \App\Reports\Facilities\BoughtInYearReport::class,
         \App\Reports\Facilities\RepairsCostReport::class,
+        \App\Reports\Accounting\CashbookReport::class,
+        \App\Reports\Accounting\TrialBalanceReport::class,
+        \App\Reports\Accounting\ReceiptReport::class,
+        \App\Reports\Accounting\PaymentVoucherReport::class,
+        \App\Reports\Accounting\ReceiptsRegisterReport::class,
+        \App\Reports\Accounting\VouchersRegisterReport::class,
+        \App\Reports\Accounting\CollectionsRegisterReport::class,
+        \App\Reports\Accounting\RemittancesRegisterReport::class,
+        \App\Reports\Accounting\PurchaseOrderReport::class,
+        \App\Reports\Accounting\PayslipsReport::class,
+        \App\Reports\Accounting\PayrollRegisterReport::class,
+        \App\Reports\Accounting\RemittanceAdviceReport::class,
+        \App\Reports\Accounting\CollectionSheetReport::class,
+        \App\Reports\Accounting\ReconciliationReport::class,
     ];
 
     /** @return Report[] */

@@ -260,7 +260,7 @@
     const foot = [
       own && c.cancel ? btn("cancel", "btn-outline-danger me-auto", "ri-close-circle-line", "Cancel the order") : "",
       own && c.close ? btn("close", "btn-outline-secondary me-auto", "ri-lock-line", "Close - no more coming") : "",
-      btn("print", "btn-outline-primary", "ri-printer-line", "Print the LPO"),
+      btn("print", "btn-outline-primary", "ri-file-pdf-2-line", "LPO (PDF)"),
       own && c.bill ? btn("bill", "btn-outline-primary", "ri-file-list-2-line", "Enter the bill") : "",
       own && c.receive ? btn("receive", "btn-primary", "ri-truck-line", "Goods received") : "",
       '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>',
@@ -473,23 +473,8 @@
   // ------------------------------------------------------------ print
 
   /** The local purchase order, printed from the browser for the supplier. */
-  function printOrder(o) {
-    const w = window.open("", "_blank");
-    if (!w) return Toast.error("Allow pop-ups to print.");
-    const s = o.supplier_info || {};
-    const rows = o.lines.map((l, i) => `<tr><td>${i + 1}</td><td>${esc(l.description)}</td><td style="text-align:right">${qty(l.quantity)}</td><td style="text-align:right">${A.amount(l.unit_price)}</td><td style="text-align:right">${A.amount(l.amount)}</td></tr>`).join("");
-    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>LPO ${esc(o.number)}</title><style>body{font-family:Inter,Arial,sans-serif;color:#0D0D0D;max-width:760px;margin:32px auto;padding:0 16px}h1{font-size:20px;margin:0}h2{font-size:14px;font-weight:600;margin:4px 0 18px}table{width:100%;border-collapse:collapse;margin:16px 0}td,th{padding:8px;border-bottom:1px solid #ddd;font-size:14px;text-align:left}.tot td{font-weight:700;border-top:2px solid #0D0D0D}.meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:14px}.sig{margin-top:56px;display:flex;justify-content:space-between;font-size:13px}.sig div{border-top:1px solid #0D0D0D;padding-top:6px;width:30%}</style></head><body>
-      <h1>Christian Church International - ${esc(o.place?.name || "")}</h1><h2>LOCAL PURCHASE ORDER No. ${esc(o.number)}</h2>
-      <div class="meta"><div><b>To:</b> ${esc(s.name || o.supplier || "")}</div><div><b>Date:</b> ${A.day(o.date)}</div><div><b>Phone:</b> ${esc(s.phone || "-")}</div><div><b>Deliver by:</b> ${o.deliver_by ? A.day(o.deliver_by) : "-"}</div><div><b>KRA PIN:</b> ${esc(s.kra_pin || "-")}</div><div><b>Our reference:</b> ${esc(o.requisition?.number || "-")}</div></div>
-      <p style="font-size:14px">Please supply the following, and quote this order number on your delivery note and invoice.</p>
-      <table><thead><tr><th>#</th><th>Item</th><th style="text-align:right">Qty</th><th style="text-align:right">Unit price</th><th style="text-align:right">KES</th></tr></thead><tbody>${rows}<tr class="tot"><td colspan="4">Total</td><td style="text-align:right">${A.amount(o.amount)}</td></tr></tbody></table>
-      ${o.notes ? `<p style="font-size:13px"><b>Note:</b> ${esc(o.notes)}</p>` : ""}
-      ${o.status === "cancelled" ? '<p style="color:#F23535;font-weight:700">CANCELLED - this order is no longer valid.</p>' : ""}
-      <div class="sig"><div>Ordered by: ${esc(o.issued_by || "")}</div><div>Authorised by</div><div>Supplier's acceptance</div></div>
-      <script>window.onload=()=>window.print()<\/script></body></html>`);
-    w.document.close();
-  }
-
+  /** The LPO the supplier is given: the diocese PDF (accounting.lpo). */
+  const printOrder = (o) => A.pdf("accounting.lpo", { record_id: o.id }, `LPO ${o.number}`);
   // ------------------------------------------------------------ start
 
   function init() {

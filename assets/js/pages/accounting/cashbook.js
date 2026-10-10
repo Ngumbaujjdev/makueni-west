@@ -135,7 +135,8 @@
       const tr = e.target.closest("[data-journal]");
       if (tr) W.viewJournal(Number(tr.dataset.journal), { onChange: () => load(book.account.id) });
     });
-    $("printBtn").addEventListener("click", () => window.print());
+    // The cashbook as a book: the diocese PDF with its cover (accounting.cashbook).
+    $("printBtn").addEventListener("click", () => book && A.pdf("accounting.cashbook", { account_id: book.account.id, account_label: book.account.name, date_from: book.from, date_to: book.to }, `Cashbook - ${book.account.name}`));
     $("csvBtn").addEventListener("click", csv);
     $("receiptBtn")?.addEventListener("click", () => W.receipt({ onDone: () => load(book?.account.id), prefill: { account_id: book?.account.id } }));
     A.placePicker($("accPlacePick"), () => {
