@@ -41,7 +41,7 @@ class MenuOrderTest extends TestCase
         $this->seed(AccountingAccessSeeder::class);
 
         $church = Submodule::where('path', 'like', '/church/accounting/%')->where('is_active', true)->orderBy('order')->orderBy('title')->pluck('title')->all();
-        $this->assertSame(['Overview', 'Cash & bank', 'Collections', 'Receipts', 'Online giving', 'Paybill', 'Requisitions', 'Approvals', 'Procurement', 'Payment vouchers', 'Payroll', 'Remittances', 'Cashbook', 'Journals', 'Reconciliation', 'Month-end close', 'All documents'], $church);
+        $this->assertSame(['Overview', 'Cash & bank', 'Collections', 'Receipts', 'Online giving', 'Transactions', 'Paybill', 'Requisitions', 'Approvals', 'Procurement', 'Payment vouchers', 'Payroll', 'Remittances', 'Cashbook', 'Journals', 'Reconciliation', 'Month-end close', 'All documents'], $church);
 
         // The menu the treasurer gets back from the API is in that order too.
         Sanctum::actingAs($this->treasurer);

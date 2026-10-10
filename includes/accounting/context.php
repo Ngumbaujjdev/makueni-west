@@ -37,6 +37,7 @@ function accountingPageContext(string $level, string $page): array
         'payroll' => 'payroll.read',
         'paybill' => 'paybill.read',
         'giving' => 'giving.read',
+        'transactions' => 'transactions.read',
         'gateways' => 'gateways.manage',
     ][$page] ?? 'books.read'));
     $role = getCurrentRole() ?? [];

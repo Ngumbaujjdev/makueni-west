@@ -152,6 +152,11 @@ const AccountingAPI = (function () {
     reverseCollection: (id, reason) => request("POST", `/accounting/collections/${id}/reverse`, { body: { reason } }),
     // A4 - approvals, requisitions, advances
     approvalBoard: () => request("GET", "/approvals/board"),
+    // A10e - transactions: every attempt to pay, failed ones included
+    transactions: (params) => request("GET", "/accounting/transactions", { params }),
+    transaction: (source, id) => request("GET", `/accounting/transactions/${source}/${id}`),
+    checkTransaction: (source, id) => request("POST", `/accounting/transactions/${source}/${id}/check`),
+    checkWaiting: (body) => request("POST", "/accounting/transactions/check-waiting", { body }),
     approvals: (tab) => request("GET", "/approvals", { params: { tab, territory_id: "" } }),
     approval: (id) => request("GET", `/approvals/requests/${id}`, { params: { territory_id: "" } }),
     decideApproval: (id, decision, comment) => request("POST", `/approvals/requests/${id}/${decision}`, { body: { comment } }),

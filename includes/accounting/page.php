@@ -5,7 +5,7 @@ $titles = [
     'index' => 'Accounting', 'accounts' => 'Cash & bank', 'cashbook' => 'Cashbook', 'receipts' => 'Receipts',
     'payments' => 'Payment vouchers', 'journals' => 'Journals', 'documents' => 'All documents', 'chart' => 'Chart of accounts',
     'reconciliation' => 'Reconciliation', 'reconcile' => 'Reconcile', 'close' => 'Month-end close', 'collections' => 'Collections',
-    'approvals' => 'Approvals', 'requisitions' => 'Requisitions', 'approval-rules' => 'Approval rules', 'procurement' => 'Procurement', 'remittances' => 'Remittances', 'payroll' => 'Payroll', 'paybill' => 'Paybill', 'giving' => 'Online giving', 'gateways' => 'Gateways', 'record' => 'Record', 'account' => 'Account',
+    'approvals' => 'Approvals', 'requisitions' => 'Requisitions', 'approval-rules' => 'Approval rules', 'procurement' => 'Procurement', 'remittances' => 'Remittances', 'payroll' => 'Payroll', 'paybill' => 'Paybill', 'giving' => 'Online giving', 'transactions' => 'Transactions', 'gateways' => 'Gateways', 'record' => 'Record', 'account' => 'Account',
 ];
 // A record's page sits under the list it belongs to.
 $recordLists = ['voucher' => ['payments', 'Payment vouchers'], 'requisition' => ['requisitions', 'Requisitions'], 'payroll' => ['payroll', 'Payroll'], 'order' => ['procurement', 'Procurement'], 'remittance' => ['remittances', 'Remittances'], 'collection' => ['collections', 'Collections']];
