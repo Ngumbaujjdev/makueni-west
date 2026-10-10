@@ -16,6 +16,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\Settings\Settings::class);
         // The chart of accounts checks itself once per request.
         $this->app->singleton(\App\Services\Accounting\Chart::class);
+        $this->app->singleton(\App\Services\Accounting\GivingPurposes::class);
     }
 
     /**

@@ -709,6 +709,35 @@ API (under `/api/accounting`): `GET transactions?from&to&status&method&source&q&
 
 **Menu:** Finance > Accounting > **Statements** (`statements.php`, after Month-end close), permission `{level}.accounting.statements.read` for whoever reads the books.
 
+## A11 - Giving options and funds at every level (2026-10-10, in three parts)
+
+What a giver gives for (Tithe, Offering, a region's conference...) and the funds money is kept in are no longer fixed in code: every level sets up its own in Settings › Giving options & funds.
+
+**Data**
+- `giving_purposes`:
+  - `territory_id`: null = standard, kept by whichever place collects it; set = the owner, whose money it is.
+  - `reach`: `self` (only the owner's own giving page) or `below` (every place under it).
+  - `key` (≤8, never changes - stored on gifts, claims and payments), `label`, `suffix` (the Pay Bill ending, 1-6 letters, unique), `words` (other endings givers type), `account_id` (a standard income account), `fund_id` (null = General), `icon`, `colour`, order, `is_active`, `is_default` (the option when no ending is typed).
+  - The five that were fixed in code are made on first use with their old keys, endings and words: T (T; TITHE, TITHES), O (OFF; O, OFFERING, SADAKA), TH (TH; THANKS, THANKSGIVING), B (B; BLD, BUILDING → fund BLD), K (KYS; K → fund KYS). The old `paybill.default_purpose` setting becomes `is_default`.
+  - `gifts.purpose` and `payment_claims.purpose` widen to 8.
+- Funds (part 2): `accounting_funds` gains `territory_id` (null = standard: GEN, BLD, KYS, CONF) and `reach`; codes are unique per owner and the standard codes are reserved. Every place fund's equity account is the standard **3900 Other funds**; its lines are told apart by `fund_id`.
+
+**Rules**
+- An ending is 1-6 letters (a 6-letter church code plus it fits Safaricom's 12-character account reference), unique across every option's ending and words, never ends in DS (that marks a share payment), and code + ending never spells another place's code. A changed ending is kept as a word, so printed numbers keep working.
+- An option or fund that has been used is switched off, never deleted; the standard five can't be deleted. A switched-off option keeps its name on everything already given, and its ending still parses.
+- A church's options are always "this place only". A place can hide an inherited option from its own giving page; a payment with that ending still posts.
+- At most 20 options and 20 funds per place.
+
+**Whose money (part 2)**
+- Standard option: the collecting place's, as before.
+- An owned option collected at a place below: posted in the **owner's** books (the collecting place in the memo); `gifts.owner_territory_id` / `mpesa_payments.owner_territory_id` record it.
+  - Diocese paybill: diocese Dr paybill / Cr 2400 for the owner; owner Dr 1310 / Cr income. Monthly settlement pays the owner.
+  - Paystack: the owner's subaccount and share rules, or held by the diocese for the owner.
+  - The diocese as owner: diocese income.
+  - An owned option paid into a church's own paybill waits in To sort.
+
+**Part 1 (built 2026-10-10):** the table, `App\Services\Accounting\GivingPurposes` (`all`, `active`, `find`, `usable`, static `label`, `default`, `byWord`, `target`, `accountNumber`, `present`) and every reader switched to it - the parser, account numbers, Ask to pay, claims, the giving page, receipts, SMS and lists. `Paybill::PURPOSES/SUFFIX/WORDS` are gone.
+
 ## Later phases (outline - specified when built)
 - **A2 Reconciliation:** built 2026-10-09, see "A2 - Reconciliation" above.
 - **A3 Sunday collections:** built 2026-10-09, see "A3 - Sunday collections" above.

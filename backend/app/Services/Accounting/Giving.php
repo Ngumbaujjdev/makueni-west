@@ -54,7 +54,7 @@ final class Giving
         $paybillReady = (bool) ($this->settings->system('paybill.shortcode') && $this->settings->system('paybill.passkey') && $this->settings->system('paybill.consumer_key'));
         $own = $this->paybill->mpesaChannel($place);
         $paybill = $own
-            ? ['number' => $own->account_number, 'till' => $own->account_name === 'Till', 'accounts' => collect(Paybill::PURPOSES)->map(fn ($p, $k) => ['label' => $p[0], 'account' => Paybill::SUFFIX[$k]])->values()->all()]
+            ? ['number' => $own->account_number, 'till' => $own->account_name === 'Till', 'accounts' => app(GivingPurposes::class)->active()->map(fn ($p) => ['purpose' => $p->key, 'label' => $p->label, 'account' => $p->suffix])->values()->all()]
             : ($paybillReady ? ['number' => $this->settings->system('paybill.shortcode'), 'till' => false, 'accounts' => array_values($this->paybill->accountNumbers($place)),
                 // "I've paid - here's my code" is checked against the diocese paybill (A10f).
                 'claim' => true] : null);
@@ -62,7 +62,7 @@ final class Giving
         return [
             'place' => ['name' => $place->name, 'code' => Paybill::code($place), 'level' => $place->territory_type->value],
             'logo' => url("/api/settings/logo/{$place->id}"),
-            'purposes' => collect(Paybill::PURPOSES)->map(fn ($p, $k) => ['key' => $k, 'label' => $p[0]])->values(),
+            'purposes' => app(GivingPurposes::class)->present(),
             'methods' => ['mpesa' => $own !== null || $paybillReady, 'paystack' => Paystack::ready()],
             'paybill' => $paybill,
             'note' => $this->settings->system('giving.page_note'),
@@ -85,7 +85,7 @@ final class Giving
         $pay = $method === 'paystack' && array_key_exists((string) ($data['pay'] ?? ''), self::PAY) ? (string) $data['pay'] : null;
         $mobile = in_array($pay, ['mpesa', 'airtel'], true);
         $purpose = (string) ($data['purpose'] ?? '');
-        if (! isset(Paybill::PURPOSES[$purpose])) {
+        if (! app(GivingPurposes::class)->usable($purpose)) {
             throw ValidationException::withMessages(['purpose' => ['Pick what you are giving for.']]);
         }
         $amount = round((float) ($data['amount'] ?? 0), 2);
@@ -134,7 +134,7 @@ final class Giving
         try {
             // Paystack needs an email; a mobile-money giver who gave none is receipted by SMS, so the diocese's own address stands in.
             $out = Paystack::diocese()->initialize((float) $gift->amount, $email !== '' ? $email : (string) config('mail.from.address'),
-                $gift->reference, url('/api/give/callback'), ['gift' => $gift->reference, 'place' => $place->name, 'purpose' => Paybill::PURPOSES[$purpose][0], 'pay' => $pay],
+                $gift->reference, url('/api/give/callback'), ['gift' => $gift->reference, 'place' => $place->name, 'purpose' => GivingPurposes::label($purpose), 'pay' => $pay],
                 $channel?->subaccount_code, $split, $pay ? self::PAY[$pay] : null);
         } catch (Throwable $e) {
             $gift->update(['status' => 'failed', 'result' => mb_substr($e->getMessage(), 0, 255)]);
@@ -211,7 +211,7 @@ final class Giving
     {
         $diocese = $this->paybill->diocese();
         [$account, $fund] = $this->paybill->target($gift->purpose);
-        $label = Paybill::PURPOSES[$gift->purpose][0];
+        $label = GivingPurposes::label($gift->purpose);
         $clearing = $this->chart->account('online_clearing');
         $charges = $this->chart->account('bank_charges');
         $head = fn (string $narration, string $party) => ['doc_type' => 'receipt', 'date' => $date, 'narration' => $narration, 'party_name' => $party,

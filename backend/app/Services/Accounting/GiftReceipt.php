@@ -85,7 +85,7 @@ final class GiftReceipt
     {
         $place = Territory::find($g->territory_id);
         $s = $this->summary($g);
-        $purpose = Paybill::PURPOSES[$g->purpose][0] ?? 'Gift';
+        $purpose = GivingPurposes::label($g->purpose, 'Gift');
         $when = $g->paid_at?->setTimezone('Africa/Nairobi');
         $how = $this->paidWithLabel($g).($g->method === 'paystack' ? ' (Paystack)' : '');
         $data = new ReportData(
@@ -121,7 +121,7 @@ final class GiftReceipt
                 ->map(fn ($l) => ['for' => $l->account->name, 'fund' => $l->fund?->name ?? '', 'amount' => round((float) $l->credit, 2)])->values()->all()
             : [];
 
-        return $rows ?: [['for' => Paybill::PURPOSES[$g->purpose][0] ?? 'Gift', 'fund' => '', 'amount' => round((float) $g->amount, 2)]];
+        return $rows ?: [['for' => GivingPurposes::label($g->purpose, 'Gift'), 'fund' => '', 'amount' => round((float) $g->amount, 2)]];
     }
 
     /** 0712 345 678 -> 07•• ••• 678 (the giver knows it's theirs; nobody else learns it). */

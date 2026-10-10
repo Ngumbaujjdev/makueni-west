@@ -10,6 +10,7 @@ use App\Models\PaystackSettlement;
 use App\Models\Territory;
 use App\Services\Accounting\Chart;
 use App\Services\Accounting\Giving;
+use App\Services\Accounting\GivingPurposes;
 use App\Services\Accounting\Paybill;
 use App\Services\Payments\Paystack;
 use App\Support\AccountingAccess;
@@ -52,10 +53,10 @@ class GivingController extends AccountingBase
                 'route' => $route ? $route->provider : ($place->territory_type->value === 'diocese' || $this->settings()->system('paybill.shortcode') ? 'paybill' : null),
                 'channels' => $own->map(fn ($c) => $this->presentChannel($c))->values(),
                 'diocese_paybill' => $this->settings()->system('paybill.shortcode'),
-                'accounts' => collect(Paybill::PURPOSES)->map(fn ($p, $k) => ['label' => $p[0], 'account' => Paybill::SUFFIX[$k]])->values(),
+                'accounts' => app(GivingPurposes::class)->active()->map(fn ($p) => ['purpose' => $p->key, 'label' => $p->label, 'account' => $p->suffix])->values(),
             ],
             'gifts' => $gifts->map(fn ($g) => [
-                'id' => $g->id, 'reference' => $g->reference, 'amount' => (float) $g->amount, 'purpose' => $g->purpose, 'purpose_label' => Paybill::PURPOSES[$g->purpose][0] ?? $g->purpose,
+                'id' => $g->id, 'reference' => $g->reference, 'amount' => (float) $g->amount, 'purpose' => $g->purpose, 'purpose_label' => GivingPurposes::label($g->purpose, $g->purpose),
                 'giver' => $g->giver_name, 'phone' => $g->giver_phone, 'method' => $g->method, 'channel' => $g->channel, 'status' => $g->status, 'status_label' => Gift::STATUSES[$g->status],
                 'fee' => (float) $g->fee, 'split' => (float) $g->split, 'net' => (float) $g->net, 'receipt' => $numbers[$g->journal_id] ?? null,
                 'created_at' => $g->created_at?->toIso8601String(), 'paid_at' => $g->paid_at?->toIso8601String(), 'result' => in_array($g->status, ['failed', 'refunded'], true) || $g->disputed_at || (float) $g->refunded_amount > 0 ? $g->result : null,
