@@ -278,6 +278,13 @@ class DatabaseSeeder extends Seeder
             AccountingAccessSeeder::class,
             ApprovalWorkflowsSeeder::class,
 
+            // ==========================================
+            // PHASE 37: Staff (HR) - the people each place employs, and the
+            // positions, grades and allowances each level sets up;
+            // {level}.hr.* (docs/specs/hr-spec.md)
+            // ==========================================
+            HrAccessSeeder::class,
+
             // The order of each module's pages on the menu, for the modules
             // whose own seeders don't set it (main page first, reports last).
             MenuOrderSeeder::class,

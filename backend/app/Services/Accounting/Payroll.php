@@ -30,62 +30,10 @@ final class Payroll
 
     // ------------------------------------------------------------ people
 
+    /** Add or change someone a place pays - through Staff (docs/specs/hr-spec.md), the one record. */
     public function saveEmployee(Territory $place, User $user, array $data, ?Employee $e = null): Employee
     {
-        $name = trim((string) ($data['name'] ?? ''));
-        if ($name === '') {
-            throw ValidationException::withMessages(['name' => ['Who is it?']]);
-        }
-        $allowances = [];
-        foreach ($data['allowances'] ?? [] as $i => $a) {
-            $label = trim((string) ($a['name'] ?? ''));
-            $amount = round((float) ($a['amount'] ?? 0), 2);
-            if ($label === '' && $amount <= 0) {
-                continue;
-            }
-            if ($label === '' || $amount <= 0) {
-                throw ValidationException::withMessages(["allowances.{$i}" => ['Give each allowance a name and an amount.']]);
-            }
-            $allowances[] = ['name' => mb_substr($label, 0, 60), 'amount' => $amount];
-        }
-        if (! empty($data['start_date']) && ! empty($data['end_date']) && $data['end_date'] < $data['start_date']) {
-            throw ValidationException::withMessages(['end_date' => ['They can\'t leave before they started.']]);
-        }
-        $fields = [
-            'name' => mb_substr($name, 0, 150),
-            'phone' => $this->clean($data['phone'] ?? null, 30),
-            'email' => $this->clean($data['email'] ?? null, 150),
-            'position' => $this->clean($data['position'] ?? null, 100),
-            'start_date' => $data['start_date'] ?? null,
-            'end_date' => $data['end_date'] ?? null,
-            'pay_method' => in_array($data['pay_method'] ?? '', array_keys(Employee::METHODS), true) ? $data['pay_method'] : ($e?->pay_method ?? 'mpesa'),
-            'pay_to' => $this->clean($data['pay_to'] ?? null, 150),
-            // Where to pay them, in a shape the treasurer can pay from; it decides the method and the one-line "pay to".
-            'payee' => array_key_exists('payee', $data) ? \App\Support\PayTo::from($data['payee']) : $e?->payee,
-            'basic_pay' => round(max((float) ($data['basic_pay'] ?? 0), 0), 2),
-            'allowances' => $allowances,
-            'is_active' => array_key_exists('is_active', $data) ? (bool) $data['is_active'] : ($e?->is_active ?? true),
-        ];
-        // Personal numbers: a value replaces the saved one; left blank, the saved one stays.
-        foreach (Employee::PRIVATE as $key) {
-            if (($v = $this->clean($data[$key] ?? null, 40)) !== null) {
-                $fields[$key] = strtoupper($v);
-            }
-        }
-        if ($fields['payee']) {
-            $fields['pay_method'] = $fields['payee']['method'];
-            $fields['pay_to'] = mb_substr((string) \App\Support\PayTo::describe($fields['payee']), 0, 150);
-        }
-        if ((float) $fields['basic_pay'] + array_sum(array_column($allowances, 'amount')) <= 0) {
-            throw ValidationException::withMessages(['basic_pay' => ['Enter what they are paid a month.']]);
-        }
-        if ($e) {
-            $e->update($fields);
-
-            return $e->fresh();
-        }
-
-        return Employee::create($fields + ['territory_id' => $place->id, 'created_by' => $user->id]);
+        return app(\App\Services\HR\Staff::class)->save($place, $user, $data, $e);
     }
 
     // ------------------------------------------------------------ the run
@@ -99,7 +47,7 @@ final class Payroll
         if (PayrollRun::where('territory_id', $place->id)->where('month', $month)->where('status', '!=', 'cancelled')->exists()) {
             throw ValidationException::withMessages(['month' => ['There is already a payroll for '.date('F Y', strtotime("{$month}-01")).'.']]);
         }
-        $people = Employee::where('territory_id', $place->id)->orderBy('name')->get()->filter(fn ($e) => $e->paidIn($month));
+        $people = $this->paidHere($place, $month);
         if ($people->isEmpty()) {
             throw ValidationException::withMessages(['month' => ['Nobody is on the payroll for that month - add the people you pay first.']]);
         }
@@ -113,6 +61,20 @@ final class Payroll
 
             return $run->fresh('payslips');
         });
+    }
+
+    /**
+     * Everyone this place pays for the month: posted here during it - the
+     * place they were last posted to pays the whole month - and not left before it.
+     */
+    private function paidHere(Territory $place, string $month)
+    {
+        $start = "{$month}-01";
+        $end = date('Y-m-t', strtotime($start));
+
+        return Employee::where(fn ($q) => $q->where('territory_id', $place->id)
+            ->orWhereHas('postings', fn ($p) => $p->where('territory_id', $place->id)->where('from_date', '<=', $end)->where(fn ($w) => $w->whereNull('to_date')->orWhere('to_date', '>=', $start))))
+            ->orderBy('name')->get()->filter(fn ($e) => $e->paidIn($month) && $e->payingPlaceIn($month) === (int) $place->id)->values();
     }
 
     /** A payslip from what the person is paid now (keeping any other deduction already on it). */
@@ -158,7 +120,7 @@ final class Payroll
     public function addSlip(PayrollRun $run, int $employeeId): Payslip
     {
         $this->assertDraft($run);
-        $e = Employee::where('territory_id', $run->territory_id)->find($employeeId);
+        $e = $this->paidHere(Territory::findOrFail($run->territory_id), $run->month)->firstWhere('id', $employeeId);
         if (! $e) {
             throw ValidationException::withMessages(['employee_id' => ['Pick someone on this place\'s payroll.']]);
         }

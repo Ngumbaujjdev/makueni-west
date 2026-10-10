@@ -21,6 +21,7 @@
             <exclude>tests/Feature/People</exclude>
             <exclude>tests/Feature/Facilities</exclude>
             <exclude>tests/Feature/Accounting</exclude>
+            <exclude>tests/Feature/HR</exclude>
         </testsuite>
         <testsuite name="Diocese">
             <directory>tests/Feature/Diocese</directory>
@@ -54,6 +55,9 @@
         </testsuite>
         <testsuite name="Accounting">
             <directory>tests/Feature/Accounting</directory>
+        </testsuite>
+        <testsuite name="HR">
+            <directory>tests/Feature/HR</directory>
         </testsuite>
     </testsuites>
     <source>
