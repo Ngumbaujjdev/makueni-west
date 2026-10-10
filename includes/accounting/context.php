@@ -45,9 +45,25 @@ function accountingPageContext(string $level, string $page): array
     $user = getAuthUser() ?? [];
     $can = fn (string $p) => hasGlobalAccess() || hasPermission("{$level}.accounting.{$p}");
 
+    // A page whose main write button this role can't have says which permission it needs (nothing about who records is hard-coded -
+    // the diocese admin gives permissions in Roles & permissions).
+    $main = [
+        'collections' => ['collections.record', 'Record collections', $level === 'church'],
+        'accounts' => ['accounts.manage', 'Add and change accounts', true],
+        'payments' => ['payments.prepare', 'Prepare payments', true],
+        'procurement' => ['procurement.manage', 'Buy through procurement', true],
+        'payroll' => ['payroll.manage', 'Run the payroll', true],
+        'remittances' => ['payments.prepare', 'Prepare payments (to send the share)', true],
+        'reconciliation' => ['reconcile.do', 'Reconcile accounts', true],
+    ][$page] ?? null;
+    $needs = $main && $main[2] && ! $can($main[0])
+        ? ['permission' => $main[0], 'label' => $main[1], 'admin' => hasGlobalAccess() || hasPermission('diocesesettings.systemadministration.rolemanagement.read')]
+        : null;
+
     return [
         'level' => $level,
         'page' => $page,
+        'needs' => $needs,
         'baseUrl' => SITE_URL . "/{$level}/accounting",
         'budgetsUrl' => SITE_URL . ($level === 'church' ? '/church/budget' : "/{$level}/budgets"),
         'homeUrl' => SITE_URL . "/{$level}/dashboard",
