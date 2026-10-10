@@ -340,8 +340,8 @@ final class Remittances
 
     // ------------------------------------------------------------ receiving
 
-    /** Confirm it reached us: our receipt - Dr where it landed / Cr contributions or allocations, with who sent it. */
-    public function confirm(Remittance $rem, User $user, array $data): Remittance
+    /** Confirm it reached us: our receipt - Dr where it landed / Cr contributions or allocations, with who sent it. No user: paid into the diocese paybill by M-Pesa (A6b). */
+    public function confirm(Remittance $rem, ?User $user, array $data): Remittance
     {
         $to = Territory::findOrFail($rem->to_territory_id);
         $into = $this->docs->cashAccount($to, (int) ($data['into_account_id'] ?? 0), 'into_account_id');
@@ -373,7 +373,7 @@ final class Remittances
                 ['account_id' => $income->id, 'credit' => (float) $rem->amount, 'budget_line_id' => $this->chart->budgetLineFor($to, $income->id)?->id, 'memo' => $from?->name, 'for_territory_id' => $from?->id],
             ], $user);
             $this->bridge->journalPosted($journal, $user);
-            $rem->update(['status' => 'confirmed', 'into_account_id' => $into->id, 'received_on' => $date, 'received_journal_id' => $journal->id, 'confirmed_by' => $user->id, 'confirmed_at' => now()]);
+            $rem->update(['status' => 'confirmed', 'into_account_id' => $into->id, 'received_on' => $date, 'received_journal_id' => $journal->id, 'confirmed_by' => $user?->id, 'confirmed_at' => now()]);
             $this->tell($rem->from, 'accounting.payments.prepare', "{$to->name} confirmed {$rem->number}", 'KES '.number_format((float) $rem->amount, 2)." - {$rem->purpose} - reached them on ".date('j M', strtotime($date)).'.', $rem);
 
             return $rem->fresh('lines');

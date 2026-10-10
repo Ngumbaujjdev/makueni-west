@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Accounting;
 use App\Models\Remittance;
 use App\Models\Territory;
 use App\Services\Accounting\Chart;
+use App\Services\Accounting\Paybill;
 use App\Services\Accounting\Remittances;
 use App\Support\AccountingAccess;
 use App\Support\PlaceAccess;
@@ -108,6 +109,20 @@ class RemittanceController extends AccountingBase
         $r = $this->remittances->confirm($r, $request->user(), $data);
 
         return $this->ok($this->present($r, $request->user(), true), 'Confirmed - the receipt is in your books.');
+    }
+
+    /** POST /accounting/remittances/{id}/mpesa {phone} - pay a share to the diocese by the M-Pesa prompt (A6b). */
+    public function payMpesa(Request $request, int $id): JsonResponse
+    {
+        [$r, , $deny] = $this->remittance($request, $id, 'from', 'pay');
+        if ($deny) {
+            return $deny;
+        }
+        $data = $request->validate(['phone' => ['required', 'string', 'max:20']], ['phone.required' => 'Which phone gets the prompt?']);
+        $req = app(Paybill::class)->askForRemittance($r, $request->user(), $data['phone']);
+
+        return $this->ok(['id' => $req->id, 'status' => $req->status, 'result' => $req->result, 'account_ref' => $req->account_ref, 'amount' => (float) $req->amount, 'phone' => $req->phone],
+            'Sent - enter the M-Pesa PIN on the phone. It is recorded paid and confirmed as soon as Safaricom says so.', 201);
     }
 
     public function unconfirm(Request $request, int $id): JsonResponse
@@ -251,6 +266,8 @@ class RemittanceController extends AccountingBase
                 'query' => $toSide && $r->status === 'sent',
                 'unconfirm' => $toSide && $r->status === 'confirmed',
                 'answer' => $fromSide && $r->status === 'queried',
+                // A6b: the M-Pesa prompt from the diocese paybill, for whoever pays vouchers where it came from.
+                'pay_mpesa' => $r->status === 'waiting' && $r->kind === 'share' && $r->from && AccountingAccess::can($user, $r->from, 'pay') && app(Paybill::class)->sharePromptProblem($r) === null,
             ],
         ];
         if ($full) {
