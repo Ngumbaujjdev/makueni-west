@@ -53,10 +53,10 @@ abstract class DiocesePdfReport extends TCPDF
         }
 
         $this->applyTextColor(DioceseBranding::TEXT_BLACK);
-        $this->SetFont('times', 'B', 16);
+        $this->SetFont('helvetica', 'B', 16);
         $this->Cell(0, 8, $title, 0, 1, 'C');
 
-        $this->SetFont('times', '', 10);
+        $this->SetFont('helvetica', '', 10);
         $this->applyTextColor(DioceseBranding::DARK_GRAY);
         $this->Cell(0, 6, $subtitle, 0, 1, 'C');
 
@@ -98,9 +98,9 @@ abstract class DiocesePdfReport extends TCPDF
         // getNumLines() so the whole row can share one common height,
         // keeping the boxes visually aligned regardless of which one
         // wraps.
-        $this->SetFont('times', 'B', 14);
+        $this->SetFont('helvetica', 'B', 14);
         $valueLines = array_map(fn (array $box) => $this->getNumLines((string) $box['value'], $innerWidth), $boxes);
-        $this->SetFont('times', '', 7.5);
+        $this->SetFont('helvetica', '', 7.5);
         $labelLines = array_map(fn (array $box) => $this->getNumLines(strtoupper((string) $box['label']), $innerWidth), $boxes);
 
         $rowHeights = array_map(
@@ -117,12 +117,12 @@ abstract class DiocesePdfReport extends TCPDF
 
             $this->SetXY($x + 2, $startY + $topPad);
             $this->applyTextColor($color);
-            $this->SetFont('times', 'B', 14);
+            $this->SetFont('helvetica', 'B', 14);
             $this->MultiCell($innerWidth, $valueLineHeight, (string) $box['value'], 0, 'L', false, 1);
 
             $this->SetXY($x + 2, $startY + $topPad + ($valueLines[$i] * $valueLineHeight) + $gapBetween);
             $this->applyTextColor(DioceseBranding::DARK_GRAY);
-            $this->SetFont('times', '', 7.5);
+            $this->SetFont('helvetica', '', 7.5);
             $this->MultiCell($innerWidth, $labelLineHeight, strtoupper((string) $box['label']), 0, 'L', false, 1);
 
             $x += $boxWidth + $gap;
@@ -136,7 +136,7 @@ abstract class DiocesePdfReport extends TCPDF
      */
     protected function addSectionTitle(string $title): void
     {
-        $this->SetFont('times', 'B', 12);
+        $this->SetFont('helvetica', 'B', 12);
         $this->applyTextColor(DioceseBranding::TEXT_BLACK);
         $this->Cell(0, 8, $title, 0, 1, 'L');
         $this->Ln(1);
@@ -153,7 +153,7 @@ abstract class DiocesePdfReport extends TCPDF
         $widths ??= array_fill(0, count($headers), $usableWidth / count($headers));
         $rowHeight = 7;
 
-        $this->SetFont('times', 'B', 9);
+        $this->SetFont('helvetica', 'B', 9);
         $this->applyFillColor(DioceseBranding::PRIMARY_TEAL);
         $this->SetTextColor(255, 255, 255);
         foreach ($headers as $i => $header) {
@@ -161,7 +161,7 @@ abstract class DiocesePdfReport extends TCPDF
         }
         $this->Ln();
 
-        $this->SetFont('times', '', 9);
+        $this->SetFont('helvetica', '', 9);
         foreach ($rows as $rowIndex => $row) {
             $stripe = $rowIndex % 2 === 1;
             $this->applyFillColor(DioceseBranding::LIGHT_GRAY);
@@ -185,7 +185,7 @@ abstract class DiocesePdfReport extends TCPDF
         }
 
         $this->addSectionTitle($sectionTitle);
-        $this->SetFont('times', '', 10);
+        $this->SetFont('helvetica', '', 10);
         $this->applyTextColor(DioceseBranding::TEXT_BLACK);
 
         foreach ($lines as $line) {
@@ -219,7 +219,7 @@ abstract class DiocesePdfReport extends TCPDF
             $this->SetY($this->GetY() + $qrSize + 2);
         }
 
-        $this->SetFont('times', 'I', 8);
+        $this->SetFont('helvetica', 'I', 8);
         $this->applyTextColor(DioceseBranding::DARK_GRAY);
         $this->MultiCell(0, 5, 'This is a computer-generated document and does not require a signature.', 0, 'C');
         $this->Cell(0, 5, 'Generated on: '.now()->format('F j, Y g:i A'), 0, 1, 'C');
