@@ -254,6 +254,7 @@ class CollectionController extends AccountingBase
                 'mpesa_account' => $c->mpesaAccount ? ['id' => $c->mpesaAccount->id, 'name' => $c->mpesaAccount->name] : null,
                 'attendance' => $c->attendance ? ['id' => $c->attendance->id, 'name' => $c->attendance->event_name ?: ($c->attendance->gatheringType?->name ?? 'Service')] : null,
                 'attendance_record_id' => $c->attendance_record_id,
+                'gathering_type_id' => $c->gathering_type_id,
                 'notes' => $c->notes,
             ];
         }
@@ -282,6 +283,7 @@ class CollectionController extends AccountingBase
             'date' => ['required', 'date'],
             'title' => ['nullable', 'string', 'max:150'],
             'attendance_record_id' => ['nullable', 'integer'],
+            'gathering_type_id' => ['nullable', 'integer'],
             'cash_account_id' => ['nullable', 'integer'],
             'mpesa_account_id' => ['nullable', 'integer'],
             'denominations' => ['nullable', 'array'],

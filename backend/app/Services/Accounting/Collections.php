@@ -170,7 +170,21 @@ final class Collections
         });
     }
 
-    /** What a church's count window offers: the kinds of giving, money accounts, that day's gatherings. */
+    /** One of the church's own kinds of gathering, or none. */
+    private function gatheringType(Territory $place, $id): ?int
+    {
+        if (empty($id)) {
+            return null;
+        }
+        $type = \App\Models\GatheringType::where('territory_id', $place->id)->find((int) $id);
+        if (! $type) {
+            throw ValidationException::withMessages(['gathering_type_id' => ['Pick one of this church\'s gatherings.']]);
+        }
+
+        return $type->id;
+    }
+
+    /** What a church's count window offers: the kinds of giving, the services, that day's gatherings. */
     public function options(Territory $place, ?string $date = null): array
     {
         $this->chart->ensureStandard();
@@ -180,6 +194,10 @@ final class Collections
 
         return [
             'presets' => collect(self::PRESETS)->map(fn ($v, $label) => ['label' => $label, 'account_id' => $acc($v[0]), 'fund_id' => $funds[$v[1]] ?? null])->values(),
+            // What the collection was for: Sunday service, the church's own kinds of gathering (Tuesday fellowship, Kesha...), or something else typed in.
+            'services' => collect([['id' => null, 'name' => 'Sunday service']])
+                ->concat(\App\Models\GatheringType::where('territory_id', $place->id)->where('is_active', true)->orderBy('name')->get(['id', 'name'])->map(fn ($g) => ['id' => $g->id, 'name' => $g->name]))
+                ->values(),
             'gatherings' => ChurchAttendanceRecord::with(['gatheringType:id,name', 'gatheringCategory:id,name'])
                 ->where('territory_type', 'church')->where('territory_id', $place->id)->whereDate('service_date', $date)->orderBy('id')->get()
                 ->map(fn ($r) => ['id' => $r->id, 'name' => $r->event_name ?: ($r->gatheringType?->name ?? $r->gatheringCategory?->name ?? 'Service'), 'gathering_type_id' => $r->gathering_type_id])->values(),
@@ -274,7 +292,7 @@ final class Collections
                 'date' => $data['date'],
                 'title' => mb_substr(trim((string) ($data['title'] ?? '')) ?: 'Sunday service', 0, 150),
                 'attendance_record_id' => $attendance?->id,
-                'gathering_type_id' => $attendance?->gathering_type_id,
+                'gathering_type_id' => $attendance?->gathering_type_id ?? $this->gatheringType($place, $data['gathering_type_id'] ?? null),
                 'cash_account_id' => $cash->id,
                 'mpesa_account_id' => $mpesa?->id,
                 'denominations' => $den,

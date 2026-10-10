@@ -17,7 +17,9 @@ use Spatie\Permission\Models\Role;
  * opens - and which roles hold them. One engine for every level; the
  * chart page is the diocese's only.
  *
- * Idempotent - safe to re-run. Users log out and back in for the new menu.
+ * Idempotent - safe to re-run. Each default grant is made once, ever: one the
+ * diocese admin removed in Roles & permissions is not put back.
+ * Users log out and back in for the new menu.
  */
 class AccountingAccessSeeder extends Seeder
 {
@@ -186,25 +188,45 @@ class AccountingAccessSeeder extends Seeder
             $granted = 0;
             foreach ($grants as $roleName => $abilities) {
                 $role = Role::where('name', $roleName)->where('territory_level', $level)->first() ?? Role::where('name', $roleName)->first();
-                if (! $role) {
-                    continue;
-                }
-                $missing = collect($abilities)->flatMap(fn ($a) => $permissions[$a] ?? [])->reject(fn ($p) => $role->hasPermissionTo($p));
-                if ($missing->isNotEmpty()) {
-                    $role->givePermissionTo($missing->all());
-                    $granted += $missing->count();
+                if ($role) {
+                    $granted += $this->grantOnce($role, collect($abilities)->flatMap(fn ($a) => $permissions[$a] ?? []));
                 }
             }
             foreach (Role::where('territory_level', $level)->get() as $role) {
-                $missing = collect(self::EVERYONE)->flatMap(fn ($a) => $permissions[$a] ?? [])->reject(fn ($p) => $role->hasPermissionTo($p));
-                if ($missing->isNotEmpty()) {
-                    $role->givePermissionTo($missing->all());
-                    $granted += $missing->count();
-                }
+                $granted += $this->grantOnce($role, collect(self::EVERYONE)->flatMap(fn ($a) => $permissions[$a] ?? []));
             }
             $this->command?->info("   ✅ {$level}: Finance > Accounting (".count($pages)." pages), {$granted} new grant(s)");
         }
 
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+    }
+
+    /**
+     * Give a role its default permissions - each one once, ever. A default the
+     * diocese admin later took away in Roles & permissions stays away: who may
+     * record is the admin's to decide, not this seeder's.
+     */
+    private function grantOnce(Role $role, \Illuminate\Support\Collection $permissions): int
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('accounting_seeded_grants')) {
+            $missing = $permissions->reject(fn ($p) => $role->hasPermissionTo($p));
+            $missing->isNotEmpty() && $role->givePermissionTo($missing->all());
+
+            return $missing->count();
+        }
+        $seeded = \Illuminate\Support\Facades\DB::table('accounting_seeded_grants')->where('role_id', $role->id)->pluck('permission_id')->all();
+        $given = 0;
+        foreach ($permissions->unique('id') as $p) {
+            if (in_array($p->id, $seeded, true)) {
+                continue;
+            }
+            if (! $role->hasPermissionTo($p)) {
+                $role->givePermissionTo($p);
+                $given++;
+            }
+            \Illuminate\Support\Facades\DB::table('accounting_seeded_grants')->insertOrIgnore(['role_id' => $role->id, 'permission_id' => $p->id, 'created_at' => now(), 'updated_at' => now()]);
+        }
+
+        return $given;
     }
 }
