@@ -774,3 +774,29 @@ The user found the pages bare. The redesign ships in five parts:
     - All / in / out pills.
   - **Rows open** the voucher, collection or payroll page, or the journal.
 - **`accounts/{id}` movements** add `direction`, `balance_after` (worked back from today's balance), `method`, `method_label`, `source`, `source_id`, `status`, `attachments`, `against` [{name, cash_kind}] and `year_count`.
+
+**R4, every Accounting document and report as a diocese PDF:**
+- **The engine.** All Accounting PDFs go through the report engine (`app/Reports/Accounting/*`, module `accounting`) and `DioceseReportPdf`: Settings › Documents & PDF letterhead, logo, QR verification code and page numbers. Every hand-made `window.print` / `document.write` pop-up is gone, except the owner's remittance statement for a place below. `ReportData` gains three optional fields:
+  - `cover`: a cover page with the place's own logo, converted from WebP;
+  - `signatures`: boxes to sign, with the footer saying "Signed copies are kept with the books";
+  - `orientation`.
+- **Params.** `ReportController` accepts `account_id`, `record_id` and `date_from` / `date_to` for reports whose inputs are `account` / `record` / `dates`. `Report::checkParams()` refuses a record or account that isn't the place's (422). `AccountingReport` reads for whoever may read the books (`AccountingAccess::canRead`).
+- **Books:**
+  - Cashbook (`accounting.cashbook`): a cover page, landscape, b/f, movements, c/f, signatures;
+  - Trial balance (`accounting.trial_balance`): by kind, and whether it balances.
+- **Registers:** receipts, payment vouchers, collections (church), remittances, each for a date range.
+- **Documents** (locked, from their page):
+  - official receipt;
+  - payment voucher (lines, approvals and history, four signatures);
+  - LPO;
+  - payslips;
+  - payroll register (no statutory deductions);
+  - remittance advice;
+  - collection sheet (with notes and coins counted);
+  - bank reconciliation statement.
+- **Reports page** (`reports.php`, menu after All documents, `accounting.reports.read` with the books' readers). Its groups:
+  - Books and Registers cards, each with an account, a date range and Download PDF;
+  - Documents, saying where each is downloaded from;
+  - Statements (income & expenditure, balance sheet, funds, audit pack), shown as "coming with the year-end statements" (A9, makueni-west-6b's API).
+- **Buttons:** `AccountingUI.pdf(key, params, title)` opens the export window locked to the report. It is used by the Cashbook, the record pages' hero, the journal and voucher windows, Procurement, Payroll, Collections and Reconcile.
+- **Deploy:** run `AccountingAccessSeeder` (new page and permission) and `php artisan queue:restart`, so the reports worker loads the new report classes.
