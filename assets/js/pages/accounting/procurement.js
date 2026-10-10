@@ -179,7 +179,7 @@
       ],
       nonSortable: [5],
       empty: A.empty("ri-store-2-line", "No suppliers yet", "Add the shops and companies you buy from - they are picked on quotations and orders.", data.can.procure && !A.viewingBelow() ? '<button type="button" class="btn btn-primary" data-firstsupplier><i class="ri-store-2-line me-1"></i>Add a supplier</button>' : ""),
-      rowHtml: (s) => `<tr data-pills="${s.owed > 0 ? "owed " : ""}${s.is_active ? "on" : "off"}"><td data-order="${esc(s.name)}"><div class="fw-semibold">${esc(s.name)}${s.is_active ? "" : ' <span class="badge bg-secondary">Off</span>'}</div><div class="acc-sub">${esc(s.pay_details || "")}</div></td><td class="d-none d-md-table-cell">${esc(s.phone || "")}<div class="acc-sub">${esc(s.email || "")}</div></td><td class="d-none d-lg-table-cell">${esc(s.kra_pin || "-")}</td><td class="text-end" data-order="${s.ordered}">${A.money(s.ordered)}<div class="acc-sub">${s.orders} ${s.orders === 1 ? "order" : "orders"}</div></td><td class="text-end" data-order="${s.owed}"><strong class="${s.owed > 0 ? "text-danger" : ""}">${A.money(s.owed)}</strong></td><td class="text-end text-nowrap">${data.can.procure && !A.viewingBelow() ? `<button type="button" class="btn btn-sm btn-icon btn-outline-primary" data-editsupplier="${s.id}" aria-label="Change"><i class="ri-edit-line"></i></button> <button type="button" class="btn btn-sm btn-icon btn-outline-danger" data-removesupplier="${s.id}" aria-label="Remove"><i class="ri-delete-bin-line"></i></button>` : ""}</td></tr>`,
+      rowHtml: (s) => `<tr data-pills="${s.owed > 0 ? "owed " : ""}${s.is_active ? "on" : "off"}"><td data-order="${esc(s.name)}"><div class="fw-semibold">${esc(s.name)}${s.is_active ? "" : ' <span class="badge bg-secondary">Off</span>'}</div><div class="acc-sub">${esc(s.payee_text || s.pay_details || "")}</div></td><td class="d-none d-md-table-cell">${esc(s.phone || "")}<div class="acc-sub">${esc(s.email || "")}</div></td><td class="d-none d-lg-table-cell">${esc(s.kra_pin || "-")}</td><td class="text-end" data-order="${s.ordered}">${A.money(s.ordered)}<div class="acc-sub">${s.orders} ${s.orders === 1 ? "order" : "orders"}</div></td><td class="text-end" data-order="${s.owed}"><strong class="${s.owed > 0 ? "text-danger" : ""}">${A.money(s.owed)}</strong></td><td class="text-end text-nowrap">${data.can.procure && !A.viewingBelow() ? `<button type="button" class="btn btn-sm btn-icon btn-outline-primary" data-editsupplier="${s.id}" aria-label="Change"><i class="ri-edit-line"></i></button> <button type="button" class="btn btn-sm btn-icon btn-outline-danger" data-removesupplier="${s.id}" aria-label="Remove"><i class="ri-delete-bin-line"></i></button>` : ""}</td></tr>`,
     });
   }
 
@@ -497,7 +497,7 @@
 
   function supplierWindow(s = null) {
     const f = (id, label, v, type = "text", max = 150) => `<div class="col-sm-6"><label class="form-label" for="${id}">${label}</label><input type="${type}" class="form-control" id="${id}" maxlength="${max}" value="${esc(v || "")}"></div>`;
-    K.confirmWindow({
+    const el = K.confirmWindow({
       title: s ? `Change ${s.name}` : "Add a supplier",
       subtitle: "Picked on quotations and orders",
       icon: "ri-store-2-line",
@@ -505,15 +505,17 @@
       body: K.parts([
         { icon: "ri-store-2-line", title: "Who", body: `<div class="row g-2">${f("suName", "Name", s?.name)}${f("suPin", "KRA PIN", s?.kra_pin, "text", 20)}</div>` },
         { icon: "ri-phone-line", title: "Contact", body: `<div class="row g-2">${f("suPhone", "Phone", s?.phone, "tel", 30)}${f("suEmail", "Email", s?.email, "email")}</div>` },
-        { icon: "ri-bank-card-line", title: "How to pay them", body: `<input type="text" class="form-control" id="suPay" maxlength="255" placeholder="e.g. Till 123456, or Equity a/c 0123..." value="${esc(s?.pay_details || "")}">${s ? `<label class="form-check form-switch mt-2 mb-0"><input class="form-check-input" type="checkbox" id="suOn"${s.is_active ? " checked" : ""}><span class="form-check-label">Active - offered on new quotations and orders</span></label>` : ""}` },
+        { icon: "ri-bank-card-line", title: "How to pay them", hint: "So whoever pays the bill knows where", body: `${W.payeeFields("suTo", s?.payee)}<input type="text" class="form-control mt-2" id="suPay" maxlength="255" placeholder="Other notes on paying them (optional)" value="${esc(s?.pay_details || "")}">${s ? `<label class="form-check form-switch mt-2 mb-0"><input class="form-check-input" type="checkbox" id="suOn"${s.is_active ? " checked" : ""}><span class="form-check-label">Active - offered on new quotations and orders</span></label>` : ""}` },
       ]),
       run: async () => {
         const v = (id) => document.getElementById(id).value.trim() || null;
-        const out = await API.saveSupplier(s?.id, { name: v("suName") || "", kra_pin: v("suPin"), phone: v("suPhone"), email: v("suEmail"), pay_details: v("suPay"), is_active: s ? document.getElementById("suOn").checked : true });
+        const out = await API.saveSupplier(s?.id, { name: v("suName") || "", kra_pin: v("suPin"), phone: v("suPhone"), email: v("suEmail"), pay_details: v("suPay"), payee: W.readPayee(el, "suTo"), is_active: s ? document.getElementById("suOn").checked : true });
         if (out.ok) load();
         return out;
       },
     });
+    W.wirePayee(el, "suTo");
+    el.querySelector(".modal-dialog").classList.add("modal-lg");
   }
 
   // ------------------------------------------------------------ print

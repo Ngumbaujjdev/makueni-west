@@ -391,6 +391,12 @@ Under `/api/accounting`: `GET|POST requisitions` Â· `GET requisitions/options` Â
 - **The seeder gives each default once, ever** (`accounting_seeded_grants`): a default the admin took away is never put back by a later run.
 - **A collection says which service it was for:** Sunday service, one of the church's own gatherings (Tuesday Fellowship, Kesha...), or Other (typed). Saved as `gathering_type_id` and the title.
 
+## Payee details and detail pages (2026-10-10)
+- **Where money goes**, in a shape a treasurer can pay from - the same on suppliers, people on the payroll, requisitions and payment vouchers (`payee` JSON): **M-Pesa** or **Airtel Money** (a phone), a **paybill** (number + account), a **till**, a **bank** (bank, branch, account number, account name) or **cash**. Checked by shape (`App\Support\PayTo`), said in one line ("Paybill 247247, account 0123456789"), shown with the real marks.
+- A supplier's details are **copied onto the voucher** that pays its bill; a requisition's onto the voucher that pays it (not for an advance). A person's pay method and "pay to" follow their details. The voucher and requisition show "Pay by" (and in approvals).
+- **Paying still happens outside the system** (the bank, M-Pesa): the voucher records it once paid. Sending money from the system is a later step.
+- **Detail pages** (`GET /api/accounting/trail/{type}/{id}`) also for a **bill**, a **receipt** (any posted document), a **gift**, a **supplier** and a **person on the payroll**: what happened when, what it is chained to, and a summary (title, number, amount, status, facts, lines). A person's page only for whoever sees the payroll there.
+
 ## A5 - Procurement (built 2026-10-09)
 
 Standard buying - quotations, a local purchase order (LPO), goods received (GRN), the supplier's invoice matched three ways, then payment - but only for bigger purchases. Small ones stay a requisition paid straight away. Every level.

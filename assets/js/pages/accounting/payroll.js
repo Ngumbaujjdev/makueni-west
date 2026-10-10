@@ -35,7 +35,7 @@
   };
   const pill = (s) => `<span class="badge bg-${ST[s][0]} ${A.textOn(ST[s][0])}"><i class="${ST[s][1]} me-1"></i>${ST[s][2]}</span>`;
   const monthLabel = (m) => new Date(`${m}-15T12:00:00`).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
-  const METHOD = { mpesa: "M-Pesa", bank: "Bank", cash: "Cash" };
+  const METHOD = { mpesa: "M-Pesa", airtel: "Airtel Money", paybill: "Paybill", till: "Till", bank: "Bank", cash: "Cash" };
 
   // ------------------------------------------------------------ the page
 
@@ -103,7 +103,7 @@
       pills: [
         { key: "on", label: "On the payroll", icon: "ri-user-follow-line", color: "success", test: (e) => e.is_active },
         { key: "left", label: "Left", icon: "ri-user-unfollow-line", color: "secondary", test: (e) => !e.is_active },
-        { key: "mpesa", label: "Paid by M-Pesa", icon: "ri-smartphone-line", color: "success", test: (e) => e.pay_method === "mpesa" },
+        { key: "mpesa", label: "Paid by M-Pesa", icon: "ri-smartphone-line", color: "success", test: (e) => ["mpesa", "paybill", "till"].includes(e.pay_method) },
         { key: "bank", label: "Paid to a bank", icon: "ri-bank-line", color: "primary", test: (e) => e.pay_method === "bank" },
       ],
       sorts: [
@@ -113,7 +113,7 @@
       ],
       nonSortable: [4],
       empty: A.empty("ri-team-line", "Nobody on the payroll yet", "Add the people this place pays - staff, a caretaker, someone paid an allowance.", data.can.manage && !A.viewingBelow() ? '<button type="button" class="btn btn-primary" data-firstperson><i class="ri-user-add-line me-1"></i>Add a person</button>' : ""),
-      rowHtml: (e) => `<tr class="${e.is_active ? "" : "opacity-50"}" data-pills="${e.is_active ? "on" : "left"} ${e.pay_method}"><td data-order="${esc(e.name)}"><div class="fw-semibold">${esc(e.name)}${e.is_active ? "" : ' <span class="badge bg-secondary">Left</span>'}</div><div class="acc-sub">${esc(e.position || "")}${e.start_date ? ` · since ${A.day(e.start_date)}` : ""}</div></td><td class="d-none d-md-table-cell">${A.methodChip(e.pay_method, e.pay_method_label)}<div class="acc-sub mt-1">${esc(e.pay_to || "")}</div></td><td class="d-none d-lg-table-cell">${esc(e.kra_pin || "-")}</td><td class="text-end" data-order="${e.gross}"><strong>${A.money(e.gross)}</strong>${e.allowances.length ? `<div class="acc-sub">basic ${A.money(e.basic_pay)} + ${e.allowances.length} ${e.allowances.length === 1 ? "allowance" : "allowances"}</div>` : ""}</td><td class="text-end">${data.can.manage && !A.viewingBelow() ? `<button type="button" class="btn btn-sm btn-icon btn-outline-primary" data-person="${e.id}" aria-label="Change"><i class="ri-edit-line"></i></button>` : ""}</td></tr>`,
+      rowHtml: (e) => `<tr class="${e.is_active ? "" : "opacity-50"}" data-pills="${e.is_active ? "on" : "left"} ${e.pay_method}"><td data-order="${esc(e.name)}"><div class="fw-semibold">${esc(e.name)}${e.is_active ? "" : ' <span class="badge bg-secondary">Left</span>'}</div><div class="acc-sub">${esc(e.position || "")}${e.start_date ? ` · since ${A.day(e.start_date)}` : ""}</div></td><td class="d-none d-md-table-cell">${A.methodChip({ paybill: "mpesa", till: "mpesa" }[e.pay_method] || e.pay_method, e.pay_method_label)}<div class="acc-sub mt-1">${esc(e.pay_to || "")}</div></td><td class="d-none d-lg-table-cell">${esc(e.kra_pin || "-")}</td><td class="text-end" data-order="${e.gross}"><strong>${A.money(e.gross)}</strong>${e.allowances.length ? `<div class="acc-sub">basic ${A.money(e.basic_pay)} + ${e.allowances.length} ${e.allowances.length === 1 ? "allowance" : "allowances"}</div>` : ""}</td><td class="text-end">${data.can.manage && !A.viewingBelow() ? `<button type="button" class="btn btn-sm btn-icon btn-outline-primary" data-person="${e.id}" aria-label="Change"><i class="ri-edit-line"></i></button>` : ""}</td></tr>`,
     });
   }
 
@@ -157,7 +157,7 @@
       body: K.parts([
         { icon: "ri-user-line", title: "Who", body: `<div class="row g-2">${f("pnName", "Name", e?.name)}${f("pnPos", "Position", e?.position)}${f("pnPhone", "Phone", e?.phone, "tel")}${f("pnEmail", "Email", e?.email, "email")}${f("pnStart", "Started", e?.start_date, "date")}${f("pnEnd", "Left (if they have)", e?.end_date, "date")}</div>` },
         { icon: "ri-money-dollar-box-line", title: "Pay a month", body: `<div class="row g-2">${f("pnBasic", "Basic pay (KES)", e?.basic_pay || "", "text", "col-sm-6", ' inputmode="decimal"')}</div><div class="mt-2" id="pnAllow"></div><button type="button" class="btn btn-sm btn-outline-primary mt-1" id="pnAddAllow"><i class="ri-add-line me-1"></i>Add an allowance</button>` },
-        { icon: "ri-bank-card-line", title: "Paid by", body: `<div class="row g-2"><div class="col-sm-4"><select class="form-select" id="pnMethod">${Object.entries(METHOD).map(([k, v]) => `<option value="${k}"${(e?.pay_method || "mpesa") === k ? " selected" : ""}>${v}</option>`).join("")}</select></div>${f("pnTo", "", e?.pay_to, "text", "col-sm-8", ' placeholder="M-Pesa number, or bank and account" aria-label="Paid to"').replace('<label class="form-label" for="pnTo"></label>', "")}</div>` },
+        { icon: "ri-bank-card-line", title: "Paid by", hint: e?.pay_to && !e?.payee ? `Saved before as: ${esc(e.pay_to)}` : "Where their pay goes", body: W.payeeFields("pnTo", e?.payee || (e ? { method: e.pay_method } : { method: "mpesa" }), { optional: false }) },
         { icon: "ri-lock-line", title: "Private numbers", hint: "Kept encrypted; only the last four are ever shown", body: `<div class="row g-2">${secret("pnId", "ID number", e?.id_number)}${secret("pnKra", "KRA PIN", e?.kra_pin)}</div>${e ? `<label class="form-check form-switch mt-3 mb-0"><input class="form-check-input" type="checkbox" id="pnActive"${e.is_active ? " checked" : ""}><span class="form-check-label">On the payroll (off once they leave)</span></label>` : ""}` },
       ]),
       run: async () => {
@@ -171,8 +171,7 @@
           end_date: v("pnEnd"),
           basic_pay: n(v("pnBasic")),
           allowances: [...el.querySelectorAll("[data-allow]")].map((x) => ({ name: x.querySelector("[data-an]").value.trim(), amount: n(x.querySelector("[data-aa]").value) })).filter((a) => a.name || a.amount),
-          pay_method: el.querySelector("#pnMethod").value,
-          pay_to: v("pnTo"),
+          payee: W.readPayee(el, "pnTo"),
           id_number: v("pnId"),
           kra_pin: v("pnKra"),
           ...(e ? { is_active: el.querySelector("#pnActive").checked } : {}),
@@ -182,6 +181,7 @@
         return out;
       },
     });
+    W.wirePayee(el, "pnTo");
     el.querySelector(".modal-dialog").classList.add("modal-lg");
     const add = (a = {}) => {
       el.querySelector("#pnAllow").insertAdjacentHTML("beforeend", `<div class="row g-2 mb-2" data-allow><div class="col-7"><input type="text" class="form-control" data-an maxlength="60" placeholder="e.g. House" value="${esc(a.name || "")}"></div><div class="col-5"><div class="input-group"><span class="input-group-text">KES</span><input type="text" inputmode="decimal" class="form-control text-end" data-aa value="${a.amount || ""}"></div></div></div>`);
