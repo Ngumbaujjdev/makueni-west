@@ -74,6 +74,7 @@ class StaffTest extends TestCase
         $this->assertSame('Test Diocese', $setup['allowances'][0]['owner']['name']);
         $this->assertFalse($setup['allowances'][0]['can']['edit']);
         $this->postJson('/api/hr/setup/allowance', ['name' => 'Airtime', 'default_amount' => 500])->assertCreated();
+        $this->assertSame(['Caretaker'], array_column($setup['positions'], 'name'), 'a region\'s own jobs are not a church\'s to set up');
         // Positions meant for a region aren't offered at a church.
         $this->assertSame(['Caretaker'], array_column($this->getJson('/api/hr/options')->json('data.positions'), 'name'));
 
