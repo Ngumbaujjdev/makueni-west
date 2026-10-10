@@ -17,15 +17,16 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Payroll (docs/specs/accounting-spec.md, A7): the people a place pays, a
- * monthly run worked out with the statutory rates in Settings, approved
- * through the engine - which posts it (Dr salaries / Cr net pay payable, Cr
- * deductions payable) - then net pay paid to the staff and what was withheld
- * paid to each authority, each by a voucher already authorised.
+ * Payroll (docs/specs/accounting-spec.md, A7): the people a place pays and
+ * a monthly run - pay (basic + allowances) less any other deduction (a SACCO,
+ * a loan); the churches don't deduct PAYE, NSSF, SHIF or the Housing Levy.
+ * Approved through the engine, which posts it (Dr salaries / Cr net pay
+ * payable, Cr deductions payable for what was held back), then the staff are
+ * paid by one voucher already authorised.
  */
 final class Payroll
 {
-    public function __construct(private PayrollCalculator $calc, private Ledger $ledger, private Chart $chart, private BudgetBridge $bridge, private PaymentVouchers $vouchers, private ApprovalService $engine) {}
+    public function __construct(private Ledger $ledger, private Chart $chart, private BudgetBridge $bridge, private PaymentVouchers $vouchers, private ApprovalService $engine) {}
 
     // ------------------------------------------------------------ people
 
@@ -61,7 +62,6 @@ final class Payroll
             'pay_to' => $this->clean($data['pay_to'] ?? null, 150),
             'basic_pay' => round(max((float) ($data['basic_pay'] ?? 0), 0), 2),
             'allowances' => $allowances,
-            'statutory' => (bool) ($data['statutory'] ?? true),
             'is_active' => array_key_exists('is_active', $data) ? (bool) $data['is_active'] : ($e?->is_active ?? true),
         ];
         // Personal numbers: a value replaces the saved one; left blank, the saved one stays.
@@ -114,46 +114,35 @@ final class Payroll
     {
         return $this->worked([
             'employee_id' => $e->id, 'name' => $e->name, 'position' => $e->position, 'pay_method' => $e->pay_method, 'pay_to' => $e->pay_to,
-            'statutory' => $e->statutory, 'basic' => (float) $e->basic_pay, 'allowances' => $e->allowances ?? [], 'other' => $other, 'other_note' => $otherNote,
+            'basic' => (float) $e->basic_pay, 'allowances' => $e->allowances ?? [], 'other' => $other, 'other_note' => $otherNote,
         ]);
     }
 
-    /** The statutory figures and totals worked out (or, with $overrides, typed over). */
-    private function worked(array $s, ?array $overrides = null): array
+    /** Pay = basic + allowances; net = pay less any other deduction. */
+    private function worked(array $s): array
     {
         $gross = round((float) $s['basic'] + array_sum(array_map(fn ($a) => (float) $a['amount'], $s['allowances'] ?? [])), 2);
-        $c = $this->calc->compute($gross, (bool) $s['statutory']);
-        $manual = false;
-        foreach (['nssf', 'shif', 'ahl', 'paye'] as $k) {
-            if ($overrides !== null && array_key_exists($k, $overrides) && $overrides[$k] !== null && $overrides[$k] !== '' && round((float) $overrides[$k], 2) !== round($c[$k], 2)) {
-                $c[$k] = round(max((float) $overrides[$k], 0), 2);
-                $manual = true;
-            }
-        }
-        $total = round($c['nssf'] + $c['shif'] + $c['ahl'] + $c['paye'] + (float) $s['other'], 2);
-        if ($total > $gross) {
-            throw ValidationException::withMessages(['other' => ["{$s['name']}'s deductions come to more than their pay."]]);
+        $other = round(max((float) $s['other'], 0), 2);
+        if ($other > $gross) {
+            throw ValidationException::withMessages(['other' => ["{$s['name']}'s deduction comes to more than their pay."]]);
         }
 
-        return $s + [
-            'gross' => $gross, 'nssf' => $c['nssf'], 'shif' => $c['shif'], 'ahl' => $c['ahl'], 'taxable' => $c['taxable'], 'paye' => $c['paye'],
-            'total_deductions' => $total, 'net' => round($gross - $total, 2), 'employer_nssf' => $c['employer_nssf'], 'employer_ahl' => $c['employer_ahl'], 'manual' => $manual,
-        ];
+        return $s + ['gross' => $gross, 'total_deductions' => $other, 'net' => round($gross - $other, 2)];
     }
 
-    /** Change one person's pay in a draft: basic, allowances, other deductions, or a statutory figure typed over. */
+    /** Change one person's pay in a draft: basic, allowances, or the other deduction. */
     public function updateSlip(PayrollRun $run, Payslip $slip, array $data): Payslip
     {
         $this->assertDraft($run);
         $allowances = array_values(array_filter(array_map(fn ($a) => ['name' => mb_substr(trim((string) ($a['name'] ?? '')), 0, 60) ?: 'Allowance', 'amount' => round(max((float) ($a['amount'] ?? 0), 0), 2)], $data['allowances'] ?? $slip->allowances ?? []), fn ($a) => $a['amount'] > 0));
         $fields = $this->worked([
-            'name' => $slip->name, 'statutory' => $slip->statutory,
+            'name' => $slip->name,
             'basic' => round(max((float) ($data['basic'] ?? $slip->basic), 0), 2),
             'allowances' => $allowances,
             'other' => round(max((float) ($data['other'] ?? $slip->other), 0), 2),
             'other_note' => $this->clean($data['other_note'] ?? $slip->other_note, 150),
-        ], $data['overrides'] ?? null);
-        unset($fields['name'], $fields['statutory']);
+        ]);
+        unset($fields['name']);
         $slip->update($fields);
         $this->totals($run);
 
@@ -183,7 +172,7 @@ final class Payroll
         $this->totals($run);
     }
 
-    /** Put the worked-out figures back for everyone (what they are paid now, today's rates). */
+    /** Read everyone's pay again from what they are paid now (their other deduction stays). */
     public function recalculate(PayrollRun $run): PayrollRun
     {
         $this->assertDraft($run);
@@ -204,7 +193,6 @@ final class Payroll
             'gross' => round($s->sum(fn ($p) => (float) $p->gross), 2),
             'deductions' => round($s->sum(fn ($p) => (float) $p->total_deductions), 2),
             'net' => round($s->sum(fn ($p) => (float) $p->net), 2),
-            'employer' => round($s->sum(fn ($p) => (float) $p->employer_nssf + (float) $p->employer_ahl), 2),
         ]);
     }
 
@@ -267,21 +255,18 @@ final class Payroll
         }
     }
 
-    /** Dr salaries (gross + the employer's share) / Cr net pay payable / Cr deductions payable. */
+    /** Dr salaries (on the salaries budget line) / Cr net pay payable / Cr deductions payable for what was held back. */
     private function post(PayrollRun $run, ?User $by): Journal
     {
         $place = Territory::findOrFail($run->territory_id);
         $salaries = $this->standard('5000');
-        $line = $this->chart->budgetLineFor($place, $salaries->id)?->id;
         $date = min(date('Y-m-t', strtotime("{$run->month}-01")), now()->toDateString());
-        $employer = round((float) $run->employer, 2);
-        $lines = [['account_id' => $salaries->id, 'debit' => (float) $run->gross, 'budget_line_id' => $line, 'memo' => 'Gross pay']];
-        if ($employer > 0) {
-            $lines[] = ['account_id' => $salaries->id, 'debit' => $employer, 'budget_line_id' => $line, 'memo' => 'Employer NSSF and Housing Levy'];
-        }
-        $lines[] = ['account_id' => $this->chart->account('net_pay')->id, 'credit' => (float) $run->net, 'memo' => 'Net pay'];
-        if ((float) $run->deductions + $employer > 0) {
-            $lines[] = ['account_id' => $this->chart->account('payroll_deductions')->id, 'credit' => round((float) $run->deductions + $employer, 2), 'memo' => 'PAYE, NSSF, SHIF, Housing Levy and other deductions'];
+        $lines = [
+            ['account_id' => $salaries->id, 'debit' => (float) $run->gross, 'budget_line_id' => $this->chart->budgetLineFor($place, $salaries->id)?->id, 'memo' => 'Pay'],
+            ['account_id' => $this->chart->account('net_pay')->id, 'credit' => (float) $run->net, 'memo' => 'Net pay'],
+        ];
+        if ((float) $run->deductions > 0) {
+            $lines[] = ['account_id' => $this->chart->account('payroll_deductions')->id, 'credit' => (float) $run->deductions, 'memo' => 'Held from pay (SACCO, loans)'];
         }
         $journal = $this->ledger->post($place, [
             'doc_type' => 'payroll', 'date' => $date, 'narration' => 'Payroll for '.$run->label(), 'source_type' => 'payroll_run', 'source_id' => $run->id,
@@ -310,54 +295,31 @@ final class Payroll
 
     // ------------------------------------------------------------ paying
 
-    /** What each payment of a run comes to: net, and each authority (both shares where the employer pays too). @return array<string, float> */
-    public function amounts(PayrollRun $run): array
+    /** Pay the staff: one voucher, a line per person - already authorised by whoever approved the run. */
+    public function pay(PayrollRun $run, User $user, int $payFromAccountId): PaymentVoucher
     {
-        $s = $run->payslips()->get();
-        $sum = fn ($f) => round($s->sum($f), 2);
-
-        return [
-            'net' => $sum(fn ($p) => (float) $p->net),
-            'paye' => $sum(fn ($p) => (float) $p->paye),
-            'nssf' => $sum(fn ($p) => (float) $p->nssf + (float) $p->employer_nssf),
-            'shif' => $sum(fn ($p) => (float) $p->shif),
-            'ahl' => $sum(fn ($p) => (float) $p->ahl + (float) $p->employer_ahl),
-        ];
-    }
-
-    /** Pay net pay (one voucher, a line per person) or remit one authority's deductions - a voucher already authorised. */
-    public function pay(PayrollRun $run, User $user, string $kind, int $payFromAccountId): PaymentVoucher
-    {
-        if (! array_key_exists($kind, PayrollPayment::KINDS)) {
-            throw ValidationException::withMessages(['kind' => ['Pick what is paid.']]);
-        }
-
-        return DB::transaction(function () use ($run, $user, $kind, $payFromAccountId) {
+        return DB::transaction(function () use ($run, $user, $payFromAccountId) {
             $run = PayrollRun::whereKey($run->id)->lockForUpdate()->firstOrFail();
             if (! in_array($run->status, ['posted', 'paid'], true)) {
                 throw ValidationException::withMessages(['run' => ['Only an approved payroll is paid.']]);
             }
-            if ($this->openPayment($run, $kind)) {
-                throw ValidationException::withMessages(['kind' => [PayrollPayment::KINDS[$kind][0].' already has a voucher.']]);
+            if ($this->openPayment($run)) {
+                throw ValidationException::withMessages(['run' => ['The staff already have a voucher for this payroll.']]);
             }
-            $amount = $this->amounts($run)[$kind];
-            if ($amount <= 0) {
-                throw ValidationException::withMessages(['kind' => ['There is nothing to pay for '.PayrollPayment::KINDS[$kind][0].'.']]);
+            if ((float) $run->net <= 0) {
+                throw ValidationException::withMessages(['run' => ['There is nothing to pay.']]);
             }
             $place = Territory::findOrFail($run->territory_id);
-            $payment = PayrollPayment::create(['payroll_run_id' => $run->id, 'kind' => $kind, 'amount' => $amount]);
-            $account = $kind === 'net' ? $this->chart->account('net_pay') : $this->chart->account('payroll_deductions');
-            $lines = $kind === 'net'
-                ? $run->payslips()->where('net', '>', 0)->get()->map(fn ($p) => ['account_id' => $account->id, 'amount' => (float) $p->net, 'description' => mb_substr($p->name.($p->pay_to ? ' - '.Employee::METHODS[$p->pay_method].' '.$p->pay_to : ''), 0, 255)])->all()
-                : [['account_id' => $account->id, 'amount' => $amount, 'description' => PayrollPayment::KINDS[$kind][0].' for '.$run->label()]];
+            $payment = PayrollPayment::create(['payroll_run_id' => $run->id, 'kind' => 'net', 'amount' => (float) $run->net]);
+            $account = $this->chart->account('net_pay');
             $pv = $this->vouchers->prepareAuthorised($place, $user, [
                 'date' => now()->toDateString(),
-                'payee_name' => $kind === 'net' ? 'Staff - payroll '.$run->label() : PayrollPayment::KINDS[$kind][1],
+                'payee_name' => 'Staff - payroll '.$run->label(),
                 'pay_from_account_id' => $payFromAccountId,
-                'narration' => ($kind === 'net' ? 'Net pay' : PayrollPayment::KINDS[$kind][0]).' - payroll for '.$run->label(),
+                'narration' => 'Net pay - payroll for '.$run->label(),
                 'purpose' => 'payroll',
                 'payroll_payment_id' => $payment->id,
-                'lines' => $lines,
+                'lines' => $run->payslips()->where('net', '>', 0)->get()->map(fn ($p) => ['account_id' => $account->id, 'amount' => (float) $p->net, 'description' => mb_substr($p->name.($p->pay_to ? ' - '.Employee::METHODS[$p->pay_method].' '.$p->pay_to : ''), 0, 255)])->all(),
             ], $run->approved_by, 'Payroll for '.$run->label().', approved');
             $payment->update(['payment_voucher_id' => $pv->id]);
 
@@ -365,13 +327,14 @@ final class Payroll
         });
     }
 
-    private function openPayment(PayrollRun $run, string $kind): ?PayrollPayment
+    /** The staff's voucher, unless it was cancelled. */
+    public function openPayment(PayrollRun $run): ?PayrollPayment
     {
-        return PayrollPayment::where('payroll_run_id', $run->id)->where('kind', $kind)
+        return PayrollPayment::with('voucher')->where('payroll_run_id', $run->id)
             ->whereHas('voucher', fn ($q) => $q->where('status', '!=', 'cancelled'))->first();
     }
 
-    /** A voucher of a run was paid, its payment reversed or cancelled: the run is paid once net pay and every authority are. */
+    /** Its voucher was paid, its payment reversed or the voucher cancelled: the run is paid while that voucher is. */
     public function voucherChanged(PaymentVoucher $pv): void
     {
         $payment = PayrollPayment::find($pv->payroll_payment_id);
@@ -382,12 +345,9 @@ final class Payroll
             $payment->delete();
         }
         $run = PayrollRun::find($payment->payroll_run_id);
-        if (! $run || ! in_array($run->status, ['posted', 'paid'], true)) {
-            return;
+        if ($run && in_array($run->status, ['posted', 'paid'], true)) {
+            $run->update(['status' => $pv->status === 'paid' ? 'paid' : 'posted']);
         }
-        $paid = collect($this->amounts($run))->every(fn ($amount, $kind) => $amount <= 0
-            || PayrollPayment::where('payroll_run_id', $run->id)->where('kind', $kind)->whereHas('voucher', fn ($q) => $q->where('status', 'paid'))->exists());
-        $run->update(['status' => $paid ? 'paid' : 'posted']);
     }
 
     /** Each person's payment reference (e.g. the M-Pesa code), once net pay is paid. */

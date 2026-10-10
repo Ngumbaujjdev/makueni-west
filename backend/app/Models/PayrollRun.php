@@ -9,8 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A month's payroll at a place (docs/specs/accounting-spec.md, A7): drafted,
- * approved through the engine (which posts it), then paid - net pay to the
- * staff and the deductions to each authority.
+ * approved through the engine (which posts it), then the staff paid.
  */
 class PayrollRun extends Model implements \OwenIt\Auditing\Contracts\Auditable, Approvable
 {
@@ -18,9 +17,9 @@ class PayrollRun extends Model implements \OwenIt\Auditing\Contracts\Auditable, 
 
     public const STATUSES = ['draft' => 'Draft', 'submitted' => 'Waiting for approval', 'returned' => 'Sent back', 'posted' => 'Approved - to pay', 'paid' => 'Paid', 'cancelled' => 'Cancelled'];
 
-    protected $fillable = ['territory_id', 'month', 'status', 'gross', 'deductions', 'net', 'employer', 'journal_id', 'prepared_by', 'approved_by', 'approved_at', 'decision_note'];
+    protected $fillable = ['territory_id', 'month', 'status', 'gross', 'deductions', 'net', 'journal_id', 'prepared_by', 'approved_by', 'approved_at', 'decision_note'];
 
-    protected $casts = ['gross' => 'decimal:2', 'deductions' => 'decimal:2', 'net' => 'decimal:2', 'employer' => 'decimal:2', 'approved_at' => 'datetime'];
+    protected $casts = ['gross' => 'decimal:2', 'deductions' => 'decimal:2', 'net' => 'decimal:2', 'approved_at' => 'datetime'];
 
     public function payslips(): HasMany
     {
@@ -68,15 +67,14 @@ class PayrollRun extends Model implements \OwenIt\Auditing\Contracts\Auditable, 
         $this->loadMissing(['payslips', 'preparer']);
 
         return [
-            'facts' => [
+            'facts' => array_values(array_filter([
                 ['Month', $this->label()],
                 ['People', (string) $this->payslips->count()],
-                ['Gross pay', 'KES '.number_format((float) $this->gross, 2)],
-                ['Deductions', 'KES '.number_format((float) $this->deductions, 2)],
+                ['Pay', 'KES '.number_format((float) $this->gross, 2)],
+                (float) $this->deductions > 0 ? ['Other deductions (SACCO, loans)', 'KES '.number_format((float) $this->deductions, 2)] : null,
                 ['Net pay', 'KES '.number_format((float) $this->net, 2)],
-                ['Employer NSSF and Housing Levy', 'KES '.number_format((float) $this->employer, 2)],
                 ['Prepared by', $this->preparer?->full_name],
-            ],
+            ])),
             // Gross per person, so the lines add up to the amount approved; net beside it.
             'lines' => $this->payslips->map(fn ($p) => [$p->name.($p->position ? " - {$p->position}" : '').' (net '.number_format((float) $p->net, 2).')', (float) $p->gross])->values()->all(),
             'media' => [],
