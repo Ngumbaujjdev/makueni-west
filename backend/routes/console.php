@@ -76,3 +76,6 @@ Schedule::command('facilities:duty-reminders')->hourlyAt(0)->timezone('Africa/Na
 
 // Approvals (docs/specs/accounting-spec.md, A4): remind late approvers, then pass it up.
 Schedule::command('approvals:escalate')->hourly()->withoutOverlapping();
+// Online giving (A10a): finish gifts Paystack hasn't told us about, and record its payouts.
+Schedule::command('payments:reconcile')->everyTenMinutes()->withoutOverlapping();
+Schedule::command('payments:settlements')->dailyAt('07:00')->withoutOverlapping();

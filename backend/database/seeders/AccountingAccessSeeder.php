@@ -32,6 +32,7 @@ class AccountingAccessSeeder extends Seeder
         'accounts' => ['accounts.php', 'Cash & bank', 'Cash at hand, the bank and M-Pesa with their balances; the chart of accounts', null],
         'collections' => ['collections.php', 'Collections', 'Sunday collections: counted by one, confirmed by another, receipted per fund, banked', ['church']],
         'receipts' => ['receipts.php', 'Receipts', 'Write official receipts for money received - tithes, offerings, contributions', null],
+        'giving' => ['giving.php', 'Online giving', 'Gifts made on our giving page - by M-Pesa or card - and the link to share', null],
         'paybill' => ['paybill.php', 'Paybill', 'The diocese M-Pesa paybill: giving by church code, what waits to be sorted, monthly settlements', null],
         'requisitions' => ['requisitions.php', 'Requisitions', 'Ask for money - to pay, to buy, or an advance - approved, then paid', null],
         'approvals' => ['approvals.php', 'Approvals', 'What waits for my approval, what I asked for, and who I hand it to while away', null],
@@ -44,6 +45,7 @@ class AccountingAccessSeeder extends Seeder
         'reconciliation' => ['reconciliation.php', 'Reconciliation', 'Count the cash, match the bank and M-Pesa to their statements - and the places below', null],
         'close' => ['close.php', 'Month-end close', 'Close each month once every account is proven; the level above reopens', null],
         'documents' => ['documents.php', 'All documents', 'Every receipt, payment, transfer and journal, newest first', null],
+        'gateways' => ['gateways.php', 'Gateways', 'Each church\'s Paystack for online giving, and the payouts recorded', ['diocese']],
         'chart' => ['chart.php', 'Chart of accounts', 'The standard accounts every church, region and diocese posts to', ['diocese']],
         'rules' => ['approval-rules.php', 'Approval rules', 'Who approves what, by level and amount, and who it goes to when late', ['diocese']],
     ];
@@ -63,6 +65,7 @@ class AccountingAccessSeeder extends Seeder
             'accounting.procurement.read' => 'procurement',
             'accounting.remittances.read' => 'remittances',
             'accounting.paybill.read' => 'paybill',
+            'accounting.giving.read' => 'giving',
         ],
         'receipt' => ['accounting.receipts.create' => 'receipts'],
         'prepare' => ['accounting.payments.prepare' => 'payments'],
@@ -85,6 +88,7 @@ class AccountingAccessSeeder extends Seeder
         'payroll' => ['accounting.payroll.manage' => 'payroll', 'accounting.payroll.read' => 'payroll'],
         'payrollread' => ['accounting.payroll.read' => 'payroll'],
         'paybill' => ['accounting.paybill.manage' => 'paybill', 'accounting.paybill.read' => 'paybill'],
+        'gateways' => ['accounting.gateways.manage' => 'gateways'],
     ];
 
     /** What every role at a level gets: their approvals, and asking for money. */
@@ -111,7 +115,7 @@ class AccountingAccessSeeder extends Seeder
             'Regional Committee Member' => ['read', 'below'],
         ],
         'diocese' => [
-            'Diocese Finance Officer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'chart', 'below', 'reconcile', 'petty', 'close', 'reopen', 'rules', 'procure', 'payroll', 'paybill'],
+            'Diocese Finance Officer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'chart', 'below', 'reconcile', 'petty', 'close', 'reopen', 'rules', 'procure', 'payroll', 'paybill', 'gateways'],
             'Diocese Treasurer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'below', 'reconcile', 'petty', 'close', 'reopen', 'procure', 'payroll', 'paybill'],
             'Bishop' => ['read', 'authorise', 'below', 'payrollread'],
             'Diocese Administrator' => ['read', 'prepare', 'below', 'procure'],

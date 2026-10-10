@@ -327,7 +327,7 @@ final class Paybill
     // ------------------------------------------------------------ ask to pay (STK)
 
     /** Send the M-Pesa prompt to a phone, with the place's account number filled in. */
-    public function ask(Territory $place, User $user, string $phone, float $amount, string $purpose): MpesaRequest
+    public function ask(Territory $place, ?User $user, string $phone, float $amount, string $purpose): MpesaRequest
     {
         if (! Daraja::validPhone($phone)) {
             throw ValidationException::withMessages(['phone' => ['Enter a Safaricom number, e.g. 0712 345 678.']]);
@@ -341,7 +341,7 @@ final class Paybill
         }
         $daraja = Daraja::diocese();
         $ref = self::code($place).self::SUFFIX[$purpose];
-        $request = MpesaRequest::create(['territory_id' => $place->id, 'account_ref' => $ref, 'amount' => $amount, 'phone' => Daraja::phone($phone), 'shortcode' => $daraja->shortcode, 'requested_by' => $user->id]);
+        $request = MpesaRequest::create(['territory_id' => $place->id, 'account_ref' => $ref, 'amount' => $amount, 'phone' => Daraja::phone($phone), 'shortcode' => $daraja->shortcode, 'requested_by' => $user?->id]);
         try {
             $out = $daraja->stkPush($phone, $amount, $ref, mb_substr(self::PURPOSES[$purpose][0], 0, 13), $this->callbackUrl('stk'));
         } catch (Throwable $e) {
@@ -363,6 +363,7 @@ final class Paybill
         if ((int) ($callback['ResultCode'] ?? -1) !== 0) {
             if ($request->status === 'pending') {
                 $request->update(['status' => 'failed', 'result' => mb_substr((string) ($callback['ResultDesc'] ?? 'Not paid'), 0, 255)]);
+                app(Giving::class)->mpesaAnswered($request->fresh(), null);
             }
 
             return null;
@@ -380,6 +381,7 @@ final class Paybill
             'raw' => $callback,
         ]);
         $request->update(['status' => 'paid', 'result' => 'Paid', 'mpesa_payment_id' => $payment->id]);
+        app(Giving::class)->mpesaAnswered($request->fresh(), $payment);
 
         return $payment;
     }
@@ -430,7 +432,7 @@ final class Paybill
         $base = fn () => JournalLine::query()->join('journals', 'journals.id', '=', 'journal_lines.journal_id')
             ->where('journal_lines.territory_id', $diocese->id)->where('journal_lines.account_id', $held)->where('journal_lines.for_territory_id', $place->id);
         // Paybill money in for the place up to the month's end (a reversal of one counts when it reverses)...
-        $in = (float) $base()->where('journals.source_type', 'mpesa_payment')->where('journal_lines.date', '<=', $end)->selectRaw('COALESCE(SUM(journal_lines.credit - journal_lines.debit), 0) as v')->value('v');
+        $in = (float) $base()->whereIn('journals.source_type', ['mpesa_payment', 'gift'])->where('journal_lines.date', '<=', $end)->selectRaw('COALESCE(SUM(journal_lines.credit - journal_lines.debit), 0) as v')->value('v');
         // ...less everything taken from it - netted shares, settlements paid, and their reversals - whenever it happened.
         $out = (float) $base()->whereIn('journals.source_type', ['paybill_settlement', 'payment_voucher'])->selectRaw('COALESCE(SUM(journal_lines.debit - journal_lines.credit), 0) as v')->value('v');
         $waiting = (float) PaybillSettlement::where('territory_id', $place->id)->where('status', 'prepared')->sum('net');

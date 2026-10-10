@@ -103,6 +103,8 @@ class AppServiceProvider extends ServiceProvider
             'mpesa_payment' => 'App\Models\MpesaPayment',
             'mpesa_request' => 'App\Models\MpesaRequest',
             'paybill_settlement' => 'App\Models\PaybillSettlement',
+            'gift' => 'App\Models\Gift',
+            'payment_channel' => 'App\Models\PaymentChannel',
 
             // Fiscal period models
             'fiscal_year' => 'App\Models\FiscalYear',

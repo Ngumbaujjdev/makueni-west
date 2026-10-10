@@ -322,6 +322,18 @@ return [
             'sentence' => 'The diocese M-Pesa paybill members pay into with their church\'s code as the account number. Register its addresses with Safaricom from Accounting, Paybill.',
         ],
 
+        // Online giving (docs/specs/accounting-spec.md, A10) - Paystack for the giving page.
+        'giving' => [
+            'label' => 'Online giving',
+            'icon' => 'ri-hand-heart-line',
+            'colour' => 'pink',
+            'group' => 'money',
+            'levels' => ['diocese'],
+            'kind' => 'form',
+            'grants' => ['update' => ['diocese' => ['Diocese Finance Officer', 'Diocese Treasurer']]],
+            'sentence' => 'The diocese\'s Paystack account behind every church\'s giving page. Each church\'s subaccount is set up under Accounting, Gateways.',
+        ],
+
         // Existing settings pages, shown inside the hub (S3). 'permission' is
         // the page's own read permission ("{level}." is added); 'absorbs' is
         // the page's menu row, which SettingsHubSeeder moves under Settings.
@@ -476,6 +488,13 @@ return [
         'paybill.safaricom_only' => ['section' => 'paybill', 'card' => 'Where Safaricom reaches us', 'label' => 'Accept payments only from Safaricom\'s published addresses', 'type' => 'switch', 'default' => false, 'levels' => ['diocese'], 'help' => 'Leave off behind a proxy that hides the caller\'s address.'],
         'paybill.default_purpose' => ['section' => 'paybill', 'card' => 'Payments', 'label' => 'When the account number has no purpose, count it as', 'type' => 'select', 'options' => ['O' => 'Offering', 'T' => 'Tithe', 'TH' => 'Thanksgiving'], 'rules' => ['required'], 'default' => 'O', 'levels' => ['diocese']],
         'paybill.thank_sms' => ['section' => 'paybill', 'card' => 'Payments', 'label' => 'SMS the giver a thank-you with the receipt number', 'type' => 'switch', 'default' => true, 'levels' => ['diocese'], 'help' => 'Sent from the church\'s own sender where it has one.'],
+
+        // Online giving (A10) - read by App\Services\Payments\Paystack and App\Services\Accounting\Giving.
+        'giving.paystack_mode' => ['section' => 'giving', 'card' => 'Paystack', 'label' => 'Paystack', 'type' => 'select', 'options' => ['test' => 'Test - no real money', 'live' => 'Live - real money'], 'rules' => ['required'], 'default' => 'test', 'levels' => ['diocese'], 'used_by' => 'The giving page'],
+        'giving.paystack_secret' => ['section' => 'giving', 'card' => 'Paystack', 'label' => 'Secret key', 'type' => 'secret', 'secret' => true, 'rules' => ['nullable', 'string', 'max:200', 'regex:/^sk_(test|live)_/'], 'default' => null, 'levels' => ['diocese'], 'help' => 'From Paystack, Settings, API keys. It also checks every webhook - set Paystack\'s webhook to this system\'s /api/payments/paystack/webhook.'],
+        'giving.paystack_public' => ['section' => 'giving', 'card' => 'Paystack', 'label' => 'Public key', 'rules' => ['nullable', 'string', 'max:200', 'regex:/^pk_(test|live)_/'], 'default' => null, 'levels' => ['diocese']],
+        'giving.receipts' => ['section' => 'giving', 'card' => 'Givers', 'label' => 'Send the giver a receipt by SMS (and email when they gave one)', 'type' => 'switch', 'default' => true, 'levels' => ['diocese']],
+        'giving.page_note' => ['section' => 'giving', 'card' => 'Givers', 'label' => 'A line on every giving page', 'rules' => ['nullable', 'string', 'max:160'], 'default' => '"Each of you should give what you have decided in your heart to give." 2 Corinthians 9:7', 'levels' => ['diocese'], 'span' => 12],
 
         // Security (S4b) - read by User::verifyPin, the password rules in AuthController and Sanctum.
         'security.pin_attempts' => ['section' => 'security', 'card' => 'Employee code + PIN', 'label' => 'Wrong PINs before it locks', 'type' => 'number', 'rules' => ['required', 'integer', 'between:1,10'], 'default' => 3, 'levels' => ['diocese'], 'used_by' => 'Sign-in with employee code and PIN'],

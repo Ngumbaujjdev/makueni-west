@@ -130,8 +130,8 @@ final class Documents
         if ($journal->source_type === 'collection') {
             throw ValidationException::withMessages(['journal' => ['This is a Sunday collection - open it under Collections to reverse it.']]);
         }
-        if (in_array($journal->source_type, ['mpesa_payment', 'paybill_settlement'], true)) {
-            throw ValidationException::withMessages(['journal' => ['This came through the diocese paybill - it is changed from Accounting, Paybill.']]);
+        if (in_array($journal->source_type, ['mpesa_payment', 'paybill_settlement', 'gift', 'paystack_settlement'], true)) {
+            throw ValidationException::withMessages(['journal' => ['This came through the paybill or online giving - it is changed from Accounting, Paybill or Online giving.']]);
         }
         if ($journal->source_type === 'payroll_run') {
             throw ValidationException::withMessages(['journal' => ['This posts a payroll - a posted payroll is corrected next month or with a journal.']]);

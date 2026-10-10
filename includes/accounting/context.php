@@ -34,6 +34,8 @@ function accountingPageContext(string $level, string $page): array
         'remittances' => 'remittances.read',
         'payroll' => 'payroll.read',
         'paybill' => 'paybill.read',
+        'giving' => 'giving.read',
+        'gateways' => 'gateways.manage',
     ][$page] ?? 'books.read'));
     $role = getCurrentRole() ?? [];
     $user = getAuthUser() ?? [];
@@ -69,6 +71,7 @@ function accountingPageContext(string $level, string $page): array
             'procure' => $can('procurement.manage'),
             'payroll' => $can('payroll.manage'),
             'paybill' => $level === 'diocese' && $can('paybill.manage'),
+            'gateways' => $level === 'diocese' && $can('gateways.manage'),
         ],
     ];
 }

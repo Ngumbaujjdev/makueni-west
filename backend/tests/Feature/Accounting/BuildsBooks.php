@@ -44,7 +44,7 @@ trait BuildsBooks
     protected function perms(string $level, array $abilities): array
     {
         $map = [
-            'read' => ['accounting.books.read', 'accounting.accounts.read', 'accounting.cashbook.read', 'accounting.payments.read', 'accounting.documents.read', 'accounting.remittances.read', 'accounting.paybill.read'],
+            'read' => ['accounting.books.read', 'accounting.accounts.read', 'accounting.cashbook.read', 'accounting.payments.read', 'accounting.documents.read', 'accounting.remittances.read', 'accounting.paybill.read', 'accounting.giving.read'],
             'receipt' => ['accounting.receipts.create'],
             'prepare' => ['accounting.payments.prepare'],
             'authorise' => ['accounting.payments.authorise'],
@@ -66,6 +66,7 @@ trait BuildsBooks
             'payroll' => ['accounting.payroll.manage', 'accounting.payroll.read'],
             'payrollread' => ['accounting.payroll.read'],
             'paybill' => ['accounting.paybill.manage', 'accounting.paybill.read'],
+            'gateways' => ['accounting.gateways.manage'],
         ];
 
         return collect($abilities)->flatMap(fn ($a) => array_map(fn ($p) => "{$level}.{$p}", $map[$a]))->all();
