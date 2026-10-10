@@ -121,6 +121,9 @@ final class Documents
     /** Reverse a document; anything it put into a budget comes off too. */
     public function reverse(Journal $journal, User $user, string $reason, ?string $date = null): Journal
     {
+        if ($journal->source_type === 'accounting_year') {
+            throw ValidationException::withMessages(['journal' => ['This closes a year - reopen the year instead.']]);
+        }
         if ($journal->source_type === 'budget_entry') {
             throw ValidationException::withMessages(['journal' => ['This came from Budgets - change or remove the entry there and the books follow.']]);
         }

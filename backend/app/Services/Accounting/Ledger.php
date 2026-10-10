@@ -34,7 +34,10 @@ final class Ledger
     public function post(Territory $place, array $head, array $lines, ?User $by, bool $allowInactive = false): Journal
     {
         $date = CarbonImmutable::parse($head['date'])->startOfDay();
-        $this->assertOpen($place, $date);
+        // A year's closing journal (and its reversal on reopening) is dated 31 December, inside the closed months (A9).
+        if (($head['source_type'] ?? null) !== 'accounting_year') {
+            $this->assertOpen($place, $date);
+        }
         $clean = $this->checkLines($place, $lines, $allowInactive);
         $total = array_sum(array_column($clean, 'debit_cents'));
 

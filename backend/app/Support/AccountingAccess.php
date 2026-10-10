@@ -163,6 +163,23 @@ final class AccountingAccess
             || (PlaceAccess::isOwn($user, $place) && $place->territory_type->value === 'diocese');
     }
 
+    /**
+     * May the user see this place's statements with every place below it
+     * added together? Whoever reads the books below from here.
+     */
+    public static function canConsolidate(?User $user, Territory $place): bool
+    {
+        if (! $user || $place->territory_type->value === 'church') {
+            return false;
+        }
+        if ($user->hasGlobalAccess()) {
+            return true;
+        }
+        $acting = PlaceAccess::acting($user);
+
+        return $acting && self::canAt($user, $acting, 'below') && (PlaceAccess::isOwn($user, $place) || PlaceAccess::isBelow($user, $place));
+    }
+
     /** Everything the user may do here, for the page to offer. */
     public static function abilities(?User $user, Territory $place): array
     {

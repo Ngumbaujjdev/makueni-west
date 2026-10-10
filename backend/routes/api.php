@@ -710,6 +710,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('periods', [$per, 'index']);
         Route::post('periods/close', [$per, 'close']);
         Route::post('periods/reopen', [$per, 'reopen']);
+        // A9 - the financial statements and the year-end close.
+        $stm = \App\Http\Controllers\Api\Accounting\StatementController::class;
+        Route::get('statements/{kind}', [$stm, 'show'])->whereIn('kind', \App\Http\Controllers\Api\Accounting\StatementController::KINDS);
+        Route::get('years', [$stm, 'years']);
+        Route::post('years/{year}/close', [$stm, 'close'])->whereNumber('year');
+        Route::post('years/{year}/reopen', [$stm, 'reopen'])->whereNumber('year');
         // A3 - Sunday collections (churches).
         $col = \App\Http\Controllers\Api\Accounting\CollectionController::class;
         Route::get('collections', [$col, 'index']);

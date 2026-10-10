@@ -674,6 +674,41 @@ API (under `/api/accounting`): `GET transactions?from&to&status&method&source&q&
 - **Settings, Paybill, "Checking payments with Safaricom"**: the API operator's name, its **security credential** (generated on the Daraja portal) - or its password with Safaricom's certificate uploaded to `storage/app/daraja/{sandbox|production}.cer` - and the paybill's nominated phone. C2B registration falls back to v2 when v1 refuses the app.
 - `payment_claims`: code, place, purpose, giver, amount, status (checking | waiting | confirmed | failed), result, Safaricom's conversation ids, the payment it became.
 
+## A9 - Financial statements and the year-end close (built 2026-10-10)
+
+**The statements** (`App\Services\Accounting\Statements`) are read straight from the journal lines, for one place's books or - **consolidated** - for a region or the diocese with every place below it:
+
+| Kind | What it shows | Ties to |
+|---|---|---|
+| `ie` - Income and expenditure | Each income and expense account for a period, a column per fund, beside the same period last year; the surplus per fund | the funds statement's surplus |
+| `position` - Financial position | What we own, what we owe, and each fund's balance (its own account plus income less spending not yet closed into it), at a date and a year earlier | net assets = total funds |
+| `receipts-payments` - Receipts and payments | Cash, bank and M-Pesa at the start; for every document that moved money through one, its other lines (credits received, debits paid); at the end. Money moved between our own accounts is neither | start + received - paid = end |
+| `funds` - Changes in funds | Each fund: at the start, income, spending, transfers & opening entries (postings straight to a fund's account), at the end | the position's funds |
+| `trial-balance` | Every account at a date; `before_close` leaves out the closing journal of that date's year | debits = credits |
+
+- **Income and expenditure never counts a closing journal** (or its reversal): closing moves the surplus into the funds; it isn't income or spending. Balances (position, funds, trial balance) count everything.
+- **Consolidated - eliminations.** A line naming another place of the set (`for_territory_id`) is left out: the share sent up (5700 / 5710 at the church, 4100 at the place above), support sent down (the expense, 4110), and paybill money the diocese holds for a church (2400 at the diocese, 1310 at the church). The paying side of a remittance's voucher now names where it went (the receiving side always did); a migration tagged the past ones.
+  - **Money on its way** - paid by one place, not yet confirmed by the other - is one line, "Money on its way between places" (a payment line in receipts and payments), so the statements still balance.
+  - A place's own accounts (its bank, its M-Pesa) show under their standard header when consolidated.
+  - Income and expenditure lists what was taken out ("eliminated").
+- **Who:** any statement for whoever reads the place's books; **consolidated** for whoever reads the books below (`accounting.below.read`) - not a church.
+
+**The year-end close** (`App\Services\Accounting\Years`, `accounting_years`):
+- A year closes when it has ended, **every month from its first posting to December is closed**, and the year before (if it had postings) is closed.
+- Closing posts one **closing journal** (`doc_type` `closing`, number `.../YEC/2025/000001`, `source_type` `accounting_year`) dated 31 December: each income and expense account emptied per fund, each fund's net into its own account (General 3000, Building 3100, KYS 3200, Conference 3300). It is posted into the closed December - the one journal that may be.
+- **Reopen** - the level above, with a reason (`accounting.periods.reopen`, as for months): the closing journal is reversed on 31 December; the months stay closed. Later closed years are reopened first.
+- A month of a closed year can't be reopened alone ("reopen the year first"); the closing journal can't be reversed by hand.
+- Who closes: `accounting.periods.close` at the place.
+
+**API** (under `/api/accounting`, `?territory_id=` for a place below):
+- `GET statements/{ie|position|receipts-payments|funds|trial-balance}?from&to | at &consolidated=1 &before_close=1` - `from` defaults to 1 January of `to`'s year, `to` and `at` to today. Every reply carries `place`, `consolidated`, `places` (how many added together), `can.consolidate` and `year_closed`.
+- `GET years` - `{place, can: {close, reopen}, years: [{year, status, surplus, closing_journal: {id, number}, closed_by, closed_at, reopened_at, reopen_reason, blockers: [..]}]}`.
+- `POST years/{year}/close`; `POST years/{year}/reopen {reason}`.
+
+**Reports** (PDF / Excel, inputs `dates` + `consolidated`, grouped `statements`): `accounting.statement.ie`, `.position` (at `date_to`), `.receipts-payments`, `.funds`, and **`accounting.statement.audit-pack`** - behind a cover, all four statements, the trial balance before the close, each month's close and each money account's last signed-off reconciliation, with signature boxes for the treasurer, chairperson and auditor. `accounting.trial_balance` gains `consolidated` and `before_close`.
+
+**Menu:** Finance > Accounting > **Statements** (`statements.php`, after Month-end close), permission `{level}.accounting.statements.read` for whoever reads the books.
+
 ## Later phases (outline - specified when built)
 - **A2 Reconciliation:** built 2026-10-09, see "A2 - Reconciliation" above.
 - **A3 Sunday collections:** built 2026-10-09, see "A3 - Sunday collections" above.
@@ -682,8 +717,7 @@ API (under `/api/accounting`): `GET transactions?from&to&status&method&source&q&
 - **A6 Between levels:** built 2026-10-10, see "A6 - Remittances between levels" above.
 - **A7 Payroll:** built 2026-10-10, see "A7 - Payroll" above.
 - **A8 The diocese M-Pesa paybill:** built 2026-10-10, see "A8 - The diocese M-Pesa paybill" above.
-- **A9 Financial statements:** I&E, financial position, receipts & payments,
-  changes in funds, consolidation, year-end close, the audit pack.
+- **A9 Financial statements:** built 2026-10-10, see "A9 - Financial statements and the year-end close" above.
 - **A10 Church gateways:** built 2026-10-10, see "A10a", "A10b" and "A10c" above.
 
 ## Demo data (2026-10-10)
