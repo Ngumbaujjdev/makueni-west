@@ -23,7 +23,7 @@
   let period = new URLSearchParams(window.location.search).get("period") || "30";
   let placeId = Number(new URLSearchParams(window.location.search).get("place")) || null;
 
-  const ST = { paid: ["success", "ri-checkbox-circle-line"], pending: ["warning", "ri-time-line"], failed: ["danger", "ri-close-circle-line"], abandoned: ["secondary", "ri-close-line"], refunded: ["danger", "ri-arrow-go-back-line"], to_sort: ["warning", "ri-question-line"], returned: ["secondary", "ri-arrow-go-back-line"] };
+  const ST = { checking: ["primary", "ri-loader-4-line"], waiting: ["warning", "ri-shield-check-line"], paid: ["success", "ri-checkbox-circle-line"], pending: ["warning", "ri-time-line"], failed: ["danger", "ri-close-circle-line"], abandoned: ["secondary", "ri-close-line"], refunded: ["danger", "ri-arrow-go-back-line"], to_sort: ["warning", "ri-question-line"], returned: ["secondary", "ri-arrow-go-back-line"] };
   const PERIODS = { 1: "Today", 7: "7 days", 30: "30 days", month: "This month", year: "This year" };
   const iso = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   const range = () => {
@@ -47,6 +47,7 @@
       ? `<div class="alert alert-warning d-flex flex-wrap align-items-center gap-2"><i class="ri-time-line fs-5"></i><div class="flex-fill"><strong>${s.waiting_long} ${s.waiting_long === 1 ? "payment has" : "payments have"} been waiting more than 10 minutes.</strong> The answer may not have come back - they are checked again on their own every few minutes.</div>${data.can.check && !A.viewingBelow() ? '<button type="button" class="btn btn-sm btn-warning" data-check-all><i class="ri-refresh-line me-1"></i>Check them now</button>' : ""}</div>`
       : "";
     $("txCheckAll").hidden = !data.can.check || !s.pending;
+    $("txCheckCode").hidden = !data.can.check;
   }
 
   const rowHtml = (r) => `<tr class="acc-row" data-key="${r.key}" data-pills="${r.status === "abandoned" ? "failed" : r.status} ${r.method}">
@@ -76,6 +77,7 @@
         { key: "failed", label: "Not paid", icon: ST.failed[1], color: "danger", test: (r) => r.status === "failed" || r.status === "abandoned" },
         { key: "refunded", label: "Refunded", icon: ST.refunded[1], color: "danger", test: (r) => r.status === "refunded" },
         { key: "to_sort", label: "To sort", icon: ST.to_sort[1], color: "warning", test: (r) => r.status === "to_sort" },
+        { key: "claimed", label: "Claimed by code", icon: ST.waiting[1], color: "warning", test: (r) => r.source === "claim" },
         { key: "mpesa", label: "M-Pesa", icon: "ri-smartphone-line", color: "success", test: (r) => r.method === "mpesa" },
         { key: "card", label: "Card", icon: "ri-bank-card-line", color: "primary", test: (r) => r.method === "card" },
       ],
@@ -155,6 +157,26 @@
     el.querySelector(".modal-dialog").classList.add("modal-lg");
   }
 
+  /** A treasurer checks an M-Pesa code someone says they paid with (A10f). */
+  function checkCodeWindow() {
+    const purposes = [["T", "Tithe"], ["O", "Offering"], ["TH", "Thanksgiving"], ["B", "Building fund"], ["K", "KYS"]];
+    const el = K.confirmWindow({
+      title: "Check an M-Pesa code",
+      subtitle: "Someone says they paid the paybill - Safaricom confirms it, then it goes into the books once",
+      icon: "ri-shield-check-line",
+      go: '<i class="ri-search-line me-1"></i>Check it',
+      body: K.parts([
+        { icon: "ri-hashtag", title: "The payment", body: `<div class="row g-2"><div class="col-sm-6"><label class="form-label fw-semibold mb-1" for="ccCode">M-Pesa code</label><input type="text" class="form-control text-uppercase" id="ccCode" maxlength="12" placeholder="e.g. SJK1ABC234"></div><div class="col-sm-6"><label class="form-label fw-semibold mb-1" for="ccPurpose">Given for</label><select class="form-select" id="ccPurpose">${purposes.map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}</select></div>${data.places.length ? `<div class="col-12"><label class="form-label fw-semibold mb-1" for="ccPlace">For which place</label><select class="form-select" id="ccPlace">${data.places.map((p) => `<option value="${p.id}"${p.id === placeId ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</select></div>` : ""}</div>` },
+      ]),
+      run: async () => {
+        const out = await API.checkCode({ code: el.querySelector("#ccCode").value.trim(), purpose: el.querySelector("#ccPurpose").value, place_id: Number(el.querySelector("#ccPlace")?.value) || undefined });
+        if (out.ok) setTimeout(load, 4000);
+        return out;
+      },
+    });
+    ["#ccPurpose", "#ccPlace"].forEach((x) => el.querySelector(x) && UI.enhanceSelect(el.querySelector(x), { search: x === "#ccPlace" }));
+  }
+
   async function checkAll(btn) {
     UI.setButtonLoading(btn, "Checking...");
     const out = await API.checkWaiting({ place_id: placeId || undefined });
@@ -176,6 +198,7 @@
       if (tr) open(tr.dataset.key);
     });
     $("txCheckAll").addEventListener("click", (e) => checkAll(e.currentTarget));
+    $("txCheckCode").addEventListener("click", checkCodeWindow);
     $("txLate").addEventListener("click", (e) => e.target.closest("[data-check-all]") && checkAll(e.target.closest("[data-check-all]")));
     A.placePicker($("accPlacePick"), load);
     load();
