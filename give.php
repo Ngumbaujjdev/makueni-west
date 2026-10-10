@@ -69,7 +69,18 @@ $code = strtoupper(preg_replace('/[^A-Za-z0-9-]/', '', $_GET['c'] ?? ''));
 
             const IMG = <?= json_encode(SITE_URL . '/assets/images/payments/') ?>;
             const CCI_LOGO = <?= json_encode(SITE_URL . '/assets/images/brand-logos/toggle-logo.png') ?>;
-            const logo = (files, size = "lg") => `<span class="acc-logo ${size === "lg" ? "give-mark" : `acc-logo-${size}`}${files.length > 1 ? " is-card" : ""}">${files.map((f) => `<img src="${IMG}${f}" alt="">`).join("")}</span>`;
+            const logo = (files, size = "lg") => (files[0] || "").startsWith("ri-")
+                ? `<span class="acc-logo ${size === "lg" ? "give-mark" : `acc-logo-${size}`} is-icon bg-info"><i class="${files[0]}"></i></span>`
+                : `<span class="acc-logo ${size === "lg" ? "give-mark" : `acc-logo-${size}`}${files.length > 1 ? " is-card" : ""}">${files.map((f) => `<img src="${IMG}${f}" alt="">`).join("")}</span>`;
+            /** Each tile: how it is paid (method), what Paystack opens on (pay), and which hints show (hint). */
+            const TILES = {
+                "ps-mpesa": { method: "paystack", pay: "mpesa", hint: "mobile", name: "M-Pesa" },
+                "ps-airtel": { method: "paystack", pay: "airtel", hint: "mobile", name: "Airtel Money" },
+                "ps-card": { method: "paystack", pay: "card", hint: "paystack", name: "card" },
+                "ps-pesalink": { method: "paystack", pay: "pesalink", hint: "paystack", name: "Pesalink" },
+                mpesa: { method: "mpesa", pay: null, hint: "mpesa", name: "M-Pesa" },
+                paybill: { method: "paybill", pay: null, hint: "paybill", name: "Pay Bill" },
+            };
             const REMEMBER = "mwd-giver";
             const remembered = () => {
                 try {
@@ -81,10 +92,15 @@ $code = strtoupper(preg_replace('/[^A-Za-z0-9-]/', '', $_GET['c'] ?? ''));
 
             function form() {
                 const p = page;
+                // Through Paystack when it is on (its secure page opens on the pick); the paybill's own prompt only when it isn't.
+                const ps = p.methods.paystack;
                 const methods = [
-                    p.methods.mpesa && { key: "mpesa", title: "M-Pesa", sub: "The prompt comes to your phone", logos: ["mpesa.svg"] },
+                    ps && { key: "ps-mpesa", title: "M-Pesa", sub: "Pay on Paystack's secure page", logos: ["mpesa.svg"] },
+                    ps && { key: "ps-airtel", title: "Airtel Money", sub: "Pay on Paystack's secure page", logos: ["airtel-money.svg"] },
+                    ps && { key: "ps-card", title: "Card", sub: "Visa or Mastercard", logos: ["visa.svg", "mastercard.svg"] },
+                    ps && { key: "ps-pesalink", title: "Pesalink", sub: "From your bank, on Paystack", logos: ["ri-bank-line"] },
+                    !ps && p.methods.mpesa && { key: "mpesa", title: "M-Pesa", sub: "The prompt comes to your phone", logos: ["mpesa.svg"] },
                     p.paybill && { key: "paybill", title: p.paybill.till ? "Buy Goods" : "Pay Bill", sub: "Yourself, from your M-Pesa menu", logos: ["mpesa.svg"] },
-                    p.methods.paystack && { key: "paystack", title: "Card or other", sub: "Visa, Mastercard - or M-Pesa on Paystack's page", logos: ["visa.svg", "mastercard.svg"] },
                 ].filter(Boolean);
                 if (!methods.length) {
                     body.innerHTML = `<h4 class="fw-bold mb-1">${esc(p.place.name)}</h4><p class="mb-0">Online giving isn't open yet for this church.</p>`;
@@ -109,15 +125,15 @@ $code = strtoupper(preg_replace('/[^A-Za-z0-9-]/', '', $_GET['c'] ?? ''));
                     ${me ? `<div class="mb-2" id="gWelcome">Welcome back, <strong>${esc(String(me.name || "").split(" ")[0])}</strong> - <a href="#" id="gForget">not you?</a></div>` : ""}
                     <div class="row g-2 mb-2">
                         ${field("gName", "Full name", "text", 'maxlength="150" autocomplete="name" placeholder="e.g. Ruth Mwende"')}
-                        ${field("gPhone", "Phone number", "tel", 'autocomplete="tel" placeholder="e.g. 0712 345 678"', '<span data-for="mpesa">The M-Pesa prompt comes to this number.</span><span data-for="paystack" hidden>For your SMS receipt.</span>')}
-                        ${field("gEmail", "Email", "email", 'autocomplete="email" placeholder="e.g. ruth@example.com"', '<span data-for="paystack" hidden>Paystack sends your receipt here.</span><span data-for="mpesa">Optional - for an email receipt.</span>')}
+                        ${field("gPhone", "Phone number", "tel", 'autocomplete="tel" placeholder="e.g. 0712 345 678"', '<span data-for="mpesa">The M-Pesa prompt comes to this number.</span><span data-for="mobile" hidden>For your SMS receipt.</span><span data-for="paystack" hidden>For your SMS receipt.</span>')}
+                        ${field("gEmail", "Email", "email", 'autocomplete="email" placeholder="e.g. ruth@example.com"', '<span data-for="paystack" hidden>Paystack sends your receipt here.</span><span data-for="mpesa">Optional - for an email receipt.</span><span data-for="mobile" hidden>Optional - your receipt comes by SMS.</span>')}
                     </div>
                     <div class="form-check mb-3"><input class="form-check-input" type="checkbox" id="gRemember"${me ? " checked" : ""}><label class="form-check-label" for="gRemember">Remember my details on this device</label></div>
                     <div class="alert alert-light border mb-3 py-2" id="gSummary" hidden></div>
                     <button type="button" class="btn btn-primary btn-lg w-100" id="gGo"><i class="ri-hand-heart-line me-1"></i><span id="gGoText">Give</span></button>
                     <div id="gMsg" class="mt-3" aria-live="polite"></div>
                     </div>
-                    <div class="d-flex flex-wrap align-items-center justify-content-center gap-2 mt-3 small"><i class="ri-lock-2-line"></i><span>Secured by Safaricom M-Pesa and Paystack</span>${logo(["mpesa.svg"], "sm")}${logo(["visa.svg"], "sm")}${logo(["mastercard.svg"], "sm")}</div>
+                    <div class="d-flex flex-wrap align-items-center justify-content-center gap-2 mt-3 small"><i class="ri-lock-2-line"></i><span>Secured by Paystack and Safaricom M-Pesa</span>${logo(["mpesa.svg"], "sm")}${ps ? logo(["airtel-money.svg"], "sm") : ""}${logo(["visa.svg"], "sm")}${logo(["mastercard.svg"], "sm")}</div>
                     `;
                 const $ = (id) => body.querySelector(`#${id}`);
                 if (me) {
@@ -135,13 +151,16 @@ $code = strtoupper(preg_replace('/[^A-Za-z0-9-]/', '', $_GET['c'] ?? ''));
                     $("gWelcome").remove();
                 });
                 const method = () => body.querySelector('input[name="method"]:checked').value;
+                const tile = () => TILES[method()] || TILES.mpesa;
                 const amountOf = () => Number(String($("gAmount").value).replace(/[^0-9.]/g, "")) || 0;
                 const summary = () => {
                     const v = amountOf();
                     const purpose = p.purposes.find((u) => u.key === body.querySelector('input[name="purpose"]:checked').value);
-                    $("gGoText").textContent = v ? `Give ${money(v)}` : "Give";
+                    const t = tile();
+                    const onPaystack = t.method === "paystack";
+                    $("gGoText").textContent = onPaystack ? (v ? `Continue to Paystack - ${money(v)}` : "Continue to Paystack") : v ? `Give ${money(v)}` : "Give";
                     $("gSummary").hidden = !v;
-                    $("gSummary").innerHTML = v ? `<strong>${esc(purpose?.label || "Gift")} · ${money(v)}</strong> to ${esc(p.place.name)} by ${method() === "mpesa" ? "M-Pesa" : "card or M-Pesa on Paystack"}${method() === "mpesa" && v > 150000 ? '<div class="text-danger small mt-1">That is above most M-Pesa limits - card may be easier.</div>' : ""}` : "";
+                    $("gSummary").innerHTML = v ? `<strong>${esc(purpose?.label || "Gift")} · ${money(v)}</strong> to ${esc(p.place.name)} by ${esc(t.name)}${onPaystack ? " on Paystack" : ""}${t.hint !== "paystack" && v > 150000 ? '<div class="text-danger small mt-1">That is above most mobile money limits - card may be easier.</div>' : ""}` : "";
                 };
                 const show = () => {
                     const m = method();
@@ -152,9 +171,10 @@ $code = strtoupper(preg_replace('/[^A-Za-z0-9-]/', '', $_GET['c'] ?? ''));
                     if (m === "paybill") paybillPanel();
                     renumber();
                     if (m === "paybill") return;
-                    body.querySelectorAll("[data-for]").forEach((x) => (x.hidden = x.dataset.for !== m));
-                    // Email is required for card (Paystack's receipt), optional for M-Pesa.
-                    body.querySelector('[data-field="gEmail"] [data-req]').hidden = m !== "paystack";
+                    const h = tile().hint;
+                    body.querySelectorAll("[data-for]").forEach((x) => (x.hidden = x.dataset.for !== h));
+                    // Email is required for card and Pesalink (Paystack's receipt), optional for mobile money (our SMS).
+                    body.querySelector('[data-field="gEmail"] [data-req]').hidden = h !== "paystack";
                     summary();
                 };
                 $("gAmount").addEventListener("input", summary);
@@ -250,9 +270,10 @@ $code = strtoupper(preg_replace('/[^A-Za-z0-9-]/', '', $_GET['c'] ?? ''));
                 if (!d.amount || d.amount < 10) errors.gAmount = "Please enter at least KES 10.";
                 if (!d.name || d.name.length < 2) errors.gName = "Please enter your full name.";
                 const digits = (d.phone || "").replace(/[\s\-()]/g, "");
-                if (d.method === "mpesa" && !/^(\+?254|0)?[17]\d{8}$/.test(digits)) errors.gPhone = "Please enter your M-Pesa number, e.g. 0712 345 678.";
-                if (d.method === "paystack" && !/^\+?\d{9,15}$/.test(digits)) errors.gPhone = "Please enter a valid phone number, e.g. 0712 345 678.";
-                if (d.method === "paystack" && !d.email) errors.gEmail = "Please enter your email address - Paystack sends your receipt there.";
+                const mobile = d.method === "mpesa" || d.pay === "mpesa" || d.pay === "airtel";
+                if (mobile && !/^(\+?254|0)?[17]\d{8}$/.test(digits)) errors.gPhone = d.pay === "airtel" ? "Please enter your Airtel Money number, e.g. 0733 345 678." : "Please enter your M-Pesa number, e.g. 0712 345 678.";
+                else if (d.method === "paystack" && !/^\+?\d{9,15}$/.test(digits)) errors.gPhone = "Please enter a valid phone number, e.g. 0712 345 678.";
+                if (d.method === "paystack" && !mobile && !d.email) errors.gEmail = "Please enter your email address - Paystack sends your receipt there.";
                 else if (d.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) errors.gEmail = "Please enter a valid email address.";
                 return errors;
             }
@@ -263,7 +284,8 @@ $code = strtoupper(preg_replace('/[^A-Za-z0-9-]/', '', $_GET['c'] ?? ''));
                 const d = {
                     purpose: body.querySelector('input[name="purpose"]:checked').value,
                     amount: Number(String(body.querySelector("#gAmount").value).replace(/[^0-9.]/g, "")) || 0,
-                    method: body.querySelector('input[name="method"]:checked').value,
+                    method: (TILES[body.querySelector('input[name="method"]:checked').value] || TILES.mpesa).method,
+                    pay: (TILES[body.querySelector('input[name="method"]:checked').value] || TILES.mpesa).pay,
                     name: body.querySelector("#gName").value.trim(),
                     phone: body.querySelector("#gPhone").value.trim(),
                     email: body.querySelector("#gEmail").value.trim() || null,
@@ -280,7 +302,7 @@ $code = strtoupper(preg_replace('/[^A-Za-z0-9-]/', '', $_GET['c'] ?? ''));
                     body.querySelector("#gRemember").checked ? localStorage.setItem(REMEMBER, JSON.stringify({ name: d.name, phone: d.phone, email: d.email })) : localStorage.removeItem(REMEMBER);
                 } catch (x) {}
                 btn.disabled = true;
-                body.querySelector("#gGoText").textContent = d.method === "mpesa" ? "Sending the prompt..." : "Opening the secure payment page...";
+                body.querySelector("#gGoText").textContent = d.method === "mpesa" ? "Sending the prompt..." : "Opening Paystack's secure page...";
                 const r = await call("POST", `/give/${encodeURIComponent(CODE)}`, d);
                 if (!r.ok) {
                     btn.disabled = false;
