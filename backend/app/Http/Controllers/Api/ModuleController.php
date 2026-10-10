@@ -87,7 +87,7 @@ class ModuleController extends Controller
                             ->with([
                                 'submodules' => function ($subQuery) {
                                     $subQuery->active()
-                                        ->orderBy('title')
+                                        ->orderBy('order')->orderBy('title')
                                         ->with(['subSubmodules' => function ($subSubQuery) {
                                             $subSubQuery->active()
                                                 ->orderBy('title');
@@ -133,6 +133,7 @@ class ModuleController extends Controller
                                     'id' => $submodule->id,
                                     'module_id' => $submodule->module_id,
                                     'title' => $submodule->title,
+                                    'order' => (int) $submodule->order,
                                     'path' => $submodule->path,
                                     'description' => $submodule->description,
                                     'is_active' => $submodule->is_active,
@@ -244,7 +245,7 @@ class ModuleController extends Controller
                                 'submodules' => function ($subQuery) use ($permittedSubmoduleIds, $permittedSubSubmoduleIds) {
                                     $subQuery->active()
                                         ->whereIn('id', $permittedSubmoduleIds)
-                                        ->orderBy('title')
+                                        ->orderBy('order')->orderBy('title')
                                         ->with(['subSubmodules' => function ($subSubQuery) use ($permittedSubSubmoduleIds) {
                                             $subSubQuery->active()
                                                 ->whereIn('id', $permittedSubSubmoduleIds)
@@ -301,6 +302,7 @@ class ModuleController extends Controller
                                     'id' => $submodule->id,
                                     'module_id' => $submodule->module_id,
                                     'title' => $submodule->title,
+                                    'order' => (int) $submodule->order,
                                     'path' => $submodule->path,
                                     'description' => $submodule->description,
                                     'is_active' => $submodule->is_active,
@@ -574,7 +576,7 @@ class ModuleController extends Controller
                     $query->active()->orderBy('title');
                 },
                 'submodules' => function ($query) {
-                    $query->active()->orderBy('title');
+                    $query->active()->orderBy('order')->orderBy('title');
                 },
             ]);
 
@@ -839,7 +841,7 @@ class ModuleController extends Controller
             $submodules = $module->submodules()
                 ->withCount(['subSubmodules', 'permissions'])
                 ->active()
-                ->orderBy('title')
+                ->orderBy('order')->orderBy('title')
                 ->get();
 
             $submodulesData = $submodules->map(function ($submodule) {

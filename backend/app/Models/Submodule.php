@@ -16,7 +16,8 @@ class Submodule extends Model implements Auditable
         'title',
         'path',
         'is_active',
-        'description'
+        'description',
+        'order',
     ];
 
     protected $casts = [

@@ -21,24 +21,29 @@ use Spatie\Permission\Models\Role;
  */
 class AccountingAccessSeeder extends Seeder
 {
-    /** The pages: key => [file, title, description, levels (null = all)]. */
+    /**
+     * The pages: key => [file, title, description, levels (null = all)], in
+     * the order the menu shows them - as money moves: where it is, money in,
+     * asking and approving, money out, between places, then the books and
+     * the month's close.
+     */
     private const PAGES = [
         'overview' => ['', 'Overview', 'Where the money is now, this month in and out, by fund, the latest documents', null],
         'accounts' => ['accounts.php', 'Cash & bank', 'Cash at hand, the bank and M-Pesa with their balances; the chart of accounts', null],
-        'cashbook' => ['cashbook.php', 'Cashbook', 'Every shilling in and out of one account, with the running balance', null],
+        'collections' => ['collections.php', 'Collections', 'Sunday collections: counted by one, confirmed by another, receipted per fund, banked', ['church']],
         'receipts' => ['receipts.php', 'Receipts', 'Write official receipts for money received - tithes, offerings, contributions', null],
+        'requisitions' => ['requisitions.php', 'Requisitions', 'Ask for money - to pay, to buy, or an advance - approved, then paid', null],
+        'approvals' => ['approvals.php', 'Approvals', 'What waits for my approval, what I asked for, and who I hand it to while away', null],
+        'procurement' => ['procurement.php', 'Procurement', 'Bigger purchases: quotations, the order, goods received, the supplier\'s bill, then payment', null],
         'payments' => ['payments.php', 'Payment vouchers', 'Prepare, authorise and pay - every payment with its papers', null],
+        'payroll' => ['payroll.php', 'Payroll', 'The people this place pays, the monthly run with PAYE, NSSF, SHIF and the Housing Levy, payslips and paying it', null],
+        'remittances' => ['remittances.php', 'Remittances', 'The share sent up and support sent down - due from the books, sent by voucher, confirmed by the place receiving it', null],
+        'cashbook' => ['cashbook.php', 'Cashbook', 'Every shilling in and out of one account, with the running balance', null],
         'journals' => ['journals.php', 'Journals', 'Opening balances and corrections, in balanced journals', null],
-        'documents' => ['documents.php', 'All documents', 'Every receipt, payment, transfer and journal, newest first', null],
-        'chart' => ['chart.php', 'Chart of accounts', 'The standard accounts every church, region and diocese posts to', ['diocese']],
         'reconciliation' => ['reconciliation.php', 'Reconciliation', 'Count the cash, match the bank and M-Pesa to their statements - and the places below', null],
         'close' => ['close.php', 'Month-end close', 'Close each month once every account is proven; the level above reopens', null],
-        'collections' => ['collections.php', 'Collections', 'Sunday collections: counted by one, confirmed by another, receipted per fund, banked', ['church']],
-        'approvals' => ['approvals.php', 'Approvals', 'What waits for my approval, what I asked for, and who I hand it to while away', null],
-        'requisitions' => ['requisitions.php', 'Requisitions', 'Ask for money - to pay, to buy, or an advance - approved, then paid', null],
-        'remittances' => ['remittances.php', 'Remittances', 'The share sent up and support sent down - due from the books, sent by voucher, confirmed by the place receiving it', null],
-        'payroll' => ['payroll.php', 'Payroll', 'The people this place pays, the monthly run with PAYE, NSSF, SHIF and the Housing Levy, payslips and paying it', null],
-        'procurement' => ['procurement.php', 'Procurement', 'Bigger purchases: quotations, the order, goods received, the supplier\'s bill, then payment', null],
+        'documents' => ['documents.php', 'All documents', 'Every receipt, payment, transfer and journal, newest first', null],
+        'chart' => ['chart.php', 'Chart of accounts', 'The standard accounts every church, region and diocese posts to', ['diocese']],
         'rules' => ['approval-rules.php', 'Approval rules', 'Who approves what, by level and amount, and who it goes to when late', ['diocese']],
     ];
 
@@ -139,13 +144,15 @@ class AccountingAccessSeeder extends Seeder
             ])->save();
 
             $pages = [];
+            $position = 0;
             foreach (self::PAGES as $key => [$file, $title, $description, $levels]) {
+                $position++;
                 if ($levels && ! in_array($level, $levels, true)) {
                     continue;
                 }
                 $pages[$key] = Submodule::updateOrCreate(
                     ['module_id' => $module->id, 'path' => "/{$level}/accounting/{$file}"],
-                    ['title' => $title, 'description' => $description, 'is_active' => true],
+                    ['title' => $title, 'description' => $description, 'is_active' => true, 'order' => $position],
                 );
             }
             // Pages that are no longer ours leave the menu.
