@@ -26,14 +26,24 @@
   function render() {
     const std = data.chart.filter((a) => !a.own);
     $("typePills").innerHTML = `<div class="pp-pills" role="tablist">${TYPES.map(([k, l, i, c]) => `<button type="button" class="pp-pill${k === type ? " is-on" : ""}" style="--q: var(--${c}-rgb)" data-type="${k}" role="tab" aria-selected="${k === type}"><i class="${i}"></i>${l}<span class="pp-pill-count">${std.filter((a) => a.type === k && !a.is_header).length}</span></button>`).join("")}</div>`;
-    $("chartRows").innerHTML = std
-      .filter((a) => a.type === type)
-      .map((a) =>
-        a.is_header
-          ? `<tr class="acc-group-row"><td>${esc(a.code)}</td><td colspan="2">${esc(a.name)}${a.description ? `<div class="acc-sub">${esc(a.description)}</div>` : ""}</td><td class="text-end"><button type="button" class="btn btn-sm btn-outline-secondary" data-edit="${a.id}"><i class="ri-edit-line"></i></button></td></tr>`
-          : `<tr><td>${esc(a.code)}</td><td><span class="fw-semibold">${esc(a.name)}</span>${a.is_active ? "" : ' <span class="soft-chip soft-danger">Off</span>'}${a.system_key ? ' <span class="soft-chip soft-primary" title="The books rely on it"><i class="ri-lock-line"></i>Needed</span>' : ""}${a.description ? `<div class="acc-sub">${esc(a.description)}</div>` : ""}</td><td class="d-none d-md-table-cell">${a.cash_kind ? `<span class="soft-chip soft-${A.kind(a.cash_kind).color}"><i class="${A.kind(a.cash_kind).icon}"></i>${esc(A.kind(a.cash_kind).label)}</span>` : `<span class="acc-sub">${esc(a.type_label)}</span>`}</td><td class="text-end"><button type="button" class="btn btn-sm btn-outline-secondary" data-edit="${a.id}"><i class="ri-edit-line me-1"></i>Change</button></td></tr>`,
-      )
-      .join("");
+    A.tableKit({
+      tableId: "stdChartTable",
+      items: std.filter((a) => a.type === type),
+      noun: "accounts",
+      search: "Search code or name...",
+      pills: [
+        { key: "on", label: "In use", icon: "ri-checkbox-circle-line", color: "success", test: (a) => a.is_active && !a.is_header },
+        { key: "off", label: "Off", icon: "ri-forbid-line", color: "danger", test: (a) => !a.is_active },
+        { key: "needed", label: "Needed by the books", icon: "ri-lock-line", color: "primary", test: (a) => !!a.system_key },
+        { key: "group", label: "Groups", icon: "ri-folder-line", color: "purple", test: (a) => a.is_header },
+      ],
+      sorts: [
+        { key: "code", label: "By code", order: [[0, "asc"]] },
+        { key: "name", label: "Name A-Z", order: [[1, "asc"]] },
+      ],
+      nonSortable: [3],
+      rowHtml: (a) => `<tr data-pills="${a.is_header ? "group" : a.is_active ? "on" : "off"}${a.system_key ? " needed" : ""}"${a.is_header ? ' class="acc-group-row"' : ""}><td data-order="${esc(a.code)}">${esc(a.code)}</td><td data-order="${esc(a.name)}"><span class="fw-semibold">${esc(a.name)}</span>${a.is_header ? ' <span class="soft-chip soft-purple"><i class="ri-folder-line"></i>Group</span>' : ""}${a.is_active ? "" : ' <span class="soft-chip soft-danger">Off</span>'}${a.system_key && !a.is_header ? ' <span class="soft-chip soft-primary" title="The books rely on it"><i class="ri-lock-line"></i>Needed</span>' : ""}${a.description ? `<div class="acc-sub">${esc(a.description)}</div>` : ""}</td><td class="d-none d-md-table-cell">${a.cash_kind ? A.methodChip(a.cash_kind === "petty_cash" ? "cash" : a.cash_kind, A.kind(a.cash_kind).label) : `<span class="acc-sub">${esc(a.type_label)}</span>`}</td><td class="text-end"><button type="button" class="btn btn-sm btn-outline-secondary" data-edit="${a.id}"><i class="ri-edit-line me-1"></i>Change</button></td></tr>`,
+    });
     $("fundRows").innerHTML = `<div class="acc-fund-list">${data.funds.map((f) => `<div class="acc-fund"><span class="avatar avatar-sm avatar-rounded bg-${f.is_restricted ? "warning text-dark" : "success text-white"}"><i class="${f.is_restricted ? "ri-lock-line" : "ri-hand-heart-line"}"></i></span><div class="flex-fill min-w-0"><div class="fw-semibold">${esc(f.name)}</div><div class="acc-sub">${esc(f.code)} · ${f.is_restricted ? "Restricted" : "Free to use"}${f.description ? ` · ${esc(f.description)}` : ""}</div></div></div>`).join("")}</div>`;
   }
 

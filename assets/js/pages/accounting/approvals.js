@@ -170,7 +170,40 @@
       mine: ["ri-hand-coin-line", "You haven't asked for anything", "Ask for money on the Requisitions page; you'll see here where it stands."],
       decided: ["ri-shield-check-line", "Nothing decided yet", "What you approve, send back or reject shows here."],
     }[tab];
-    $("apList").innerHTML = items.length ? `<div class="acc-feed">${items.map((r, i) => feedItem(r, tab === "waiting" && i === 0)).join("")}</div>` : A.empty(...empty);
+    if (!items.length) {
+      $("apList").innerHTML = A.empty(...empty);
+      return;
+    }
+    feed = { items, tab };
+    const kinds = [["all", "All", "ri-apps-2-line", "primary"], ["payment_voucher", "Vouchers", "ri-file-list-3-line", "primary"], ["requisition", "Requisitions", "ri-hand-heart-line", "success"], ["payroll_run", "Payroll", "ri-money-dollar-box-line", "purple"]].filter(([k]) => k === "all" || items.some((r) => r.subject.type === k));
+    $("apList").innerHTML = `<div class="acc-kit">
+        <div class="pp-pills acc-kit-pills">${kinds.map(([k, l, i, c]) => `<button type="button" class="pp-pill${k === "all" ? " is-on" : ""}" style="--q: var(--${c}-rgb)" data-ap-kind="${k}"><i class="${i}"></i>${l}<span class="pp-pill-count">${k === "all" ? items.length : items.filter((r) => r.subject.type === k).length}</span></button>`).join("")}</div>
+        <div class="list-filterbar"><div class="list-search"><i class="ri-search-line"></i><input type="search" class="form-control" id="apSearch" placeholder="Search number, who asked, what for..." autocomplete="off"></div>
+          <select class="form-select list-filter" id="apSort" aria-label="Sort"><option value="old"${tab === "waiting" ? " selected" : ""}>Oldest first</option><option value="new"${tab === "waiting" ? "" : " selected"}>Newest first</option><option value="big">Largest first</option><option value="small">Smallest first</option></select>
+          <div class="list-filterbar-end"><span class="list-count" id="apCount"></span></div></div>
+      </div><div id="apFeed"></div>`;
+    DemographicsUI.enhanceSelect($("apSort"), { search: false });
+    let t = null;
+    $("apSearch").addEventListener("input", () => {
+      clearTimeout(t);
+      t = setTimeout(drawFeed, 200);
+    });
+    $("apSort").addEventListener("change", drawFeed);
+    drawFeed();
+  }
+
+  /** The feed after its kind, search and sort. */
+  let feed = null;
+  function drawFeed() {
+    const kind = $("apList").querySelector("[data-ap-kind].is-on")?.dataset.apKind || "all";
+    const q = ($("apSearch")?.value || "").trim().toLowerCase();
+    const sort = $("apSort")?.value || "new";
+    const list = feed.items
+      .filter((r) => kind === "all" || r.subject.type === kind)
+      .filter((r) => !q || [r.subject.number, r.subject.title, r.subject.label, r.requested_by, r.place?.name, r.stage?.name].join(" ").toLowerCase().includes(q))
+      .sort((a, b) => (sort === "big" ? b.subject.amount - a.subject.amount : sort === "small" ? a.subject.amount - b.subject.amount : sort === "old" ? String(a.requested_at).localeCompare(String(b.requested_at)) : String(b.requested_at).localeCompare(String(a.requested_at))));
+    $("apCount").textContent = list.length === feed.items.length ? `${list.length} ${list.length === 1 ? "request" : "requests"}` : `${list.length} of ${feed.items.length}`;
+    $("apFeed").innerHTML = list.length ? `<div class="acc-feed">${list.map((r, i) => feedItem(r, feed.tab === "waiting" && sort === "old" && i === 0 && kind === "all" && !q)).join("")}</div>` : A.empty("ri-search-line", "Nothing matches", "Try another word or kind.");
   }
 
   /** Approve (with an optional note) or send back, straight from the list. */
@@ -292,7 +325,7 @@
       icon: "ri-user-shared-line",
       go: '<i class="ri-check-line me-1"></i>Hand over',
       body: K.parts([
-        { icon: "ri-user-line", title: "Who approves for you", body: `<select class="form-select" id="dgWho">${people.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join("")}</select>` },
+        { icon: "ri-user-line", title: "Who approves for you", body: `<select class="form-select" id="dgWho">${people.map((p) => `<option value="${p.id}" data-icon="${p.same_place === false ? "ri-arrow-up-line" : "ri-user-line"}" data-color="${p.same_place === false ? "purple" : "primary"}">${esc([p.name, [p.role, p.place].filter(Boolean).join(", ")].filter(Boolean).join(" · "))}${p.same_place === false ? " (above)" : ""}</option>`).join("")}</select>` },
         { icon: "ri-calendar-line", title: "From - to", body: `<div class="row g-2"><div class="col-6"><input type="date" class="form-control" id="dgFrom" value="${today}" min="${today}"></div><div class="col-6"><input type="date" class="form-control" id="dgTo" value="${today}" min="${today}"></div></div>` },
         { icon: "ri-file-list-3-line", title: "For", body: `<div class="mw-days" role="radiogroup"><label><input type="radio" name="dgKind" value="" checked><span>Everything</span></label><label><input type="radio" name="dgKind" value="requisition"><span>Requisitions</span></label><label><input type="radio" name="dgKind" value="payment_voucher"><span>Payment vouchers</span></label></div><input type="text" class="form-control mt-2" id="dgWhy" maxlength="255" placeholder="Why (optional), e.g. Annual leave">` },
       ]),
@@ -318,6 +351,11 @@
       load();
     });
     $("apList").addEventListener("click", (e) => {
+      const kindBtn = e.target.closest("[data-ap-kind]");
+      if (kindBtn) {
+        $("apList").querySelectorAll("[data-ap-kind]").forEach((b) => b.classList.toggle("is-on", b === kindBtn));
+        return drawFeed();
+      }
       const d = e.target.closest("[data-decide]");
       if (d) return quickDecide(Number(d.dataset.req), d.dataset.decide);
       const v = e.target.closest("[data-open-view]");

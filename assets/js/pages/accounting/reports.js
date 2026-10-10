@@ -41,7 +41,7 @@
         <div class="d-flex align-items-start gap-3"><span class="avatar avatar-md avatar-rounded bg-${color} ${A.textOn(color)} flex-shrink-0"><i class="${icon} fs-18"></i></span>
           <div class="min-w-0"><div class="fw-semibold fs-15">${esc(title)}</div><p class="acc-sub mb-0">${esc(text)}</p>${chips ? `<div class="d-flex flex-wrap gap-1 mt-2">${chips}</div>` : ""}</div></div>
         ${controls}
-        <div class="mt-auto">${coming ? '<span class="badge bg-secondary text-dark"><i class="ri-time-line me-1"></i>Coming with the year-end statements</span>' : `<button type="button" class="btn btn-primary" data-go="${id}"><i class="ri-file-pdf-2-line me-1"></i>${esc(cta)}</button>`}</div>
+        <div class="mt-auto">${coming ? '<span class="badge bg-secondary text-dark"><i class="ri-time-line me-1"></i>Coming with the year-end statements</span>' : `<button type="button" class="btn btn-primary" data-go="${id}"><i class="ri-file-pdf-line me-1"></i>${esc(cta)}</button>`}</div>
       </div></div></div>`;
   }
 
@@ -61,6 +61,7 @@
       ["ri-bank-line", "primary", "Bank reconciliation", "Open a reconciliation - Statement (PDF)", "reconciliation.php"],
     ].filter(Boolean);
     $("rpApp").innerHTML =
+      `<div id="rpRecent"></div>` +
       group(
         "ri-book-open-line",
         "primary",
@@ -122,6 +123,32 @@
     A.pdf(key, { date_from: from, date_to: to }, el.querySelector(".fw-semibold").textContent);
   }
 
+  /** "My recent PDFs": what this person exported from Accounting, newest first, ready to download again. */
+  let runs = [];
+  let recentTimer = null;
+  async function recent() {
+    clearTimeout(recentTimer);
+    const res = await AccountingAPI.reportRuns();
+    const el = $("rpRecent");
+    if (!el || !res.ok) return;
+    runs = (res.data || []).filter((r) => String(r.report_key || "").startsWith("accounting."));
+    const ST = { ready: ["success", "ri-checkbox-circle-line", "Ready"], queued: ["warning", "ri-time-line", "Waiting"], running: ["primary", "ri-loader-4-line", "Building"], failed: ["danger", "ri-error-warning-line", "Failed"] };
+    const ago = (iso) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+    el.innerHTML = `<div class="card custom-card acc-rec-card"><div class="card-header justify-content-between flex-wrap gap-2"><div><div class="card-title d-flex align-items-center gap-2"><span class="acc-rec-icon bg-danger"><i class="ri-file-pdf-line"></i></span>My recent PDFs</div><span class="card-subtitle-text">Everything you exported from Accounting - the same files are under <i class="ri-file-download-line"></i> at the top of every page</span></div><button type="button" class="btn btn-sm btn-outline-primary" data-recent-refresh><i class="ri-refresh-line me-1"></i>Refresh</button></div>
+      <div class="card-body">${
+        runs.length
+          ? `<div class="acc-rp-runs">${runs
+              .slice(0, 12)
+              .map((r, i) => {
+                const st = r.expired ? ["secondary", "ri-time-line", "Expired"] : ST[r.status] || ST.queued;
+                return `<div class="acc-rp-run"><span class="avatar avatar-sm avatar-rounded bg-danger text-white"><i class="ri-file-pdf-line"></i></span><div class="min-w-0 flex-fill"><strong class="d-block text-truncate">${esc(r.title || r.report_key)}</strong><small>${esc(r.period_label || "")}${r.period_label ? " · " : ""}${esc(ago(r.created_at))}</small></div><span class="badge bg-${st[0]} ${A.textOn(st[0])}"><i class="${st[1]} me-1"></i>${st[2]}</span>${r.status === "ready" && !r.expired ? `<button type="button" class="btn btn-sm btn-primary" data-run="${i}"><i class="ri-download-2-line me-1"></i>Download</button>` : ""}</div>`;
+              })
+              .join("")}</div>`
+          : '<p class="acc-muted-line mb-0">Nothing yet - download a cashbook, a register or any receipt or voucher and it shows here.</p>'
+      }</div></div>`;
+    if (runs.some((r) => ["queued", "running"].includes(r.status))) recentTimer = setTimeout(recent, 4000);
+  }
+
   async function load() {
     const res = await AccountingAPI.accounts();
     if (!res.ok) {
@@ -131,6 +158,7 @@
     accounts = res.data.cash || [];
     A.placeLine($("accPlaceLine"), res.data.place);
     render();
+    recent();
   }
 
   function init() {
@@ -148,8 +176,13 @@
       }
       const g = e.target.closest("[data-go]");
       if (g) go(g.dataset.go);
+      const dl = e.target.closest("[data-run]");
+      if (dl) ReportCenter.download(runs[Number(dl.dataset.run)], dl);
+      if (e.target.closest("[data-recent-refresh]")) recent();
     });
     A.placePicker($("accPlacePick"), load);
+    // A PDF finished in the export window: show it in "My recent PDFs" straight away.
+    document.getElementById("reportModal")?.addEventListener("hidden.bs.modal", recent);
     load();
   }
 

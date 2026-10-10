@@ -12,6 +12,7 @@ use App\Models\Territory;
 use App\Reports\Demographics\MetricReport;
 use App\Reports\Report;
 use App\Reports\ReportContext;
+use App\Reports\ReportGenerator;
 use App\Reports\ReportRegistry;
 use App\Support\BudgetAccess;
 use Illuminate\Http\JsonResponse;
@@ -106,6 +107,27 @@ class ReportController extends Controller
         $run = $this->ownRun($request, $uuid);
 
         return $run ? response()->json(['success' => true, 'data' => $run->toApi()]) : $this->fail(404, 'Report not found.');
+    }
+
+    /**
+     * POST /reports/runs/{uuid}/now - build a run that has waited in the queue
+     * (no worker running) right away, in this request.
+     */
+    public function now(Request $request, string $uuid): JsonResponse
+    {
+        $run = $this->ownRun($request, $uuid);
+        if (! $run) {
+            return $this->fail(404, 'Report not found.');
+        }
+        if ($run->status !== ReportRun::STATUS_QUEUED) {
+            return $this->fail(422, 'This report is already being built.');
+        }
+        if ($run->created_at && $run->created_at->gt(now()->subSeconds(10))) {
+            return $this->fail(422, 'Give it a few seconds - it may still start on its own.');
+        }
+        (new GenerateReportJob($run))->handle(app(ReportGenerator::class));
+
+        return response()->json(['success' => true, 'data' => $run->fresh()->toApi()]);
     }
 
     /** GET /reports/runs/{uuid}/download */

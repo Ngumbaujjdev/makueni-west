@@ -117,7 +117,7 @@
       <td><div class="d-flex align-items-center gap-2">${A.docTile(j.doc_type)}<div class="min-w-0"><div class="d-flex align-items-center gap-2 flex-wrap"><span class="fw-semibold">${esc(j.number)}</span>${A.docPill(j.doc_type)}</div><div class="acc-sub text-truncate">${esc(j.narration || "")}</div></div></div></td>
       <td class="d-none d-md-table-cell">${j.party_name ? A.person(j.party_name) : '<span class="acc-sub">Between our accounts</span>'}</td>
       <td class="d-none d-lg-table-cell">${A.methodChip(j.method, j.method_label) || '<span class="acc-sub">-</span>'}</td>
-      <td class="text-end">${A.signedAmount(j.doc_type, j.amount)}<div class="d-flex justify-content-end flex-wrap gap-1 mt-1">${j.status === "reversed" ? '<span class="badge bg-danger">Reversed</span>' : '<span class="badge bg-success">Posted</span>'}${j.attachments ? `<span class="badge bg-primary"><i class="ri-attachment-2 me-1"></i>${j.attachments}</span>` : ""}</div></td>
+      <td class="text-end">${A.signedAmount(j.doc_type, j.amount)}<div class="d-flex justify-content-end flex-wrap gap-1 mt-1">${j.status === "reversed" ? '<span class="badge bg-danger">Reversed</span>' : '<span class="badge bg-success">Posted</span>'}${j.doc_type === "receipt" ? A.pdfButton("accounting.receipt", { record_id: j.id }, `Receipt ${j.number}`, "Receipt") : j.source === "payment_voucher" && j.source_id ? A.pdfButton("accounting.voucher", { record_id: j.source_id }, `Voucher for ${j.number}`, "Voucher") : ""}${j.attachments ? `<span class="badge bg-primary"><i class="ri-attachment-2 me-1"></i>${j.attachments}</span>` : ""}</div></td>
     </tr>`;
   }
 

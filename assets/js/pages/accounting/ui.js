@@ -321,7 +321,132 @@ const AccountingUI = (function () {
     ReportCenter.open({ territoryId: Number(below) || CTX.place.id, reportKey, module: "accounting", params, locked: true, title });
   }
 
-  return { pdf, approvalTimeline, methodLogo, dateTile, since, signedAmount, sourceRecord, person, avatar, personColor, initials, dateChip, accountChip, journey, mini, approvalSteps, nextCard, esc, textOn, money, short, figure, amount, day, num, KINDS, kind, tile, DOCS, doc, docPill, docTile, VOUCHER, voucherPill, methodChip, reversedChip, viewingBelow, placeLine, placePicker, ownOnly, options, empty, errorBox, link };
+  /**
+   * Sorting and filters for any Accounting table (2026-10-10, R4b): pills
+   * with counts, a search, a Sort menu and clickable headers - in place, the
+   * state in the URL (prefix keeps two tables on one page apart). The tools
+   * sit just above the table; rows carry data-pills="a b" for the pills and
+   * data-order on cells that sort by value.
+   *   o: {tableId, items, rowHtml, pills:[{key,label,icon,color,test}],
+   *       sorts:[{key,label,order:[[col,"asc"|"desc"]]}], noun, search,
+   *       empty (html), prefix, nonSortable:[cols], pageLength}
+   */
+  let kitFilterOn = false;
+  const kitPill = {};
+  function tableKit(o) {
+    const UIH = DemographicsUI;
+    if (!kitFilterOn && window.jQuery?.fn?.dataTable) {
+      kitFilterOn = true;
+      window.jQuery.fn.dataTable.ext.search.push((settings, data, i) => {
+        const want = kitPill[settings.nTable.id];
+        if (!want || want === "all") return true;
+        const tr = settings.aoData[i]?.nTr;
+        return !tr || ` ${tr.dataset.pills || ""} `.includes(` ${want} `);
+      });
+    }
+    const table = document.getElementById(o.tableId);
+    if (!table) return null;
+    const tbody = table.tBodies[0];
+    const cols = table.tHead?.rows[0]?.cells.length || 1;
+    const holder = table.closest(".table-responsive") || table;
+    let bar = document.getElementById(`${o.tableId}Kit`);
+    if (!bar) {
+      holder.insertAdjacentHTML("beforebegin", `<div class="acc-kit" id="${o.tableId}Kit"></div>`);
+      bar = document.getElementById(`${o.tableId}Kit`);
+    }
+    const pre = o.prefix || "";
+    const q = new URLSearchParams(window.location.search);
+    const pills = o.pills?.length ? [{ key: "all", label: "All", icon: "ri-apps-2-line", color: "primary", test: () => true }, ...o.pills] : [];
+    let pill = pills.some((p) => p.key === q.get(`${pre}pill`)) ? q.get(`${pre}pill`) : "all";
+    const sorts = o.sorts || [];
+    const sortKey = sorts.some((x) => x.key === q.get(`${pre}sort`)) ? q.get(`${pre}sort`) : sorts[0]?.key;
+    tbody.innerHTML = o.items.length ? o.items.map(o.rowHtml).join("") : `<tr><td colspan="${cols}">${o.empty || empty("ri-inbox-line", "Nothing here yet", "")}</td></tr>`;
+    if (!o.items.length) {
+      bar.hidden = true;
+      if (window.jQuery?.fn?.DataTable?.isDataTable(`#${o.tableId}`)) {
+        const fresh = tbody.innerHTML;
+        window.jQuery(`#${o.tableId}`).DataTable().destroy();
+        tbody.innerHTML = fresh;
+      }
+      return null;
+    }
+    bar.hidden = false;
+    bar.innerHTML = `${pills.length ? `<div class="pp-pills acc-kit-pills" role="tablist">${pills.map((p) => `<button type="button" class="pp-pill${p.key === pill ? " is-on" : ""}" style="--q: var(--${p.color || "primary"}-rgb)" data-kit-pill="${p.key}"><i class="${p.icon}"></i>${esc(p.label)}<span class="pp-pill-count">${o.items.filter(p.test).length}</span></button>`).join("")}</div>` : ""}
+      <div class="list-filterbar">
+        <div class="list-search"><i class="ri-search-line"></i><input type="search" class="form-control" data-kit-search placeholder="${esc(o.search || "Search...")}" autocomplete="off" value="${esc(q.get(`${pre}q`) || "")}"></div>
+        ${sorts.length > 1 ? `<select class="form-select list-filter" data-kit-sort aria-label="Sort">${sorts.map((x) => `<option value="${x.key}" data-icon="ri-sort-desc" data-color="primary"${x.key === sortKey ? " selected" : ""}>${esc(x.label)}</option>`).join("")}</select>` : ""}
+        <div class="list-filterbar-end"><span class="list-count" data-kit-count></span><button type="button" class="list-reset d-none" data-kit-reset><i class="ri-refresh-line"></i><span>Reset</span></button></div>
+      </div>`;
+    kitPill[o.tableId] = pill;
+    const order = (k) => (sorts.find((x) => x.key === k) || sorts[0])?.order || [];
+    const dt = UIH.initListDataTable(o.tableId, { hideDefaultSearch: true, order: order(sortKey), nonSortableColumns: o.nonSortable || [], noun: o.noun || "rows", pageLength: o.pageLength || 25, responsive: false });
+    const search = bar.querySelector("[data-kit-search]");
+    const sortSel = bar.querySelector("[data-kit-sort]");
+    if (sortSel) UIH.enhanceSelect(sortSel, { search: false });
+    const filtered = () => pill !== "all" || search.value.trim() || (sortSel && sortSel.value !== sorts[0].key);
+    function apply() {
+      kitPill[o.tableId] = pill;
+      if (dt) {
+        dt.search(search.value);
+        if (sortSel) dt.order(order(sortSel.value));
+        dt.draw();
+      }
+      const info = dt ? dt.page.info() : { recordsDisplay: o.items.length, recordsTotal: o.items.length };
+      bar.querySelector("[data-kit-count]").textContent = info.recordsDisplay === info.recordsTotal ? `${info.recordsTotal} ${o.noun || "rows"}` : `${info.recordsDisplay} of ${info.recordsTotal} ${o.noun || "rows"}`;
+      bar.querySelector("[data-kit-reset]").classList.toggle("d-none", !filtered());
+      const p = new URLSearchParams(window.location.search);
+      const set = (k, v, def) => (v && v !== def ? p.set(k, v) : p.delete(k));
+      set(`${pre}q`, search.value.trim(), "");
+      set(`${pre}pill`, pill, "all");
+      if (sortSel) set(`${pre}sort`, sortSel.value, sorts[0].key);
+      history.replaceState(null, "", `${window.location.pathname}${p.toString() ? `?${p}` : ""}`);
+    }
+    let t = null;
+    search.addEventListener("input", () => {
+      clearTimeout(t);
+      t = setTimeout(apply, 250);
+    });
+    sortSel?.addEventListener("change", apply);
+    bar.onclick = (e) => {
+      const b = e.target.closest("[data-kit-pill]");
+      if (b) {
+        pill = b.dataset.kitPill;
+        bar.querySelectorAll("[data-kit-pill]").forEach((x) => x.classList.toggle("is-on", x === b));
+        return apply();
+      }
+      if (e.target.closest("[data-kit-reset]")) {
+        search.value = "";
+        pill = "all";
+        bar.querySelectorAll("[data-kit-pill]").forEach((x) => x.classList.toggle("is-on", x.dataset.kitPill === "all"));
+        if (sortSel) {
+          sortSel.value = sorts[0].key;
+          UIH.syncSelect(sortSel);
+        }
+        apply();
+      }
+    };
+    apply();
+    return dt;
+  }
+
+  /** A small PDF button for a table row (stops the row's own click). */
+  const pdfButton = (key, params, title, label = "PDF") =>
+    `<button type="button" class="btn btn-sm btn-icon btn-outline-danger acc-row-pdf" data-row-pdf='${esc(JSON.stringify({ key, params, title }))}' title="${esc(`${label}: ${title}`)}" aria-label="${esc(`${label}: ${title}`)}"><i class="ri-file-pdf-line"></i></button>`;
+  // Any row PDF button, anywhere: open the export window, don't open the row.
+  document.addEventListener(
+    "click",
+    (e) => {
+      const b = e.target.closest("[data-row-pdf]");
+      if (!b) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const d = JSON.parse(b.dataset.rowPdf);
+      pdf(d.key, d.params, d.title);
+    },
+    true,
+  );
+
+  return { pdf, tableKit, pdfButton, approvalTimeline, methodLogo, dateTile, since, signedAmount, sourceRecord, person, avatar, personColor, initials, dateChip, accountChip, journey, mini, approvalSteps, nextCard, esc, textOn, money, short, figure, amount, day, num, KINDS, kind, tile, DOCS, doc, docPill, docTile, VOUCHER, voucherPill, methodChip, reversedChip, viewingBelow, placeLine, placePicker, ownOnly, options, empty, errorBox, link };
 })();
 
 window.AccountingUI = AccountingUI;

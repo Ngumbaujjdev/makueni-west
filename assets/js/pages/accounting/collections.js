@@ -76,7 +76,7 @@
     <td data-order="${c.date}${String(c.id).padStart(8, "0")}" class="text-nowrap">${A.day(c.date)}</td>
     <td class="d-none d-lg-table-cell"><div class="d-flex flex-wrap gap-1">${c.kinds.map((k) => `<span class="soft-chip soft-primary">${esc(k.label)} ${A.money(k.cash + k.mpesa).replace("KES ", "")}</span>`).join("")}</div></td>
     <td class="d-none d-md-table-cell acc-steps-cell">${A.mini(["Counted", "Confirmed", "Banked"], c.status === "posted" ? (c.banked || !(c.cash_total > 0) ? 3 : 2) : 1, { stop: { returned: "Sent back", reversed: "Reversed" }[c.status] || null })}${c.status === "posted" ? `<div class="acc-sub mt-1">${c.banked ? `Banked ${A.day(c.banked.date, { day: "numeric", month: "short" })}` : c.cash_total > 0 ? "Cash not banked yet" : "All by M-Pesa"}</div>` : ""}</td>
-    <td class="text-end" data-order="${c.total}"><strong>${A.money(c.total)}</strong><div class="acc-sub">Cash ${A.money(c.cash_total)} · M-Pesa ${A.money(c.mpesa_total)}</div></td>
+    <td class="text-end" data-order="${c.total}"><strong>${A.money(c.total)}</strong><div class="acc-sub">Cash ${A.money(c.cash_total)} · M-Pesa ${A.money(c.mpesa_total)}</div><div class="mt-1">${A.pdfButton("accounting.collection", { record_id: c.id }, `${c.title} - ${A.day(c.date)}`, "Collection sheet")}</div></td>
   </tr>`;
 
   async function load() {

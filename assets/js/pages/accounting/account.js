@@ -122,9 +122,38 @@
     );
   }
 
+  /** What a movement was against: the other accounts, money accounts with their logo. */
+  const against = (m) =>
+    m.against
+      .slice(0, 2)
+      .map((x) => `<span class="acc-against">${x.cash_kind ? A.methodLogo(x.cash_kind === "petty_cash" ? "cash" : x.cash_kind, "xs") : '<i class="ri-book-2-line"></i>'}${esc(x.name)}</span>`)
+      .join("") + (m.against.length > 2 ? `<span class="acc-sub">+${m.against.length - 2}</span>` : "");
+
+  /** One movement: direction, from or to whom, the document and how, what it was against, the amount and the balance after. */
+  function stRow(d, m) {
+    const rec = A.sourceRecord(m);
+    const who = m.party || m.against.map((x) => x.name).join(", ");
+    return `<div class="acc-st-row${m.reversed ? " is-reversed" : ""}" data-journal="${m.journal_id}"${rec ? ` data-record="${A.link("record.php", rec)}"` : ""} role="button" tabindex="0">
+      <span class="acc-st-dir is-${m.direction}"><i class="${m.direction === "in" ? "ri-arrow-left-down-line" : "ri-arrow-right-up-line"}"></i></span>
+      <div class="acc-st-main"><div class="acc-st-line"><strong>${m.direction === "in" ? `${esc(d.labels.in)} from` : `${esc(d.labels.out)} to`} ${esc(who || "-")}</strong></div>
+        <div class="acc-st-meta"><span class="fw-semibold">${esc(m.number)}</span>${A.docPill(m.doc_type)}${m.method ? A.methodChip(m.method, m.method_label) : ""}${m.reversed ? '<span class="badge bg-danger">Reversed</span>' : ""}${m.attachments ? `<span class="badge bg-primary"><i class="ri-attachment-2 me-1"></i>${m.attachments}</span>` : ""}</div>
+        ${m.details ? `<div class="acc-sub text-truncate">${esc(m.details)}</div>` : ""}
+        <div class="acc-st-against">${against(m)}</div></div>
+      <div class="acc-st-money"><span class="acc-st-amount is-${m.direction}">${m.direction === "in" ? "+" : "−"} ${A.money(m.direction === "in" ? m.in : m.out)}</span><small>Balance ${A.money(m.balance_after)}</small></div>
+    </div>`;
+  }
+
   /** A statement of money in and out: by day, newest first, each with its direction, who or what it was against, and the balance after it. */
-  function movements(d, filter = "all") {
-    const list = d.movements.filter((m) => filter === "all" || m.direction === filter);
+  function movements(d, filter = "all", q = "", sort = "new") {
+    q = q.trim().toLowerCase();
+    const list = d.movements
+      .filter((m) => filter === "all" || m.direction === filter)
+      .filter((m) => !q || [m.number, m.party, m.details, m.method_label, ...m.against.map((x) => x.name)].join(" ").toLowerCase().includes(q))
+      .sort((a, b) => (sort === "big" ? Math.max(b.in, b.out) - Math.max(a.in, a.out) : sort === "old" ? String(a.date).localeCompare(String(b.date)) : 0));
+    if (sort !== "new") {
+      // Out of date order a day header means nothing: one flat list.
+      return list.length ? `<div class="acc-statement"><div class="acc-st-day">${list.map((m) => stRow(d, m)).join("")}</div></div>` : A.empty("ri-search-line", "Nothing matches", "Try another word.");
+    }
     if (!list.length) return A.empty("ri-exchange-line", filter === "all" ? "Nothing moved yet" : "Nothing like that lately", "Receipts, payments and transfers on this account show here.");
     const days = [];
     list.forEach((m) => {
@@ -132,29 +161,13 @@
       if (last && last.date === m.date) last.items.push(m);
       else days.push({ date: m.date, items: [m] });
     });
-    const against = (m) =>
-      m.against
-        .slice(0, 2)
-        .map((x) => `<span class="acc-against">${x.cash_kind ? A.methodLogo(x.cash_kind === "petty_cash" ? "cash" : x.cash_kind, "xs") : '<i class="ri-book-2-line"></i>'}${esc(x.name)}</span>`)
-        .join("") + (m.against.length > 2 ? `<span class="acc-sub">+${m.against.length - 2}</span>` : "");
     return `<div class="acc-statement">${days
       .map((g) => {
         const tin = g.items.reduce((t, m) => t + m.in, 0);
         const tout = g.items.reduce((t, m) => t + m.out, 0);
         return `<div class="acc-st-day"><div class="acc-st-dayhead">${A.dateTile(g.date)}<div class="flex-fill min-w-0"><strong>${A.day(g.date, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</strong><small>${esc(A.since(g.date))}</small></div><div class="acc-st-daysum">${tin ? `<span class="text-success">In ${A.money(tin)}</span>` : ""}${tout ? `<span class="text-danger">Out ${A.money(tout)}</span>` : ""}</div></div>
           ${g.items
-            .map((m) => {
-              const rec = A.sourceRecord(m);
-              const who = m.party || m.against.map((x) => x.name).join(", ");
-              return `<div class="acc-st-row${m.reversed ? " is-reversed" : ""}" data-journal="${m.journal_id}"${rec ? ` data-record="${A.link("record.php", rec)}"` : ""} role="button" tabindex="0">
-                <span class="acc-st-dir is-${m.direction}"><i class="${m.direction === "in" ? "ri-arrow-left-down-line" : "ri-arrow-right-up-line"}"></i></span>
-                <div class="acc-st-main"><div class="acc-st-line"><strong>${m.direction === "in" ? `${esc(d.labels.in)} from` : `${esc(d.labels.out)} to`} ${esc(who || "-")}</strong></div>
-                  <div class="acc-st-meta"><span class="fw-semibold">${esc(m.number)}</span>${A.docPill(m.doc_type)}${m.method ? A.methodChip(m.method, m.method_label) : ""}${m.reversed ? '<span class="badge bg-danger">Reversed</span>' : ""}${m.attachments ? `<span class="badge bg-primary"><i class="ri-attachment-2 me-1"></i>${m.attachments}</span>` : ""}</div>
-                  ${m.details ? `<div class="acc-sub text-truncate">${esc(m.details)}</div>` : ""}
-                  <div class="acc-st-against">${against(m)}</div></div>
-                <div class="acc-st-money"><span class="acc-st-amount is-${m.direction}">${m.direction === "in" ? "+" : "−"} ${A.money(m.direction === "in" ? m.in : m.out)}</span><small>Balance ${A.money(m.balance_after)}</small></div>
-              </div>`;
-            })
+            .map((m) => stRow(d, m))
             .join("")}</div>`;
       })
       .join("")}</div>`;
@@ -179,7 +192,7 @@
     const last = d.movements.length ? `<a class="btn btn-sm btn-outline-primary" href="${a.cash_kind ? A.link("cashbook.php", { account_id: a.id, from: `${new Date().getFullYear()}-01-01` }) : A.link("documents.php")}"><i class="ri-book-open-line me-1"></i>${a.cash_kind ? "Full cashbook" : "All documents"}</a>` : "";
     const tin = d.movements.reduce((t, m) => t + m.in, 0);
     const tout = d.movements.reduce((t, m) => t + m.out, 0);
-    const pills = `<div class="d-flex flex-wrap align-items-center gap-2"><div class="pp-pills" role="tablist">${[["all", "All", "ri-apps-2-line", "primary"], ["in", d.labels.in, "ri-arrow-left-down-line", "success"], ["out", d.labels.out, "ri-arrow-right-up-line", "danger"]].map(([k, l, i, c]) => `<button type="button" class="pp-pill${k === "all" ? " is-on" : ""}" style="--q: var(--${c}-rgb)" data-filter="${k}"><i class="${i}"></i>${esc(l)}</button>`).join("")}</div>${last}</div>`;
+    const pills = `<div class="d-flex flex-wrap align-items-center gap-2"><div class="list-search acc-st-search"><i class="ri-search-line"></i><input type="search" class="form-control form-control-sm" id="acSearch" placeholder="Search..." autocomplete="off"></div><select class="form-select form-select-sm acc-st-sort" id="acSort" aria-label="Sort"><option value="new">Newest first, by day</option><option value="old">Oldest first</option><option value="big">Largest first</option></select><div class="pp-pills" role="tablist">${[["all", "All", "ri-apps-2-line", "primary"], ["in", d.labels.in, "ri-arrow-left-down-line", "success"], ["out", d.labels.out, "ri-arrow-right-up-line", "danger"]].map(([k, l, i, c]) => `<button type="button" class="pp-pill${k === "all" ? " is-on" : ""}" style="--q: var(--${c}-rgb)" data-filter="${k}"><i class="${i}"></i>${esc(l)}</button>`).join("")}</div>${last}</div>`;
     data = d;
     $("acApp").innerHTML = `${hero(d)}
       <div class="row" id="acStats"></div>
@@ -189,6 +202,13 @@
       </div>
       ${card("ri-exchange-line", "Money in and out", '<div id="acStatement"></div>', { color: "purple", extra: pills, sub: `The ${d.movements.length} latest movements · in ${A.money(tin)} · out ${A.money(tout)} - with the balance after each` })}`;
     $("acStatement").innerHTML = movements(d);
+    const redraw = () => ($("acStatement").innerHTML = movements(data, document.querySelector("[data-filter].is-on")?.dataset.filter || "all", $("acSearch").value, $("acSort").value));
+    let t = null;
+    $("acSearch").addEventListener("input", () => {
+      clearTimeout(t);
+      t = setTimeout(redraw, 200);
+    });
+    $("acSort").addEventListener("change", redraw);
     stats(d);
     drawChart(d);
   }
@@ -200,7 +220,7 @@
       const f = e.target.closest("[data-filter]");
       if (f) {
         document.querySelectorAll("[data-filter]").forEach((b) => b.classList.toggle("is-on", b === f));
-        $("acStatement").innerHTML = movements(data, f.dataset.filter);
+        $("acStatement").innerHTML = movements(data, f.dataset.filter, $("acSearch").value, $("acSort").value);
         return;
       }
       if (e.target.closest("a, button")) return;

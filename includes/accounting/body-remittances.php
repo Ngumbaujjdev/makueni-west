@@ -30,13 +30,13 @@ include __DIR__ . '/toolbar.php';
     <div id="rmRules"></div>
     <div class="card custom-card">
         <div class="card-header"><div><div class="card-title">Our remittances</div><span class="card-subtitle-text">Shares sent up and support sent down - each paid by a voucher, then confirmed by the place receiving it</span></div></div>
-        <div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0 acc-table"><thead><tr><th>Remittance</th><th class="d-none d-md-table-cell">To</th><th class="d-none d-lg-table-cell">Sent</th><th>Where it stands</th><th class="text-end">Amount</th></tr></thead><tbody id="rmSentRows"></tbody></table></div></div>
+        <div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0 acc-table" id="rmSentTable"><thead><tr><th>Remittance</th><th class="d-none d-md-table-cell">To</th><th class="d-none d-lg-table-cell">Sent</th><th>Where it stands</th><th class="text-end">Amount</th></tr></thead><tbody id="rmSentRows"></tbody></table></div></div>
     </div>
 </div>
 <div id="rmInPane" hidden>
     <div class="card custom-card">
         <div class="card-header"><div><div class="card-title">Coming in</div><span class="card-subtitle-text">Money other places sent us - confirm it when it reaches the account, or query it</span></div></div>
-        <div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0 acc-table"><thead><tr><th>From</th><th class="d-none d-md-table-cell">Sent</th><th>Where it stands</th><th class="text-end">Amount</th><th class="text-end">Action</th></tr></thead><tbody id="rmInRows"></tbody></table></div></div>
+        <div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0 acc-table" id="rmInTable"><thead><tr><th>From</th><th class="d-none d-md-table-cell">Sent</th><th>Where it stands</th><th class="text-end">Amount</th><th class="text-end">Action</th></tr></thead><tbody id="rmInRows"></tbody></table></div></div>
     </div>
 </div>
 <div id="rmBelowPane" hidden>

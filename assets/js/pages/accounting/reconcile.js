@@ -70,7 +70,7 @@
       <div><span>Deposits in transit</span><strong>${A.amount(r.in_transit) || "0.00"}</strong></div>
       <i class="ri-subtract-line"></i>
       <div><span>Unpresented payments</span><strong>${A.amount(r.unpresented) || "0.00"}</strong></div>
-      <i class="ri-equal-line"></i>
+      <i class="ri-subtract-line"></i>
       <div><span>Balance per cashbook</span><strong>${A.amount(r.book_balance) || "0.00"}</strong></div>
       <div class="acc-recstrip-diff"><span>Difference</span><strong>${ok ? '<i class="ri-check-line"></i> 0.00' : A.money(r.difference, { sign: true })}</strong></div>
     </div>`;

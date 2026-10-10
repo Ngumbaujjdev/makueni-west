@@ -63,30 +63,60 @@
   };
 
   function runs() {
-    $("pyRunRows").innerHTML = data.runs.length
-      ? data.runs
-          .map(
-            (r) => `<tr class="acc-row" data-id="${r.id}">
-              <td><div class="d-flex align-items-center gap-3">${monthTile(r.month)}<div class="min-w-0"><div class="fw-semibold">${esc(r.label)}</div><div class="acc-sub"><i class="ri-group-line me-1"></i>${r.people} ${r.people === 1 ? "person" : "people"}</div></div></div></td>
-              <td class="text-end d-none d-md-table-cell">${A.money(r.gross)}</td>
-              <td class="text-end d-none d-lg-table-cell">${r.deductions ? A.money(r.deductions) : '<span class="acc-sub">None</span>'}</td>
-              <td class="text-end"><strong>${A.money(r.net)}</strong></td>
+    const ST_PILLS = [
+      { key: "paid", label: "Paid", icon: "ri-checkbox-circle-line", color: "success", test: (r) => r.status === "paid" },
+      { key: "posted", label: "To pay", icon: "ri-bank-card-line", color: "primary", test: (r) => r.status === "posted" },
+      { key: "submitted", label: "Waiting", icon: "ri-time-line", color: "warning", test: (r) => r.status === "submitted" },
+      { key: "draft", label: "Draft", icon: "ri-draft-line", color: "secondary", test: (r) => ["draft", "returned"].includes(r.status) },
+    ];
+    A.tableKit({
+      tableId: "pyRunTable",
+      items: data.runs,
+      noun: "months",
+      search: "Search a month...",
+      pills: ST_PILLS,
+      sorts: [
+        { key: "new", label: "Newest month first", order: [[0, "desc"]] },
+        { key: "old", label: "Oldest month first", order: [[0, "asc"]] },
+        { key: "big", label: "Largest net first", order: [[3, "desc"]] },
+      ],
+      nonSortable: [4, 5],
+      empty: A.empty("ri-calendar-check-line", "No payroll yet", data.employees.length ? "Start the month - everyone's pay and deductions are worked out for you to check." : "Add the people this place pays first, then start the month."),
+      rowHtml: (r) => `<tr class="acc-row" data-id="${r.id}" data-pills="${r.status === "returned" ? "draft" : r.status}">
+              <td data-order="${r.month}"><div class="d-flex align-items-center gap-3">${monthTile(r.month)}<div class="min-w-0"><div class="fw-semibold">${esc(r.label)}</div><div class="acc-sub"><i class="ri-group-line me-1"></i>${r.people} ${r.people === 1 ? "person" : "people"}</div></div></div></td>
+              <td class="text-end d-none d-md-table-cell" data-order="${r.gross}">${A.money(r.gross)}</td>
+              <td class="text-end d-none d-lg-table-cell" data-order="${r.deductions}">${r.deductions ? A.money(r.deductions) : '<span class="acc-sub">None</span>'}</td>
+              <td class="text-end" data-order="${r.net}"><strong>${A.money(r.net)}</strong></td>
               <td class="acc-steps-cell">${runSteps(r)}${r.can.decide ? '<span class="badge bg-warning text-dark mt-1"><i class="ri-flashlight-line me-1"></i>Your turn</span>' : ""}</td>
+              <td class="text-end">${A.pdfButton("accounting.payslips", { record_id: r.id }, `Payslips ${r.label}`, "Payslips")}</td>
             </tr>`,
-          )
-          .join("")
-      : `<tr><td colspan="5">${A.empty("ri-calendar-check-line", "No payroll yet", data.employees.length ? "Start the month - everyone's pay and deductions are worked out for you to check." : "Add the people this place pays first, then start the month.")}</td></tr>`;
+    });
   }
 
   function people() {
-    $("pyPeopleRows").innerHTML = data.employees.length
-      ? data.employees
-          .map(
-            (e) => `<tr class="${e.is_active ? "" : "opacity-50"}"><td><div class="fw-semibold">${esc(e.name)}${e.is_active ? "" : ' <span class="badge bg-secondary">Left</span>'}</div><div class="acc-sub">${esc(e.position || "")}${e.start_date ? ` · since ${A.day(e.start_date)}` : ""}</div></td><td class="d-none d-md-table-cell">${esc(e.pay_method_label)}<div class="acc-sub">${esc(e.pay_to || "")}</div></td><td class="d-none d-lg-table-cell">${esc(e.kra_pin || "-")}</td><td class="text-end"><strong>${A.money(e.gross)}</strong>${e.allowances.length ? `<div class="acc-sub">basic ${A.money(e.basic_pay)} + ${e.allowances.length} ${e.allowances.length === 1 ? "allowance" : "allowances"}</div>` : ""}</td><td class="text-end">${data.can.manage && !A.viewingBelow() ? `<button type="button" class="btn btn-sm btn-icon btn-outline-primary" data-person="${e.id}" aria-label="Change"><i class="ri-edit-line"></i></button>` : ""}</td></tr>`,
-          )
-          .join("")
-      : `<tr><td colspan="5">${A.empty("ri-team-line", "Nobody on the payroll yet", "Add the people this place pays - staff, a caretaker, someone paid an allowance.", data.can.manage && !A.viewingBelow() ? '<button type="button" class="btn btn-primary" data-firstperson><i class="ri-user-add-line me-1"></i>Add a person</button>' : "")}</td></tr>`;
+    A.tableKit({
+      tableId: "pyPeopleTable",
+      prefix: "p_",
+      items: data.employees,
+      noun: "people",
+      search: "Search name, position, phone...",
+      pills: [
+        { key: "on", label: "On the payroll", icon: "ri-user-follow-line", color: "success", test: (e) => e.is_active },
+        { key: "left", label: "Left", icon: "ri-user-unfollow-line", color: "secondary", test: (e) => !e.is_active },
+        { key: "mpesa", label: "Paid by M-Pesa", icon: "ri-smartphone-line", color: "success", test: (e) => e.pay_method === "mpesa" },
+        { key: "bank", label: "Paid to a bank", icon: "ri-bank-line", color: "primary", test: (e) => e.pay_method === "bank" },
+      ],
+      sorts: [
+        { key: "name", label: "Name A-Z", order: [[0, "asc"]] },
+        { key: "big", label: "Highest pay first", order: [[3, "desc"]] },
+        { key: "small", label: "Lowest pay first", order: [[3, "asc"]] },
+      ],
+      nonSortable: [4],
+      empty: A.empty("ri-team-line", "Nobody on the payroll yet", "Add the people this place pays - staff, a caretaker, someone paid an allowance.", data.can.manage && !A.viewingBelow() ? '<button type="button" class="btn btn-primary" data-firstperson><i class="ri-user-add-line me-1"></i>Add a person</button>' : ""),
+      rowHtml: (e) => `<tr class="${e.is_active ? "" : "opacity-50"}" data-pills="${e.is_active ? "on" : "left"} ${e.pay_method}"><td data-order="${esc(e.name)}"><div class="fw-semibold">${esc(e.name)}${e.is_active ? "" : ' <span class="badge bg-secondary">Left</span>'}</div><div class="acc-sub">${esc(e.position || "")}${e.start_date ? ` · since ${A.day(e.start_date)}` : ""}</div></td><td class="d-none d-md-table-cell">${A.methodChip(e.pay_method, e.pay_method_label)}<div class="acc-sub mt-1">${esc(e.pay_to || "")}</div></td><td class="d-none d-lg-table-cell">${esc(e.kra_pin || "-")}</td><td class="text-end" data-order="${e.gross}"><strong>${A.money(e.gross)}</strong>${e.allowances.length ? `<div class="acc-sub">basic ${A.money(e.basic_pay)} + ${e.allowances.length} ${e.allowances.length === 1 ? "allowance" : "allowances"}</div>` : ""}</td><td class="text-end">${data.can.manage && !A.viewingBelow() ? `<button type="button" class="btn btn-sm btn-icon btn-outline-primary" data-person="${e.id}" aria-label="Change"><i class="ri-edit-line"></i></button>` : ""}</td></tr>`,
+    });
   }
+
 
   function showTab() {
     document.querySelectorAll("#pyTabs [data-tab]").forEach((b) => {
@@ -194,8 +224,8 @@
     const btn = (k, cls, icon, label) => `<button type="button" class="btn ${cls}" data-act="${k}"><i class="${icon} me-1"></i>${label}</button>`;
     const foot = [
       own && c.cancel ? btn("cancel", "btn-outline-danger me-auto", "ri-close-circle-line", "Cancel") : "",
-      btn("print", "btn-outline-primary", "ri-file-pdf-2-line", "Payslips (PDF)"),
-      btn("register", "btn-outline-primary", "ri-file-pdf-2-line", "Register (PDF)"),
+      btn("print", "btn-outline-primary", "ri-file-pdf-line", "Payslips (PDF)"),
+      btn("register", "btn-outline-primary", "ri-file-pdf-line", "Register (PDF)"),
       btn("csv", "btn-outline-primary", "ri-download-2-line", "Register"),
       own && ["posted", "paid"].includes(r.status) && c.pay ? btn("refs", "btn-outline-primary", "ri-hashtag", "References") : "",
       own && c.edit ? btn("recalculate", "btn-outline-secondary", "ri-refresh-line", "Recalculate") : "",

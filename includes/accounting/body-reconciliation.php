@@ -30,7 +30,7 @@ $board = $accCtx['level'] !== 'church' && $c['below'];
     <div class="card-header justify-content-between flex-wrap gap-2"><div><div class="card-title">History</div><span class="card-subtitle-text">Every count and reconciliation, newest first</span></div></div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover mb-0 acc-table">
+            <table class="table table-hover mb-0 acc-table" id="histTable">
                 <thead><tr><th>Date</th><th>Account</th><th class="d-none d-md-table-cell">By</th><th class="text-end">Book</th><th class="text-end">Difference</th><th>Status</th></tr></thead>
                 <tbody id="histRows"></tbody>
             </table>

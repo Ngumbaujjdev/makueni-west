@@ -83,16 +83,21 @@
       ["expense", "Expenses", "ri-arrow-up-circle-line", "purple"],
     ];
     $("typePills").innerHTML = `<div class="pp-pills" role="tablist">${TYPES.map(([k, l, i, c]) => `<button type="button" class="pp-pill${k === type ? " is-on" : ""}${counts[k] ? "" : " is-empty"}" style="--q: var(--${c}-rgb)" data-type="${k}" role="tab" aria-selected="${k === type}"><i class="${i}"></i>${l}<span class="pp-pill-count">${counts[k] || 0}</span></button>`).join("")}</div>`;
-    const shown = rows.filter((a) => !a.is_header || rows.some((x) => x.parent_id === a.id) || !used);
-    $("chartRows").innerHTML = shown.length
-      ? shown
-          .map((a) =>
-            a.is_header
-              ? `<tr class="acc-group-row"><td>${esc(a.code)}</td><td colspan="3">${esc(a.name)}</td></tr>`
-              : `<tr class="acc-row" data-id="${a.id}"><td><span class="${a.parent_id ? "ps-3" : ""}">${esc(a.code)}</span></td><td><span class="fw-semibold">${esc(a.name)}</span>${a.own ? ' <span class="soft-chip soft-primary">Ours</span>' : ""}${a.is_active ? "" : ' <span class="soft-chip soft-danger">Off</span>'}${a.description ? `<div class="acc-sub">${esc(a.description)}</div>` : ""}</td><td class="d-none d-md-table-cell">${a.cash_kind ? `<span class="soft-chip soft-${A.kind(a.cash_kind).color}"><i class="${A.kind(a.cash_kind).icon}"></i>${esc(A.kind(a.cash_kind).label)}</span>` : `<span class="acc-sub">${esc(a.type_label)}</span>`}</td><td class="text-end"><strong class="${(a.balance || 0) < 0 ? "text-danger" : ""}">${a.balance ? A.money(a.balance) : '<span class="acc-sub">-</span>'}</strong></td></tr>`,
-          )
-          .join("")
-      : `<tr><td colspan="4">${A.empty("ri-scales-3-line", used ? "Nothing in these accounts yet" : "No accounts", used ? "Switch off \"Only accounts with money\" to see them all." : "")}</td></tr>`;
+    // Search and sort within the kind: the header rows (groups) give way to the codes, which keep the grouping.
+    A.tableKit({
+      tableId: "chartTable",
+      prefix: "c_",
+      items: rows.filter((a) => !a.is_header),
+      noun: "accounts",
+      search: "Search code or name...",
+      sorts: [
+        { key: "code", label: "By code", order: [[0, "asc"]] },
+        { key: "name", label: "Name A-Z", order: [[1, "asc"]] },
+        { key: "big", label: "Largest balance", order: [[3, "desc"]] },
+      ],
+      empty: A.empty("ri-scales-3-line", used ? "Nothing in these accounts yet" : "No accounts", used ? "Switch off \"Only accounts with money\" to see them all." : ""),
+      rowHtml: (a) => `<tr class="acc-row" data-id="${a.id}"><td data-order="${esc(a.code)}"><span class="${a.parent_id ? "ps-3" : ""}">${esc(a.code)}</span></td><td data-order="${esc(a.name)}"><span class="fw-semibold">${esc(a.name)}</span>${a.own ? ' <span class="soft-chip soft-primary">Ours</span>' : ""}${a.is_active ? "" : ' <span class="soft-chip soft-danger">Off</span>'}${a.description ? `<div class="acc-sub">${esc(a.description)}</div>` : ""}</td><td class="d-none d-md-table-cell">${a.cash_kind ? A.methodChip(a.cash_kind === "petty_cash" ? "cash" : a.cash_kind, A.kind(a.cash_kind).label) : `<span class="acc-sub">${esc(a.type_label)}</span>`}</td><td class="text-end" data-order="${a.balance || 0}"><strong class="${(a.balance || 0) < 0 ? "text-danger" : ""}">${a.balance ? A.money(a.balance) : '<span class="acc-sub">-</span>'}</strong></td></tr>`,
+    });
   }
 
   async function load() {

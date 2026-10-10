@@ -17,7 +17,7 @@ include __DIR__ . '/toolbar.php';
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive acc-tb-wrap">
-                    <table class="table mb-0 acc-table acc-tb">
+                    <table class="table table-hover mb-0 acc-table acc-tb" id="tbTable">
                         <thead><tr><th>Account</th><th class="text-end">Debit</th><th class="text-end">Credit</th></tr></thead>
                         <tbody id="tbRows"></tbody>
                         <tfoot id="tbFoot"></tfoot>

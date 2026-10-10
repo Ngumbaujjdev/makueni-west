@@ -40012,3 +40012,22 @@ a.acc-chain-item:hover, button.acc-chain-item:hover { border-color: rgba(var(--p
 .give-mark.is-card { display: inline-flex; align-items: center; justify-content: center; gap: 3px; padding: 0 4px; }
 .give-mark.is-card img { max-width: 47%; }
 .give-wrap .give-logo { flex-shrink: 0; width: 60px; height: 60px; padding: 4px; border: 1px solid var(--default-border); border-radius: .8rem; background: #fff; object-fit: contain; }
+/* ===========================================================================
+   ACCOUNTING R4b (2026-10-10) - sorting and filters on every table, PDFs on
+   the rows, my recent PDFs, the "build it now" offer
+   =========================================================================== */
+.acc-kit { padding: .85rem 1rem 0; }
+.acc-kit-pills { margin-bottom: .6rem; }
+.acc-kit .list-filterbar { margin-bottom: .75rem; }
+.acc-row-pdf { --bs-btn-padding-y: .1rem; --bs-btn-padding-x: .35rem; line-height: 1; }
+.acc-bf { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; padding: .65rem 1rem; background: rgba(var(--primary-rgb), .05); font-size: .86rem; color: var(--v2-heading); }
+.acc-bf:empty { display: none; }
+.acc-bf strong, .acc-bf-sums { font-variant-numeric: tabular-nums; }
+.acc-bf-sums { display: inline-flex; flex-wrap: wrap; gap: .4rem 1rem; align-items: center; font-weight: 600; }
+.acc-st-search { min-width: 12rem; }
+.acc-st-sort { width: auto; }
+.acc-rp-runs { display: grid; grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr)); gap: .55rem; }
+.acc-rp-run { display: flex; align-items: center; gap: .65rem; padding: .6rem .7rem; border: 1px solid var(--default-border); border-radius: .8rem; }
+.acc-rp-run small { font-size: .74rem; color: var(--default-text-color); }
+.rp-buildnow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; margin: .5rem 0; padding: .6rem .75rem; border-radius: .7rem; background: rgba(var(--warning-rgb), .14); font-size: .82rem; color: var(--v2-heading); }
+@media (max-width: 575.98px) { .acc-rp-runs { grid-template-columns: minmax(0, 1fr); } }
