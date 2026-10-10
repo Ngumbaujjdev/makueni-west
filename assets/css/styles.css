@@ -40057,3 +40057,20 @@ a.acc-chain-item:hover, button.acc-chain-item:hover { border-color: rgba(var(--p
   body.verify-page { background: #fff !important; }
 }
 @media (max-width: 480px) { .give-receipt-facts { grid-template-columns: minmax(0, 1fr); } .give-receipt-head { flex-wrap: wrap; } .give-receipt-no { margin-left: 0; text-align: left; } }
+
+/* ========================================================================
+   Accounting - "Set up the books" checklist on the overview, and a line
+   just added on Cash & bank (2026-10-10)
+   ======================================================================== */
+.acc-setup-steps li { display: flex; align-items: center; gap: .75rem; padding: .65rem 0; border-bottom: 1px dashed var(--default-border); }
+.acc-setup-steps li:last-child { border-bottom: 0; }
+.acc-setup-step.is-done .fw-semibold { color: var(--v2-heading); }
+.acc-setup-later, .acc-setup-jobs-head { margin: 1rem 0 .25rem; font-size: .72rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--v2-heading); }
+.acc-setup-jobs-head { margin-top: 0; }
+.acc-setup-jobs li { padding: .6rem .75rem; border: 1px solid var(--default-border); border-radius: .65rem; margin-bottom: .5rem; }
+.acc-table tr.is-fresh > td { background: rgba(var(--success-rgb), .08); }
+@media (max-width: 575.98px) {
+  /* Icon | words; the button or Done sits under the words. */
+  .acc-setup-steps li { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: .75rem; row-gap: .4rem; }
+  .acc-setup-steps li > :nth-child(n+3) { grid-column: 2; justify-self: start; }
+}

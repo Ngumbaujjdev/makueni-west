@@ -169,30 +169,87 @@
     el.hidden = false;
   }
 
-  function start(d) {
+  // ------------------------------------------------------------ setting the books up
+
+  const STEP_ICON = { accounts: "ri-bank-line", opening: "ri-scales-3-line", petty: "ri-wallet-3-line", funds: "ri-safe-2-line", lines: "ri-git-branch-line", suppliers: "ri-store-2-line", staff: "ri-team-line", close: "ri-lock-line" };
+
+  /** Where each step is done (GET accounting/setup gives the page key). */
+  function stepAction(s, can) {
+    const go = (href, label) => `<a class="btn btn-sm btn-outline-primary" href="${esc(href)}">${label}<i class="ri-arrow-right-line ms-1"></i></a>`;
+    switch (s.page) {
+      case "accounts":
+        return go(A.link("accounts.php"), s.key === "petty" ? "Petty cash" : "Cash & bank");
+      case "journals":
+        return can.journal ? '<button type="button" class="btn btn-sm btn-outline-primary" data-opening>Opening balances</button>' : go(A.link("journals.php"), "Journals");
+      case "funds":
+        return go(`${CTX.siteUrl}/${CTX.level}/settings/?section=givingoptions`, "Giving options & funds");
+      case "chart":
+        return go(A.link("accounts.php", { add: "line" }), "Add our own line");
+      case "procurement":
+        return go(A.link("procurement.php"), "Suppliers");
+      case "staff":
+        return go(`${CTX.siteUrl}/${CTX.level}/hr/`, "Staff");
+      case "close":
+        return go(A.link("close.php"), "Month-end close");
+      default:
+        return "";
+    }
+  }
+
+  /**
+   * "Set up the books": the steps that make the books whole (needed first, the
+   * rest when needed), and who here can do each job - a job nobody holds says
+   * which permission it needs. Folds to one line once the needed steps are done.
+   */
+  function setup(s) {
     const el = $("startCard");
-    const own = !A.viewingBelow();
-    if (d.documents > 0 || !own) {
+    if (!s || A.viewingBelow()) {
       el.hidden = true;
       return;
     }
-    const c = d.can;
-    const step = (n, icon, title, text, btn) => `<div class="acc-start-step"><span class="acc-start-n">${n}</span><div class="flex-fill"><div class="fw-semibold"><i class="${icon} me-1"></i>${title}</div><p class="mb-2">${text}</p>${btn}</div></div>`;
-    el.innerHTML = `<div class="card-body"><div class="fs-15 fw-semibold mb-1">Start the books</div><p class="mb-3">Three steps and every shilling ${esc(d.place.name)} receives and spends has a home.</p><div class="acc-start-steps">
-      ${step(1, "ri-bank-line", "Add the bank and M-Pesa", "Cash at hand is already there.", c.accounts ? `<a class="btn btn-sm btn-outline-primary" href="${A.link("accounts.php")}">Cash & bank</a>` : "")}
-      ${step(2, "ri-scales-3-line", "Enter what each account holds today", "One opening journal - the cash counted, the bank statement's balance.", c.journal ? '<button type="button" class="btn btn-sm btn-outline-primary" data-opening>Opening balances</button>' : "")}
-      ${step(3, "ri-bill-line", "Write receipts and pay by voucher", "From now on, money in is a receipt and money out a payment voucher.", c.receipt ? '<button type="button" class="btn btn-sm btn-primary" data-first-receipt>Write a receipt</button>' : "")}
-    </div></div>`;
-    el.hidden = false;
+    const pct = s.of ? Math.round((s.done / s.of) * 100) : 100;
+    const finished = s.done >= s.of;
+    const row = (st) => `<li class="acc-setup-step${st.done ? " is-done" : ""}">
+        <span class="avatar avatar-sm ${st.done ? "bg-success text-white" : "bg-light text-dark border"}"><i class="${st.done ? "ri-check-line" : STEP_ICON[st.key] || "ri-checkbox-blank-circle-line"}"></i></span>
+        <div class="flex-fill min-w-0"><div class="fw-semibold">${esc(st.title)}</div><div class="acc-sub">${esc(st.detail)}</div></div>
+        ${st.done ? '<span class="soft-chip soft-success"><i class="ri-check-line"></i>Done</span>' : stepAction(st, s.can)}
+      </li>`;
+    const needed = s.steps.filter((x) => !x.optional);
+    const later = s.steps.filter((x) => x.optional);
+    const job = (j) => `<li class="acc-setup-job">
+        <div class="d-flex align-items-center justify-content-between gap-2"><span class="fw-semibold">${esc(j.label)}</span>${j.held ? `<span class="soft-chip soft-success">${j.holders.length}</span>` : '<span class="soft-chip soft-warning"><i class="ri-error-warning-line"></i>Nobody</span>'}</div>
+        ${j.held ? `<div class="d-flex flex-wrap gap-1 mt-1">${j.holders.map((n) => A.person(n)).join("")}</div>` : `<div class="acc-sub mt-1">Needs the <b>${esc(CTX.level)}.accounting.${esc(j.permission.replace(/^accounting\./, ""))}</b> permission</div>`}
+      </li>`;
+    el.classList.toggle("is-folded", finished);
+    el.innerHTML = `<div class="card-header justify-content-between flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2"><span class="avatar avatar-sm bg-${finished ? "success" : "primary"} text-white"><i class="${finished ? "ri-checkbox-circle-line" : "ri-list-check-2"}"></i></span>
+          <div><div class="card-title mb-0">${finished ? "The books are set up" : "Set up the books"}</div><div class="acc-sub">${finished ? `${esc(s.place.name)} has what it needs - the rest is there when you need it.` : `A few steps and every shilling ${esc(s.place.name)} receives and spends has a home.`}</div></div></div>
+        <div class="d-flex flex-wrap align-items-center gap-2"><span class="soft-chip soft-${finished ? "success" : "warning"}">${s.done} of ${s.of} needed steps done</span>${s.unheld ? `<span class="soft-chip soft-danger"><i class="ri-user-unfollow-line"></i>${s.unheld} ${s.unheld === 1 ? "job" : "jobs"} with nobody</span>` : ""}<button type="button" class="btn btn-sm btn-light border" data-fold>${finished ? "Show" : "Hide"}</button></div>
+      </div>
+      <div class="card-body acc-setup-body">
+        <div class="progress progress-sm mb-3" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Set-up progress"><div class="progress-bar bg-${finished ? "success" : "primary"}" style="width:${pct}%"></div></div>
+        <div class="row g-4">
+          <div class="col-lg-7"><ul class="list-unstyled acc-setup-steps mb-0">${needed.map(row).join("")}</ul>
+            ${later.length ? `<div class="acc-setup-later">When you need them</div><ul class="list-unstyled acc-setup-steps mb-0">${later.map(row).join("")}</ul>` : ""}</div>
+          <div class="col-lg-5"><div class="acc-setup-jobs-head"><i class="ri-shield-user-line me-1"></i>Who does what here</div><ul class="list-unstyled acc-setup-jobs mb-2">${s.jobs.map(job).join("")}</ul>
+            ${CTX.canAdmin ? `<a class="btn btn-sm btn-outline-primary" href="${CTX.siteUrl}/diocese/settings/admin/role-management.php"><i class="ri-key-2-line me-1"></i>Roles & permissions</a>` : s.unheld ? '<div class="acc-sub">Ask the diocese administrator to give someone these permissions.</div>' : ""}</div>
+        </div>
+      </div>`;
+    const body = el.querySelector(".acc-setup-body");
+    body.hidden = finished;
+    el.querySelector("[data-fold]").addEventListener("click", (e) => {
+      body.hidden = !body.hidden;
+      e.currentTarget.textContent = body.hidden ? "Show" : "Hide";
+    });
     el.querySelector("[data-opening]")?.addEventListener("click", () => W.journal({ opening: true, onDone: load }));
-    el.querySelector("[data-first-receipt]")?.addEventListener("click", () => W.receipt({ onDone: load }));
+    el.hidden = false;
   }
 
   async function load() {
     $("statCardsRow").innerHTML = UI.skeletonCards(4, "col-xl-3 col-sm-6");
     $("latestRows").innerHTML = UI.renderTableLoading(5);
     A.ownOnly();
-    const res = await AccountingAPI.overview();
+    const [res, su] = await Promise.all([AccountingAPI.overview(), A.viewingBelow() ? null : AccountingAPI.setup()]);
     if (!res.ok) {
       $("statCardsRow").innerHTML = `<div class="col-12">${A.errorBox(res.message)}</div>`;
       $("latestRows").innerHTML = "";
@@ -200,7 +257,7 @@
     }
     const d = res.data;
     A.placeLine($("accPlaceLine"), d.place);
-    start(d);
+    setup(su?.ok ? su.data : null);
     lastSunday(d);
     cards(d);
     cashList(d);

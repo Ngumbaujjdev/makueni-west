@@ -42,13 +42,31 @@
         { key: "name", label: "Name A-Z", order: [[1, "asc"]] },
       ],
       nonSortable: [3],
-      rowHtml: (a) => `<tr data-pills="${a.is_header ? "group" : a.is_active ? "on" : "off"}${a.system_key ? " needed" : ""}"${a.is_header ? ' class="acc-group-row"' : ""}><td data-order="${esc(a.code)}">${esc(a.code)}</td><td data-order="${esc(a.name)}"><span class="fw-semibold">${esc(a.name)}</span>${a.is_header ? ' <span class="soft-chip soft-purple"><i class="ri-folder-line"></i>Group</span>' : ""}${a.is_active ? "" : ' <span class="soft-chip soft-danger">Off</span>'}${a.system_key && !a.is_header ? ' <span class="soft-chip soft-primary" title="The books rely on it"><i class="ri-lock-line"></i>Needed</span>' : ""}${a.description ? `<div class="acc-sub">${esc(a.description)}</div>` : ""}</td><td class="d-none d-md-table-cell">${a.cash_kind ? A.methodChip(a.cash_kind === "petty_cash" ? "cash" : a.cash_kind, A.kind(a.cash_kind).label) : `<span class="acc-sub">${esc(a.type_label)}</span>`}</td><td class="text-end"><button type="button" class="btn btn-sm btn-outline-secondary" data-edit="${a.id}"><i class="ri-edit-line me-1"></i>Change</button></td></tr>`,
+      rowHtml: (a) => `<tr data-pills="${a.is_header ? "group" : a.is_active ? "on" : "off"}${a.system_key ? " needed" : ""}"${a.is_header ? ' class="acc-group-row"' : ""}><td data-order="${esc(a.code)}"><span class="${a.parent_id ? "ps-3" : ""}">${esc(a.code)}</span></td><td data-order="${esc(a.name)}"><span class="fw-semibold${a.parent_id ? " ps-3" : ""}">${esc(a.name)}</span>${a.is_header ? ' <span class="soft-chip soft-purple"><i class="ri-folder-line"></i>Group</span>' : ""}${a.is_active ? "" : ' <span class="soft-chip soft-danger">Off</span>'}${a.system_key && !a.is_header ? ' <span class="soft-chip soft-primary" title="The books rely on it"><i class="ri-lock-line"></i>Needed</span>' : ""}${a.description ? `<div class="acc-sub">${esc(a.description)}</div>` : ""}</td><td class="d-none d-md-table-cell">${a.cash_kind ? A.methodChip(a.cash_kind === "petty_cash" ? "cash" : a.cash_kind, A.kind(a.cash_kind).label) : `<span class="acc-sub">${esc(a.type_label)}</span>`}</td><td class="text-end"><button type="button" class="btn btn-sm btn-outline-secondary" data-edit="${a.id}"><i class="ri-edit-line me-1"></i>Change</button></td></tr>`,
     });
     $("fundRows").innerHTML = `<div class="acc-fund-list">${data.funds.map((f) => `<div class="acc-fund"><span class="avatar avatar-sm avatar-rounded bg-${f.is_restricted ? "warning text-dark" : "success text-white"}"><i class="${f.is_restricted ? "ri-lock-line" : "ri-hand-heart-line"}"></i></span><div class="flex-fill min-w-0"><div class="fw-semibold">${esc(f.name)}</div><div class="acc-sub">${esc(f.code)} · ${f.is_restricted ? "Restricted" : "Free to use"}${f.description ? ` · ${esc(f.description)}` : ""}</div></div></div>`).join("")}</div>`;
   }
 
   function edit(a = null) {
     const t = TYPES.find((x) => x[0] === (a?.type || type));
+    /** A new account's heading picker: the headings of the chosen kind; a new kind refreshes them. */
+    const ready = () => {
+      if (a) return;
+      const heads = () => {
+        const k = $("chType").value;
+        const s = $("chParent");
+        s.innerHTML = `<option value="">No heading - on its own</option>${data.chart.filter((x) => !x.own && x.is_header && x.type === k).map((x) => `<option value="${x.id}" data-icon="ri-folder-line" data-color="purple">${esc(x.code)} ${esc(x.name)}</option>`).join("")}`;
+        DemographicsUI.syncSelect?.(s);
+        const tt = TYPES.find((x) => x[0] === k);
+        $("chCode").placeholder = `e.g. ${tt[4]}240`;
+        const sub = document.querySelector("#ppModal .app-modal-subtitle");
+        if (sub) sub.textContent = `${tt[1]} codes start with ${tt[4]}`;
+      };
+      heads();
+      DemographicsUI.enhanceSelect($("chParent"));
+      DemographicsUI.enhanceSelect($("chType"));
+      window.jQuery?.($("chType")).on("change", heads);
+    };
     K.confirmWindow({
       title: a ? `Change ${a.code} ${a.name}` : "Add an account to the chart",
       subtitle: a ? "Every place sees the new name" : `${t[1]} codes start with ${t[4]}`,
@@ -56,18 +74,20 @@
       go: `<i class="ri-check-line me-1"></i>${a ? "Save" : "Add account"}`,
       body: K.parts([
         ...(a ? [] : [{ icon: "ri-price-tag-3-line", title: "Type and code", body: `<div class="row g-2"><div class="col-sm-6"><select class="form-select" id="chType">${TYPES.map(([k, l]) => `<option value="${k}"${k === t[0] ? " selected" : ""}>${l}</option>`).join("")}</select></div><div class="col-sm-6"><input type="text" class="form-control" id="chCode" maxlength="20" placeholder="e.g. ${t[4]}240" inputmode="numeric"></div></div>` }]),
+        ...(a ? [] : [{ icon: "ri-folder-line", title: "Where it sits", hint: "Under a heading of the same kind, so reports group it there - or a heading of its own.", body: `<select class="form-select" id="chParent"></select><div class="form-check form-switch mt-2"><input class="form-check-input" type="checkbox" id="chHeader"><label class="form-check-label" for="chHeader">This only groups other accounts (a heading - nothing is posted to it)</label></div>` }]),
         { icon: "ri-edit-line", title: "Name", body: `<input type="text" class="form-control" id="chName" maxlength="150" value="${esc(a?.name || "")}" placeholder="e.g. Fuel"><input type="text" class="form-control mt-2" id="chAbout" maxlength="255" value="${esc(a?.description || "")}" placeholder="What it is for (optional)">` },
         ...(a && !a.is_header ? [{ icon: "ri-toggle-line", title: "In use", body: `<div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="chActive"${a.is_active ? " checked" : ""}${a.system_key ? " disabled" : ""}><label class="form-check-label" for="chActive">${a.system_key ? "The books rely on this account" : "Places can post to it"}</label></div>` }] : []),
       ]),
       run: async () => {
         const body = { name: $("chName").value.trim(), description: $("chAbout").value.trim() || null };
-        if (!a) Object.assign(body, { type: $("chType").value, code: $("chCode").value.trim() });
+        if (!a) Object.assign(body, { type: $("chType").value, code: $("chCode").value.trim(), parent_id: Number($("chParent").value) || null, is_header: $("chHeader").checked });
         if (a && $("chActive") && !a.system_key) body.is_active = $("chActive").checked;
         const res = await AccountingAPI.saveChart(a?.id, body);
         if (res.ok) load();
         return res;
       },
     });
+    ready();
   }
 
   async function load() {

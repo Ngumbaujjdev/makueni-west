@@ -506,6 +506,47 @@ const AccountingWindows = (function () {
     });
   }
 
+  // ------------------------------------------------------------ our own line under a standard account
+
+  /**
+   * "Add our own line": a finer income or expense line of our own under one of
+   * the diocese's standard accounts (4010-01 Youth offering under 4010
+   * Offerings). Budgets count it on the standard account's line. A line we
+   * already have is renamed here.
+   */
+  function ownLine({ line = null, chart = [], onDone } = {}) {
+    const parents = chart.filter((a) => ["income", "expense"].includes(a.type) && !a.own && !a.is_header && a.is_active);
+    const group = (t, label) => `<optgroup label="${label}">${parents.filter((a) => a.type === t).map((a) => `<option value="${a.id}" data-icon="${t === "income" ? "ri-arrow-down-circle-line" : "ri-arrow-up-circle-line"}" data-color="${t === "income" ? "success" : "danger"}">${esc(a.code)} ${esc(a.name)}</option>`).join("")}</optgroup>`;
+    open({
+      title: line ? `Change ${line.name}` : "Add our own line",
+      subtitle: line ? `${line.code} - only our books use it` : "A finer line of our own under one of the diocese's accounts - budgets count it on that account's line",
+      icon: "ri-git-branch-line",
+      size: "modal-lg",
+      parts: [
+        ...(line
+          ? []
+          : [{ title: "Under which account", hint: "The diocese's standard account it belongs to - e.g. Youth offering under Offerings, Choir uniforms under Equipment.",
+              body: `<select class="form-select" id="olParent" data-field="parent_id"><option value="">Pick an account...</option>${group("income", "Money in")}${group("expense", "Money out")}</select>` }]),
+        {
+          title: "Name and note",
+          body: `<div class="row g-2"><div class="col-12"><input type="text" class="form-control" id="olName" data-field="name" maxlength="150" placeholder="e.g. Youth offering" value="${esc(line?.name || "")}"></div>
+          <div class="col-12"><input type="text" class="form-control" id="olAbout" data-field="description" maxlength="255" placeholder="What goes here? (optional)" value="${esc(line?.description || "")}"></div>
+          ${line ? `<div class="col-12"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="olActive"${line.is_active ? " checked" : ""}><label class="form-check-label" for="olActive">In use</label></div></div>` : ""}</div>`,
+        },
+      ],
+      saveLabel: line ? "Save" : "Add the line",
+      onReady: (el) => {
+        const s = el.querySelector("#olParent");
+        if (s) UI.enhanceSelect(s, { search: true });
+      },
+      save: (el) =>
+        line
+          ? API.saveAccount(line.id, { name: val(el, "#olName"), description: val(el, "#olAbout") || null, is_active: el.querySelector("#olActive").checked })
+          : API.saveAccount(null, { parent_id: Number(val(el, "#olParent")) || null, name: val(el, "#olName"), description: val(el, "#olAbout") || null }),
+      done: (res) => ({ title: line ? "Saved" : `${res.data.name} added`, facts: [["Code", esc(res.data.code)], ...(line ? [] : [["Under", esc((parents.find((a) => a.id === res.data.parent_id) || {}).name || "")]])], wire: () => onDone?.(res.data) }),
+    });
+  }
+
   // ------------------------------------------------------------ views
 
   /** A plain view window (no form): header band, body, footer buttons. */
@@ -902,7 +943,7 @@ const AccountingWindows = (function () {
     });
   }
 
-  return { payeeFields, wirePayee, readPayee, receipt, voucher, transfer, journal, account, viewJournal, viewVoucher, voucherSteps, voucherNext, viewFrame, heroStrip, part, factGrid, filesPart, close, countCash, pettySpend, setFloat, topUp, reasonWindow, cashTiles };
+  return { payeeFields, wirePayee, readPayee, receipt, voucher, transfer, journal, account, viewJournal, viewVoucher, voucherSteps, voucherNext, ownLine, viewFrame, heroStrip, part, factGrid, filesPart, close, countCash, pettySpend, setFloat, topUp, reasonWindow, cashTiles };
 })();
 
 window.AccountingWindows = AccountingWindows;

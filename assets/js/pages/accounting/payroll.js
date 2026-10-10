@@ -20,6 +20,8 @@
   const API = AccountingAPI;
   const $ = (id) => document.getElementById(id);
   const esc = A.esc;
+  // People are managed in Staff (HR) - their position, grade, allowances and pay (2026-10-10).
+  const staffUrl = `${window.ACC_CTX.siteUrl}/${window.ACC_CTX.level}/hr/`;
   const n = (v) => Math.round(parseFloat(String(v ?? "").replace(/[^0-9.]/g, "")) * 100) / 100 || 0;
   const params = new URLSearchParams(window.location.search);
   let data = null;
@@ -112,8 +114,8 @@
         { key: "small", label: "Lowest pay first", order: [[3, "asc"]] },
       ],
       nonSortable: [4],
-      empty: A.empty("ri-team-line", "Nobody on the payroll yet", "Add the people this place pays - staff, a caretaker, someone paid an allowance.", data.can.manage && !A.viewingBelow() ? '<button type="button" class="btn btn-primary" data-firstperson><i class="ri-user-add-line me-1"></i>Add a person</button>' : ""),
-      rowHtml: (e) => `<tr class="${e.is_active ? "" : "opacity-50"}" data-pills="${e.is_active ? "on" : "left"} ${e.pay_method}"><td data-order="${esc(e.name)}"><div class="fw-semibold">${esc(e.name)}${e.is_active ? "" : ' <span class="badge bg-secondary">Left</span>'}</div><div class="acc-sub">${esc(e.position || "")}${e.start_date ? ` · since ${A.day(e.start_date)}` : ""}</div></td><td class="d-none d-md-table-cell">${A.methodChip({ paybill: "mpesa", till: "mpesa" }[e.pay_method] || e.pay_method, e.pay_method_label)}<div class="acc-sub mt-1">${esc(e.pay_to || "")}</div></td><td class="d-none d-lg-table-cell">${esc(e.kra_pin || "-")}</td><td class="text-end" data-order="${e.gross}"><strong>${A.money(e.gross)}</strong>${e.allowances.length ? `<div class="acc-sub">basic ${A.money(e.basic_pay)} + ${e.allowances.length} ${e.allowances.length === 1 ? "allowance" : "allowances"}</div>` : ""}</td><td class="text-end">${data.can.manage && !A.viewingBelow() ? `<button type="button" class="btn btn-sm btn-icon btn-outline-primary" data-person="${e.id}" aria-label="Change"><i class="ri-edit-line"></i></button>` : ""}</td></tr>`,
+      empty: A.empty("ri-team-line", "Nobody on the payroll yet", "The people this place pays are added in Staff - with their position, grade and allowances.", !A.viewingBelow() ? `<a class="btn btn-primary" href="${staffUrl}"><i class="ri-user-add-line me-1"></i>Add people in Staff</a>` : ""),
+      rowHtml: (e) => `<tr class="${e.is_active ? "" : "opacity-50"}" data-pills="${e.is_active ? "on" : "left"} ${e.pay_method}"><td data-order="${esc(e.name)}"><div class="fw-semibold">${esc(e.name)}${e.is_active ? "" : ' <span class="badge bg-secondary">Left</span>'}</div><div class="acc-sub">${esc(e.position || "")}${e.start_date ? ` · since ${A.day(e.start_date)}` : ""}</div></td><td class="d-none d-md-table-cell">${A.methodChip({ paybill: "mpesa", till: "mpesa" }[e.pay_method] || e.pay_method, e.pay_method_label)}<div class="acc-sub mt-1">${esc(e.pay_to || "")}</div></td><td class="d-none d-lg-table-cell">${esc(e.kra_pin || "-")}</td><td class="text-end" data-order="${e.gross}"><strong>${A.money(e.gross)}</strong>${e.allowances.length ? `<div class="acc-sub">basic ${A.money(e.basic_pay)} + ${e.allowances.length} ${e.allowances.length === 1 ? "allowance" : "allowances"}</div>` : ""}</td><td class="text-end">${!A.viewingBelow() ? `<a class="btn btn-sm btn-outline-primary" href="${staffUrl}" title="Change pay, position or allowances in Staff"><i class="ri-user-settings-line me-1"></i>In Staff</a>` : ""}</td></tr>`,
     });
   }
 
@@ -142,54 +144,6 @@
     runs();
     people();
     showTab();
-  }
-
-  // ------------------------------------------------------------ a person
-
-  function personWindow(e = null) {
-    const f = (id, label, v, type = "text", col = "col-sm-6", extra = "") => `<div class="${col}"><label class="form-label" for="${id}">${label}</label><input type="${type}" class="form-control" id="${id}" value="${esc(v ?? "")}"${extra}></div>`;
-    const secret = (id, label, masked) => `<div class="col-sm-6"><label class="form-label" for="${id}">${label}</label><input type="text" class="form-control" id="${id}" maxlength="20" autocomplete="off" placeholder="${masked ? `Saved: ${esc(masked)} - type to replace` : "Not given"}"></div>`;
-    const el = K.confirmWindow({
-      title: e ? `Change ${e.name}` : "Add a person to the payroll",
-      subtitle: "What they are paid a month and how",
-      icon: "ri-user-add-line",
-      go: '<i class="ri-check-line me-1"></i>Save',
-      body: K.parts([
-        { icon: "ri-user-line", title: "Who", body: `<div class="row g-2">${f("pnName", "Name", e?.name)}${f("pnPos", "Position", e?.position)}${f("pnPhone", "Phone", e?.phone, "tel")}${f("pnEmail", "Email", e?.email, "email")}${f("pnStart", "Started", e?.start_date, "date")}${f("pnEnd", "Left (if they have)", e?.end_date, "date")}</div>` },
-        { icon: "ri-money-dollar-box-line", title: "Pay a month", body: `<div class="row g-2">${f("pnBasic", "Basic pay (KES)", e?.basic_pay || "", "text", "col-sm-6", ' inputmode="decimal"')}</div><div class="mt-2" id="pnAllow"></div><button type="button" class="btn btn-sm btn-outline-primary mt-1" id="pnAddAllow"><i class="ri-add-line me-1"></i>Add an allowance</button>` },
-        { icon: "ri-bank-card-line", title: "Paid by", hint: e?.pay_to && !e?.payee ? `Saved before as: ${esc(e.pay_to)}` : "Where their pay goes", body: W.payeeFields("pnTo", e?.payee || (e ? { method: e.pay_method } : { method: "mpesa" }), { optional: false }) },
-        { icon: "ri-lock-line", title: "Private numbers", hint: "Kept encrypted; only the last four are ever shown", body: `<div class="row g-2">${secret("pnId", "ID number", e?.id_number)}${secret("pnKra", "KRA PIN", e?.kra_pin)}</div>${e ? `<label class="form-check form-switch mt-3 mb-0"><input class="form-check-input" type="checkbox" id="pnActive"${e.is_active ? " checked" : ""}><span class="form-check-label">On the payroll (off once they leave)</span></label>` : ""}` },
-      ]),
-      run: async () => {
-        const v = (id) => el.querySelector(`#${id}`).value.trim() || null;
-        const body = {
-          name: v("pnName") || "",
-          position: v("pnPos"),
-          phone: v("pnPhone"),
-          email: v("pnEmail"),
-          start_date: v("pnStart"),
-          end_date: v("pnEnd"),
-          basic_pay: n(v("pnBasic")),
-          allowances: [...el.querySelectorAll("[data-allow]")].map((x) => ({ name: x.querySelector("[data-an]").value.trim(), amount: n(x.querySelector("[data-aa]").value) })).filter((a) => a.name || a.amount),
-          payee: W.readPayee(el, "pnTo"),
-          id_number: v("pnId"),
-          kra_pin: v("pnKra"),
-          ...(e ? { is_active: el.querySelector("#pnActive").checked } : {}),
-        };
-        const out = await API.saveEmployee(e?.id, body);
-        if (out.ok) load();
-        return out;
-      },
-    });
-    W.wirePayee(el, "pnTo");
-    el.querySelector(".modal-dialog").classList.add("modal-lg");
-    const add = (a = {}) => {
-      el.querySelector("#pnAllow").insertAdjacentHTML("beforeend", `<div class="row g-2 mb-2" data-allow><div class="col-7"><input type="text" class="form-control" data-an maxlength="60" placeholder="e.g. House" value="${esc(a.name || "")}"></div><div class="col-5"><div class="input-group"><span class="input-group-text">KES</span><input type="text" inputmode="decimal" class="form-control text-end" data-aa value="${a.amount || ""}"></div></div></div>`);
-    };
-    (e?.allowances || []).forEach(add);
-    el.querySelector("#pnAddAllow").addEventListener("click", () => add());
-    UI.enhanceSelect(el.querySelector("#pnMethod"), { search: false });
-    if (window.DateField) ["#pnStart", "#pnEnd"].forEach((s) => DateField.enhance(el.querySelector(s), { quick: ["today"] }));
   }
 
   // ------------------------------------------------------------ the run
@@ -372,16 +326,10 @@
   // ------------------------------------------------------------ start
 
   function init() {
-    $("personBtn")?.addEventListener("click", () => personWindow());
     $("startBtn")?.addEventListener("click", startRun);
     $("pyRunRows").addEventListener("click", (e) => {
       const tr = e.target.closest("tr[data-id]");
       if (tr) window.location.href = A.link("record.php", { type: "payroll", id: tr.dataset.id });
-    });
-    $("pyPeopleRows").addEventListener("click", (e) => {
-      if (e.target.closest("[data-firstperson]")) return personWindow();
-      const b = e.target.closest("[data-person]");
-      if (b) personWindow(data.employees.find((x) => x.id === Number(b.dataset.person)));
     });
     $("pyTabs").addEventListener("click", (e) => {
       const b = e.target.closest("[data-tab]");
