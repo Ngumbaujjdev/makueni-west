@@ -39758,3 +39758,167 @@ a.acc-chain-item:hover, button.acc-chain-item:hover { border-color: rgba(var(--p
 .acc-jtext small { white-space: nowrap; }
 .acc-jtext .acc-jnote { white-space: normal; }
 .acc-chain-num { overflow-wrap: anywhere; }
+
+/* ===========================================================================
+   ACCOUNTING REDESIGN R2 (2026-10-10) - lighter windows, key data in colour
+   The user found the navy band and bold black text heavy ("hard to find the
+   important data"): Accounting windows get a white header with a coloured
+   top line and icon, calmer text, and colour only on the key data.
+   =========================================================================== */
+.acc-body .app-modal .modal-header { border-top: 3px solid rgb(var(--acc-tone, var(--primary-rgb))); border-bottom: 1px solid var(--default-border); background: #fff; color: var(--v2-heading); }
+.acc-body .app-modal.is-danger { --acc-tone: var(--danger-rgb); }
+.acc-body .app-modal.is-done, .acc-body .app-modal:has(.app-modal-state.is-done) { --acc-tone: var(--success-rgb); }
+.acc-body .app-modal.is-danger .modal-header, .acc-body .app-modal.is-done .modal-header, .acc-body .app-modal:has(.app-modal-state.is-done) .modal-header { background: #fff; }
+.acc-body .app-modal-icon { background: rgb(var(--acc-tone, var(--primary-rgb))) !important; color: #fff !important; }
+.acc-body .app-modal .modal-title { font-weight: 600; color: var(--v2-heading); }
+.acc-body .app-modal-subtitle { color: var(--default-text-color); }
+.acc-body .app-modal .modal-header .btn-close { background: rgba(var(--dark-rgb, 15, 23, 42), .06) url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23334155'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e") center / .7rem auto no-repeat; }
+.acc-body .app-modal .modal-header .btn-close:hover { background-color: rgba(15, 23, 42, .12); }
+.acc-body .app-modal .modal-header .btn-close:focus { box-shadow: 0 0 0 3px rgba(var(--primary-rgb), .3); }
+.acc-tone-primary { --acc-tone: var(--primary-rgb); }
+.acc-tone-success { --acc-tone: var(--success-rgb); }
+.acc-tone-danger { --acc-tone: var(--danger-rgb); }
+.acc-tone-warning { --acc-tone: var(--warning-rgb); }
+.acc-tone-purple { --acc-tone: var(--purple-rgb); }
+.acc-tone-pink { --acc-tone: var(--pink-rgb); }
+.acc-tone-secondary { --acc-tone: var(--secondary-rgb); }
+.acc-body .acc-tone-warning .app-modal-icon, .acc-body .acc-tone-secondary .app-modal-icon { color: var(--diocese-black) !important; }
+
+/* Each part's head: a solid icon tile in its own colour */
+.acc-body .app-modal-part-head { font-weight: 600; }
+.acc-body .app-modal-part-head i { background: rgb(var(--acc-part, var(--primary-rgb))); color: #fff; }
+.acc-body .app-modal-part[data-tone="warning"] { --acc-part: var(--warning-rgb); }
+.acc-body .app-modal-part[data-tone="warning"] .app-modal-part-head i { color: var(--diocese-black); }
+.acc-body .app-modal-part[data-tone="purple"] { --acc-part: var(--purple-rgb); }
+.acc-body .app-modal-part[data-tone="pink"] { --acc-part: var(--pink-rgb); }
+.acc-body .app-modal-part[data-tone="success"] { --acc-part: var(--success-rgb); }
+.acc-body .app-modal-part[data-tone="danger"] { --acc-part: var(--danger-rgb); }
+.acc-body .app-modal.is-danger .app-modal-part-head i { background: rgb(var(--danger-rgb)); color: #fff; }
+
+/* Calmer text: values plain, labels small and grey - the figure and the colour carry the weight */
+.acc-body .acc-facts strong, .acc-body .acc-hero-facts strong, .acc-body .acc-rec-facts strong { font-weight: 500; }
+.acc-body .acc-rec-card .card-title { font-weight: 600; }
+.acc-body .acc-lines-table td .fw-semibold { font-weight: 500 !important; }
+.acc-hero-amount.is-out .acc-figure, .acc-rec-amount.is-out .acc-figure { color: rgb(var(--danger-rgb)); }
+.acc-hero-amount.is-in .acc-figure, .acc-rec-amount.is-in .acc-figure { color: rgb(var(--success-rgb)); }
+.acc-hero-amount.is-out .acc-figure small, .acc-rec-amount.is-out .acc-figure small, .acc-hero-amount.is-in .acc-figure small, .acc-rec-amount.is-in .acc-figure small { color: inherit; opacity: .75; }
+
+/* A person, a date, an account */
+.acc-person { display: inline-flex; align-items: center; gap: .4rem; min-width: 0; font-weight: 500; }
+.acc-person .avatar { flex-shrink: 0; font-size: .62rem; font-weight: 700; }
+.acc-date { display: inline-flex; align-items: center; gap: .35rem; font-weight: 500; }
+.acc-date i { color: rgb(var(--purple-rgb)); }
+.acc-acct { display: inline-flex; align-items: center; gap: .4rem; min-width: 0; font-weight: 500; }
+.acc-acct-tile { display: inline-grid; flex-shrink: 0; place-items: center; width: 1.35rem; height: 1.35rem; border-radius: .4rem; font-size: .72rem; }
+
+/* Record pages: each card's icon in its own colour */
+.acc-rec-icon.bg-primary, .acc-rec-icon.bg-success, .acc-rec-icon.bg-danger, .acc-rec-icon.bg-purple, .acc-rec-icon.bg-pink, .acc-rec-icon.bg-info { color: #fff; }
+.acc-rec-icon.bg-warning { color: var(--diocese-black); }
+
+/* Approvals: who holds what (the lane board), the feed, this month */
+.acc-lanes { display: flex; flex-direction: column; gap: .35rem; }
+.acc-lanes-head, .acc-lane { display: grid; grid-template-columns: 13rem minmax(0, 1fr); gap: .75rem; align-items: start; }
+.acc-lanes-head .acc-lane-who { align-self: end; font-size: .68rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--default-text-color); }
+.acc-lane-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .35rem; }
+.acc-lane-days span { display: flex; flex-direction: column; align-items: center; padding: .35rem 0; border: 1px solid var(--default-border); border-radius: .6rem; background: #fff; }
+.acc-lane-days small { font-size: .66rem; font-weight: 600; text-transform: uppercase; color: var(--default-text-color); }
+.acc-lane-days strong { font-size: .92rem; color: var(--v2-heading); }
+.acc-lane-days .is-today { border-color: rgb(var(--primary-rgb)); background: rgb(var(--primary-rgb)); }
+.acc-lane-days .is-today small, .acc-lane-days .is-today strong { color: #fff; }
+.acc-lane-who { display: flex; align-items: center; gap: .6rem; min-width: 0; padding: .55rem .65rem; border: 1px solid var(--default-border); border-radius: .75rem; background: #fff; }
+.acc-lane-who small { font-size: .72rem; color: var(--default-text-color); }
+.acc-lane-track { position: relative; min-height: 3.4rem; }
+.acc-lane-cols { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .35rem; }
+.acc-lane-cols span { border-radius: .6rem; background: rgba(var(--primary-rgb), .025); }
+.acc-lane-cols .is-today { background: rgba(var(--primary-rgb), .07); }
+.acc-lane-now { position: absolute; top: -.35rem; bottom: 0; left: calc(100% - 100% / 14); border-left: 2px dashed rgb(var(--primary-rgb)); }
+.acc-lane-block { position: absolute; z-index: 1; display: flex; align-items: center; gap: .5rem; height: 2.9rem; padding: .35rem .5rem .35rem .4rem; border-radius: .8rem; color: #fff; text-decoration: none; box-shadow: 0 6px 14px rgba(15, 23, 42, .12); transition: transform .15s, box-shadow .15s; }
+.acc-lane-block:hover { color: #fff; transform: translateY(-1px); box-shadow: 0 10px 20px rgba(15, 23, 42, .18); }
+.acc-lane-ico { display: grid; flex: 0 0 2.05rem; place-items: center; width: 2.05rem; height: 2.05rem; border-radius: 50%; background: #fff; color: var(--v2-heading); }
+.acc-lane-text { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; line-height: 1.2; }
+.acc-lane-text strong, .acc-lane-text small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.acc-lane-text strong { font-size: .8rem; }
+.acc-lane-text small { font-size: .72rem; opacity: .92; }
+.acc-lane-pill { display: inline-flex; flex-shrink: 0; align-items: center; gap: .3rem; padding: .2rem .55rem; border-radius: 1rem; background: #fff; font-size: .7rem; font-weight: 600; color: var(--v2-heading); white-space: nowrap; }
+.acc-lane-pill i { width: .45rem; height: .45rem; border-radius: 50%; background: rgb(var(--secondary-rgb)); }
+.acc-lane-block.is-mine .acc-lane-pill i { background: rgb(var(--warning-rgb)); }
+.acc-lane-block.is-overdue .acc-lane-pill i, .acc-lane-block.is-stuck .acc-lane-pill i { background: rgb(var(--danger-rgb)); }
+.acc-lane-block.is-overdue, .acc-lane-block.is-stuck { outline: 2px solid rgb(var(--danger-rgb)); outline-offset: 1px; }
+.acc-lane-block.bg-warning { color: var(--diocese-black); }
+.acc-lanes-list { display: none; }
+.acc-lanes-group + .acc-lanes-group { margin-top: .9rem; }
+.acc-lanes-group-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .45rem; color: var(--v2-heading); }
+.acc-lanes-item { display: flex; align-items: center; gap: .55rem; padding: .5rem .6rem; border: 1px solid var(--default-border); border-radius: .7rem; color: var(--v2-heading); text-decoration: none; font-size: .84rem; }
+.acc-lanes-item + .acc-lanes-item { margin-top: .35rem; }
+
+.acc-feed { display: flex; flex-direction: column; gap: .65rem; }
+.acc-feed-item { display: flex; align-items: flex-start; gap: .85rem; padding: .9rem 1rem; border: 1px solid var(--default-border); border-radius: .9rem; background: #fff; cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.acc-feed-item:hover { border-color: rgba(var(--primary-rgb), .45); box-shadow: 0 6px 16px rgba(15, 23, 42, .06); }
+.acc-feed-item.is-first { border-color: rgb(var(--warning-rgb)); background: rgb(var(--warning-rgb)); }
+.acc-feed-item.is-first .acc-feed-line, .acc-feed-item.is-first .acc-feed-num, .acc-feed-item.is-first .acc-feed-ago, .acc-feed-item.is-first .acc-feed-amt { color: var(--diocese-black); }
+.acc-feed-item.is-first .acc-feed-chip { border-color: rgba(13, 13, 13, .15); background: #fff; }
+.acc-feed-body { display: flex; flex: 1 1 auto; flex-direction: column; gap: .35rem; min-width: 0; }
+.acc-feed-top { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.acc-feed-tag { display: inline-flex; align-items: center; gap: .3rem; padding: .15rem .55rem; border-radius: 1rem; font-size: .7rem; font-weight: 600; }
+.acc-feed-num { font-size: .78rem; font-weight: 600; color: var(--v2-heading); }
+.acc-feed-ago { margin-left: auto; font-size: .74rem; color: var(--default-text-color); }
+.acc-feed-line { font-size: .9rem; color: var(--v2-heading); }
+.acc-feed-line strong { font-weight: 600; }
+.acc-feed-amt { color: rgb(var(--danger-rgb)); white-space: nowrap; }
+.acc-feed-meta { display: flex; flex-wrap: wrap; gap: .35rem; }
+.acc-feed-chip { display: inline-flex; align-items: center; gap: .3rem; padding: .15rem .55rem; border: 1px solid var(--default-border); border-radius: 1rem; background: #fff; font-size: .72rem; font-weight: 500; color: var(--v2-heading); }
+.acc-feed-chip.is-warning { border-color: rgba(var(--warning-rgb), .6); background: rgba(var(--warning-rgb), .12); }
+.acc-feed-chip.is-danger { border-color: rgba(var(--danger-rgb), .5); background: rgba(var(--danger-rgb), .08); color: rgb(var(--danger-rgb)); }
+.acc-feed-actions { display: flex; flex-shrink: 0; flex-direction: column; align-items: stretch; gap: .35rem; }
+
+.acc-stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+.acc-stat-tile { display: flex; align-items: center; gap: .65rem; padding: .75rem; border: 1px solid var(--default-border); border-radius: .8rem; }
+.acc-stat-tile strong { display: block; font-size: 1.2rem; font-variant-numeric: tabular-nums; color: var(--v2-heading); }
+.acc-stat-tile small { display: block; font-size: .72rem; line-height: 1.25; color: var(--default-text-color); }
+.acc-activity a { font-weight: 600; }
+.acc-initials { font-size: .72rem; font-weight: 700; }
+
+/* Cash & bank */
+.acc-card-link { color: var(--v2-heading); text-decoration: none; }
+.acc-card-link:hover { color: rgb(var(--primary-rgb)); }
+.pp-pill.is-empty { opacity: .55; }
+
+@media (max-width: 991.98px) {
+  .acc-lanes { display: none; }
+  .acc-lanes-list { display: block; }
+  .acc-feed-item { flex-wrap: wrap; }
+  .acc-feed-actions { flex-direction: row; width: 100%; }
+}
+/* Chips inside a fact keep their own case and size (the fact label is the direct child span) */
+.acc-facts strong span, .acc-hero-facts strong span, .acc-rec-facts strong span { font-size: inherit; font-weight: inherit; letter-spacing: 0; text-transform: none; color: inherit; }
+.acc-facts strong .avatar, .acc-hero-facts strong .avatar, .acc-rec-facts strong .avatar { font-size: .62rem; font-weight: 700; }
+.acc-facts strong .badge, .acc-rec-facts strong .badge { font-size: .7rem; }
+
+/* A row's compact journey and the payroll month tile */
+.acc-steps-cell { min-width: 15rem; }
+.acc-steps-cell .acc-journey.is-compact { margin-bottom: .1rem; }
+.acc-journey.is-compact .acc-jstep { gap: .3rem; padding-right: .35rem; }
+.acc-journey.is-compact .acc-jtext strong { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.acc-journey.is-compact .acc-jstep.is-now .acc-jdot { box-shadow: 0 0 0 3px rgba(var(--warning-rgb), .25); animation: none; }
+.acc-journey.is-compact .acc-jstep.is-now .acc-jtext strong { color: var(--v2-heading); }
+.acc-month-tile { display: inline-flex; flex: 0 0 2.8rem; flex-direction: column; align-items: center; justify-content: center; width: 2.8rem; height: 2.8rem; border-radius: .7rem; background: rgb(var(--primary-rgb)); color: #fff; line-height: 1.05; }
+.acc-month-tile small { font-size: .62rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.acc-month-tile strong { font-size: .95rem; }
+/* (as specific as the template's colour rotation for parts, so the solid tiles win) */
+.acc-body .app-modal .app-modal-part:nth-of-type(n) > .app-modal-part-head i { background: rgb(var(--acc-part, var(--primary-rgb))); color: #fff; }
+.acc-body .app-modal .app-modal-part:nth-of-type(4n + 2) { --acc-part: var(--purple-rgb); }
+.acc-body .app-modal .app-modal-part:nth-of-type(4n + 3) { --acc-part: var(--pink-rgb); }
+.acc-body .app-modal .app-modal-part:nth-of-type(4n + 4) { --acc-part: var(--success-rgb); }
+.acc-body .app-modal .app-modal-part[data-tone="primary"]:nth-of-type(n) { --acc-part: var(--primary-rgb); }
+.acc-body .app-modal .app-modal-part[data-tone="warning"]:nth-of-type(n) { --acc-part: var(--warning-rgb); }
+.acc-body .app-modal .app-modal-part[data-tone="purple"]:nth-of-type(n) { --acc-part: var(--purple-rgb); }
+.acc-body .app-modal .app-modal-part[data-tone="pink"]:nth-of-type(n) { --acc-part: var(--pink-rgb); }
+.acc-body .app-modal .app-modal-part[data-tone="success"]:nth-of-type(n) { --acc-part: var(--success-rgb); }
+.acc-body .app-modal .app-modal-part[data-tone="warning"]:nth-of-type(n) > .app-modal-part-head i { color: var(--diocese-black); }
+.acc-body .app-modal.is-danger .app-modal-part:nth-of-type(n) > .app-modal-part-head i { background: rgb(var(--danger-rgb)); color: #fff; }
+.acc-page .acc-table td.acc-steps-cell { width: 17rem; min-width: 17rem; max-width: 17rem; }
+.acc-steps-cell .acc-journey.is-compact .acc-jtext strong { font-size: .7rem; }
+.acc-steps-cell > .acc-sub { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.acc-page .acc-table .acc-sub.text-truncate { max-width: 20rem; }
+.acc-page .acc-table td.text-end .acc-sub { max-width: 9.5rem; }
+.acc-page .acc-table .acc-sub.text-truncate { max-width: 16rem; }

@@ -16,7 +16,7 @@ include __DIR__ . '/toolbar.php';
     <div class="col-xl-5 d-flex">
         <div class="card custom-card flex-fill">
             <div class="card-header justify-content-between flex-wrap gap-2">
-                <div><div class="card-title">Where the money is</div><span class="card-subtitle-text">Each account's balance today - open one for its cashbook</span></div>
+                <div><div class="card-title">Where the money is</div><span class="card-subtitle-text">Each account's balance today - open one for its money in and out</span></div>
                 <a class="btn btn-sm btn-outline-primary" href="<?= $accCtx['baseUrl'] ?>/accounts.php" data-keep-place><i class="ri-bank-line me-1"></i>Cash & bank</a>
             </div>
             <div class="card-body" id="cashList"></div>

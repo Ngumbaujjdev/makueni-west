@@ -53,7 +53,7 @@
     const total = d.cash.reduce((s, a) => s + Math.max(0, a.balance), 0) || 1;
     $("cashList").innerHTML = `<div class="acc-cash-list">${d.cash
       .map(
-        (a) => `<a class="acc-cash-row" href="${A.link("cashbook.php", { account_id: a.id })}">
+        (a) => `<a class="acc-cash-row" href="${A.link("account.php", { id: a.id })}">
           ${A.tile(a.cash_kind)}
           <div class="flex-fill min-w-0"><div class="fw-semibold text-truncate">${esc(a.name)}</div><div class="acc-sub">${esc(A.kind(a.cash_kind).label)}${a.number_masked ? ` · ${esc(a.number_masked)}` : ""}${a.is_active ? "" : " · switched off"}</div>
           <div class="progress progress-xs mt-1"><div class="progress-bar bg-${A.kind(a.cash_kind).color}" style="width:${Math.round((Math.max(0, a.balance) / total) * 100)}%"></div></div></div>

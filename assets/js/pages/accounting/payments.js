@@ -40,7 +40,7 @@
     </td>
     <td data-order="${v.date}${String(v.id).padStart(8, "0")}" class="text-nowrap">${A.day(v.date)}</td>
     <td class="d-none d-md-table-cell"><span class="fw-semibold">${esc(v.payee_name)}</span><div class="acc-sub">${esc((v.charged_to || []).join(", "))}</div></td>
-    <td class="d-none d-lg-table-cell">${A.voucherPill(v.status)}<div class="acc-sub mt-1">${esc(v.status === "paid" ? `Paid ${A.day(v.paid_on)}${v.reference ? ` · ${v.reference}` : ""}` : v.status === "authorised" ? `By ${v.authorised_by || ""}` : v.status === "rejected" ? v.reject_reason || "" : `By ${v.prepared_by || ""}`)}</div></td>
+    <td class="d-none d-lg-table-cell acc-steps-cell">${A.mini(["Prepared", "Authorised", "Paid"], { prepared: 1, authorised: 2, paid: 3, rejected: 1, cancelled: 1 }[v.status] ?? 0, { stop: v.status === "rejected" ? "Sent back" : v.status === "cancelled" ? "Cancelled" : null })}<div class="acc-sub mt-1">${esc(v.status === "paid" ? `Paid ${A.day(v.paid_on)}${v.reference ? ` · ${v.reference}` : ""}` : v.status === "authorised" ? `By ${v.authorised_by || ""}` : v.status === "rejected" ? v.reject_reason || "" : `By ${v.prepared_by || ""}`)}</div></td>
     <td class="text-end" data-order="${v.amount}"><strong>${A.money(v.amount)}</strong><div class="acc-sub">from ${esc(v.pay_from?.name || "")}</div></td>
   </tr>`;
 

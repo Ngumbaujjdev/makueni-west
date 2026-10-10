@@ -472,11 +472,11 @@ const AccountingWindows = (function () {
   // ------------------------------------------------------------ views
 
   /** A plain view window (no form): header band, body, footer buttons. */
-  function viewFrame({ title, subtitle, icon, body, foot, hero }) {
+  function viewFrame({ title, subtitle, icon, body, foot, hero, tone = "primary" }) {
     document.getElementById(ID)?.remove();
     document.body.insertAdjacentHTML(
       "beforeend",
-      `<div class="modal fade app-modal acc-modal" id="${ID}" tabindex="-1" aria-labelledby="${ID}Title"><div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable modal-fullscreen-sm-down"><div class="modal-content">
+      `<div class="modal fade app-modal acc-modal acc-tone-${tone}" id="${ID}" tabindex="-1" aria-labelledby="${ID}Title"><div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable modal-fullscreen-sm-down"><div class="modal-content">
         <div class="modal-header"><span class="app-modal-icon"><i class="${icon}"></i></span><div class="flex-fill min-w-0"><h5 class="modal-title" id="${ID}Title">${esc(title)}</h5><div class="app-modal-subtitle">${esc(subtitle)}</div></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
         <div class="modal-body" id="${ID}Body">${hero ? heroStrip(hero) : ""}${body}</div>
         <div class="modal-footer" id="${ID}Foot">${foot}</div>
@@ -489,18 +489,18 @@ const AccountingWindows = (function () {
   }
 
   /** The strip at the top of a view window: the amount in full, where it stands, and three facts. */
-  const heroStrip = ({ amount, label = "Amount", status = "", facts = [] }) =>
-    `<div class="acc-hero"><div class="acc-hero-main"><span class="acc-hero-label">${esc(label)}</span><div class="acc-hero-amount">${A.figure(amount)}</div>${status ? `<div class="mt-2">${status}</div>` : ""}</div><div class="acc-hero-facts">${facts.filter(Boolean).map(([k, v]) => `<div><span>${esc(k)}</span><strong>${v || "-"}</strong></div>`).join("")}</div></div>`;
+  const heroStrip = ({ amount, label = "Amount", status = "", facts = [], dir = "" }) =>
+    `<div class="acc-hero"><div class="acc-hero-main"><span class="acc-hero-label">${esc(label)}</span><div class="acc-hero-amount${dir ? ` is-${dir}` : ""}">${A.figure(amount)}</div>${status ? `<div class="mt-2">${status}</div>` : ""}</div><div class="acc-hero-facts">${facts.filter(Boolean).map(([k, v]) => `<div><span>${esc(k)}</span><strong>${v || "-"}</strong></div>`).join("")}</div></div>`;
 
   const factGrid = (facts) => `<div class="acc-facts">${facts.filter(Boolean).map(([k, v]) => `<div><span>${esc(k)}</span><strong>${v || "-"}</strong></div>`).join("")}</div>`;
-  const part = (icon, title, body, extra = "") => `<section class="app-modal-part"><div class="app-modal-part-head"><i class="${icon}"></i>${esc(title)}${extra}</div>${body}</section>`;
+  const part = (icon, title, body, extra = "", tone = "") => `<section class="app-modal-part"${tone ? ` data-tone="${tone}"` : ""}><div class="app-modal-part-head"><i class="${icon}"></i>${esc(title)}${extra}</div>${body}</section>`;
 
   function filesPart(files, { canAdd, canRemove, label = "Receipts and papers" }) {
     const list = files.length
       ? `<div class="acc-files">${files.map((f) => `<div class="acc-file"><i class="${f.mime === "application/pdf" ? "ri-file-pdf-line text-danger" : "ri-image-line text-primary"}"></i><button type="button" class="btn btn-link p-0 text-start flex-fill" data-open-file="${f.id}">${esc(f.name)}</button>${canRemove ? `<button type="button" class="btn btn-icon btn-sm btn-outline-danger" data-remove-file="${f.id}" aria-label="Remove ${esc(f.name)}"><i class="ri-delete-bin-line"></i></button>` : ""}</div>`).join("")}</div>`
       : '<p class="mb-0 acc-muted-line">No files attached.</p>';
     const add = canAdd ? `<label class="btn btn-sm btn-outline-primary mt-2 mb-0"><i class="ri-attachment-2 me-1"></i>Attach a file<input type="file" data-add-file accept="image/jpeg,image/png,image/webp,application/pdf" hidden></label>` : "";
-    return part("ri-attachment-2", label, list + add);
+    return part("ri-attachment-2", label, list + add, "", "pink");
   }
 
   function wireFilesView(el, { add, remove, openUrl, reload }) {
@@ -541,12 +541,13 @@ const AccountingWindows = (function () {
     const body =
       status +
       source +
-      part("ri-information-line", "Details", factGrid([j.party_phone && ["Phone", esc(j.party_phone)], ["Reference", esc(j.reference)], ["Posted by", esc(j.posted_by)], j.narration && ["Note", esc(j.narration)]])) +
-      part("ri-scales-3-line", "In the books", lines) +
+      part("ri-information-line", "Details", factGrid([j.party_phone && ["Phone", esc(j.party_phone)], ["Reference", esc(j.reference)], ["Posted by", A.person(j.posted_by)], j.narration && ["Note", esc(j.narration)]]), "", "primary") +
+      part("ri-scales-3-line", "In the books", lines, "", "purple") +
       filesPart(j.files, { canAdd: own && (j.can.receipt || j.can.journal || j.can.pay || j.can.prepare), canRemove: own && (j.can.receipt || j.can.journal) });
     const foot = `${j.can.reverse ? '<button type="button" class="btn btn-outline-danger me-auto" data-reverse><i class="ri-arrow-go-back-line me-1"></i>Reverse</button>' : ""}${j.doc_type === "receipt" ? '<button type="button" class="btn btn-outline-primary" data-print><i class="ri-printer-line me-1"></i>Print receipt</button>' : ""}<button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>`;
-    const hero = { amount: j.amount, status: `${A.docPill(j.doc_type)}${j.status === "reversed" ? ` ${A.reversedChip()}` : ""}`, facts: [["Date", A.day(j.date)], [j.doc_type === "payment" ? "Paid to" : j.doc_type === "receipt" ? "Received from" : "From", esc(j.party_name)], ["How", esc(j.method_label || "-")]] };
-    const el = viewFrame({ title: `${A.doc(j.doc_type).label} ${j.number}`, subtitle: j.place.name, icon: A.doc(j.doc_type).icon, body, foot, hero });
+    const dir = { receipt: "in", payment: "out", bill: "out", payroll: "out" }[j.doc_type] || "";
+    const hero = { amount: j.amount, dir, status: `${A.docPill(j.doc_type)}${j.status === "reversed" ? ` ${A.reversedChip()}` : ""}`, facts: [["Date", A.dateChip(j.date)], [j.doc_type === "payment" ? "Paid to" : j.doc_type === "receipt" ? "Received from" : "From", esc(j.party_name)], ["How", esc(j.method_label || "-")]] };
+    const el = viewFrame({ title: `${A.doc(j.doc_type).label} ${j.number}`, subtitle: j.place.name, icon: A.doc(j.doc_type).icon, body, foot, hero, tone: A.doc(j.doc_type).color });
     wireFilesView(el, { add: (f) => API.addJournalFile(j.id, f), remove: (m) => API.removeJournalFile(j.id, m), openUrl: (m) => API.journalFileUrl(j.id, m), reload: () => viewJournal(id, { onChange }) });
     el.querySelector("[data-print]")?.addEventListener("click", () => printReceipt(j));
     el.querySelector("[data-reverse]")?.addEventListener("click", () =>
@@ -649,9 +650,9 @@ const AccountingWindows = (function () {
       .join("")}</tbody><tfoot><tr><th>Total</th><th class="d-none d-sm-table-cell"></th><th class="text-end">${A.amount(v.amount)}</th></tr></tfoot></table></div>`;
     const body =
       alert +
-      part("ri-route-line", "Where it stands", A.journey(voucherSteps(v)) + voucherNext(v), v.approval?.workflow ? `<small>${esc(v.approval.workflow)}</small>` : "") +
-      part("ri-information-line", "Details", factGrid([v.payee_phone && ["Phone", esc(v.payee_phone)], ["For", esc(v.narration)], v.authorise_note && ["Authoriser's note", esc(v.authorise_note)], v.status === "paid" && ["Paid by", `${esc(how(v.method))} ${esc(v.reference || "")}`], v.journal_number && ["In the books", esc(v.journal_number)]])) +
-      part("ri-list-check-2", "What it pays for", lines) +
+      part("ri-route-line", "Where it stands", A.journey(voucherSteps(v)) + voucherNext(v), v.approval?.workflow ? `<small>${esc(v.approval.workflow)}</small>` : "", "warning") +
+      part("ri-information-line", "Details", factGrid([v.payee_phone && ["Phone", esc(v.payee_phone)], ["For", esc(v.narration)], v.authorise_note && ["Authoriser's note", esc(v.authorise_note)], v.status === "paid" && ["Paid by", `${esc(how(v.method))} ${esc(v.reference || "")}`], v.journal_number && ["In the books", esc(v.journal_number)]]), "", "primary") +
+      part("ri-list-check-2", "What it pays for", lines, "", "purple") +
       filesPart(v.files, { canAdd: c.own && (c.prepare || c.pay || c.journal), canRemove: c.own && v.status !== "paid" && (c.prepare || c.pay), label: "Invoice, quote and receipt" });
     const btn = (key, cls, icon, label) => `<button type="button" class="btn ${cls}" data-act="${key}"><i class="${icon} me-1"></i>${label}</button>`;
     const foot = [
@@ -663,8 +664,8 @@ const AccountingWindows = (function () {
       c.pay_this ? btn("pay", "btn-primary", "ri-hand-coin-line", "Pay") : "",
       '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>',
     ].join("");
-    const hero = { amount: v.amount, status: A.voucherPill(v.status, true), facts: [["Pay to", esc(v.payee_name)], ["Date", A.day(v.date)], ["Pay from", esc(v.pay_from?.name)]] };
-    const el = viewFrame({ title: `Voucher ${v.number}`, subtitle: v.narration, icon: "ri-file-list-3-line", body, foot, hero });
+    const hero = { amount: v.amount, dir: "out", status: A.voucherPill(v.status, true), facts: [["Pay to", esc(v.payee_name)], ["Date", A.dateChip(v.date)], ["Pay from", A.accountChip(v.pay_from)]] };
+    const el = viewFrame({ title: `Voucher ${v.number}`, subtitle: v.narration, icon: "ri-file-list-3-line", body, foot, hero, tone: A.VOUCHER[v.status]?.color || "primary" });
     wireFilesView(el, { add: (f) => API.addVoucherFile(v.id, f), remove: (m) => API.removeVoucherFile(v.id, m), openUrl: (m) => API.voucherFileUrl(v.id, m), reload: () => viewVoucher(id, { onChange }) });
     el.querySelector("#" + ID + "Foot").addEventListener("click", async (e) => {
       const b = e.target.closest("[data-act]");
