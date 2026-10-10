@@ -72,7 +72,7 @@
       .join("");
   }
 
-  const sentRow = (r) => `<tr class="acc-row" data-id="${r.id}"><td><div class="fw-semibold">${esc(r.purpose)}</div><div class="acc-sub">${esc(r.number)} · ${esc(r.kind_label)}</div></td><td class="d-none d-md-table-cell">${esc(r.to?.name || "")}</td><td class="d-none d-lg-table-cell text-nowrap">${r.sent_on ? A.day(r.sent_on) : "-"}</td><td>${pill(r.status)}${r.status === "waiting" && r.voucher ? `<div class="acc-sub mt-1">Voucher ${esc(r.voucher.number)}</div>` : ""}${r.can.answer ? '<div><span class="badge bg-danger mt-1">Answer their query</span></div>' : ""}</td><td class="text-end"><strong>${A.money(r.amount)}</strong></td></tr>`;
+  const sentRow = (r) => `<tr class="acc-row" data-id="${r.id}"><td><div class="fw-semibold">${esc(r.purpose)}</div><div class="acc-sub">${esc(r.number)} · ${esc(r.kind_label)}</div></td><td class="d-none d-md-table-cell">${esc(r.to?.name || "")}</td><td class="d-none d-lg-table-cell text-nowrap">${r.sent_on ? A.day(r.sent_on) : "-"}</td><td>${pill(r.status)}${r.status === "waiting" && r.voucher ? `<div class="acc-sub mt-1">Voucher ${esc(r.voucher.number)}</div>` : ""}${r.can.answer ? '<div><span class="badge bg-danger mt-1">Answer their query</span></div>' : ""}${r.can.pay_mpesa && !A.viewingBelow() ? `<div><button type="button" class="btn btn-sm btn-success mt-1" data-mpesa="${r.id}"><i class="ri-smartphone-line me-1"></i>Pay by M-Pesa</button></div>` : ""}</td><td class="text-end"><strong>${A.money(r.amount)}</strong></td></tr>`;
 
   function sent() {
     $("rmSentRows").innerHTML = data.sent.length
@@ -175,11 +175,12 @@
       body: K.parts([
         { icon: "ri-percent-line", title: "Which share", body: ruleTiles },
         { icon: "ri-calendar-line", title: "Months and amounts", hint: "What is owed is filled in", body: `<div id="shMonths"></div><div class="acc-sub mt-2" id="shTotal"></div>` },
-        { icon: "ri-bank-line", title: "Pay it from", body: W.cashTiles(o.data.cash, o.data.cash.find((a) => a.cash_kind === "bank")?.id || o.data.cash[0]?.id, "shFrom") },
+        { icon: "ri-bank-line", title: "Pay it from", body: W.cashTiles(o.data.cash, o.data.cash.find((a) => a.cash_kind === "bank")?.id || o.data.cash[0]?.id, "shFrom") + '<div class="form-check form-switch mt-3"><input class="form-check-input" type="checkbox" role="switch" id="shWhole"><label class="form-check-label" for="shWhole">We\'ll pay it by the M-Pesa prompt - round up to whole shillings</label></div>' },
       ]),
       run: async () => {
         const rule = Number(el.querySelector('input[name="shRule"]:checked')?.value || rule0.id);
-        const lines = [...el.querySelectorAll("[data-sh]")].filter((x) => x.querySelector("input[type=checkbox]").checked).map((x) => ({ month: x.dataset.sh, amount: n(x.querySelector("[data-amt]").value) }));
+        const whole = el.querySelector("#shWhole")?.checked;
+        const lines = [...el.querySelectorAll("[data-sh]")].filter((x) => x.querySelector("input[type=checkbox]").checked).map((x) => ({ month: x.dataset.sh, amount: whole ? Math.ceil(n(x.querySelector("[data-amt]").value)) : n(x.querySelector("[data-amt]").value) }));
         const res = await API.sendRemittance({ kind: "share", budget_deduction_id: rule, lines, pay_from_account_id: Number(el.querySelector('input[name="shFrom"]:checked')?.value) });
         if (res.ok) setTimeout(load, 300);
         return res;
@@ -225,6 +226,43 @@
     UI.enhanceSelect(el.querySelector("#suAcc"), { search: true });
   }
 
+  // ------------------------------------------------------------ paying a share by M-Pesa (A6b)
+
+  /** The M-Pesa prompt from the diocese paybill: paid and confirmed in both books as soon as Safaricom says so. */
+  function mpesaWindow(r) {
+    const el = K.confirmWindow({
+      title: `Pay ${A.money(r.amount)} by M-Pesa`,
+      subtitle: `${r.purpose} - to ${r.to?.name || "the diocese"}`,
+      icon: "ri-smartphone-line",
+      go: '<i class="ri-send-plane-line me-1"></i>Send the prompt',
+      body: K.parts([
+        { icon: "ri-file-list-3-line", title: "The share", body: `<div class="acc-facts"><div><span>Amount</span><strong>${A.money(r.amount)}</strong></div><div><span>For</span><strong>${(r.months || []).map((m) => monthName(m, { month: "long", year: "numeric" })).join(", ") || esc(r.purpose)}</strong></div>${r.voucher ? `<div><span>Voucher</span><strong>${esc(r.voucher.number)} · authorised</strong></div>` : ""}</div>` },
+        { icon: "ri-phone-line", title: "The phone that pays", hint: "Normally the church's M-Pesa line", body: `<input type="tel" class="form-control" id="mpPhone" placeholder="e.g. 0712 345 678" autocomplete="tel"><div class="acc-sub mt-2">The prompt comes from the diocese paybill. Once the PIN is entered, the voucher is paid and the diocese's receipt is written - no confirming by hand.</div>` },
+      ]),
+      run: async () => {
+        const out = await API.remittanceAct(r.id, "mpesa", { phone: el.querySelector("#mpPhone").value.trim() });
+        if (out.ok) followShare(out.data.id);
+        return out;
+      },
+    });
+    el.querySelector("#mpPhone").focus();
+  }
+
+  /** Wait for the PIN, as Ask to pay does on the Paybill page. */
+  function followShare(id) {
+    let tries = 0;
+    const tick = async () => {
+      const res = await API.askStatus(id);
+      if (res.ok && res.data.status === "paid") {
+        Toast.success(`Paid - ${A.money(res.data.amount)} is sent and confirmed by the diocese.`);
+        return load();
+      }
+      if (res.ok && res.data.status === "failed") return Toast.error(`Not paid: ${res.data.result || "the prompt was cancelled"}. You can send it again.`);
+      if (++tries < 40) setTimeout(tick, 3000);
+    };
+    setTimeout(tick, 4000);
+  }
+
   // ------------------------------------------------------------ one remittance
 
   async function view(id) {
@@ -248,6 +286,7 @@
       own && c.query ? btn("query", "btn-outline-danger", "ri-question-line", "Query it") : "",
       own && c.answer ? btn("answer", "btn-primary", "ri-reply-line", "Answer") : "",
       own && c.confirm ? btn("confirm", "btn-success", "ri-check-line", "Confirm received") : "",
+      own && c.pay_mpesa ? btn("mpesa", "btn-success", "ri-smartphone-line", "Pay by M-Pesa") : "",
       r.voucher && !c.confirm && !c.unconfirm ? `<a class="btn btn-outline-primary" href="${A.link("payments.php", { voucher: r.voucher.id })}"><i class="ri-file-list-3-line me-1"></i>Voucher ${esc(r.voucher.number)}</a>` : "",
       '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>',
     ].join("");
@@ -274,6 +313,7 @@
         load();
       };
       if (act === "confirm") return confirmWindow(r, done);
+      if (act === "mpesa") return (bootstrap.Modal.getInstance(el)?.hide(), mpesaWindow(r));
       const text = { query: ["Query it", "What is wrong? e.g. Not on our statement", "reason", "Query it", true], unconfirm: ["Undo the confirmation", "Why? e.g. Confirmed into the wrong account", "reason", "Undo it", true], answer: ["Answer their query", "e.g. Sent by M-Pesa on 3 Oct, code QWE123", "answer", "Send the answer", false] }[act];
       K.confirmWindow({
         title: text[0],
@@ -368,6 +408,8 @@
     document.querySelectorAll("#rmYear [data-year]").forEach((x) => x.classList.toggle("active", Number(x.dataset.year) === year));
     ["rmSentRows", "rmInRows"].forEach((t) =>
       $(t).addEventListener("click", (e) => {
+        const m = e.target.closest("[data-mpesa]");
+        if (m) return mpesaWindow(data.sent.find((x) => x.id === Number(m.dataset.mpesa)));
         const c = e.target.closest("[data-confirm]");
         if (c) {
           const r = data.coming_in.find((x) => x.id === Number(c.dataset.confirm));

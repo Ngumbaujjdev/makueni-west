@@ -45,7 +45,8 @@ class PaybillController extends AccountingBase
         $isDiocese = $place->territory_type->value === 'diocese';
         $q = MpesaPayment::with('place:id,name,code')->orderByDesc('paid_at')->orderByDesc('id')->limit(1000);
         if (! $isDiocese) {
-            $q->where('territory_id', $place->id)->where('status', 'posted');
+            // A share paid to the diocese by M-Pesa (A6b) is a payment out, not giving in.
+            $q->where('territory_id', $place->id)->where('status', 'posted')->whereNull('remittance_id');
         } else {
             // A church's own paybill (A10b) is its own business - unless it couldn't be posted and waits to be sorted.
             $q->where(fn ($w) => $w->whereNull('channel_id')->orWhere('status', 'to_sort'));
@@ -261,7 +262,7 @@ class PaybillController extends AccountingBase
             'id' => $p->id, 'trans_id' => $p->trans_id, 'kind' => $p->kind, 'amount' => (float) $p->amount, 'own' => (bool) $p->channel_id,
             'phone' => $p->phone, 'payer_name' => $p->payer_name, 'bill_ref' => $p->bill_ref, 'paid_at' => $p->paid_at?->toIso8601String(),
             'place' => $p->place ? ['id' => $p->place->id, 'name' => $p->place->name, 'code' => $p->place->code] : null,
-            'purpose' => $p->purpose, 'purpose_label' => Paybill::PURPOSES[$p->purpose][0] ?? null,
+            'purpose' => $p->purpose, 'purpose_label' => $p->remittance_id || $this->paybill->isShareRef($p->bill_ref) ? 'Diocese share' : (Paybill::PURPOSES[$p->purpose][0] ?? null),
             'status' => $p->status, 'status_label' => MpesaPayment::STATUSES[$p->status], 'note' => $p->note,
             'receipt' => ($j = ($full && ! $p->channel_id) ? $p->diocese_journal_id : $p->place_journal_id) ? ($this->numbers[$j] ?? Journal::find($j)?->number) : null,
         ];

@@ -38,6 +38,10 @@ use Throwable;
  * A church with its own paybill (A10b) takes M-Pesa through its PayHero or
  * its own Daraja app instead: the same payments and prompts, marked with the
  * channel, posted straight into its own books (Dr its M-Pesa / Cr income).
+ *
+ * A6b: a church pays its share to the diocese by the M-Pesa prompt from the
+ * diocese paybill ({code}DS) - its authorised voucher is paid and the
+ * diocese confirms it, in one step.
  */
 final class Paybill
 {
@@ -175,9 +179,11 @@ final class Paybill
         $parsed = $channel
             ? ['place' => Territory::find($channel->territory_id), 'purpose' => $this->parseOwn($channel, $p['bill_ref'] ?? null)]
             : $this->parse($p['bill_ref'] ?? null);
+        $remittanceId = $p['remittance_id'] ?? (! $channel ? $this->shareFor($p['bill_ref'] ?? null, (float) $p['amount']) : null);
         try {
             $payment = MpesaPayment::create([
                 'channel_id' => $channel?->id,
+                'remittance_id' => $remittanceId ?: null,
                 'trans_id' => strtoupper(trim($p['trans_id'])),
                 'kind' => $p['kind'] ?? 'c2b',
                 'shortcode' => (string) $p['shortcode'],
@@ -205,7 +211,7 @@ final class Paybill
         }
         $this->post($payment);
         $payment->refresh();
-        if ($payment->status === 'posted' && $payment->territory_id) {
+        if ($payment->status === 'posted' && $payment->territory_id && ! $payment->remittance_id) {
             DB::afterCommit(fn () => SendPaybillThanks::dispatch($payment->id));
         }
 
@@ -224,6 +230,11 @@ final class Paybill
                 $date = $payment->paid_at->copy()->setTimezone('Africa/Nairobi')->toDateString();
                 $head = fn (string $narration) => ['doc_type' => 'receipt', 'date' => $date, 'narration' => $narration, 'party_name' => $payment->payer_name ?: 'M-Pesa payer',
                     'party_phone' => $payment->phone, 'method' => 'mpesa', 'reference' => $payment->trans_id, 'source_type' => 'mpesa_payment', 'source_id' => $payment->id];
+                if (! $payment->channel_id && ($payment->remittance_id || $this->isShareRef($payment->bill_ref))) {
+                    $this->postShare($payment, $diocese, $paybill, $head);
+
+                    return;
+                }
                 if ($payment->channel_id && $place && $payment->purpose) {
                     $this->postOwn($payment, $place);
 
@@ -257,6 +268,109 @@ final class Paybill
             report($e);
             $payment->update(['status' => 'to_sort', 'note' => mb_substr('Couldn\'t be posted: '.$e->getMessage(), 0, 255)]);
         }
+    }
+
+    // ------------------------------------------------------------ a share paid by M-Pesa (A6b)
+
+    /** SHR027DS - a church's share to the diocese. */
+    public function isShareRef(?string $billRef): bool
+    {
+        $ref = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $billRef));
+
+        return strlen($ref) > 2 && str_ends_with($ref, 'DS') && $this->parse(substr($ref, 0, -2).'T')['place'] !== null;
+    }
+
+    /** A share typed by hand to {code}DS: the church's one waiting share, voucher authorised, of the same amount. */
+    private function shareFor(?string $billRef, float $amount): ?int
+    {
+        if (! $this->isShareRef($billRef)) {
+            return null;
+        }
+        $ref = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $billRef));
+        $place = $this->parse(substr($ref, 0, -2).'T')['place'];
+        $ids = Remittance::where('from_territory_id', $place->id)->where('to_territory_id', $this->diocese()->id)->where('kind', 'share')->where('status', 'waiting')
+            ->where('amount', round($amount, 2))->whereHas('voucher', fn ($q) => $q->where('status', 'authorised'))->pluck('id');
+
+        return $ids->count() === 1 ? (int) $ids->first() : null;
+    }
+
+    /** Why a share can't be paid by the prompt - null when it can. */
+    public function sharePromptProblem(Remittance $rem, bool $forPrompt = true): ?string
+    {
+        if ($rem->kind !== 'share' || (int) $rem->to_territory_id !== (int) $this->diocese()->id) {
+            return 'Only a share to the diocese is paid through the diocese paybill.';
+        }
+        if ($rem->status !== 'waiting') {
+            return $rem->status === 'cancelled' ? 'It was cancelled.' : 'It is already paid.';
+        }
+        if ($rem->voucher?->status !== 'authorised') {
+            return 'Its voucher must be authorised first.';
+        }
+        if ($forPrompt && abs((float) $rem->amount - round((float) $rem->amount)) > 0.001) {
+            return 'M-Pesa takes whole shillings - send the share in whole shillings, or pay it as usual.';
+        }
+        if ($forPrompt && ! ($this->settings->system('paybill.shortcode') && $this->settings->system('paybill.consumer_key') && $this->settings->system('paybill.passkey'))) {
+            return 'The diocese paybill isn\'t set up for M-Pesa prompts yet.';
+        }
+
+        return null;
+    }
+
+    /** The prompt for a share - always through the diocese paybill: the money is the diocese's. */
+    public function askForRemittance(Remittance $rem, User $by, string $phone): MpesaRequest
+    {
+        if ($problem = $this->sharePromptProblem($rem)) {
+            throw ValidationException::withMessages(['remittance' => [$problem]]);
+        }
+        if (! Daraja::validPhone($phone)) {
+            throw ValidationException::withMessages(['phone' => ['Enter a Safaricom number, e.g. 0712 345 678.']]);
+        }
+        $place = Territory::findOrFail($rem->from_territory_id);
+        $daraja = Daraja::diocese();
+        $ref = self::code($place).'DS';
+        $request = MpesaRequest::create(['remittance_id' => $rem->id, 'territory_id' => $place->id, 'account_ref' => $ref, 'amount' => round((float) $rem->amount),
+            'phone' => Daraja::phone($phone), 'shortcode' => $daraja->shortcode, 'requested_by' => $by->id]);
+        try {
+            $out = $daraja->stkPush($phone, (float) $rem->amount, $ref, 'Diocese share', $this->callbackUrl('stk'));
+        } catch (Throwable $e) {
+            $request->update(['status' => 'failed', 'result' => mb_substr($e->getMessage(), 0, 255)]);
+            throw ValidationException::withMessages(['phone' => ['M-Pesa didn\'t take it: '.$e->getMessage()]]);
+        }
+        $request->update(['merchant_request_id' => $out['MerchantRequestID'] ?? null, 'checkout_request_id' => $out['CheckoutRequestID'] ?? null, 'result' => $out['CustomerMessage'] ?? null]);
+
+        return $request->fresh();
+    }
+
+    /**
+     * A share paid into the diocese paybill: the church's voucher is paid (the
+     * M-Pesa code its reference) and the diocese confirms it - Dr the paybill /
+     * Cr church contributions. If its voucher can't be paid any more, the
+     * money waits To sort - never lost.
+     */
+    private function postShare(MpesaPayment $payment, Territory $diocese, AccountingAccount $paybill, callable $head): void
+    {
+        $rem = $payment->remittance_id ? Remittance::with('voucher')->find($payment->remittance_id) : null;
+        $problem = $rem ? $this->sharePromptProblem($rem, false) : 'No waiting share of that place matches it.';
+        if (! $problem && round((float) $payment->amount, 2) !== round((float) $rem->amount, 2)) {
+            $problem = 'The amount paid isn\'t the share\'s amount.';
+        }
+        $by = $rem ? (User::find(MpesaRequest::whereKey($payment->mpesa_request_id)->value('requested_by')) ?? User::find($rem->voucher?->prepared_by)) : null;
+        if (! $problem && ! $by) {
+            $problem = 'No one to record paying it.';
+        }
+        if ($problem) {
+            $j = $this->ledger->post($diocese, $head("Diocese share payment to sort ({$payment->bill_ref})"), [
+                ['account_id' => $paybill->id, 'debit' => (float) $payment->amount],
+                ['account_id' => $this->chart->account('paybill_to_sort')->id, 'credit' => (float) $payment->amount, 'memo' => "Account {$payment->bill_ref}"],
+            ], null);
+            $payment->update(['diocese_journal_id' => $j->id, 'note' => mb_substr("A share payment - match it under Remittances. {$problem}", 0, 255)]);
+
+            return;
+        }
+        $date = $payment->paid_at->copy()->setTimezone('Africa/Nairobi')->toDateString();
+        $pv = app(PaymentVouchers::class)->pay($rem->voucher, $by, ['paid_on' => max($date, $rem->voucher->date->toDateString()), 'method' => 'mpesa', 'reference' => $payment->trans_id]);
+        $rem = app(Remittances::class)->confirm($rem->fresh(), null, ['into_account_id' => $paybill->id, 'received_on' => max($date, $rem->voucher->date->toDateString())]);
+        $payment->update(['status' => 'posted', 'territory_id' => $rem->from_territory_id, 'place_journal_id' => $pv->journal_id, 'diocese_journal_id' => $rem->received_journal_id, 'note' => null]);
     }
 
     /** Into a church's own paybill (A10b): Dr its M-Pesa account / Cr the purpose's income, on its budget line. */
@@ -520,6 +634,7 @@ final class Paybill
         $payment = $this->record([
             'trans_id' => (string) ($m['MpesaReceiptNumber'] ?? ''),
             'channel_id' => $request->channel_id,
+            'remittance_id' => $request->remittance_id,
             'kind' => 'stk',
             'shortcode' => $request->shortcode,
             'amount' => (float) ($m['Amount'] ?? $request->amount),

@@ -761,6 +761,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('remittances', [$rem, 'store']);
         Route::get('remittances/{id}', [$rem, 'show'])->whereNumber('id');
         Route::post('remittances/{id}/confirm', [$rem, 'confirm'])->whereNumber('id');
+        Route::post('remittances/{id}/mpesa', [$rem, 'payMpesa'])->whereNumber('id');
         Route::post('remittances/{id}/unconfirm', [$rem, 'unconfirm'])->whereNumber('id');
         Route::post('remittances/{id}/query', [$rem, 'query'])->whereNumber('id');
         Route::post('remittances/{id}/answer', [$rem, 'answer'])->whereNumber('id');
