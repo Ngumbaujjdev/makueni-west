@@ -23,13 +23,15 @@ const AccountingUI = (function () {
     if (v < 0) return sign ? `-KES ${s}` : `(KES ${s})`;
     return `KES ${s}`;
   }
-  /** 12.4k / 1.2m for cards. */
-  function short(n) {
-    const v = Math.abs(Number(n || 0));
-    const neg = Number(n) < 0 ? "-" : "";
-    if (v >= 1e6) return `${neg}KES ${(v / 1e6).toFixed(v >= 1e7 ? 0 : 1)}m`;
-    if (v >= 1e4) return `${neg}KES ${Math.round(v / 1e3).toLocaleString("en-GB")}k`;
-    return `${neg}KES ${v.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
+  /**
+   * Amounts are always written in full (2026-10-10: no "12k" / "1.2m"). The
+   * card figure keeps the full number with a small "KES" in front of it.
+   */
+  const short = (n) => money(n);
+  function figure(n) {
+    const v = Number(n || 0);
+    const s = Math.abs(v).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return `<span class="acc-figure${v < 0 ? " is-neg" : ""}"><small>KES</small>${v < 0 ? "-" : ""}${s}</span>`;
   }
   const amount = (n) => (Number(n) ? Number(n).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "");
   const day = (iso, opts = { day: "numeric", month: "short", year: "numeric" }) => (iso ? new Date(`${String(iso).slice(0, 10)}T12:00:00`).toLocaleDateString("en-GB", opts) : "-");
@@ -181,7 +183,55 @@ const AccountingUI = (function () {
     return `<ol class="acc-tl">${stages}</ol>`;
   }
 
-  return { approvalTimeline, esc, textOn, money, short, amount, day, num, KINDS, kind, tile, DOCS, doc, docPill, docTile, VOUCHER, voucherPill, methodChip, reversedChip, viewingBelow, placeLine, placePicker, ownOnly, options, empty, errorBox, link };
+  /**
+   * The journey (2026-10-10): a record's steps as a lane, left to right -
+   * done (green), now (gold, pulsing), next (grey), stopped (red), blocked
+   * (nobody holds the role), skipped. Each step: {title, state, icon, who, when, note}.
+   */
+  const STEP = { done: "ri-check-line", now: "ri-time-line", next: "ri-more-line", stopped: "ri-close-line", blocked: "ri-error-warning-line", skipped: "ri-subtract-line" };
+  const when = (iso) => (iso ? new Date(iso.length > 10 ? iso : `${iso}T12:00:00`).toLocaleString("en-GB", iso.length > 10 ? { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" } : { day: "numeric", month: "short", year: "numeric" }) : "");
+  function journey(steps, { compact = false } = {}) {
+    const items = steps
+      .filter(Boolean)
+      .map((st, i) => {
+        const state = st.state || "next";
+        const icon = state === "done" || state === "next" ? st.icon || STEP[state] : STEP[state];
+        return `<li class="acc-jstep is-${state}"><span class="acc-jdot"><i class="${icon}"></i></span><div class="acc-jtext"><span class="acc-jn">Step ${i + 1}</span><strong>${esc(st.title)}</strong>${!compact && st.who ? `<small class="acc-jwho">${esc(st.who)}</small>` : ""}${!compact && st.when ? `<small>${esc(when(st.when))}</small>` : ""}${!compact && st.note ? `<small class="acc-jnote">${esc(st.note)}</small>` : ""}</div></li>`;
+      })
+      .join("");
+    return `<ol class="acc-journey${compact ? " is-compact" : ""}">${items}</ol>`;
+  }
+
+  /** An approval request's stages as journey steps (the engine's stages, in order). */
+  function approvalSteps(ap) {
+    if (!ap || !ap.stages) return [];
+    return ap.stages.map((st) => {
+      const live = st.people.filter((p) => !p.superseded);
+      const decided = live.filter((p) => ["approved", "rejected", "returned"].includes(p.status));
+      const last = decided.sort((a, b) => String(b.decided_at).localeCompare(String(a.decided_at)))[0];
+      const state = { approved: "done", active: "now", pending: "next", rejected: "stopped", returned: "stopped", skipped: "skipped", blocked: "blocked" }[st.status] || "next";
+      const waiting = live.filter((p) => p.status === "pending").map((p) => p.name);
+      return {
+        title: st.name,
+        state,
+        icon: "ri-shield-check-line",
+        who: state === "now" ? `Waiting on ${waiting.join(", ") || "-"}` : state === "blocked" ? st.blocked_reason || "Nobody holds the role" : decided.map((p) => p.name).join(", ") || (state === "next" ? "Not reached yet" : ""),
+        when: last?.decided_at || null,
+        note: last?.comment ? `"${last.comment}"` : "",
+      };
+    });
+  }
+
+  /**
+   * "What happens next", in plain words. tone: mine (the viewer acts - solid
+   * gold, like the screenshot's "Do first"), wait (someone else), done, stopped.
+   */
+  function nextCard({ tone = "wait", title, text, actions = "" }) {
+    const T = { mine: ["ri-flashlight-line", "Your turn"], wait: ["ri-hourglass-line", "Waiting"], done: ["ri-checkbox-circle-line", "Done"], stopped: ["ri-arrow-go-back-line", "Stopped"] }[tone];
+    return `<div class="acc-next is-${tone}"><span class="acc-next-icon"><i class="${T[0]}"></i></span><div class="acc-next-text"><span class="acc-next-tag">${T[1]}</span><strong>${esc(title)}</strong>${text ? `<p>${esc(text)}</p>` : ""}</div>${actions ? `<div class="acc-next-actions">${actions}</div>` : ""}</div>`;
+  }
+
+  return { approvalTimeline, journey, approvalSteps, nextCard, esc, textOn, money, short, figure, amount, day, num, KINDS, kind, tile, DOCS, doc, docPill, docTile, VOUCHER, voucherPill, methodChip, reversedChip, viewingBelow, placeLine, placePicker, ownOnly, options, empty, errorBox, link };
 })();
 
 window.AccountingUI = AccountingUI;

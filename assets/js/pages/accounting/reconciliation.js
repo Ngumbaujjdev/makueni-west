@@ -131,7 +131,7 @@
       { icon: "ri-community-line", label: "Places", sub: `${rows.filter((r) => r.started).length} keeping books`, value: A.num(rows.length), color: "primary" },
       { icon: "ri-checkbox-circle-line", label: "Up to date", sub: "Checked last month or later", value: A.num(n("ok")), color: "success", bar: { pct: rows.length ? Math.round((n("ok") / rows.length) * 100) : 0, text: "of places" } },
       { icon: "ri-error-warning-line", label: "Behind", sub: "Two months or more, or waiting", value: A.num(n("late")), color: "danger" },
-      { icon: "ri-safe-2-line", label: "Money held", sub: "Cash, banks and M-Pesa below us", value: A.short(rows.reduce((t, r) => t + r.held, 0)), color: "purple" },
+      { icon: "ri-safe-2-line", label: "Money held", sub: "Cash, banks and M-Pesa below us", value: A.figure(rows.reduce((t, r) => t + r.held, 0)), color: "purple" },
     ]);
     const rowHtml = (r) => `<tr class="acc-row" data-id="${r.place.id}" data-pills="${r.state}${r.waiting ? " waiting" : ""}" data-f-level="${r.place.level}">
       ${K.checkCell(r.place.id, r.place.name)}

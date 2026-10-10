@@ -39621,3 +39621,95 @@ a.mi-prof-about-value:hover { color: var(--primary-color); }
 .give-accounts { display: flex; flex-wrap: wrap; gap: .4rem; }
 .give-accounts span { display: flex; flex-direction: column; padding: .35rem .6rem; border: 1px solid var(--default-border); border-radius: .5rem; }
 .give-accounts small { font-size: .7rem; color: var(--default-text-color); }
+
+/* ===========================================================================
+   ACCOUNTING REDESIGN R0 (2026-10-10) - full figures, crisper cards, tables
+   and windows, the journey lane and "what happens next"
+   =========================================================================== */
+/* Full amounts: "KES" small, the number whole, figures lined up */
+.acc-figure { display: inline-flex; align-items: baseline; gap: .3rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.acc-figure small { font-size: .52em; font-weight: 700; letter-spacing: .05em; color: var(--default-text-color); }
+.acc-figure.is-neg { color: rgb(var(--danger-rgb)); }
+.acc-page .pp-stat-value { font-size: 1.45rem; font-variant-numeric: tabular-nums; }
+/* A card's sparkline runs under the figure (like the template's sales cards), so a long amount never wraps */
+.acc-page .pp-stat .card-body > .d-flex.align-items-end { flex-direction: column; align-items: stretch !important; gap: .5rem !important; }
+.acc-page .pp-stat-spark { flex: none; max-width: none; width: 100%; margin-bottom: -.4rem; }
+
+/* Tables: room to breathe, amounts on one line, the row opens the record */
+.acc-page .acc-table > :not(caption) > * > * { padding: .8rem 1rem; }
+.acc-page .acc-table td.text-end, .acc-page .acc-table th.text-end { white-space: nowrap; }
+.acc-page .acc-table td.text-end strong { font-size: .92rem; font-variant-numeric: tabular-nums; }
+.acc-page .acc-table td.text-end .acc-sub { max-width: 15rem; margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acc-page .acc-table .acc-sub.text-truncate { max-width: 28rem; }
+.acc-page .acc-table tbody tr[data-id] { cursor: pointer; }
+.acc-page .acc-table tbody tr[data-id]:hover > td { background: rgba(var(--primary-rgb), .04); }
+.acc-page .acc-table td .badge + .acc-sub { white-space: nowrap; }
+
+/* Windows: a soft body so each titled part stands as its own crisp panel */
+.acc-modal .modal-body { background: #f6f7fb; }
+.acc-modal .app-modal-part { padding: 1rem 1.1rem; border: 1px solid var(--default-border); border-radius: .9rem; background: #fff; }
+.acc-modal .app-modal-part + .app-modal-part { margin-top: .85rem; padding-top: 1rem; border-top: 1px solid var(--default-border); }
+.acc-modal .acc-lines-table thead th { font-size: .68rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--default-text-color); }
+.acc-modal .acc-lines-table td, .acc-modal .acc-lines-table th { font-variant-numeric: tabular-nums; }
+.acc-modal .acc-lines-table tfoot th { font-size: .92rem; color: var(--v2-heading); }
+.acc-modal .alert { border-radius: .8rem; }
+
+/* The hero strip at the top of a view window */
+.acc-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 1rem 1.5rem; align-items: center; margin-bottom: .85rem; padding: 1.1rem 1.2rem; border: 1px solid var(--default-border); border-radius: .9rem; background: #fff; }
+.acc-hero-label { font-size: .68rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--default-text-color); }
+.acc-hero-amount { font-size: 1.6rem; font-weight: 700; line-height: 1.15; color: var(--v2-heading); }
+.acc-hero-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; padding-left: 1.5rem; border-left: 1px dashed var(--default-border); }
+.acc-hero-facts div { display: flex; flex-direction: column; min-width: 0; }
+.acc-hero-facts span { font-size: .68rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--default-text-color); }
+.acc-hero-facts strong { font-size: .88rem; font-weight: 600; color: var(--v2-heading); overflow-wrap: anywhere; }
+
+/* The journey: a record's steps as a lane */
+.acc-journey { display: flex; margin: 0; padding: 0; list-style: none; counter-reset: none; }
+.acc-jstep { position: relative; display: flex; flex: 1 1 0; flex-direction: column; align-items: flex-start; gap: .55rem; min-width: 0; padding-right: .75rem; }
+.acc-jstep::before { content: ""; position: absolute; top: 1.05rem; left: 2.3rem; right: .4rem; height: 2px; border-radius: 2px; background: var(--default-border); }
+.acc-jstep:last-child::before { display: none; }
+.acc-jstep.is-done::before { background: rgb(var(--success-rgb)); }
+.acc-jdot { position: relative; z-index: 1; display: grid; place-items: center; width: 2.15rem; height: 2.15rem; border: 2px solid var(--default-border); border-radius: 50%; background: #fff; font-size: 1rem; color: var(--default-text-color); }
+.acc-jstep.is-done .acc-jdot { border-color: rgb(var(--success-rgb)); background: rgb(var(--success-rgb)); color: #fff; }
+.acc-jstep.is-now .acc-jdot { border-color: rgb(var(--warning-rgb)); background: rgb(var(--warning-rgb)); color: var(--diocese-black); box-shadow: 0 0 0 5px rgba(var(--warning-rgb), .22); animation: acc-pulse 1.8s ease-out infinite; }
+.acc-jstep.is-stopped .acc-jdot { border-color: rgb(var(--danger-rgb)); background: rgb(var(--danger-rgb)); color: #fff; }
+.acc-jstep.is-blocked .acc-jdot { border-style: dashed; border-color: rgb(var(--danger-rgb)); background: rgba(var(--danger-rgb), .1); color: rgb(var(--danger-rgb)); }
+.acc-jstep.is-skipped .acc-jdot { border-style: dashed; }
+.acc-jtext { display: flex; flex-direction: column; min-width: 0; max-width: 100%; }
+.acc-jn { font-size: .64rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--default-text-color); }
+.acc-jtext strong { font-size: .86rem; color: var(--v2-heading); }
+.acc-jtext small { overflow: hidden; font-size: .74rem; color: var(--default-text-color); text-overflow: ellipsis; }
+.acc-jstep.is-now .acc-jwho { font-weight: 600; color: var(--v2-heading); }
+.acc-jstep.is-next .acc-jtext strong, .acc-jstep.is-skipped .acc-jtext strong { color: var(--default-text-color); }
+.acc-jnote { font-style: italic; }
+.acc-journey.is-compact .acc-jdot { width: 1.5rem; height: 1.5rem; font-size: .75rem; }
+.acc-journey.is-compact .acc-jstep::before { top: .75rem; left: 1.7rem; }
+.acc-journey.is-compact .acc-jn { display: none; }
+.acc-journey.is-compact .acc-jtext strong { font-size: .74rem; font-weight: 600; }
+@keyframes acc-pulse { 0% { box-shadow: 0 0 0 0 rgba(var(--warning-rgb), .45); } 100% { box-shadow: 0 0 0 9px rgba(var(--warning-rgb), 0); } }
+@media (prefers-reduced-motion: reduce) { .acc-jstep.is-now .acc-jdot { animation: none; } }
+
+/* What happens next */
+.acc-next { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1rem; margin-top: 1.1rem; padding: .9rem 1rem; border: 1px solid var(--default-border); border-radius: .85rem; background: #fff; }
+.acc-next-icon { display: grid; flex: 0 0 2.4rem; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: .7rem; background: rgb(var(--primary-rgb)); font-size: 1.15rem; color: #fff; }
+.acc-next-text { display: flex; flex: 1 1 14rem; flex-direction: column; min-width: 0; }
+.acc-next-tag { font-size: .66rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--default-text-color); }
+.acc-next-text strong { font-size: .95rem; color: var(--v2-heading); }
+.acc-next-text p { margin: .15rem 0 0; font-size: .82rem; color: var(--v2-heading); }
+.acc-next-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
+.acc-next.is-mine { border-color: rgb(var(--warning-rgb)); background: rgb(var(--warning-rgb)); }
+.acc-next.is-mine .acc-next-icon { background: #fff; color: var(--diocese-black); }
+.acc-next.is-mine .acc-next-tag, .acc-next.is-mine strong, .acc-next.is-mine p { color: var(--diocese-black); }
+.acc-next.is-done .acc-next-icon { background: rgb(var(--success-rgb)); }
+.acc-next.is-stopped .acc-next-icon { background: rgb(var(--danger-rgb)); }
+.acc-next.is-wait .acc-next-icon { background: rgba(var(--warning-rgb), .2); color: var(--diocese-black); }
+
+@media (max-width: 767.98px) {
+  .acc-hero { grid-template-columns: minmax(0, 1fr); }
+  .acc-hero-facts { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: .75rem 0 0; border-top: 1px dashed var(--default-border); border-left: 0; }
+  .acc-journey:not(.is-compact) { flex-direction: column; gap: .9rem; }
+  .acc-journey:not(.is-compact) .acc-jstep { flex-direction: row; padding-right: 0; }
+  .acc-journey:not(.is-compact) .acc-jstep::before { top: 2.2rem; bottom: -.9rem; left: 1.02rem; right: auto; width: 2px; height: auto; }
+}
+.acc-page .acc-fund > strong, .acc-page .acc-top-row strong, .acc-page .acc-cash-row strong, .acc-page .acc-lastsun-kind strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.acc-page .acc-table td.d-md-table-cell, .acc-page .acc-table td.d-lg-table-cell { min-width: 9.5rem; }

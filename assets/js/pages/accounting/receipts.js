@@ -23,9 +23,9 @@
     const mpesa = live.filter((j) => j.method === "mpesa");
     const bare = live.filter((j) => !j.attachments);
     PeopleKit.statRow($("statCardsRow"), [
-      { icon: "ri-bill-line", label: "Received", sub: `${A.num(live.length)} receipts`, value: A.short(sum(live)), color: "success" },
-      { icon: "ri-calendar-check-line", label: "This month", sub: `${A.num(month.length)} receipts`, value: A.short(sum(month)), color: "primary" },
-      { icon: "ri-smartphone-line", label: "By M-Pesa", sub: `${live.length ? Math.round((mpesa.length / live.length) * 100) : 0}% of receipts`, value: A.short(sum(mpesa)), color: "purple" },
+      { icon: "ri-bill-line", label: "Received", sub: `${A.num(live.length)} receipts`, value: A.figure(sum(live)), color: "success" },
+      { icon: "ri-calendar-check-line", label: "This month", sub: `${A.num(month.length)} receipts`, value: A.figure(sum(month)), color: "primary" },
+      { icon: "ri-smartphone-line", label: "By M-Pesa", sub: `${live.length ? Math.round((mpesa.length / live.length) * 100) : 0}% of receipts`, value: A.figure(sum(mpesa)), color: "purple" },
       { icon: "ri-attachment-2", label: "Without papers", sub: "No photo or PDF attached", value: A.num(bare.length), color: "warning" },
     ]);
   }

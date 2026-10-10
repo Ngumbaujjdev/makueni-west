@@ -43,14 +43,14 @@
     const today = pays.filter((p) => (p.paid_at || "").slice(0, 10) === new Date().toISOString().slice(0, 10));
     const tithe = month0.filter((p) => p.purpose === "T");
     K.statRow($("statCardsRow"), [
-      { icon: "ri-smartphone-line", label: "This month", sub: `${month0.length} payments`, value: A.short(sum(month0)), color: "success" },
-      { icon: "ri-sun-line", label: "Today", sub: `${today.length} payments`, value: A.short(sum(today)), color: "primary" },
+      { icon: "ri-smartphone-line", label: "This month", sub: `${month0.length} payments`, value: A.figure(sum(month0)), color: "success" },
+      { icon: "ri-sun-line", label: "Today", sub: `${today.length} payments`, value: A.figure(sum(today)), color: "primary" },
       data.diocese
         ? { icon: "ri-question-line", label: "To sort", sub: data.to_sort ? "Account numbers that named no place" : "Nothing waiting", value: A.num(data.to_sort), color: data.to_sort ? "warning" : "success" }
-        : { icon: "ri-safe-2-line", label: "Held by the diocese", sub: "Until it settles - in our books as 1310", value: A.short(data.held || 0), color: "warning" },
-      { icon: "ri-hand-heart-line", label: "Tithe this month", sub: `${tithe.length} payments`, value: A.short(sum(tithe)), color: "purple" },
+        : { icon: "ri-safe-2-line", label: "Held by the diocese", sub: "Until it settles - in our books as 1310", value: A.figure(data.held || 0), color: "warning" },
+      { icon: "ri-hand-heart-line", label: "Tithe this month", sub: `${tithe.length} payments`, value: A.figure(sum(tithe)), color: "purple" },
     ]);
-    $("pbPaymentsFigure").textContent = `${A.short(sum(month0))} this month`;
+    $("pbPaymentsFigure").textContent = `${A.money(sum(month0))} this month`;
     if ($("pbSortFigure")) $("pbSortFigure").textContent = data.to_sort ? `${data.to_sort} waiting` : "Nothing waiting";
     if ($("pbNumbersFigure")) $("pbNumbersFigure").textContent = data.own ? `Our ${data.own.till ? "till" : "paybill"} ${data.own.number}` : data.shortcode ? `Paybill ${data.shortcode}` : "Not set up yet";
     if ($("pbSetupFigure")) $("pbSetupFigure").textContent = data.setup.ready ? (data.setup.environment === "production" ? "Live" : "Sandbox") : "Not set up";
@@ -154,7 +154,7 @@
         : `<div class="p-3">${A.empty("ri-checkbox-circle-line", "Nothing to settle for " + monthLabel(month), "Every place's paybill money for the month is settled.")}</div>`
     }${
       s.settled.length
-        ? `<div class="p-3 pt-2"><div class="app-modal-part-head mt-2"><i class="ri-history-line"></i>Settled for ${esc(monthLabel(month))}</div><div class="acc-quotes">${s.settled.map((x) => `<div class="acc-quote${x.status === "paid" ? " is-chosen" : ""}"><div class="min-w-0 flex-fill"><div class="fw-semibold">${esc(x.place?.name || "")}</div><div class="acc-sub">held ${A.short(x.held)} · share ${A.short(x.share)}${x.remittance ? ` · ${esc(x.remittance.number)} ${esc(x.remittance.status)}` : ""}</div></div><strong>${A.money(x.net)}</strong>${x.remittance?.voucher ? `<a class="btn btn-sm btn-outline-primary" href="${A.link("payments.php", { voucher: x.remittance.voucher.id })}">Voucher</a>` : ""}${x.status === "prepared" ? `<button type="button" class="btn btn-sm btn-outline-danger" data-unsettle="${x.id}">Cancel</button>` : ""}</div>`).join("")}</div></div>`
+        ? `<div class="p-3 pt-2"><div class="app-modal-part-head mt-2"><i class="ri-history-line"></i>Settled for ${esc(monthLabel(month))}</div><div class="acc-quotes">${s.settled.map((x) => `<div class="acc-quote${x.status === "paid" ? " is-chosen" : ""}"><div class="min-w-0 flex-fill"><div class="fw-semibold">${esc(x.place?.name || "")}</div><div class="acc-sub">held ${A.money(x.held)} · share ${A.money(x.share)}${x.remittance ? ` · ${esc(x.remittance.number)} ${esc(x.remittance.status)}` : ""}</div></div><strong>${A.money(x.net)}</strong>${x.remittance?.voucher ? `<a class="btn btn-sm btn-outline-primary" href="${A.link("payments.php", { voucher: x.remittance.voucher.id })}">Voucher</a>` : ""}${x.status === "prepared" ? `<button type="button" class="btn btn-sm btn-outline-danger" data-unsettle="${x.id}">Cancel</button>` : ""}</div>`).join("")}</div></div>`
         : ""
     }`;
     body.querySelector("#pbPickAll")?.addEventListener("change", (e) => body.querySelectorAll("[data-pick]").forEach((x) => (x.checked = e.target.checked)));

@@ -47,12 +47,12 @@
     const transit = data.sent.filter((r) => ["sent", "queried"].includes(r.status));
     const toConfirm = data.coming_in.filter((r) => ["sent", "queried"].includes(r.status));
     K.statRow($("statCardsRow"), [
-      { icon: "ri-error-warning-line", label: `Owed for ${year}`, sub: data.owing.length ? data.owing.map((r) => r.name).join(", ") : "No share is set for this place", value: A.short(owed), color: owed > 0 ? "danger" : "success" },
-      { icon: "ri-upload-2-line", label: `Sent for ${year}`, sub: `${A.short(sum(data.owing, (r) => r.confirmed))} confirmed by them`, value: A.short(sent), color: "primary" },
-      { icon: "ri-send-plane-line", label: "Ours in transit", sub: transit.some((r) => r.status === "queried") ? `${transit.filter((r) => r.status === "queried").length} queried` : `${transit.length} not confirmed yet`, value: A.short(sum(transit, (r) => r.amount)), color: "warning" },
-      { icon: "ri-download-2-line", label: "Coming in to confirm", sub: `${toConfirm.length} from other places`, value: A.short(sum(toConfirm, (r) => r.amount)), color: "purple" },
+      { icon: "ri-error-warning-line", label: `Owed for ${year}`, sub: data.owing.length ? data.owing.map((r) => r.name).join(", ") : "No share is set for this place", value: A.figure(owed), color: owed > 0 ? "danger" : "success" },
+      { icon: "ri-upload-2-line", label: `Sent for ${year}`, sub: `${A.money(sum(data.owing, (r) => r.confirmed))} confirmed by them`, value: A.figure(sent), color: "primary" },
+      { icon: "ri-send-plane-line", label: "Ours in transit", sub: transit.some((r) => r.status === "queried") ? `${transit.filter((r) => r.status === "queried").length} queried` : `${transit.length} not confirmed yet`, value: A.figure(sum(transit, (r) => r.amount)), color: "warning" },
+      { icon: "ri-download-2-line", label: "Coming in to confirm", sub: `${toConfirm.length} from other places`, value: A.figure(sum(toConfirm, (r) => r.amount)), color: "purple" },
     ]);
-    $("rmOweFigure").textContent = owed > 0 ? `${A.short(owed)} owed` : "Up to date";
+    $("rmOweFigure").textContent = owed > 0 ? `${A.money(owed)} owed` : "Up to date";
     $("rmInFigure").textContent = toConfirm.length ? `${toConfirm.length} to confirm` : "Nothing waiting";
   }
 
