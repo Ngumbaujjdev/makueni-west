@@ -301,6 +301,7 @@ class RequisitionController extends AccountingBase
         if ($full) {
             $out += [
                 'payee_phone' => $r->payee_phone,
+                'payee' => $r->payee, 'payee_text' => \App\Support\PayTo::describe($r->payee),
                 'budget_line' => $r->budgetLine?->name,
                 'fund' => $r->fund ? ['id' => $r->fund->id, 'name' => $r->fund->name] : null,
                 'budget_line_id' => $r->budget_line_id,
@@ -337,6 +338,7 @@ class RequisitionController extends AccountingBase
             'fund_id' => ['nullable', 'integer'],
             'payee_name' => ['nullable', 'string', 'max:150'],
             'payee_phone' => ['nullable', 'string', 'max:30'],
+            ...\App\Support\PayTo::rules(),
         ], ['purpose.required' => 'Say what the money is for.', 'amount.required' => 'How much is needed?']);
     }
 }

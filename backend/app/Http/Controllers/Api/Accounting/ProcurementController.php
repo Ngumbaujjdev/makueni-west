@@ -102,6 +102,7 @@ class ProcurementController extends AccountingBase
             'pay_details' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:255'],
             'is_active' => ['nullable', 'boolean'],
+            ...\App\Support\PayTo::rules(),
         ], ['name.required' => 'What is the supplier called?']);
         $s = $this->procurement->saveSupplier($place, $request->user(), $data, $s);
 
@@ -462,7 +463,8 @@ class ProcurementController extends AccountingBase
 
     private function presentSupplier(Supplier $s): array
     {
-        return ['id' => $s->id, 'name' => $s->name, 'phone' => $s->phone, 'email' => $s->email, 'kra_pin' => $s->kra_pin, 'pay_details' => $s->pay_details, 'notes' => $s->notes, 'is_active' => $s->is_active];
+        return ['id' => $s->id, 'name' => $s->name, 'phone' => $s->phone, 'email' => $s->email, 'kra_pin' => $s->kra_pin, 'pay_details' => $s->pay_details,
+            'payee' => $s->payee, 'payee_text' => \App\Support\PayTo::describe($s->payee) ?? $s->pay_details, 'notes' => $s->notes, 'is_active' => $s->is_active];
     }
 
     private function suppliers(Territory $place, bool $activeOnly = false): array

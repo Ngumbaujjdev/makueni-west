@@ -23,7 +23,7 @@ class PaymentVoucher extends Model implements Approvable, HasMedia
     public const MAX_ATTACHMENTS = 5;
 
     protected $fillable = [
-        'territory_id', 'number', 'date', 'payee_name', 'payee_phone', 'pay_from_account_id', 'narration', 'purpose', 'requisition_id', 'supplier_invoice_id', 'remittance_id', 'payroll_payment_id', 'amount', 'status', 'method', 'reference',
+        'territory_id', 'number', 'date', 'payee_name', 'payee_phone', 'payee', 'pay_from_account_id', 'narration', 'purpose', 'requisition_id', 'supplier_invoice_id', 'remittance_id', 'payroll_payment_id', 'amount', 'status', 'method', 'reference',
         'prepared_by', 'prepared_at', 'authorised_by', 'authorised_at', 'authorise_note', 'rejected_by', 'rejected_at', 'reject_reason',
         'paid_by', 'paid_at', 'paid_on', 'journal_id', 'cancelled_by', 'cancelled_at',
     ];
@@ -31,6 +31,7 @@ class PaymentVoucher extends Model implements Approvable, HasMedia
     protected $casts = [
         'date' => 'date',
         'paid_on' => 'date',
+        'payee' => 'array',
         'amount' => 'decimal:2',
         'prepared_at' => 'datetime',
         'authorised_at' => 'datetime',
@@ -101,6 +102,7 @@ class PaymentVoucher extends Model implements Approvable, HasMedia
         return [
             'facts' => array_values(array_filter([
                 ['Pay to', $this->payee_name.($this->payee_phone ? " ({$this->payee_phone})" : '')],
+                $this->payee ? ['Pay by', \App\Support\PayTo::describe($this->payee)] : null,
                 ['What for', $this->narration],
                 ['Pay from', $this->payFrom?->name],
                 ['Prepared by', $this->preparer?->full_name],

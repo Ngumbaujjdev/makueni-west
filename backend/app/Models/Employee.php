@@ -13,7 +13,7 @@ class Employee extends Model implements \OwenIt\Auditing\Contracts\Auditable
 {
     use \OwenIt\Auditing\Auditable;
 
-    public const METHODS = ['mpesa' => 'M-Pesa', 'bank' => 'Bank', 'cash' => 'Cash'];
+    public const METHODS = \App\Support\PayTo::METHODS;
 
     /** The personal numbers - kept out of the audit trail too. */
     public const PRIVATE = ['id_number', 'kra_pin'];
@@ -21,14 +21,14 @@ class Employee extends Model implements \OwenIt\Auditing\Contracts\Auditable
     protected $auditExclude = self::PRIVATE;
 
     protected $fillable = [
-        'territory_id', 'user_id', 'name', 'phone', 'email', 'position', 'start_date', 'end_date', 'pay_method', 'pay_to',
+        'territory_id', 'user_id', 'name', 'phone', 'email', 'position', 'start_date', 'end_date', 'pay_method', 'pay_to', 'payee',
         'basic_pay', 'allowances', 'id_number', 'kra_pin', 'is_active', 'created_by',
     ];
 
     protected $hidden = self::PRIVATE;
 
     protected $casts = [
-        'start_date' => 'date', 'end_date' => 'date', 'basic_pay' => 'decimal:2', 'allowances' => 'array', 'is_active' => 'boolean',
+        'start_date' => 'date', 'end_date' => 'date', 'basic_pay' => 'decimal:2', 'allowances' => 'array', 'payee' => 'array', 'is_active' => 'boolean',
         'id_number' => 'encrypted', 'kra_pin' => 'encrypted',
     ];
 

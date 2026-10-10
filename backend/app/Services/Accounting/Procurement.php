@@ -14,6 +14,7 @@ use App\Models\SupplierInvoice;
 use App\Models\Territory;
 use App\Models\User;
 use App\Services\Settings\Settings;
+use App\Support\PayTo;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -66,6 +67,8 @@ final class Procurement
             'email' => $this->clean($data['email'] ?? null, 150),
             'kra_pin' => ($pin = $this->clean($data['kra_pin'] ?? null, 20)) ? strtoupper($pin) : null,
             'pay_details' => $this->clean($data['pay_details'] ?? null, 255),
+            // Where to pay them, in a shape a treasurer can pay from (M-Pesa, Airtel, paybill, till, bank, cash).
+            'payee' => array_key_exists('payee', $data) ? PayTo::from($data['payee']) : $s?->payee,
             'notes' => $this->clean($data['notes'] ?? null, 255),
             'is_active' => array_key_exists('is_active', $data) ? (bool) $data['is_active'] : ($s?->is_active ?? true),
         ];
@@ -546,6 +549,7 @@ final class Procurement
                 'date' => now()->toDateString(),
                 'payee_name' => $supplier?->name ?? 'Supplier',
                 'payee_phone' => $supplier?->phone,
+                'payee' => $supplier?->payee,
                 'pay_from_account_id' => $payFromAccountId,
                 'narration' => "Bill {$bill->number} ({$supplier?->name} invoice {$bill->supplier_ref}) on order {$po->number}",
                 'purpose' => 'bill',

@@ -376,6 +376,7 @@ final class Books
             'date' => $pv->date->toDateString(),
             'payee_name' => $pv->payee_name,
             'payee_phone' => $pv->payee_phone,
+            'payee' => $pv->payee, 'payee_text' => \App\Support\PayTo::describe($pv->payee),
             'narration' => $pv->narration,
             'amount' => (float) $pv->amount,
             'status' => $pv->status,

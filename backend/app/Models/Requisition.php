@@ -25,10 +25,10 @@ class Requisition extends Model implements Approvable, HasMedia
 
     protected $fillable = [
         'territory_id', 'number', 'requested_by', 'kind', 'purpose', 'amount', 'needed_by', 'account_id', 'budget_line_id', 'fund_id',
-        'payee_name', 'payee_phone', 'status', 'decision_note', 'decided_by', 'decided_at', 'payment_voucher_id',
+        'payee_name', 'payee_phone', 'payee', 'status', 'decision_note', 'decided_by', 'decided_at', 'payment_voucher_id',
     ];
 
-    protected $casts = ['amount' => 'decimal:2', 'needed_by' => 'date', 'decided_at' => 'datetime'];
+    protected $casts = ['amount' => 'decimal:2', 'needed_by' => 'date', 'decided_at' => 'datetime', 'payee' => 'array'];
 
     public function requester(): BelongsTo
     {
@@ -103,6 +103,7 @@ class Requisition extends Model implements Approvable, HasMedia
                 ['Kind', self::KINDS[$this->kind]],
                 ['Asked by', $this->requester?->full_name],
                 $this->payee_name ? ['Pay to', $this->payee_name.($this->payee_phone ? " ({$this->payee_phone})" : '')] : null,
+                $this->payee ? ['Pay by', \App\Support\PayTo::describe($this->payee)] : null,
                 $this->needed_by ? ['Needed by', $this->needed_by->format('j M Y')] : null,
                 $this->account ? ['Charged to', "{$this->account->code} {$this->account->name}"] : null,
                 $this->budgetLine ? ['Budget line', $this->budgetLine->name] : null,

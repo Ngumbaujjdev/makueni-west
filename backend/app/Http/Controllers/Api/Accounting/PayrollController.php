@@ -62,8 +62,9 @@ class PayrollController extends AccountingBase
             'position' => ['nullable', 'string', 'max:100'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date'],
-            'pay_method' => ['required', 'in:mpesa,bank,cash'],
+            'pay_method' => ['nullable', 'in:'.implode(',', array_keys(\App\Support\PayTo::METHODS))],
             'pay_to' => ['nullable', 'string', 'max:150'],
+            ...\App\Support\PayTo::rules(),
             'basic_pay' => ['required', 'numeric', 'min:0'],
             'allowances' => ['nullable', 'array', 'max:10'],
             'allowances.*.name' => ['nullable', 'string', 'max:60'],
@@ -217,7 +218,7 @@ class PayrollController extends AccountingBase
         return [
             'id' => $e->id, 'name' => $e->name, 'phone' => $e->phone, 'email' => $e->email, 'position' => $e->position,
             'start_date' => $e->start_date?->toDateString(), 'end_date' => $e->end_date?->toDateString(),
-            'pay_method' => $e->pay_method, 'pay_method_label' => Employee::METHODS[$e->pay_method], 'pay_to' => $e->pay_to,
+            'pay_method' => $e->pay_method, 'pay_method_label' => Employee::METHODS[$e->pay_method] ?? $e->pay_method, 'pay_to' => $e->pay_to, 'payee' => $e->payee,
             'basic_pay' => (float) $e->basic_pay, 'allowances' => $e->allowances ?? [], 'gross' => round((float) $e->basic_pay + array_sum(array_column($e->allowances ?? [], 'amount')), 2),
             'is_active' => $e->is_active,
             // Masked, always - the full numbers never leave the server.
@@ -255,7 +256,7 @@ class PayrollController extends AccountingBase
                 'journal_id' => $run->journal_id,
                 'place' => $this->placeInfo($place),
                 'payslips' => $run->payslips()->get()->map(fn ($p) => [
-                    'id' => $p->id, 'employee_id' => $p->employee_id, 'name' => $p->name, 'position' => $p->position, 'pay_method' => $p->pay_method, 'pay_to' => $p->pay_to,
+                    'id' => $p->id, 'employee_id' => $p->employee_id, 'name' => $p->name, 'position' => $p->position, 'pay_method' => $p->pay_method, 'pay_to' => $p->pay_to, 'payee' => $p->payee,
                     'basic' => (float) $p->basic, 'allowances' => $p->allowances ?? [], 'gross' => (float) $p->gross,
                     'other' => (float) $p->other, 'other_note' => $p->other_note, 'net' => (float) $p->net, 'reference' => $p->reference,
                 ])->values(),

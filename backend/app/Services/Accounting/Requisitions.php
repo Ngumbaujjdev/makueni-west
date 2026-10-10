@@ -147,6 +147,7 @@ final class Requisitions
                 'date' => now()->toDateString(),
                 'payee_name' => $r->kind === 'advance' ? ($requester?->full_name ?? 'Staff advance') : ($r->payee_name ?: ($requester?->full_name ?? 'Payee')),
                 'payee_phone' => $r->kind === 'advance' ? $requester?->phone : $r->payee_phone,
+                'payee' => $r->kind === 'advance' ? null : $r->payee,
                 'pay_from_account_id' => $payFromAccountId,
                 'narration' => "{$r->number}: {$r->purpose}",
                 'purpose' => $r->kind === 'advance' ? 'advance' : 'payment',
@@ -209,6 +210,7 @@ final class Requisitions
             'fund_id' => $this->docs->fund($data['fund_id'] ?? null, 'fund_id'),
             'payee_name' => isset($data['payee_name']) ? (mb_substr(trim((string) $data['payee_name']), 0, 150) ?: null) : null,
             'payee_phone' => isset($data['payee_phone']) ? (mb_substr(trim((string) $data['payee_phone']), 0, 30) ?: null) : null,
+            'payee' => \App\Support\PayTo::from($data['payee'] ?? null),
         ];
     }
 
