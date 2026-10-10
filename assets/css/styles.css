@@ -30469,6 +30469,22 @@ tr.list-row-flash > td {
 [data-theme-mode="dark"] .soft-success { color: rgb(var(--success-rgb)); }
 [data-theme-mode="dark"] .soft-danger { color: #ff7b7b; }
 [data-theme-mode="dark"] .soft-pink { color: rgb(var(--pink-rgb)); }
+/* Chips are semi-solid (2026-10-10): a deeper tint, bold text in a darker
+   shade and a thin edge of the same colour - pale chips read as faded. The
+   soft-* panels, filter strips and table group headers stay soft. */
+.soft-chip { font-weight: 600; border: 1px solid transparent; }
+.soft-chip.soft-primary, .soft-chip.soft-info { background: rgba(var(--primary-rgb), 0.2); border-color: rgba(var(--primary-rgb), 0.45); color: #17758b; }
+.soft-chip.soft-secondary, .soft-chip.soft-warning { background: rgba(var(--secondary-rgb), 0.32); border-color: rgba(var(--secondary-rgb), 0.7); color: #6b5000; }
+.soft-chip.soft-success { background: rgba(var(--success-rgb), 0.22); border-color: rgba(var(--success-rgb), 0.5); color: #0b6e52; }
+.soft-chip.soft-danger { background: rgba(var(--danger-rgb), 0.18); border-color: rgba(var(--danger-rgb), 0.45); color: #ab1b1b; }
+.soft-chip.soft-purple { background: rgba(var(--purple-rgb), 0.17); border-color: rgba(var(--purple-rgb), 0.4); color: #6c1889; }
+.soft-chip.soft-pink { background: rgba(var(--pink-rgb), 0.3); border-color: rgba(var(--pink-rgb), 0.7); color: #9c2f66; }
+[data-theme-mode="dark"] .soft-chip.soft-primary, [data-theme-mode="dark"] .soft-chip.soft-info { background: rgba(var(--primary-rgb), 0.28); color: #8fdcef; }
+[data-theme-mode="dark"] .soft-chip.soft-secondary, [data-theme-mode="dark"] .soft-chip.soft-warning { background: rgba(var(--secondary-rgb), 0.26); color: #ffd866; }
+[data-theme-mode="dark"] .soft-chip.soft-success { background: rgba(var(--success-rgb), 0.26); color: #6fe6c2; }
+[data-theme-mode="dark"] .soft-chip.soft-danger { background: rgba(var(--danger-rgb), 0.26); color: #ff8f8f; }
+[data-theme-mode="dark"] .soft-chip.soft-purple { background: rgba(var(--purple-rgb), 0.34); color: #e0a4f5; }
+[data-theme-mode="dark"] .soft-chip.soft-pink { background: rgba(var(--pink-rgb), 0.3); color: #f6bfdb; }
 
 /* Segmented control (year / range / view switch) */
 .seg-control {
@@ -38492,13 +38508,15 @@ button.cal-side-item:focus-visible {
 
 .pp-pills { display: flex; gap: .45rem; overflow-x: auto; padding-bottom: .9rem; scrollbar-width: none; }
 .pp-pills::-webkit-scrollbar { display: none; }
-.pp-pill { display: inline-flex; flex: none; align-items: center; gap: .4rem; height: 2.3rem; padding: 0 .85rem; border: 1px solid rgba(var(--q), .28); border-radius: .65rem; background: rgba(var(--q), .07); font-size: .84rem; font-weight: 600; color: var(--v2-heading); transition: background .15s, border-color .15s; }
+.pp-pill { display: inline-flex; flex: none; align-items: center; gap: .4rem; height: 2.3rem; padding: 0 .85rem; border: 1px solid rgba(var(--q), .45); border-radius: .65rem; background: rgba(var(--q), .14); font-size: .84rem; font-weight: 600; color: var(--v2-heading); transition: background .15s, border-color .15s; }
 .pp-pill i { color: rgb(var(--q)); }
 .pp-pill:hover { border-color: rgba(var(--q), .6); }
-.pp-pill-count { min-width: 1.5rem; padding: .05rem .45rem; border-radius: 1rem; background: rgba(var(--q), .16); font-size: .72rem; font-weight: 700; text-align: center; color: rgb(var(--q)); }
+.pp-pill-count { min-width: 1.5rem; padding: .05rem .45rem; border-radius: 1rem; background: rgb(var(--q)); font-size: .72rem; font-weight: 700; text-align: center; color: #fff; }
 .pp-pill.is-on { border-color: rgb(var(--q)); background: rgb(var(--q)); color: #fff; }
 .pp-pill.is-on i { color: #fff; }
 .pp-pill.is-on .pp-pill-count { background: rgba(255, 255, 255, .25); color: #fff; }
+/* Gold reads better with dark text, on the count and on a chosen gold pill. */
+.pp-pill[style*="secondary-rgb"] .pp-pill-count, .pp-pill[style*="warning-rgb"] .pp-pill-count, .pp-pill.is-on[style*="secondary-rgb"], .pp-pill.is-on[style*="warning-rgb"], .pp-pill.is-on[style*="secondary-rgb"] i, .pp-pill.is-on[style*="warning-rgb"] i, .pp-pill.is-on[style*="secondary-rgb"] .pp-pill-count, .pp-pill.is-on[style*="warning-rgb"] .pp-pill-count { color: #0d0d0d; }
 
 .pp-table .pp-check { width: 2.5rem; padding-inline-end: 0 !important; }
 .pp-table .pp-check .form-check-input { margin: 0; cursor: pointer; }
