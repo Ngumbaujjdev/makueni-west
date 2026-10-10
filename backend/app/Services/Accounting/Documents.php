@@ -130,6 +130,12 @@ final class Documents
         if ($journal->source_type === 'collection') {
             throw ValidationException::withMessages(['journal' => ['This is a Sunday collection - open it under Collections to reverse it.']]);
         }
+        if ($journal->source_type === 'supplier_invoice') {
+            throw ValidationException::withMessages(['journal' => ['This is a supplier\'s bill - open it under Procurement to reverse it.']]);
+        }
+        if ($journal->source_type === 'advance_retirement') {
+            throw ValidationException::withMessages(['journal' => ['This accounts for a staff advance - correct it with a journal, so the advance keeps its figures.']]);
+        }
 
         return DB::transaction(function () use ($journal, $user, $reason, $date) {
             $reversal = $this->ledger->reverse($journal, $user, $reason, $date);

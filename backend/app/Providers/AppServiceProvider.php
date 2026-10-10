@@ -92,6 +92,11 @@ class AppServiceProvider extends ServiceProvider
             'approval_request' => 'App\Models\ApprovalRequest',
             'approval_assignment' => 'App\Models\ApprovalAssignment',
             'approval_delegation' => 'App\Models\ApprovalDelegation',
+            'supplier' => 'App\Models\Supplier',
+            'quotation' => 'App\Models\Quotation',
+            'purchase_order' => 'App\Models\PurchaseOrder',
+            'goods_received' => 'App\Models\GoodsReceived',
+            'supplier_invoice' => 'App\Models\SupplierInvoice',
 
             // Fiscal period models
             'fiscal_year' => 'App\Models\FiscalYear',

@@ -133,6 +133,9 @@ final class Requisitions
         if ($r->payment_voucher_id) {
             throw ValidationException::withMessages(['requisition' => ['A payment voucher was already made for it.']]);
         }
+        if (Procurement::mustOrder($r)) {
+            throw ValidationException::withMessages(['requisition' => ['Above KES '.number_format(Procurement::oneQuoteLimit()).' a purchase goes through an order: get '.Procurement::quotesNeeded().' quotations, then raise the order.']]);
+        }
         $place = Territory::findOrFail($r->territory_id);
         $requester = User::find($r->requested_by);
         $line = $r->kind === 'advance'

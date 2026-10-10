@@ -36,6 +36,7 @@ class AccountingAccessSeeder extends Seeder
         'collections' => ['collections.php', 'Collections', 'Sunday collections: counted by one, confirmed by another, receipted per fund, banked', ['church']],
         'approvals' => ['approvals.php', 'Approvals', 'What waits for my approval, what I asked for, and who I hand it to while away', null],
         'requisitions' => ['requisitions.php', 'Requisitions', 'Ask for money - to pay, to buy, or an advance - approved, then paid', null],
+        'procurement' => ['procurement.php', 'Procurement', 'Bigger purchases: quotations, the order, goods received, the supplier\'s bill, then payment', null],
         'rules' => ['approval-rules.php', 'Approval rules', 'Who approves what, by level and amount, and who it goes to when late', ['diocese']],
     ];
 
@@ -51,6 +52,7 @@ class AccountingAccessSeeder extends Seeder
             'accounting.periods.read' => 'close',
             'accounting.collections.read' => 'collections',
             'accounting.requisitions.read' => 'requisitions',
+            'accounting.procurement.read' => 'procurement',
         ],
         'receipt' => ['accounting.receipts.create' => 'receipts'],
         'prepare' => ['accounting.payments.prepare' => 'payments'],
@@ -69,6 +71,7 @@ class AccountingAccessSeeder extends Seeder
         'approvals' => ['accounting.approvals.read' => 'approvals'],
         'request' => ['accounting.requisitions.create' => 'requisitions'],
         'rules' => ['accounting.approvalrules.manage' => 'rules'],
+        'procure' => ['accounting.procurement.manage' => 'procurement', 'accounting.procurement.read' => 'procurement'],
     ];
 
     /** What every role at a level gets: their approvals, and asking for money. */
@@ -77,10 +80,10 @@ class AccountingAccessSeeder extends Seeder
     /** Who does what, per level - the standard separation of duties. */
     private const GRANTS = [
         'church' => [
-            'Church Treasurer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'reconcile', 'petty', 'close', 'collect', 'confirm'],
+            'Church Treasurer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'reconcile', 'petty', 'close', 'collect', 'confirm', 'procure'],
             'Senior Pastor' => ['read', 'authorise', 'confirm'],
             'Associate Pastor' => ['read', 'authorise', 'confirm'],
-            'Church Administrator' => ['read', 'receipt', 'prepare', 'petty', 'collect'],
+            'Church Administrator' => ['read', 'receipt', 'prepare', 'petty', 'collect', 'procure'],
             'Church Secretary' => ['read', 'prepare', 'petty', 'collect'],
             'Usher Coordinator' => ['collect'],
             'Deacon' => ['collect'],
@@ -88,17 +91,17 @@ class AccountingAccessSeeder extends Seeder
             'Church Committee Member' => ['read'],
         ],
         'region' => [
-            'Regional Treasurer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'below', 'reconcile', 'petty', 'close', 'reopen'],
+            'Regional Treasurer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'below', 'reconcile', 'petty', 'close', 'reopen', 'procure'],
             'Regional Overseer' => ['read', 'authorise', 'below', 'reopen'],
-            'Regional Secretary' => ['read', 'prepare', 'below'],
+            'Regional Secretary' => ['read', 'prepare', 'below', 'procure'],
             'Regional Coordinator' => ['read', 'below'],
             'Regional Committee Member' => ['read', 'below'],
         ],
         'diocese' => [
-            'Diocese Finance Officer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'chart', 'below', 'reconcile', 'petty', 'close', 'reopen', 'rules'],
-            'Diocese Treasurer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'below', 'reconcile', 'petty', 'close', 'reopen'],
+            'Diocese Finance Officer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'chart', 'below', 'reconcile', 'petty', 'close', 'reopen', 'rules', 'procure'],
+            'Diocese Treasurer' => ['read', 'receipt', 'prepare', 'pay', 'accounts', 'journal', 'below', 'reconcile', 'petty', 'close', 'reopen', 'procure'],
             'Bishop' => ['read', 'authorise', 'below'],
-            'Diocese Administrator' => ['read', 'prepare', 'below'],
+            'Diocese Administrator' => ['read', 'prepare', 'below', 'procure'],
             'Diocese Secretary' => ['read', 'prepare', 'below'],
             'Diocese Council Member' => ['read', 'below'],
         ],

@@ -709,6 +709,29 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('requisitions/{id}/attachments/{media}', [$req, 'showAttachment'])->whereNumber(['id', 'media']);
         Route::delete('requisitions/{id}/attachments/{media}', [$req, 'removeAttachment'])->whereNumber(['id', 'media']);
         Route::post('advances/{id}/retire', [$req, 'retire'])->whereNumber('id');
+        // A5 - procurement: suppliers, quotations, the order, goods received, the bill.
+        $pro = \App\Http\Controllers\Api\Accounting\ProcurementController::class;
+        Route::get('procurement', [$pro, 'index']);
+        Route::get('procurement/options', [$pro, 'options']);
+        Route::get('procurement/suppliers', [$pro, 'suppliersIndex']);
+        Route::post('procurement/suppliers', [$pro, 'saveSupplier']);
+        Route::put('procurement/suppliers/{id}', [$pro, 'saveSupplier'])->whereNumber('id');
+        Route::delete('procurement/suppliers/{id}', [$pro, 'removeSupplier'])->whereNumber('id');
+        Route::post('requisitions/{id}/quotes', [$pro, 'addQuote'])->whereNumber('id')->middleware('throttle:30,1');
+        Route::delete('requisitions/{id}/quotes/{quote}', [$pro, 'removeQuote'])->whereNumber(['id', 'quote']);
+        Route::post('requisitions/{id}/quotes/{quote}/choose', [$pro, 'chooseQuote'])->whereNumber(['id', 'quote']);
+        Route::get('requisitions/{id}/quotes/{quote}/file', [$pro, 'quoteFile'])->whereNumber(['id', 'quote']);
+        Route::post('requisitions/{id}/order', [$pro, 'raise'])->whereNumber('id');
+        Route::get('procurement/orders/{id}', [$pro, 'showOrder'])->whereNumber('id');
+        Route::post('procurement/orders/{id}/receive', [$pro, 'receive'])->whereNumber('id')->middleware('throttle:30,1');
+        Route::post('procurement/orders/{id}/bill', [$pro, 'bill'])->whereNumber('id')->middleware('throttle:30,1');
+        Route::post('procurement/orders/{id}/close', [$pro, 'close'])->whereNumber('id');
+        Route::post('procurement/orders/{id}/cancel', [$pro, 'cancel'])->whereNumber('id');
+        Route::post('procurement/deliveries/{id}/undo', [$pro, 'undoDelivery'])->whereNumber('id');
+        Route::get('procurement/deliveries/{id}/files/{media}', [$pro, 'deliveryFile'])->whereNumber(['id', 'media']);
+        Route::post('procurement/bills/{id}/pay', [$pro, 'payBill'])->whereNumber('id');
+        Route::post('procurement/bills/{id}/reverse', [$pro, 'reverseBill'])->whereNumber('id');
+        Route::get('procurement/bills/{id}/file', [$pro, 'billFile'])->whereNumber('id');
     });
 
     // Approvals (docs/specs/accounting-spec.md, A4) - my inbox, decisions, delegations, the rules.

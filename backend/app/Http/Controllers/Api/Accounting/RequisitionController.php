@@ -76,6 +76,7 @@ class RequisitionController extends AccountingBase
             'kinds' => collect(Requisition::KINDS)->map(fn ($l, $k) => ['key' => $k, 'label' => $l])->values(),
             'budget' => $budget ? ['id' => $budget->id, 'label' => $budget->period_label] : null,
             'overdue_advance' => StaffAdvance::where('user_id', $request->user()->id)->where('status', 'open')->where('due_on', '<', now()->toDateString())->exists(),
+            'suppliers' => \App\Models\Supplier::where('territory_id', $place->id)->where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'today' => now()->toDateString(),
         ]);
     }
@@ -288,7 +289,7 @@ class RequisitionController extends AccountingBase
             'can' => [
                 'decide' => (bool) $turn || $legacy,
                 'edit' => (int) $r->requested_by === (int) $user->id && in_array($r->status, ['submitted', 'returned'], true),
-                'pay' => $r->status === 'approved' && ! $r->payment_voucher_id && AccountingAccess::can($user, $place, 'prepare'),
+                'pay' => $r->status === 'approved' && ! $r->payment_voucher_id && ! \App\Services\Accounting\Procurement::mustOrder($r) && AccountingAccess::can($user, $place, 'prepare'),
                 'cancel' => in_array($r->status, ['submitted', 'returned', 'approved'], true) && ! $r->payment_voucher_id
                     && ((int) $r->requested_by === (int) $user->id || AccountingAccess::can($user, $place, 'prepare')),
             ],
@@ -303,6 +304,7 @@ class RequisitionController extends AccountingBase
                 'account_id' => $r->account_id,
                 'attachments' => $r->getMedia('attachments')->map(fn ($m) => ['id' => $m->id, 'name' => $m->name, 'mime' => $m->mime_type])->values(),
                 'approval' => $req ? $this->inbox->present($req, $user, true) : null,
+                'procurement' => ProcurementController::quotesBlock($r, $user),
                 'advance' => $r->kind === 'advance' ? (StaffAdvance::where('requisition_id', $r->id)->first() ? $this->presentAdvance(StaffAdvance::where('requisition_id', $r->id)->first()) : null) : null,
             ];
         }
