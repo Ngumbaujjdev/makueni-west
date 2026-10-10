@@ -8,7 +8,6 @@ use App\Models\Gift;
 use App\Models\MpesaPayment;
 use App\Models\MpesaRequest;
 use App\Models\PaymentChannel;
-use App\Models\PaystackSettlement;
 use App\Models\Remittance;
 use App\Models\Territory;
 use App\Services\Payments\Daraja;
@@ -340,41 +339,5 @@ final class Giving
         }
 
         return $done;
-    }
-
-    /** Each Paystack payout - a church's subaccount, or the diocese's own - posted once: Dr its bank / Cr clearing. */
-    public function recordSettlements(): int
-    {
-        $n = 0;
-        $paystack = Paystack::diocese();
-        $diocese = $this->paybill->diocese();
-        $channels = PaymentChannel::where('provider', 'paystack')->where('status', 'active')->whereNotNull('settles_into_id')->get();
-        foreach ($channels as $ch) {
-            $place = Territory::find($ch->territory_id);
-            $code = (int) $ch->territory_id === (int) $diocese->id ? 'none' : $ch->subaccount_code;
-            if (! $place || ! $code) {
-                continue;
-            }
-            foreach ($paystack->settlements($code, now()->subDays(30)->toDateString()) as $s) {
-                $id = (string) ($s['id'] ?? '');
-                $amount = round((int) ($s['effective_amount'] ?? $s['total_amount'] ?? 0) / 100, 2);
-                if ($id === '' || $amount <= 0 || ! in_array(strtolower((string) ($s['status'] ?? '')), ['success', 'processed'], true) || PaystackSettlement::where('settlement_id', $id)->exists()) {
-                    continue;
-                }
-                DB::transaction(function () use ($s, $id, $amount, $place, $ch, &$n) {
-                    $date = substr((string) ($s['settlement_date'] ?? $s['settledAt'] ?? now()->toDateString()), 0, 10);
-                    $row = PaystackSettlement::create(['settlement_id' => $id, 'territory_id' => $place->id, 'amount' => $amount, 'settled_on' => $date, 'raw' => $s]);
-                    $j = $this->ledger->post($place, ['doc_type' => 'transfer', 'date' => $date, 'narration' => 'Paystack payout', 'method' => 'bank', 'reference' => "PSTK-{$id}",
-                        'source_type' => 'paystack_settlement', 'source_id' => $row->id], [
-                            ['account_id' => $ch->settles_into_id, 'debit' => $amount],
-                            ['account_id' => $this->chart->account('online_clearing')->id, 'credit' => $amount, 'memo' => 'Paystack payout'],
-                        ], null);
-                    $row->update(['journal_id' => $j->id]);
-                    $n++;
-                });
-            }
-        }
-
-        return $n;
     }
 }

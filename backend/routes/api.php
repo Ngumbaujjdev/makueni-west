@@ -777,6 +777,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
         // A10a - online giving: the place's gifts; the diocese's gateways.
         $gv = \App\Http\Controllers\Api\Accounting\GivingController::class;
         Route::get('giving', [$gv, 'index']);
+        // A10c - getting paid: payouts, a place asking for its own Paystack, the diocese's check.
+        $po = \App\Http\Controllers\Api\Accounting\PayoutController::class;
+        Route::get('giving/payouts', [$po, 'index']);
+        Route::get('giving/payouts/{id}', [$po, 'show'])->whereNumber('id');
+        Route::get('giving/payout-options', [$po, 'options']);
+        Route::post('giving/payout-request', [$po, 'ask']);
+        Route::delete('giving/payout-request', [$po, 'withdraw']);
+        Route::get('gateways/payouts', [$po, 'overview']);
+        Route::post('gateways/channels/{id}/review', [$po, 'review'])->whereNumber('id');
         Route::get('gateways', [$gv, 'gateways']);
         Route::get('gateways/banks', [$gv, 'banks']);
         Route::post('gateways/channels', [$gv, 'storeChannel']);
