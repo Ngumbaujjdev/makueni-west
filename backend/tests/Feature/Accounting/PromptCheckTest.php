@@ -97,6 +97,31 @@ class PromptCheckTest extends TestCase
         $this->assertTrue($ledger->trialBalance($this->myChurch)['balanced'] && $ledger->trialBalance($this->diocese)['balanced']);
     }
 
+    public function test_still_under_processing_keeps_waiting(): void
+    {
+        $ref = $this->giveByMpesa();
+        // Safaricom's 4999 is an answer, not a refusal: the giver is still at the PIN.
+        $this->query = ['ResponseCode' => '0', 'ResultCode' => '4999', 'ResultDesc' => 'The transaction is still under processing'];
+        $this->later($ref);
+        $this->getJson("/api/give/status/{$ref}")->assertOk()->assertJsonPath('data.status', 'pending');
+        $this->later($ref, 200);
+        $this->artisan('payments:reconcile')->assertSuccessful();
+        $this->assertSame('pending', Gift::where('reference', $ref)->value('status'));
+        $this->assertSame('pending', MpesaRequest::firstOrFail()->status);
+
+        // Then it is paid.
+        $this->query = ['ResponseCode' => '0', 'ResultCode' => '0', 'ResultDesc' => 'The service request is processed successfully.'];
+        $this->later($ref);
+        $this->getJson("/api/give/status/{$ref}")->assertOk()->assertJsonPath('data.status', 'paid');
+    }
+
+    public function test_a_refused_callback_gives_the_reason_in_plain_words(): void
+    {
+        $ref = $this->giveByMpesa();
+        $this->postJson('/api/payments/daraja/'.self::KEY.'/stk', ['Body' => ['stkCallback' => ['MerchantRequestID' => 'm-1', 'CheckoutRequestID' => 'ws_CO_check1', 'ResultCode' => 1037, 'ResultDesc' => 'DS timeout user cannot be reached.']]])->assertOk();
+        $this->getJson("/api/give/status/{$ref}")->assertOk()->assertJsonPath('data.status', 'failed')->assertJsonPath('data.result', "Your phone couldn't be reached - is it on?");
+    }
+
     public function test_the_callback_first_then_asking_changes_nothing(): void
     {
         $ref = $this->giveByMpesa();
@@ -115,7 +140,7 @@ class PromptCheckTest extends TestCase
         $this->query = ['ResponseCode' => '0', 'ResultCode' => '1032', 'ResultDesc' => 'Request cancelled by user'];
         $this->later($ref, 200);
         $this->artisan('payments:reconcile')->assertSuccessful();
-        $this->assertSame(['failed', 'Request cancelled by user'], [Gift::where('reference', $ref)->value('status'), Gift::where('reference', $ref)->value('result')]);
+        $this->assertSame(['failed', 'You cancelled the prompt.'], [Gift::where('reference', $ref)->value('status'), Gift::where('reference', $ref)->value('result')]);
         $this->assertSame(0, MpesaPayment::count());
 
         // A prompt nobody answered for an hour is given up.
