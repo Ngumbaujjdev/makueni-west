@@ -22,7 +22,7 @@ include __DIR__ . '/toolbar.php';
 <div id="prOrdersPane">
     <div class="card custom-card" id="prToOrderCard" hidden>
         <div class="card-header"><div><div class="card-title">Approved - to order</div><span class="card-subtitle-text">Purchases approved and not yet ordered or paid</span></div></div>
-        <div class="card-body p-0"><div class="table-responsive"><table class="table mb-0 acc-table"><thead><tr><th>Requisition</th><th class="d-none d-md-table-cell">Asked by</th><th class="d-none d-lg-table-cell">Quotations</th><th class="text-end">Approved</th><th class="text-end">Action</th></tr></thead><tbody id="prToOrderRows"></tbody></table></div></div>
+        <div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0 acc-table" id="prToOrderTable"><thead><tr><th>Requisition</th><th class="d-none d-md-table-cell">Asked by</th><th class="d-none d-lg-table-cell">Quotations</th><th class="text-end">Approved</th><th class="text-end">Action</th></tr></thead><tbody id="prToOrderRows"></tbody></table></div></div>
     </div>
     <div class="card custom-card">
         <div class="card-header"><div><div class="card-title">Purchase orders</div><span class="card-subtitle-text">Ordered, received, billed - open one to receive the goods or enter the bill</span></div></div>
@@ -44,12 +44,12 @@ include __DIR__ . '/toolbar.php';
 <div id="prBillsPane" hidden>
     <div class="card custom-card">
         <div class="card-header"><div><div class="card-title">Supplier bills</div><span class="card-subtitle-text">Posted against an order and what was received - paid by a voucher already authorised</span></div></div>
-        <div class="card-body p-0"><div class="table-responsive"><table class="table mb-0 acc-table"><thead><tr><th>Bill</th><th class="d-none d-md-table-cell">Date</th><th class="d-none d-lg-table-cell">Order</th><th>Where it stands</th><th class="text-end">Amount</th><th class="text-end">Action</th></tr></thead><tbody id="prBillRows"></tbody></table></div></div>
+        <div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0 acc-table" id="prBillTable"><thead><tr><th>Bill</th><th class="d-none d-md-table-cell">Date</th><th class="d-none d-lg-table-cell">Order</th><th>Where it stands</th><th class="text-end">Amount</th><th class="text-end">Action</th></tr></thead><tbody id="prBillRows"></tbody></table></div></div>
     </div>
 </div>
 <div id="prSuppliersPane" hidden>
     <div class="card custom-card">
         <div class="card-header"><div><div class="card-title">Suppliers</div><span class="card-subtitle-text">Who this place buys from, what was ordered and what is owed</span></div></div>
-        <div class="card-body p-0"><div class="table-responsive"><table class="table mb-0 acc-table"><thead><tr><th>Supplier</th><th class="d-none d-md-table-cell">Contact</th><th class="d-none d-lg-table-cell">KRA PIN</th><th class="text-end">Ordered</th><th class="text-end">Owed</th><th class="text-end">Action</th></tr></thead><tbody id="prSupplierRows"></tbody></table></div></div>
+        <div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0 acc-table" id="prSupplierTable"><thead><tr><th>Supplier</th><th class="d-none d-md-table-cell">Contact</th><th class="d-none d-lg-table-cell">KRA PIN</th><th class="text-end">Ordered</th><th class="text-end">Owed</th><th class="text-end">Action</th></tr></thead><tbody id="prSupplierRows"></tbody></table></div></div>
     </div>
 </div>

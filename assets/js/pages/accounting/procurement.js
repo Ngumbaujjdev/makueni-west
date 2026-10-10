@@ -59,18 +59,33 @@
 
   function toOrder() {
     $("prToOrderCard").hidden = !data.to_order.length;
-    $("prToOrderRows").innerHTML = data.to_order
-      .map((r) => {
-        const ready = !r.must_order || (r.quotes >= data.limits.quotes && r.chosen);
+    const ready = (r) => !r.must_order || (r.quotes >= data.limits.quotes && r.chosen);
+    A.tableKit({
+      tableId: "prToOrderTable",
+      prefix: "o_",
+      items: data.to_order,
+      noun: "approved purchases",
+      search: "Search what for, number, who asked...",
+      pills: [
+        { key: "ready", label: "Ready to order", icon: "ri-shopping-cart-2-line", color: "success", test: ready },
+        { key: "quotes", label: "Needs quotations", icon: "ri-scales-3-line", color: "warning", test: (r) => !ready(r) },
+      ],
+      sorts: [
+        { key: "big", label: "Largest first", order: [[3, "desc"]] },
+        { key: "small", label: "Smallest first", order: [[3, "asc"]] },
+      ],
+      nonSortable: [4],
+      rowHtml: (r) => {
+        const ok = ready(r);
         const q = r.must_order ? `${r.quotes} of ${data.limits.quotes}${r.chosen ? " · chosen" : ""}` : r.quotes ? `${r.quotes}${r.chosen ? " · chosen" : ""}` : "Not needed";
         const act = !data.can.procure || A.viewingBelow()
           ? ""
-          : ready
+          : ok
             ? `<button type="button" class="btn btn-sm btn-primary" data-raise="${r.id}"><i class="ri-shopping-cart-2-line me-1"></i>Raise the order</button>`
             : `<a class="btn btn-sm btn-outline-primary" href="${A.link("requisitions.php", { requisition: r.id })}"><i class="ri-scales-3-line me-1"></i>Get quotations</a>`;
-        return `<tr><td><div class="fw-semibold">${esc(r.purpose)}</div><div class="acc-sub">${esc(r.number)}${r.must_order ? ` · above KES ${A.num(data.limits.one_quote)}` : ""}</div></td><td class="d-none d-md-table-cell">${esc(r.requested_by || "")}</td><td class="d-none d-lg-table-cell"><span class="soft-chip soft-${ready ? "success" : "warning"}">${esc(q)}</span></td><td class="text-end"><strong>${A.money(r.amount)}</strong></td><td class="text-end">${act}</td></tr>`;
-      })
-      .join("");
+        return `<tr data-pills="${ok ? "ready" : "quotes"}"><td><div class="fw-semibold">${esc(r.purpose)}</div><div class="acc-sub">${esc(r.number)}${r.must_order ? ` · above KES ${A.num(data.limits.one_quote)}` : ""}</div></td><td class="d-none d-md-table-cell">${esc(r.requested_by || "")}</td><td class="d-none d-lg-table-cell"><span class="soft-chip soft-${ok ? "success" : "warning"}">${esc(q)}</span></td><td class="text-end" data-order="${r.amount}"><strong>${A.money(r.amount)}</strong></td><td class="text-end">${act}</td></tr>`;
+      },
+    });
   }
 
   const rowHtml = (o) => `<tr class="acc-row" data-id="${o.id}" data-pills="${o.status}${o.to_receive || o.to_bill ? " open" : ""}${o.to_receive ? " receive" : ""}${o.to_bill ? " bill" : ""}${["received", "closed"].includes(o.status) ? " received" : ""}${o.late ? " late" : ""}">
@@ -79,7 +94,7 @@
     <td data-order="${o.date}" class="text-nowrap">${A.day(o.date)}</td>
     <td class="d-none d-md-table-cell">${esc(o.supplier || "")}</td>
     <td class="d-none d-lg-table-cell acc-steps-cell">${A.mini(["Ordered", "Received", "Billed"], o.status === "cancelled" ? 1 : o.to_receive ? 1 : o.to_bill ? 2 : 3, { stop: o.status === "cancelled" ? "Cancelled" : null })}${o.late ? ' <span class="badge bg-danger">Late</span>' : ""}<div class="acc-sub mt-1">${o.to_receive ? (o.deliver_by ? `Due by ${A.day(o.deliver_by)}` : "Goods to come") : o.to_bill ? "Bill to enter" : o.status === "cancelled" ? "" : "Billed"}</div></td>
-    <td class="text-end" data-order="${o.amount}"><strong>${A.money(o.amount)}</strong></td>
+    <td class="text-end" data-order="${o.amount}"><strong>${A.money(o.amount)}</strong><div class="mt-1">${A.pdfButton("accounting.lpo", { record_id: o.id }, `LPO ${o.number}`, "LPO")}</div></td>
   </tr>`;
 
   function orders() {
@@ -115,28 +130,59 @@
     });
   }
 
-  const billRow = (b, withOrder = true) => `<tr><td><div class="fw-semibold">${esc(b.supplier || "")}</div><div class="acc-sub">${esc(b.number)} · their invoice ${esc(b.supplier_ref)}${b.file ? ` · <button type="button" class="btn btn-link p-0 acc-sub" data-billfile="${b.id}"><i class="ri-attachment-2"></i> invoice</button>` : ""}</div></td>
-    <td class="d-none d-md-table-cell text-nowrap">${A.day(b.date)}${b.due_on ? `<div class="acc-sub">due ${A.day(b.due_on)}</div>` : ""}</td>
+  const billRow = (b, withOrder = true) => `<tr data-pills="${b.status}${b.overdue ? " overdue" : ""}"><td data-order="${esc(b.supplier || "")}"><div class="fw-semibold">${esc(b.supplier || "")}</div><div class="acc-sub">${esc(b.number)} · their invoice ${esc(b.supplier_ref)}${b.file ? ` · <button type="button" class="btn btn-link p-0 acc-sub" data-billfile="${b.id}"><i class="ri-attachment-2"></i> invoice</button>` : ""}</div></td>
+    <td class="d-none d-md-table-cell text-nowrap" data-order="${b.date}">${A.day(b.date)}${b.due_on ? `<div class="acc-sub">due ${A.day(b.due_on)}</div>` : ""}</td>
     ${withOrder ? `<td class="d-none d-lg-table-cell">${b.order ? `<button type="button" class="btn btn-link p-0" data-openorder="${b.order.id}">${esc(b.order.number)}</button>` : ""}</td>` : ""}
     <td>${pill(BILL, b.status)}${b.overdue ? ' <span class="badge bg-danger">Overdue</span>' : ""}${b.voucher ? `<div class="acc-sub mt-1">Voucher ${esc(b.voucher.number)}</div>` : ""}</td>
-    <td class="text-end"><strong>${A.money(b.amount)}</strong></td>
+    <td class="text-end" data-order="${b.amount}"><strong>${A.money(b.amount)}</strong></td>
     <td class="text-end text-nowrap">${A.viewingBelow() ? "" : `${b.can.pay ? `<button type="button" class="btn btn-sm btn-primary" data-paybill="${b.id}"><i class="ri-hand-coin-line me-1"></i>Pay</button>` : ""}${b.voucher ? `<a class="btn btn-sm btn-outline-primary" href="${A.link("payments.php", { voucher: b.voucher.id })}">Voucher</a>` : ""}${b.can.reverse ? ` <button type="button" class="btn btn-sm btn-icon btn-outline-danger" data-reversebill="${b.id}" aria-label="Reverse"><i class="ri-arrow-go-back-line"></i></button>` : ""}`}</td></tr>`;
 
   function bills() {
-    $("prBillRows").innerHTML = data.bills.length
-      ? data.bills.map((b) => billRow(b)).join("")
-      : `<tr><td colspan="6">${A.empty("ri-file-list-2-line", "No bills yet", "The supplier's invoice is entered from its order once the goods have come.")}</td></tr>`;
+    A.tableKit({
+      tableId: "prBillTable",
+      prefix: "b_",
+      items: data.bills,
+      noun: "bills",
+      search: "Search supplier, bill, their invoice...",
+      pills: [
+        { key: "posted", label: "To pay", icon: "ri-hand-coin-line", color: "warning", test: (b) => b.status === "posted" },
+        { key: "overdue", label: "Overdue", icon: "ri-alarm-warning-line", color: "danger", test: (b) => b.overdue },
+        { key: "paid", label: "Paid", icon: "ri-checkbox-circle-line", color: "success", test: (b) => b.status === "paid" },
+      ],
+      sorts: [
+        { key: "new", label: "Newest first", order: [[1, "desc"]] },
+        { key: "old", label: "Oldest first", order: [[1, "asc"]] },
+        { key: "big", label: "Largest first", order: [[4, "desc"]] },
+      ],
+      nonSortable: [5],
+      empty: A.empty("ri-file-list-2-line", "No bills yet", "The supplier's invoice is entered from its order once the goods have come."),
+      rowHtml: (b) => billRow(b),
+    });
   }
 
   function suppliers() {
-    $("prSupplierRows").innerHTML = data.suppliers.length
-      ? data.suppliers
-          .map(
-            (s) => `<tr><td><div class="fw-semibold">${esc(s.name)}${s.is_active ? "" : ' <span class="badge bg-secondary">Off</span>'}</div><div class="acc-sub">${esc(s.pay_details || "")}</div></td><td class="d-none d-md-table-cell">${esc(s.phone || "")}<div class="acc-sub">${esc(s.email || "")}</div></td><td class="d-none d-lg-table-cell">${esc(s.kra_pin || "-")}</td><td class="text-end">${A.money(s.ordered)}<div class="acc-sub">${s.orders} ${s.orders === 1 ? "order" : "orders"}</div></td><td class="text-end"><strong class="${s.owed > 0 ? "text-danger" : ""}">${A.money(s.owed)}</strong></td><td class="text-end text-nowrap">${data.can.procure && !A.viewingBelow() ? `<button type="button" class="btn btn-sm btn-icon btn-outline-primary" data-editsupplier="${s.id}" aria-label="Change"><i class="ri-edit-line"></i></button> <button type="button" class="btn btn-sm btn-icon btn-outline-danger" data-removesupplier="${s.id}" aria-label="Remove"><i class="ri-delete-bin-line"></i></button>` : ""}</td></tr>`,
-          )
-          .join("")
-      : `<tr><td colspan="6">${A.empty("ri-store-2-line", "No suppliers yet", "Add the shops and companies you buy from - they are picked on quotations and orders.", data.can.procure && !A.viewingBelow() ? '<button type="button" class="btn btn-primary" data-firstsupplier><i class="ri-store-2-line me-1"></i>Add a supplier</button>' : "")}</td></tr>`;
+    A.tableKit({
+      tableId: "prSupplierTable",
+      prefix: "s_",
+      items: data.suppliers,
+      noun: "suppliers",
+      search: "Search name, phone, KRA PIN...",
+      pills: [
+        { key: "owed", label: "We owe them", icon: "ri-error-warning-line", color: "danger", test: (s) => s.owed > 0 },
+        { key: "on", label: "In use", icon: "ri-store-2-line", color: "success", test: (s) => s.is_active },
+        { key: "off", label: "Off", icon: "ri-forbid-line", color: "secondary", test: (s) => !s.is_active },
+      ],
+      sorts: [
+        { key: "name", label: "Name A-Z", order: [[0, "asc"]] },
+        { key: "ordered", label: "Most ordered", order: [[3, "desc"]] },
+        { key: "owed", label: "Most owed", order: [[4, "desc"]] },
+      ],
+      nonSortable: [5],
+      empty: A.empty("ri-store-2-line", "No suppliers yet", "Add the shops and companies you buy from - they are picked on quotations and orders.", data.can.procure && !A.viewingBelow() ? '<button type="button" class="btn btn-primary" data-firstsupplier><i class="ri-store-2-line me-1"></i>Add a supplier</button>' : ""),
+      rowHtml: (s) => `<tr data-pills="${s.owed > 0 ? "owed " : ""}${s.is_active ? "on" : "off"}"><td data-order="${esc(s.name)}"><div class="fw-semibold">${esc(s.name)}${s.is_active ? "" : ' <span class="badge bg-secondary">Off</span>'}</div><div class="acc-sub">${esc(s.pay_details || "")}</div></td><td class="d-none d-md-table-cell">${esc(s.phone || "")}<div class="acc-sub">${esc(s.email || "")}</div></td><td class="d-none d-lg-table-cell">${esc(s.kra_pin || "-")}</td><td class="text-end" data-order="${s.ordered}">${A.money(s.ordered)}<div class="acc-sub">${s.orders} ${s.orders === 1 ? "order" : "orders"}</div></td><td class="text-end" data-order="${s.owed}"><strong class="${s.owed > 0 ? "text-danger" : ""}">${A.money(s.owed)}</strong></td><td class="text-end text-nowrap">${data.can.procure && !A.viewingBelow() ? `<button type="button" class="btn btn-sm btn-icon btn-outline-primary" data-editsupplier="${s.id}" aria-label="Change"><i class="ri-edit-line"></i></button> <button type="button" class="btn btn-sm btn-icon btn-outline-danger" data-removesupplier="${s.id}" aria-label="Remove"><i class="ri-delete-bin-line"></i></button>` : ""}</td></tr>`,
+    });
   }
+
 
   function showTab() {
     document.querySelectorAll("#prTabs [data-tab]").forEach((b) => {
@@ -260,7 +306,7 @@
     const foot = [
       own && c.cancel ? btn("cancel", "btn-outline-danger me-auto", "ri-close-circle-line", "Cancel the order") : "",
       own && c.close ? btn("close", "btn-outline-secondary me-auto", "ri-lock-line", "Close - no more coming") : "",
-      btn("print", "btn-outline-primary", "ri-file-pdf-2-line", "LPO (PDF)"),
+      btn("print", "btn-outline-primary", "ri-file-pdf-line", "LPO (PDF)"),
       own && c.bill ? btn("bill", "btn-outline-primary", "ri-file-list-2-line", "Enter the bill") : "",
       own && c.receive ? btn("receive", "btn-primary", "ri-truck-line", "Goods received") : "",
       '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>',

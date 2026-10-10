@@ -544,7 +544,7 @@ const AccountingWindows = (function () {
       part("ri-information-line", "Details", factGrid([j.party_phone && ["Phone", esc(j.party_phone)], ["Reference", esc(j.reference)], ["Posted by", A.person(j.posted_by)], j.narration && ["Note", esc(j.narration)]]), "", "primary") +
       part("ri-scales-3-line", "In the books", lines, "", "purple") +
       filesPart(j.files, { canAdd: own && (j.can.receipt || j.can.journal || j.can.pay || j.can.prepare), canRemove: own && (j.can.receipt || j.can.journal) });
-    const foot = `${j.can.reverse ? '<button type="button" class="btn btn-outline-danger me-auto" data-reverse><i class="ri-arrow-go-back-line me-1"></i>Reverse</button>' : ""}${j.doc_type === "receipt" ? '<button type="button" class="btn btn-outline-primary" data-print><i class="ri-file-pdf-2-line me-1"></i>Receipt (PDF)</button>' : ""}<button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>`;
+    const foot = `${j.can.reverse ? '<button type="button" class="btn btn-outline-danger me-auto" data-reverse><i class="ri-arrow-go-back-line me-1"></i>Reverse</button>' : ""}${j.doc_type === "receipt" ? '<button type="button" class="btn btn-outline-primary" data-print><i class="ri-file-pdf-line me-1"></i>Receipt (PDF)</button>' : ""}<button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>`;
     const dir = { receipt: "in", payment: "out", bill: "out", payroll: "out" }[j.doc_type] || "";
     const hero = { amount: j.amount, dir, status: `${A.docPill(j.doc_type)}${j.status === "reversed" ? ` ${A.reversedChip()}` : ""}`, facts: [["Date", A.dateChip(j.date)], [j.doc_type === "payment" ? "Paid to" : j.doc_type === "receipt" ? "Received from" : "From", esc(j.party_name)], ["How", A.methodChip(j.method, j.method_label) || "-"]] };
     const el = viewFrame({ title: `${A.doc(j.doc_type).label} ${j.number}`, subtitle: j.place.name, icon: A.doc(j.doc_type).icon, body, foot, hero, tone: A.doc(j.doc_type).color });
@@ -648,7 +648,7 @@ const AccountingWindows = (function () {
       c.reject_this ? btn("reject", "btn-outline-danger", "ri-arrow-go-back-line", "Send back") : "",
       c.authorise_this ? btn("authorise", "btn-success", "ri-shield-check-line", v.approval && v.approval.status === "pending" ? "Approve" : "Authorise") : "",
       c.pay_this ? btn("pay", "btn-primary", "ri-hand-coin-line", "Pay") : "",
-      btn("pdf", "btn-outline-primary", "ri-file-pdf-2-line", "Voucher (PDF)"),
+      btn("pdf", "btn-outline-primary", "ri-file-pdf-line", "Voucher (PDF)"),
       '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>',
     ].join("");
     const hero = { amount: v.amount, dir: "out", status: A.voucherPill(v.status, true), facts: [["Pay to", esc(v.payee_name)], ["Date", A.dateChip(v.date)], ["Pay from", A.accountChip(v.pay_from)]] };

@@ -82,21 +82,34 @@
   }
 
   function historyTable() {
-    $("histRows").innerHTML = data.history.length
-      ? data.history
-          .map(
-            (h) => `<tr${h.type === "reconciliation" ? ` class="acc-row" data-rec="${h.id}"` : ""}>
-            <td class="text-nowrap">${A.day(h.date)}</td>
+    A.tableKit({
+      tableId: "histTable",
+      prefix: "h_",
+      items: data.history,
+      noun: "checks",
+      search: "Search account, who...",
+      pills: [
+        { key: "reconciliation", label: "Reconciliations", icon: "ri-bank-line", color: "primary", test: (h) => h.type === "reconciliation" },
+        { key: "count", label: "Cash counts", icon: "ri-money-dollar-box-line", color: "success", test: (h) => h.type === "count" },
+        { key: "diff", label: "With a difference", icon: "ri-error-warning-line", color: "danger", test: (h) => !!h.difference },
+      ],
+      sorts: [
+        { key: "new", label: "Newest first", order: [[0, "desc"]] },
+        { key: "old", label: "Oldest first", order: [[0, "asc"]] },
+        { key: "diff", label: "Biggest difference", order: [[4, "desc"]] },
+      ],
+      empty: A.empty("ri-scales-3-line", "Nothing checked yet", "Count the cash and reconcile the bank each month - it shows here."),
+      rowHtml: (h) => `<tr${h.type === "reconciliation" ? ` class="acc-row" data-rec="${h.id}"` : ""} data-pills="${h.type}${h.difference ? " diff" : ""}">
+            <td class="text-nowrap" data-order="${h.date}">${A.day(h.date)}</td>
             <td><div class="d-flex align-items-center gap-2">${A.tile(h.account.kind, "xs")}<div><div class="fw-semibold">${esc(h.account.name)}</div><div class="acc-sub">${h.type === "count" ? `Cash count${h.surprise ? " (surprise)" : ""}` : "Reconciliation"}</div></div></div></td>
             <td class="d-none d-md-table-cell">${esc(h.by || "-")}${h.approved_by ? `<div class="acc-sub">Approved by ${esc(h.approved_by)}</div>` : ""}</td>
-            <td class="text-end">${A.amount(h.book) || "0.00"}</td>
-            <td class="text-end ${h.difference ? (h.difference < 0 ? "text-danger" : "text-warning") : ""}">${h.difference ? A.money(h.difference, { sign: true }) : "-"}</td>
-            <td>${statusPill(h)}${h.journal ? `<div class="acc-sub mt-1">${esc(h.journal.number)}</div>` : ""}</td>
+            <td class="text-end" data-order="${h.book || 0}">${A.amount(h.book) || "0.00"}</td>
+            <td class="text-end ${h.difference ? (h.difference < 0 ? "text-danger" : "text-warning") : ""}" data-order="${Math.abs(h.difference || 0)}">${h.difference ? A.money(h.difference, { sign: true }) : "-"}</td>
+            <td>${statusPill(h)}${h.journal ? `<div class="acc-sub mt-1">${esc(h.journal.number)}</div>` : ""}${h.type === "reconciliation" ? `<div class="mt-1">${A.pdfButton("accounting.reconciliation", { record_id: h.id }, `Reconciliation - ${h.account.name}`, "Statement")}</div>` : ""}</td>
           </tr>`,
-          )
-          .join("")
-      : `<tr><td colspan="6">${A.empty("ri-scales-3-line", "Nothing checked yet", "Count the cash and reconcile the bank each month - it shows here.")}</td></tr>`;
+    });
   }
+
 
   async function load() {
     A.ownOnly();

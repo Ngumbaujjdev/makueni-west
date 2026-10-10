@@ -57,25 +57,39 @@
   }
 
   function rows() {
-    const q = $("cbSearch").value.trim().toLowerCase();
-    const list = book.rows.filter((r) => !q || [r.number, r.party, r.details, r.reference, ...(r.against || [])].join(" ").toLowerCase().includes(q));
     $("cbTitle").textContent = `Cashbook - ${book.account.name}`;
     $("cbSub").textContent = `${A.day(book.from)} to ${A.day(book.to)} · ${book.rows.length} ${book.rows.length === 1 ? "movement" : "movements"}`;
-    const open = `<tr class="acc-bf-row"><td>${A.day(book.from, { day: "numeric", month: "short" })}</td><td colspan="2">Balance brought forward</td><td></td><td></td><td class="text-end"><strong>${A.money(book.opening)}</strong></td></tr>`;
-    const close = `<tr class="acc-bf-row"><td>${A.day(book.to, { day: "numeric", month: "short" })}</td><td colspan="2">Balance carried forward</td><td class="text-end"><strong>${A.amount(book.in)}</strong></td><td class="text-end"><strong>${A.amount(book.out)}</strong></td><td class="text-end"><strong>${A.money(book.closing)}</strong></td></tr>`;
-    const body = list
-      .map(
-        (r) => `<tr class="acc-row${r.reversed ? " is-reversed" : ""}" data-journal="${r.journal_id}">
-        <td class="text-nowrap">${A.day(r.date, { day: "numeric", month: "short" })}</td>
+    // Brought and carried forward stand outside the table, so sorting and filtering never move them.
+    $("cbOpen").innerHTML = `<span><i class="ri-login-box-line me-1"></i>Balance brought forward · ${A.day(book.from)}</span><strong>${A.money(book.opening)}</strong>`;
+    $("cbClose").innerHTML = `<span><i class="ri-logout-box-r-line me-1"></i>Balance carried forward · ${A.day(book.to)}</span><span class="acc-bf-sums"><span class="text-success">In ${A.money(book.in)}</span><span class="text-danger">Out ${A.money(book.out)}</span><strong>${A.money(book.closing)}</strong></span>`;
+    A.tableKit({
+      tableId: "cbTable",
+      items: book.rows,
+      noun: "movements",
+      search: "Search name, number, reference...",
+      pageLength: 100,
+      pills: [
+        { key: "in", label: "Money in", icon: "ri-arrow-left-down-line", color: "success", test: (r) => r.in > 0 },
+        { key: "out", label: "Money out", icon: "ri-arrow-right-up-line", color: "danger", test: (r) => r.out > 0 },
+        { key: "transfer", label: "Transfers", icon: "ri-arrow-left-right-line", color: "primary", test: (r) => r.doc_type === "transfer" },
+        { key: "reversed", label: "Reversed", icon: "ri-arrow-go-back-line", color: "secondary", test: (r) => r.reversed },
+      ],
+      sorts: [
+        { key: "date", label: "In date order", order: [[0, "asc"]] },
+        { key: "new", label: "Newest first", order: [[0, "desc"]] },
+        { key: "in", label: "Largest in", order: [[3, "desc"]] },
+        { key: "out", label: "Largest out", order: [[4, "desc"]] },
+      ],
+      empty: A.empty("ri-book-open-line", "No money moved in this period", "Pick another period or account."),
+      rowHtml: (r, i) => `<tr class="acc-row${r.reversed ? " is-reversed" : ""}" data-journal="${r.journal_id}" data-pills="${r.in > 0 ? "in" : "out"} ${r.doc_type}${r.reversed ? " reversed" : ""}">
+        <td class="text-nowrap" data-order="${r.date}-${String(book.rows.indexOf(r)).padStart(6, "0")}">${A.day(r.date, { day: "numeric", month: "short" })}</td>
         <td><div class="d-flex align-items-center gap-2">${A.docTile(r.doc_type, "xs")}<span class="fw-semibold text-nowrap">${esc(r.number.split("/").slice(-3).join("/"))}</span></div></td>
-        <td class="acc-details"><div class="fw-semibold text-truncate">${esc(r.party || r.details || A.doc(r.doc_type).label)}</div><div class="acc-sub text-truncate">${esc((r.against || []).join(", "))}${r.reference ? ` · ${esc(r.reference)}` : ""}${r.reversed ? " · reversed" : ""}</div></td>
-        <td class="text-end text-success">${A.amount(r.in)}</td>
-        <td class="text-end text-danger">${A.amount(r.out)}</td>
-        <td class="text-end fw-semibold${r.balance < 0 ? " text-danger" : ""}">${A.amount(r.balance) || "0.00"}</td>
+        <td class="acc-details" data-search="${esc([r.number, r.party, r.details, r.reference, ...(r.against || [])].join(" "))}"><div class="fw-semibold text-truncate">${esc(r.party || r.details || A.doc(r.doc_type).label)}</div><div class="acc-sub text-truncate">${esc((r.against || []).join(", "))}${r.reference ? ` · ${esc(r.reference)}` : ""}${r.reversed ? " · reversed" : ""}</div></td>
+        <td class="text-end text-success" data-order="${r.in}">${A.amount(r.in)}</td>
+        <td class="text-end text-danger" data-order="${r.out}">${A.amount(r.out)}</td>
+        <td class="text-end fw-semibold${r.balance < 0 ? " text-danger" : ""}" data-order="${r.balance}">${A.amount(r.balance) || "0.00"}</td>
       </tr>`,
-      )
-      .join("");
-    $("cbRows").innerHTML = open + (body || `<tr><td colspan="6">${A.empty("ri-book-open-line", q ? "Nothing matches" : "No money moved in this period", q ? "Try another word." : "Pick another period or account.")}</td></tr>`) + close;
+    });
   }
 
   async function load(accountId) {
@@ -126,11 +140,6 @@
       load(book?.account.id);
     });
     [$("fromDate"), $("toDate")].forEach((x) => x.addEventListener("change", () => book && load(book.account.id)));
-    let timer = null;
-    $("cbSearch").addEventListener("input", () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => book && rows(), 200);
-    });
     $("cbRows").addEventListener("click", (e) => {
       const tr = e.target.closest("[data-journal]");
       if (tr) W.viewJournal(Number(tr.dataset.journal), { onChange: () => load(book.account.id) });

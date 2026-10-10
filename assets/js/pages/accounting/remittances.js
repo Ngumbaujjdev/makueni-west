@@ -72,22 +72,50 @@
       .join("");
   }
 
-  const sentRow = (r) => `<tr class="acc-row" data-id="${r.id}"><td><div class="fw-semibold">${esc(r.purpose)}</div><div class="acc-sub">${esc(r.number)} · ${esc(r.kind_label)}</div></td><td class="d-none d-md-table-cell">${esc(r.to?.name || "")}</td><td class="d-none d-lg-table-cell text-nowrap">${r.sent_on ? A.day(r.sent_on) : "-"}</td><td class="acc-steps-cell">${A.mini(["Voucher", "Sent", "Confirmed"], { waiting: 0, sent: 2, queried: 2, confirmed: 3, cancelled: 0 }[r.status] ?? 0, { stop: { queried: "Queried", cancelled: "Cancelled" }[r.status] || null })}${r.status === "waiting" && r.voucher ? `<div class="acc-sub mt-1">Voucher ${esc(r.voucher.number)}</div>` : ""}${r.can.answer ? '<div><span class="badge bg-danger mt-1">Answer their query</span></div>' : ""}${r.can.pay_mpesa && !A.viewingBelow() ? `<div><button type="button" class="btn btn-sm btn-success mt-1" data-mpesa="${r.id}"><i class="ri-smartphone-line me-1"></i>Pay by M-Pesa</button></div>` : ""}</td><td class="text-end"><strong>${A.money(r.amount)}</strong></td></tr>`;
+  const sentRow = (r) => `<tr class="acc-row" data-id="${r.id}" data-pills="${r.status} ${r.kind}"><td data-order="${esc(r.number)}"><div class="fw-semibold">${esc(r.purpose)}</div><div class="acc-sub">${esc(r.number)} · ${esc(r.kind_label)}</div></td><td class="d-none d-md-table-cell">${esc(r.to?.name || "")}</td><td class="d-none d-lg-table-cell text-nowrap" data-order="${r.sent_on || r.created_at || ""}">${r.sent_on ? A.day(r.sent_on) : "-"}</td><td class="acc-steps-cell">${A.mini(["Voucher", "Sent", "Confirmed"], { waiting: 0, sent: 2, queried: 2, confirmed: 3, cancelled: 0 }[r.status] ?? 0, { stop: { queried: "Queried", cancelled: "Cancelled" }[r.status] || null })}${r.status === "waiting" && r.voucher ? `<div class="acc-sub mt-1">Voucher ${esc(r.voucher.number)}</div>` : ""}${r.can.answer ? '<div><span class="badge bg-danger mt-1">Answer their query</span></div>' : ""}${r.can.pay_mpesa && !A.viewingBelow() ? `<div><button type="button" class="btn btn-sm btn-success mt-1" data-mpesa="${r.id}"><i class="ri-smartphone-line me-1"></i>Pay by M-Pesa</button></div>` : ""}</td><td class="text-end" data-order="${r.amount}"><strong>${A.money(r.amount)}</strong><div class="mt-1">${A.pdfButton("accounting.remittance", { record_id: r.id }, `Remittance ${r.number}`, "Advice")}</div></td></tr>`;
+
+  const REM_PILLS = [
+    { key: "waiting", label: "To pay", icon: "ri-time-line", color: "warning", test: (r) => r.status === "waiting" },
+    { key: "sent", label: "In transit", icon: "ri-send-plane-line", color: "primary", test: (r) => r.status === "sent" },
+    { key: "queried", label: "Queried", icon: "ri-question-line", color: "danger", test: (r) => r.status === "queried" },
+    { key: "confirmed", label: "Confirmed", icon: "ri-checkbox-circle-line", color: "success", test: (r) => r.status === "confirmed" },
+  ];
 
   function sent() {
-    $("rmSentRows").innerHTML = data.sent.length
-      ? data.sent.map(sentRow).join("")
-      : `<tr><td colspan="5">${A.empty("ri-upload-2-line", "Nothing sent yet", data.owing.length ? "Send the share from here - it is paid by a voucher like any payment, then the place receiving it confirms it." : "Remittances this place sends show here.")}</td></tr>`;
+    A.tableKit({
+      tableId: "rmSentTable",
+      items: data.sent,
+      noun: "remittances",
+      search: "Search number, what for, to whom...",
+      pills: REM_PILLS,
+      sorts: [
+        { key: "new", label: "Newest first", order: [[2, "desc"]] },
+        { key: "old", label: "Oldest first", order: [[2, "asc"]] },
+        { key: "big", label: "Largest first", order: [[4, "desc"]] },
+      ],
+      nonSortable: [3],
+      empty: A.empty("ri-upload-2-line", "Nothing sent yet", data.owing.length ? "Send the share from here - it is paid by a voucher like any payment, then the place receiving it confirms it." : "Remittances this place sends show here."),
+      rowHtml: sentRow,
+    });
   }
 
   function comingIn() {
-    $("rmInRows").innerHTML = data.coming_in.length
-      ? data.coming_in
-          .map(
-            (r) => `<tr class="acc-row" data-id="${r.id}"><td><div class="fw-semibold">${esc(r.from?.name || "")}</div><div class="acc-sub">${esc(r.purpose)} · ${esc(r.number)}</div></td><td class="d-none d-md-table-cell text-nowrap">${r.sent_on ? A.day(r.sent_on) : "-"}</td><td>${pill(r.status)}${r.status === "confirmed" && r.received_on ? `<div class="acc-sub mt-1">Reached us ${A.day(r.received_on)}</div>` : ""}</td><td class="text-end"><strong>${A.money(r.amount)}</strong></td><td class="text-end">${r.can.confirm && !A.viewingBelow() ? `<button type="button" class="btn btn-sm btn-success" data-confirm="${r.id}"><i class="ri-check-line me-1"></i>Confirm</button>` : ""}</td></tr>`,
-          )
-          .join("")
-      : `<tr><td colspan="5">${A.empty("ri-download-2-line", "Nothing coming in", "Money another place sends you shows here once they have paid it.")}</td></tr>`;
+    A.tableKit({
+      tableId: "rmInTable",
+      prefix: "in_",
+      items: data.coming_in,
+      noun: "remittances",
+      search: "Search place, what for, number...",
+      pills: REM_PILLS.filter((p) => p.key !== "waiting"),
+      sorts: [
+        { key: "new", label: "Newest first", order: [[1, "desc"]] },
+        { key: "old", label: "Oldest first", order: [[1, "asc"]] },
+        { key: "big", label: "Largest first", order: [[3, "desc"]] },
+      ],
+      nonSortable: [4],
+      empty: A.empty("ri-download-2-line", "Nothing coming in", "Money another place sends you shows here once they have paid it."),
+      rowHtml: (r) => `<tr class="acc-row" data-id="${r.id}" data-pills="${r.status}"><td data-order="${esc(r.from?.name || "")}"><div class="fw-semibold">${esc(r.from?.name || "")}</div><div class="acc-sub">${esc(r.purpose)} · ${esc(r.number)}</div></td><td class="d-none d-md-table-cell text-nowrap" data-order="${r.sent_on || ""}">${r.sent_on ? A.day(r.sent_on) : "-"}</td><td>${pill(r.status)}${r.status === "confirmed" && r.received_on ? `<div class="acc-sub mt-1">Reached us ${A.day(r.received_on)}</div>` : ""}</td><td class="text-end" data-order="${r.amount}"><strong>${A.money(r.amount)}</strong></td><td class="text-end text-nowrap">${r.can.confirm && !A.viewingBelow() ? `<button type="button" class="btn btn-sm btn-success" data-confirm="${r.id}"><i class="ri-check-line me-1"></i>Confirm</button> ` : ""}${A.pdfButton("accounting.remittance", { record_id: r.id }, `Remittance ${r.number}`, "Advice")}</td></tr>`,
+    });
   }
 
   async function loadBoard() {

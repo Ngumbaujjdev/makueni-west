@@ -774,13 +774,38 @@ const ReportCenter = (function () {
   }
 
   function renderStages() {
-    const waiting = state.shownStage === 0 && Date.now() - state.queuedSince > 20000;
+    const waiting = state.shownStage === 0 && Date.now() - state.queuedSince > 15000;
     $("rpStages").innerHTML = STAGES.map((s, i) => {
-      const label = i === 0 && waiting ? "Waiting for the report worker…" : state.format === "xlsx" && s.xlsx ? s.xlsx : s.label;
+      const label = i === 0 && waiting ? "The report worker isn't running" : state.format === "xlsx" && s.xlsx ? s.xlsx : s.label;
       const cls = i < state.shownStage || (i === state.shownStage && i === STAGES.length - 1) ? "is-done" : i === state.shownStage ? "is-active" : "";
       const icon = cls === "is-done" ? "ri-checkbox-circle-fill" : cls === "is-active" ? "ri-loader-4-line" : "ri-checkbox-blank-circle-line";
       return `<li class="${cls}"><i class="${icon}"></i>${label}</li>`;
     }).join("");
+    // Nothing has picked it up: offer to build it here instead of waiting forever.
+    let now = $("rpBuildNow");
+    if (waiting && !now) {
+      $("rpStages").insertAdjacentHTML("afterend", '<div class="rp-buildnow" id="rpBuildNow"><span>It hasn\'t started - the background worker may be off.</span><button type="button" class="btn btn-sm btn-primary"><i class="ri-flashlight-line me-1"></i>Build it now</button></div>');
+      now = $("rpBuildNow");
+      now.querySelector("button").addEventListener("click", buildNow);
+    }
+    if (now && !waiting) now.remove();
+  }
+
+  /** The worker is off: build the waiting run in the request. */
+  async function buildNow(e) {
+    const b = e.currentTarget;
+    b.disabled = true;
+    b.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Building';
+    const res = await api("POST", `/reports/runs/${state.run.uuid}/now`);
+    if (!res.ok) {
+      b.disabled = false;
+      b.innerHTML = '<i class="ri-flashlight-line me-1"></i>Build it now';
+      return Toast?.error?.(res.message || "Couldn't build it.");
+    }
+    $("rpBuildNow")?.remove();
+    state.queuedSince = Date.now() + 1e9; // stop offering it
+    state.run = res.data;
+    pollRun();
   }
 
   function setRing(pct) {

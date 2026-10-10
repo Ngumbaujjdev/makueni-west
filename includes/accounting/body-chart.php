@@ -10,7 +10,7 @@ include __DIR__ . '/toolbar.php';
             <div class="card-body pb-0 pt-3" id="typePills"></div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0 acc-table">
+                    <table class="table table-hover mb-0 acc-table" id="stdChartTable">
                         <thead><tr><th style="width:110px">Code</th><th>Account</th><th class="d-none d-md-table-cell">Used for</th><th class="text-end">Action</th></tr></thead>
                         <tbody id="chartRows"></tbody>
                     </table>

@@ -21,12 +21,12 @@ include __DIR__ . '/toolbar.php';
 <div id="pyRunsPane">
     <div class="card custom-card">
         <div class="card-header"><div><div class="card-title">Monthly runs</div><span class="card-subtitle-text">Each month: started, checked and submitted, approved, then paid - open one for its payslips and journey</span></div></div>
-        <div class="card-body p-0" id="pyRunsWrap"><div class="table-responsive"><table class="table table-hover mb-0 acc-table"><thead><tr><th>Month</th><th class="text-end d-none d-md-table-cell">Gross</th><th class="text-end d-none d-lg-table-cell">Deductions</th><th class="text-end">Net pay</th><th>Where it stands</th></tr></thead><tbody id="pyRunRows"></tbody></table></div></div>
+        <div class="card-body p-0" id="pyRunsWrap"><div class="table-responsive"><table class="table table-hover mb-0 acc-table" id="pyRunTable"><thead><tr><th>Month</th><th class="text-end d-none d-md-table-cell">Gross</th><th class="text-end d-none d-lg-table-cell">Deductions</th><th class="text-end">Net pay</th><th>Where it stands</th><th class="text-end">PDF</th></tr></thead><tbody id="pyRunRows"></tbody></table></div></div>
     </div>
 </div>
 <div id="pyPeoplePane" hidden>
     <div class="card custom-card">
         <div class="card-header"><div><div class="card-title">People on the payroll</div><span class="card-subtitle-text">What each is paid a month and how - ID numbers and KRA PINs are kept private and shown masked</span></div></div>
-        <div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0 acc-table"><thead><tr><th>Person</th><th class="d-none d-md-table-cell">Paid to</th><th class="d-none d-lg-table-cell">KRA PIN</th><th class="text-end">A month</th><th class="text-end">Action</th></tr></thead><tbody id="pyPeopleRows"></tbody></table></div></div>
+        <div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0 acc-table" id="pyPeopleTable"><thead><tr><th>Person</th><th class="d-none d-md-table-cell">Paid to</th><th class="d-none d-lg-table-cell">KRA PIN</th><th class="text-end">A month</th><th class="text-end">Action</th></tr></thead><tbody id="pyPeopleRows"></tbody></table></div></div>
     </div>
 </div>

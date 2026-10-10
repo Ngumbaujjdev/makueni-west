@@ -101,7 +101,7 @@
       steps.push({ title: "Billed", state: bills.length ? "done" : has("delivery").length ? "now" : "next", icon: "ri-file-list-2-line", who: bills.map((b) => b.number).join(", ") });
     } else if (r.kind === "advance") {
       steps.push({ title: "Advance given", state: adv ? "done" : s === "approved" ? "now" : "next", icon: "ri-wallet-3-line", who: adv ? adv.holder : "", when: adv?.issued_on });
-      steps.push({ title: "Accounted for", state: adv?.status === "retired" ? "done" : adv ? "now" : "next", icon: "ri-receipt-2-line", who: adv ? (adv.status === "retired" ? `Spent ${A.money(adv.spent)}, returned ${A.money(adv.returned)}` : `By ${A.day(adv.due_on)}`) : "" });
+      steps.push({ title: "Accounted for", state: adv?.status === "retired" ? "done" : adv ? "now" : "next", icon: "ri-bill-line", who: adv ? (adv.status === "retired" ? `Spent ${A.money(adv.spent)}, returned ${A.money(adv.returned)}` : `By ${A.day(adv.due_on)}`) : "" });
     }
     if (r.kind !== "advance") steps.push({ title: "Paid", state: s === "paid" ? "done" : (s === "approved" && r.kind === "payment") || bills.length ? "now" : "next", icon: "ri-hand-coin-line", who: r.voucher ? `${r.voucher.number}` : bills.map((b) => b.status_label).join(", ") });
     if (["rejected", "cancelled"].includes(s)) steps.push({ title: s === "rejected" ? "Rejected" : "Cancelled", state: "stopped", note: r.decision_note });
@@ -396,7 +396,7 @@
       <div class="acc-rec-top">
         <span class="avatar avatar-lg avatar-rounded bg-${rec.color || "primary"} ${A.textOn(rec.color || "primary")} flex-shrink-0"><i class="${rec.icon} fs-22"></i></span>
         <div class="min-w-0 flex-fill"><span class="acc-rec-kind">${esc(rec.kind)}</span><h4 class="acc-rec-number">${esc(rec.number)}</h4><p class="acc-rec-title">${esc(rec.title || "")}</p><div>${rec.status}</div></div>
-        <div class="acc-rec-amount${rec.dir ? ` is-${rec.dir}` : ""}"><span>${esc(rec.amountLabel || "Amount")}</span>${A.figure(rec.amount)}${(rec.pdfs || []).length ? `<div class="acc-rec-pdfs">${rec.pdfs.map((p, i) => `<button type="button" class="btn btn-sm ${i ? "btn-outline-primary" : "btn-primary"}" data-pdf="${i}"><i class="ri-file-pdf-2-line me-1"></i>${esc(p.label)}</button>`).join("")}</div>` : ""}</div>
+        <div class="acc-rec-amount${rec.dir ? ` is-${rec.dir}` : ""}"><span>${esc(rec.amountLabel || "Amount")}</span>${A.figure(rec.amount)}${(rec.pdfs || []).length ? `<div class="acc-rec-pdfs">${rec.pdfs.map((p, i) => `<button type="button" class="btn btn-sm ${i ? "btn-outline-primary" : "btn-primary"}" data-pdf="${i}"><i class="ri-file-pdf-line me-1"></i>${esc(p.label)}</button>`).join("")}</div>` : ""}</div>
       </div>
       <div class="acc-rec-facts">${rec.facts.map(([k, v]) => `<div><span>${esc(k)}</span><strong>${v || "-"}</strong></div>`).join("")}</div>
     </div></div>`;

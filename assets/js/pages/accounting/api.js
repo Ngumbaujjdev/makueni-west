@@ -152,6 +152,7 @@ const AccountingAPI = (function () {
     reverseCollection: (id, reason) => request("POST", `/accounting/collections/${id}/reverse`, { body: { reason } }),
     // A4 - approvals, requisitions, advances
     approvalBoard: () => request("GET", "/approvals/board"),
+    reportRuns: () => request("GET", "/reports/runs", { params: { territory_id: "" } }),
     // A10e - transactions: every attempt to pay, failed ones included
     transactions: (params) => request("GET", "/accounting/transactions", { params }),
     transaction: (source, id) => request("GET", `/accounting/transactions/${source}/${id}`),

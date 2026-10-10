@@ -1,6 +1,6 @@
 <?php
 $c = $accCtx['can'];
-$accButtons = '<button type="button" class="btn btn-outline-primary" id="printBtn"><i class="ri-file-pdf-2-line me-1"></i>Cashbook (PDF)</button><button type="button" class="btn btn-outline-primary" id="csvBtn"><i class="ri-file-excel-2-line me-1"></i>Excel (CSV)</button>'
+$accButtons = '<button type="button" class="btn btn-outline-primary" id="printBtn"><i class="ri-file-pdf-line me-1"></i>Cashbook (PDF)</button><button type="button" class="btn btn-outline-primary" id="csvBtn"><i class="ri-file-excel-2-line me-1"></i>Excel (CSV)</button>'
     . ($c['receipt'] ? '<button type="button" class="btn btn-primary" id="receiptBtn" data-own-only><i class="ri-bill-line me-1"></i>Write a receipt</button>' : '');
 include __DIR__ . '/toolbar.php';
 ?>
@@ -26,14 +26,15 @@ include __DIR__ . '/toolbar.php';
 <div class="card custom-card" id="cbCard">
     <div class="card-header justify-content-between flex-wrap gap-2">
         <div><div class="card-title" id="cbTitle">Cashbook</div><span class="card-subtitle-text" id="cbSub">Every movement, with the balance after it</span></div>
-        <div class="list-search acc-cb-search"><i class="ri-search-line"></i><input type="search" class="form-control" id="cbSearch" placeholder="Search name, number, reference..." autocomplete="off"></div>
     </div>
     <div class="card-body p-0">
+        <div class="acc-bf" id="cbOpen"></div>
         <div class="table-responsive">
-            <table class="table table-hover mb-0 acc-table acc-cashbook">
+            <table class="table table-hover mb-0 acc-table acc-cashbook" id="cbTable">
                 <thead><tr><th>Date</th><th>Document</th><th>Details</th><th class="text-end">In</th><th class="text-end">Out</th><th class="text-end">Balance</th></tr></thead>
                 <tbody id="cbRows"></tbody>
             </table>
         </div>
+        <div class="acc-bf" id="cbClose"></div>
     </div>
 </div>

@@ -181,7 +181,7 @@ const BudgetsEntry = (function () {
         (r) => `
         <div class="budget-receipt" data-receipt="${r.id}">
           <button type="button" class="budget-receipt-open" data-open="${r.id}" title="Open ${B.esc(r.name)}">
-            ${r.type === "image" ? `<span class="budget-receipt-thumb" data-thumb="${r.id}"></span>` : '<span class="budget-receipt-pdf"><i class="ri-file-pdf-2-line"></i>PDF</span>'}
+            ${r.type === "image" ? `<span class="budget-receipt-thumb" data-thumb="${r.id}"></span>` : '<span class="budget-receipt-pdf"><i class="ri-file-pdf-line"></i>PDF</span>'}
           </button>
           <div class="budget-receipt-meta"><span class="text-truncate">${B.esc(r.name)}</span><small>${(r.size / 1024).toFixed(0)} KB</small></div>
           ${can ? `<button type="button" class="btn btn-sm btn-danger-light budget-receipt-remove" data-remove="${r.id}" title="Remove" aria-label="Remove"><i class="ri-delete-bin-line"></i></button>` : ""}

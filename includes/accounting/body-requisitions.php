@@ -38,7 +38,7 @@ include __DIR__ . '/toolbar.php';
         <div class="card-header"><div><div class="card-title">Advances</div><span class="card-subtitle-text">Money given ahead - each is accounted for with receipts and any change</span></div></div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table mb-0 acc-table"><thead><tr><th>To</th><th>For</th><th class="d-none d-md-table-cell">Given</th><th class="text-end">Amount</th><th class="text-end">Still out</th><th class="text-end">Action</th></tr></thead><tbody id="advRows"></tbody></table>
+                <table class="table table-hover mb-0 acc-table" id="advTable"><thead><tr><th>To</th><th>For</th><th class="d-none d-md-table-cell">Given</th><th class="text-end">Amount</th><th class="text-end">Still out</th><th class="text-end">Action</th></tr></thead><tbody id="advRows"></tbody></table>
             </div>
         </div>
     </div>

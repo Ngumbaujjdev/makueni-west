@@ -101,14 +101,28 @@
   }
 
   function advances() {
-    $("advRows").innerHTML = data.advances.length
-      ? data.advances
-          .map(
-            (a) => `<tr><td><span class="fw-semibold">${esc(a.holder)}</span>${a.overdue ? ' <span class="badge bg-danger">Overdue</span>' : ""}</td><td>${esc(a.purpose)}<div class="acc-sub">Account for it by ${A.day(a.due_on)}</div></td><td class="d-none d-md-table-cell">${A.day(a.issued_on)}</td><td class="text-end">${A.money(a.amount)}</td><td class="text-end"><strong class="${a.outstanding > 0 ? "text-danger" : "text-success"}">${A.money(a.outstanding)}</strong><div class="acc-sub">spent ${A.money(a.spent)} · back ${A.money(a.returned)}</div></td><td class="text-end">${a.status === "open" && data.can.retire && !A.viewingBelow() ? `<button type="button" class="btn btn-sm btn-primary" data-retire="${a.id}"><i class="ri-receipt-2-line me-1"></i>Account for it</button>` : a.status === "retired" ? '<span class="badge bg-success">Accounted for</span>' : ""}</td></tr>`,
-          )
-          .join("")
-      : `<tr><td colspan="6">${A.empty("ri-wallet-3-line", "No advances", "A requisition for a cash advance shows here once it's paid.")}</td></tr>`;
+    A.tableKit({
+      tableId: "advTable",
+      prefix: "a_",
+      items: data.advances,
+      noun: "advances",
+      search: "Search who, what for...",
+      pills: [
+        { key: "open", label: "Still out", icon: "ri-wallet-3-line", color: "warning", test: (a) => a.status === "open" },
+        { key: "overdue", label: "Overdue", icon: "ri-alarm-warning-line", color: "danger", test: (a) => a.overdue },
+        { key: "retired", label: "Accounted for", icon: "ri-checkbox-circle-line", color: "success", test: (a) => a.status === "retired" },
+      ],
+      sorts: [
+        { key: "new", label: "Newest first", order: [[2, "desc"]] },
+        { key: "out", label: "Most still out", order: [[4, "desc"]] },
+        { key: "big", label: "Largest first", order: [[3, "desc"]] },
+      ],
+      nonSortable: [5],
+      empty: A.empty("ri-wallet-3-line", "No advances", "A requisition for a cash advance shows here once it's paid."),
+      rowHtml: (a) => `<tr data-pills="${a.status}${a.overdue ? " overdue" : ""}"><td data-order="${esc(a.holder)}"><span class="fw-semibold">${esc(a.holder)}</span>${a.overdue ? ' <span class="badge bg-danger">Overdue</span>' : ""}</td><td>${esc(a.purpose)}<div class="acc-sub">Account for it by ${A.day(a.due_on)}</div></td><td class="d-none d-md-table-cell" data-order="${a.issued_on}">${A.day(a.issued_on)}</td><td class="text-end" data-order="${a.amount}">${A.money(a.amount)}</td><td class="text-end" data-order="${a.outstanding}"><strong class="${a.outstanding > 0 ? "text-danger" : "text-success"}">${A.money(a.outstanding)}</strong><div class="acc-sub">spent ${A.money(a.spent)} · back ${A.money(a.returned)}</div></td><td class="text-end">${a.status === "open" && data.can.retire && !A.viewingBelow() ? `<button type="button" class="btn btn-sm btn-primary" data-retire="${a.id}"><i class="ri-bill-line me-1"></i>Account for it</button>` : a.status === "retired" ? '<span class="badge bg-success">Accounted for</span>' : ""}</td></tr>`,
+    });
   }
+
 
   function showTab() {
     document.querySelectorAll("#rqTabs [data-tab]").forEach((b) => {
@@ -410,7 +424,7 @@
     const el = K.confirmWindow({
       title: `Account for the advance to ${a.holder}`,
       subtitle: `${A.money(a.outstanding)} still out of ${A.money(a.amount)} - ${a.purpose}`,
-      icon: "ri-receipt-2-line",
+      icon: "ri-bill-line",
       go: '<i class="ri-check-line me-1"></i>Record it',
       body: K.parts([
         { icon: "ri-calendar-line", title: "Date", body: `<input type="date" class="form-control" id="rtDate" value="${today}" max="${today}">` },
