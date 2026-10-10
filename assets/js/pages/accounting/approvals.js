@@ -325,7 +325,7 @@
       icon: "ri-user-shared-line",
       go: '<i class="ri-check-line me-1"></i>Hand over',
       body: K.parts([
-        { icon: "ri-user-line", title: "Who approves for you", body: `<select class="form-select" id="dgWho">${people.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join("")}</select>` },
+        { icon: "ri-user-line", title: "Who approves for you", body: `<select class="form-select" id="dgWho">${people.map((p) => `<option value="${p.id}" data-icon="${p.same_place === false ? "ri-arrow-up-line" : "ri-user-line"}" data-color="${p.same_place === false ? "purple" : "primary"}">${esc([p.name, [p.role, p.place].filter(Boolean).join(", ")].filter(Boolean).join(" · "))}${p.same_place === false ? " (above)" : ""}</option>`).join("")}</select>` },
         { icon: "ri-calendar-line", title: "From - to", body: `<div class="row g-2"><div class="col-6"><input type="date" class="form-control" id="dgFrom" value="${today}" min="${today}"></div><div class="col-6"><input type="date" class="form-control" id="dgTo" value="${today}" min="${today}"></div></div>` },
         { icon: "ri-file-list-3-line", title: "For", body: `<div class="mw-days" role="radiogroup"><label><input type="radio" name="dgKind" value="" checked><span>Everything</span></label><label><input type="radio" name="dgKind" value="requisition"><span>Requisitions</span></label><label><input type="radio" name="dgKind" value="payment_voucher"><span>Payment vouchers</span></label></div><input type="text" class="form-control mt-2" id="dgWhy" maxlength="255" placeholder="Why (optional), e.g. Annual leave">` },
       ]),
