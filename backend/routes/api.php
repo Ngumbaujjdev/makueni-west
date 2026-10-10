@@ -782,6 +782,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('giving', [$gv, 'index']);
         // A10c - getting paid: payouts, a place asking for its own Paystack, the diocese's check.
         $po = \App\Http\Controllers\Api\Accounting\PayoutController::class;
+        // A10e - transactions: every attempt to pay, failed ones included.
+        $tx = \App\Http\Controllers\Api\Accounting\TransactionController::class;
+        Route::get('transactions', [$tx, 'index']);
+        Route::post('transactions/check-waiting', [$tx, 'checkWaiting']);
+        Route::get('transactions/{source}/{id}', [$tx, 'show'])->whereIn('source', ['gift', 'prompt', 'paybill'])->whereNumber('id');
+        Route::post('transactions/{source}/{id}/check', [$tx, 'check'])->whereIn('source', ['gift', 'prompt', 'paybill'])->whereNumber('id');
         Route::get('giving/payouts', [$po, 'index']);
         Route::get('giving/payouts/{id}', [$po, 'show'])->whereNumber('id');
         Route::get('giving/payout-options', [$po, 'options']);
