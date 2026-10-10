@@ -98,6 +98,8 @@ class AppServiceProvider extends ServiceProvider
             'goods_received' => 'App\Models\GoodsReceived',
             'supplier_invoice' => 'App\Models\SupplierInvoice',
             'remittance' => 'App\Models\Remittance',
+            'employee' => 'App\Models\Employee',
+            'payroll_run' => 'App\Models\PayrollRun',
 
             // Fiscal period models
             'fiscal_year' => 'App\Models\FiscalYear',

@@ -475,7 +475,7 @@ class BooksController extends AccountingBase
     /** Whoever keeps the books reverses anything; a treasurer their receipts and transfers. */
     private function mayReverse(Request $request, Journal $journal, Territory $place): bool
     {
-        if ($journal->status !== 'posted' || $journal->doc_type === 'reversal' || in_array($journal->source_type, ['budget_entry', 'payment_voucher', 'cash_count', 'collection', 'supplier_invoice', 'advance_retirement', 'remittance'], true)) {
+        if ($journal->status !== 'posted' || $journal->doc_type === 'reversal' || in_array($journal->source_type, ['budget_entry', 'payment_voucher', 'cash_count', 'collection', 'supplier_invoice', 'advance_retirement', 'remittance', 'payroll_run'], true)) {
             return false;
         }
         $u = $request->user();

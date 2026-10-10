@@ -18,7 +18,7 @@ use Illuminate\Validation\ValidationException;
  */
 final class WorkflowBuilder
 {
-    public const SUBJECTS = ['*' => 'Any money document', 'requisition' => 'Requisitions', 'payment_voucher' => 'Payment vouchers'];
+    public const SUBJECTS = ['*' => 'Any money document', 'requisition' => 'Requisitions', 'payment_voucher' => 'Payment vouchers', 'payroll_run' => 'Payroll runs'];
 
     public function __construct(private Registry $resolvers) {}
 

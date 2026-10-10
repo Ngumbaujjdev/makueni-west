@@ -97,7 +97,7 @@ final class BudgetBridge
     /** A document posted in Accounting: add a budget entry for each line on a budget line, when a budget is In use that day. */
     public function journalPosted(Journal $journal, ?User $user): void
     {
-        if (! in_array($journal->doc_type, ['receipt', 'payment', 'petty_cash', 'bill'], true) || $journal->source_type === self::SOURCE) {
+        if (! in_array($journal->doc_type, ['receipt', 'payment', 'petty_cash', 'bill', 'payroll'], true) || $journal->source_type === self::SOURCE) {
             return;
         }
         $place = Territory::find($journal->territory_id);

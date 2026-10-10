@@ -33,6 +33,8 @@ final class AccountingAccess
         'request' => 'accounting.requisitions.create',
         'rules' => 'accounting.approvalrules.manage',
         'procure' => 'accounting.procurement.manage',
+        'payroll' => 'accounting.payroll.manage',
+        'payrollread' => 'accounting.payroll.read',
     ];
 
     /** Abilities that let someone open the books (they can see what they write). */
@@ -101,6 +103,20 @@ final class AccountingAccess
     public static function canSeeRequisitions(?User $user, Territory $place): bool
     {
         return self::canRead($user, $place) || self::can($user, $place, 'request');
+    }
+
+    /** Payroll - salaries are private: whoever runs it, and those given payroll.read (not the general book-readers). */
+    public static function canSeePayroll(?User $user, Territory $place): bool
+    {
+        if ($user?->hasGlobalAccess()) {
+            return true;
+        }
+        if (PlaceAccess::isOwn($user, $place)) {
+            return self::can($user, $place, 'payroll') || self::can($user, $place, 'payrollread');
+        }
+        $acting = PlaceAccess::acting($user);
+
+        return $acting && PlaceAccess::isBelow($user, $place) && self::canAt($user, $acting, 'below') && self::canAt($user, $acting, 'payrollread');
     }
 
     /** Procurement: whoever reads the books sees it; whoever buys works in it. */

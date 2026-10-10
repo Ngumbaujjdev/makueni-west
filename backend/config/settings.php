@@ -310,6 +310,18 @@ return [
             'sentence' => 'When a purchase is big enough to need quotations and a purchase order, for every church, region and the diocese.',
         ],
 
+        // Payroll (docs/specs/accounting-spec.md, A7) - the statutory rates every place's payroll uses.
+        'payroll' => [
+            'label' => 'Payroll',
+            'icon' => 'ri-money-dollar-box-line',
+            'colour' => 'success',
+            'group' => 'money',
+            'levels' => ['diocese'],
+            'kind' => 'form',
+            'grants' => ['update' => ['diocese' => ['Diocese Finance Officer', 'Diocese Treasurer']]],
+            'sentence' => 'The PAYE bands, NSSF, SHIF and Housing Levy rates every payroll is worked out with. They change by law - confirm them with KRA, NSSF and SHA.',
+        ],
+
         // Existing settings pages, shown inside the hub (S3). 'permission' is
         // the page's own read permission ("{level}." is added); 'absorbs' is
         // the page's menu row, which SettingsHubSeeder moves under Settings.
@@ -452,6 +464,24 @@ return [
         // Procurement (A5) - read by App\Services\Accounting\Procurement.
         'procurement.one_quote_limit' => ['section' => 'procurement', 'card' => 'Buying', 'label' => 'Above this, a purchase needs an order (KES)', 'type' => 'number', 'rules' => ['required', 'integer', 'between:0,100000000'], 'default' => 50000, 'levels' => ['diocese'], 'help' => 'Up to this, an approved purchase is paid straight away with its receipt.', 'used_by' => 'Requisitions and Procurement'],
         'procurement.quotes_needed' => ['section' => 'procurement', 'card' => 'Buying', 'label' => 'Quotations needed above it', 'type' => 'number', 'rules' => ['required', 'integer', 'between:1,5'], 'default' => 3, 'levels' => ['diocese'], 'used_by' => 'Procurement'],
+
+        // Payroll (A7) - read by App\Services\Accounting\PayrollCalculator; the defaults are the rates in force in October 2026.
+        'payroll.paye_upto_1' => ['section' => 'payroll', 'card' => 'PAYE bands (monthly)', 'label' => 'First band - up to (KES)', 'type' => 'number', 'rules' => ['required', 'numeric', 'between:0,10000000'], 'default' => 24000, 'levels' => ['diocese'], 'used_by' => 'Payroll'],
+        'payroll.paye_rate_1' => ['section' => 'payroll', 'card' => 'PAYE bands (monthly)', 'label' => 'First band rate (%)', 'type' => 'number', 'rules' => ['required', 'numeric', 'between:0,100'], 'default' => 10, 'levels' => ['diocese']],
+        'payroll.paye_upto_2' => ['section' => 'payroll', 'card' => 'PAYE bands (monthly)', 'label' => 'Second band - up to (KES)', 'type' => 'number', 'rules' => ['required', 'numeric', 'between:0,10000000'], 'default' => 32333, 'levels' => ['diocese']],
+        'payroll.paye_rate_2' => ['section' => 'payroll', 'card' => 'PAYE bands (monthly)', 'label' => 'Second band rate (%)', 'type' => 'number', 'rules' => ['required', 'numeric', 'between:0,100'], 'default' => 25, 'levels' => ['diocese']],
+        'payroll.paye_upto_3' => ['section' => 'payroll', 'card' => 'PAYE bands (monthly)', 'label' => 'Third band - up to (KES)', 'type' => 'number', 'rules' => ['required', 'numeric', 'between:0,100000000'], 'default' => 500000, 'levels' => ['diocese']],
+        'payroll.paye_rate_3' => ['section' => 'payroll', 'card' => 'PAYE bands (monthly)', 'label' => 'Third band rate (%)', 'type' => 'number', 'rules' => ['required', 'numeric', 'between:0,100'], 'default' => 30, 'levels' => ['diocese']],
+        'payroll.paye_upto_4' => ['section' => 'payroll', 'card' => 'PAYE bands (monthly)', 'label' => 'Fourth band - up to (KES)', 'type' => 'number', 'rules' => ['required', 'numeric', 'between:0,100000000'], 'default' => 800000, 'levels' => ['diocese']],
+        'payroll.paye_rate_4' => ['section' => 'payroll', 'card' => 'PAYE bands (monthly)', 'label' => 'Fourth band rate (%)', 'type' => 'number', 'rules' => ['required', 'numeric', 'between:0,100'], 'default' => 32.5, 'levels' => ['diocese']],
+        'payroll.paye_rate_5' => ['section' => 'payroll', 'card' => 'PAYE bands (monthly)', 'label' => 'Above the fourth band (%)', 'type' => 'number', 'rules' => ['required', 'numeric', 'between:0,100'], 'default' => 35, 'levels' => ['diocese']],
+        'payroll.relief' => ['section' => 'payroll', 'card' => 'PAYE bands (monthly)', 'label' => 'Personal relief (KES a month)', 'type' => 'number', 'rules' => ['required', 'numeric', 'between:0,100000'], 'default' => 2400, 'levels' => ['diocese'], 'help' => 'Taken off the tax, not the pay.'],
+        'payroll.nssf_rate' => ['section' => 'payroll', 'card' => 'NSSF', 'label' => 'Rate (%) - the employer pays the same', 'type' => 'number', 'rules' => ['required', 'numeric', 'between:0,100'], 'default' => 6, 'levels' => ['diocese']],
+        'payroll.nssf_lel' => ['section' => 'payroll', 'card' => 'NSSF', 'label' => 'Lower earnings limit (Tier I up to, KES)', 'type' => 'number', 'rules' => ['required', 'numeric', 'between:0,10000000'], 'default' => 9000, 'levels' => ['diocese']],
+        'payroll.nssf_uel' => ['section' => 'payroll', 'card' => 'NSSF', 'label' => 'Upper earnings limit (Tier II up to, KES)', 'type' => 'number', 'rules' => ['required', 'numeric', 'between:0,10000000'], 'default' => 108000, 'levels' => ['diocese'], 'help' => 'Pay above this has no NSSF.'],
+        'payroll.shif_rate' => ['section' => 'payroll', 'card' => 'SHIF and Housing Levy', 'label' => 'SHIF rate (% of gross)', 'type' => 'number', 'rules' => ['required', 'numeric', 'between:0,100'], 'default' => 2.75, 'levels' => ['diocese']],
+        'payroll.shif_min' => ['section' => 'payroll', 'card' => 'SHIF and Housing Levy', 'label' => 'SHIF minimum (KES)', 'type' => 'number', 'rules' => ['required', 'numeric', 'between:0,100000'], 'default' => 300, 'levels' => ['diocese']],
+        'payroll.ahl_rate' => ['section' => 'payroll', 'card' => 'SHIF and Housing Levy', 'label' => 'Housing Levy (% of gross) - the employer pays the same', 'type' => 'number', 'rules' => ['required', 'numeric', 'between:0,100'], 'default' => 1.5, 'levels' => ['diocese'], 'help' => 'NSSF, SHIF and the Housing Levy come off the pay before PAYE is worked out.'],
 
         // Security (S4b) - read by User::verifyPin, the password rules in AuthController and Sanctum.
         'security.pin_attempts' => ['section' => 'security', 'card' => 'Employee code + PIN', 'label' => 'Wrong PINs before it locks', 'type' => 'number', 'rules' => ['required', 'integer', 'between:1,10'], 'default' => 3, 'levels' => ['diocese'], 'used_by' => 'Sign-in with employee code and PIN'],
