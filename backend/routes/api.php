@@ -71,6 +71,14 @@ Route::get('/user', function (Request $request) {
 // Public: the Verify page behind every report PDF's QR code. Says whether a
 // report is genuine and who made it - never any figures.
 Route::get('reports/verify/{code}', [ReportController::class, 'verify'])->middleware('throttle:30,1');
+// Public: Safaricom's callbacks for the diocese paybill (docs/specs/accounting-spec.md, A8).
+// The callback key in the address is the guard; a wrong key is a 404.
+Route::prefix('payments/daraja/{key}')->middleware('throttle:600,1')->group(function () {
+    $daraja = \App\Http\Controllers\Api\Payments\DarajaController::class;
+    Route::post('validation', [$daraja, 'validation']);
+    Route::post('confirmation', [$daraja, 'confirmation']);
+    Route::post('stk', [$daraja, 'stk']);
+});
 
 Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
@@ -744,6 +752,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('remittances/{id}/unconfirm', [$rem, 'unconfirm'])->whereNumber('id');
         Route::post('remittances/{id}/query', [$rem, 'query'])->whereNumber('id');
         Route::post('remittances/{id}/answer', [$rem, 'answer'])->whereNumber('id');
+        // A8 - the diocese paybill.
+        $pb = \App\Http\Controllers\Api\Accounting\PaybillController::class;
+        Route::get('paybill', [$pb, 'index']);
+        Route::post('paybill/payments/{id}/sort', [$pb, 'sort'])->whereNumber('id');
+        Route::post('paybill/ask', [$pb, 'ask'])->middleware('throttle:20,1');
+        Route::get('paybill/requests/{id}', [$pb, 'request'])->whereNumber('id');
+        Route::get('paybill/settlements', [$pb, 'settlements']);
+        Route::post('paybill/settlements', [$pb, 'settle']);
+        Route::post('paybill/settlements/{id}/cancel', [$pb, 'cancelSettlement'])->whereNumber('id');
+        Route::post('paybill/setup/register', [$pb, 'register']);
+        Route::post('paybill/setup/simulate', [$pb, 'simulate'])->middleware('throttle:10,1');
         // A7 - payroll.
         $pay = \App\Http\Controllers\Api\Accounting\PayrollController::class;
         Route::get('payroll', [$pay, 'index']);

@@ -201,6 +201,16 @@ const AccountingAPI = (function () {
     remittanceAct: (id, act, body) => request("POST", `/accounting/remittances/${id}/${act}`, { body }),
     remittanceBoard: (year) => request("GET", "/accounting/remittances/board", { params: { year } }),
     remittanceStatement: (place, year) => request("GET", "/accounting/remittances/statement", { params: { place, year } }),
+    // A8 - the diocese paybill
+    paybill: () => request("GET", "/accounting/paybill"),
+    sortPayment: (id, body) => request("POST", `/accounting/paybill/payments/${id}/sort`, { body }),
+    askToPay: (body) => request("POST", "/accounting/paybill/ask", { body }),
+    askStatus: (id) => request("GET", `/accounting/paybill/requests/${id}`),
+    paybillSettlements: (month) => request("GET", "/accounting/paybill/settlements", { params: { month } }),
+    settlePaybill: (body) => request("POST", "/accounting/paybill/settlements", { body }),
+    cancelSettlement: (id) => request("POST", `/accounting/paybill/settlements/${id}/cancel`),
+    registerPaybill: () => request("POST", "/accounting/paybill/setup/register"),
+    simulatePaybill: (body) => request("POST", "/accounting/paybill/setup/simulate", { body }),
     // A7 - payroll
     payroll: () => request("GET", "/accounting/payroll"),
     saveEmployee: (id, body) => request(id ? "PUT" : "POST", id ? `/accounting/payroll/employees/${id}` : "/accounting/payroll/employees", { body }),

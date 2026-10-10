@@ -306,6 +306,7 @@ final class Remittances
             return;
         }
         $rem->update(['status' => 'sent', 'sent_journal_id' => $pv->journal_id, 'sent_on' => $pv->paid_on, 'method' => $pv->method, 'reference' => $pv->reference]);
+        \App\Models\PaybillSettlement::where('remittance_id', $rem->id)->where('status', 'prepared')->update(['status' => 'paid']);
         $this->tell($rem->to, 'accounting.receipts.create', 'KES '.number_format((float) $rem->amount, 2)." on its way from {$rem->from->name}",
             "{$rem->purpose}. Confirm it when it reaches your account.", $rem);
     }
@@ -324,12 +325,17 @@ final class Remittances
     {
         Remittance::whereKey($pv->remittance_id)->whereIn('status', ['sent', 'queried'])
             ->update(['status' => 'waiting', 'sent_journal_id' => null, 'sent_on' => null, 'method' => null, 'reference' => null]);
+        \App\Models\PaybillSettlement::where('remittance_id', $pv->remittance_id)->where('status', 'paid')->update(['status' => 'prepared']);
     }
 
     /** Its voucher was cancelled: so is the remittance. */
     public function voucherCancelled(PaymentVoucher $pv): void
     {
         Remittance::whereKey($pv->remittance_id)->where('status', 'waiting')->update(['status' => 'cancelled']);
+        // A paybill settlement's voucher cancelled: its netting is undone too.
+        if ($settlement = \App\Models\PaybillSettlement::where('remittance_id', $pv->remittance_id)->where('status', 'prepared')->first()) {
+            app(Paybill::class)->undoSettlement($settlement, null);
+        }
     }
 
     // ------------------------------------------------------------ receiving
@@ -350,7 +356,8 @@ final class Remittances
             if ($rem->sent_on && strtotime($date) < strtotime($rem->sent_on->toDateString())) {
                 throw ValidationException::withMessages(['received_on' => ['It can\'t arrive before it was sent ('.$rem->sent_on->format('j M').').']]);
             }
-            $income = $this->standard($rem->kind === 'share' ? '4100' : '4110');
+            // A share is income to the place above, support to the place below; paybill money settled clears what the diocese held for it.
+            $income = $this->standard(['share' => '4100', 'support' => '4110', 'settlement' => '1310'][$rem->kind]);
             $from = Territory::find($rem->from_territory_id);
             $journal = $this->ledger->post($to, [
                 'doc_type' => 'receipt',

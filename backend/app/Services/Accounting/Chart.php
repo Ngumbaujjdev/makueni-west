@@ -31,6 +31,7 @@ final class Chart
         '1150' => ['M-Pesa accounts', 'asset', ['parent' => '1000', 'header' => true, 'key' => 'mpesa', 'cash' => 'mpesa', 'about' => 'Each place adds its till, paybill or phone here']],
         '1200' => ['Staff advances', 'asset', ['key' => 'staff_advances', 'about' => 'Money given out ahead, still to be accounted for']],
         '1300' => ['Due from places below', 'asset', ['key' => 'due_from_below', 'about' => 'What churches and regions owe us']],
+        '1310' => ['Held by the diocese for us', 'asset', ['key' => 'held_by_diocese', 'about' => 'Paybill money the diocese holds for this place until it settles']],
         '1400' => ['Other receivables', 'asset', ['key' => 'receivables']],
         '1500' => ['Fixed assets', 'asset', ['key' => 'fixed_assets', 'about' => 'Land, buildings, vehicles and equipment']],
 
@@ -40,6 +41,7 @@ final class Chart
         '2300' => ['Payroll deductions payable', 'liability', ['key' => 'payroll_deductions', 'about' => 'Deductions held from pay (e.g. SACCO, loans) to pay over']],
         '2310' => ['Net pay payable', 'liability', ['key' => 'net_pay']],
         '2400' => ['Money held for others', 'liability', ['key' => 'held_for_others', 'about' => 'Collected on behalf of someone else, to pass on']],
+        '2410' => ['Paybill payments to sort', 'liability', ['key' => 'paybill_to_sort', 'about' => 'Paid to the diocese paybill with an account number that matched no place']],
 
         '3000' => ['General fund', 'fund', ['key' => 'general_fund', 'about' => 'Money free to be used for any of the church\'s work']],
         '3100' => ['Building fund', 'fund', ['key' => 'building_fund', 'about' => 'Kept for building only']],
