@@ -12,7 +12,7 @@ require_once __DIR__ . '/../permission-check.php';
 
 /**
  * @param string $level church | region | diocese
- * @param string $page  staff | positions
+ * @param string $page  staff | positions | person | item
  */
 function hrPageContext(string $level, string $page): array
 {
@@ -31,6 +31,7 @@ function hrPageContext(string $level, string $page): array
         'homeUrl' => SITE_URL . "/{$level}/dashboard",
         'siteUrl' => SITE_URL,
         'payrollUrl' => SITE_URL . "/{$level}/accounting/payroll.php",
+        'membersUrl' => SITE_URL . '/church/members',
         'place' => $place,
         'can' => [
             'manage' => $can('staff.manage'),
@@ -65,7 +66,7 @@ function hrPageScripts(string $page): void
         echo '<script src="' . SITE_URL . "/{$src}\"></script>\n";
     }
     // The Accounting kit (tables, money, how-to-pay fields) and the People kit (windows in parts) are reused as they are.
-    foreach (['assets/js/utils/date-field.js', 'assets/js/pages/demographics/api-handler.js', 'assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/members/ui.js', 'assets/js/pages/members/list-kit.js', 'assets/js/pages/accounting/api.js', 'assets/js/pages/accounting/ui.js', 'assets/js/pages/accounting/windows.js', 'assets/js/pages/hr/api.js', "assets/js/pages/hr/{$page}.js"] as $src) {
+    foreach (['assets/js/utils/date-field.js', 'assets/js/pages/demographics/api-handler.js', 'assets/js/pages/demographics/ui-helpers.js', 'assets/js/pages/members/ui.js', 'assets/js/pages/members/list-kit.js', 'assets/js/pages/accounting/api.js', 'assets/js/pages/accounting/ui.js', 'assets/js/pages/accounting/windows.js', 'assets/js/pages/hr/api.js', 'assets/js/pages/hr/windows.js', "assets/js/pages/hr/{$page}.js"] as $src) {
         echo '<script src="' . $v($src) . '"></script>' . "\n";
     }
 }

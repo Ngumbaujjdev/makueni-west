@@ -18,7 +18,6 @@
   const CTX = window.HR_CTX;
   const $ = (id) => document.getElementById(id);
   const esc = A.esc;
-  const n = (v) => (String(v ?? "").trim() === "" ? null : Math.round(parseFloat(String(v).replace(/[^0-9.]/g, "")) * 100) / 100 || 0);
   let data = null;
   let tab = ["position", "grade", "allowance"].includes(new URLSearchParams(window.location.search).get("tab")) ? new URLSearchParams(window.location.search).get("tab") : "position";
 
@@ -29,11 +28,13 @@
   };
   const LEVELS = { church: "Churches", region: "Regions", diocese: "The diocese" };
   const money = (v) => (v === null || v === undefined ? "-" : A.money(v, { cents: false }));
+  const itemUrl = (r) => `${CTX.baseUrl}/item.php?kind=${tab}&id=${r.id}`;
+  const ours = (r) => (r.ours ? ' <span class="soft-chip soft-success"><i class="ri-edit-2-line"></i>Our version</span>' : !r.own && r.version_from && r.version_from.id !== r.owner.id ? ` <span class="soft-chip soft-purple"><i class="ri-git-branch-line"></i>${esc(r.version_from.name)}'s version</span>` : "");
   const owner = (r) => (r.own ? '<span class="soft-chip soft-success"><i class="ri-home-4-line"></i>Ours</span>' : `<span class="soft-chip soft-${r.owner.level === "diocese" ? "primary" : "purple"}"><i class="${r.owner.level === "diocese" ? "ri-government-line" : "ri-map-pin-line"}"></i>${esc(r.owner.name)}</span>`);
   const state = (r) => (!r.is_active ? '<span class="badge bg-secondary text-dark">Switched off</span>' : r.hidden ? '<span class="badge bg-secondary text-dark">Not used here</span>' : '<span class="badge bg-success text-white"><i class="ri-check-line me-1"></i>In use</span>');
 
   function details(kind, r) {
-    if (kind === "position") return `${r.levels.length ? r.levels.map((l) => LEVELS[l]).join(", ") : "Any level"}${r.grade ? ` · ${esc(r.grade)}` : ""}`;
+    if (kind === "position") return `${r.levels.length ? r.levels.map((l) => LEVELS[l]).join(", ") : "Any level"}${r.grade ? ` · ${esc(r.grade)}` : ""}${r.default_pay ? ` · usually ${money(r.default_pay)}` : ""}${r.allowances?.length ? ` + ${r.allowances.map((a) => esc(a.name)).join(", ")}` : ""}`;
     if (kind === "grade") return r.min_pay !== null || r.max_pay !== null ? `${money(r.min_pay)} to ${money(r.max_pay)}${r.default_pay ? ` · usually ${money(r.default_pay)}` : ""}` : r.default_pay ? `Usually ${money(r.default_pay)}` : "No range";
     return r.default_amount ? `Usually ${money(r.default_amount)}` : "Amount set per person";
   }
@@ -69,8 +70,8 @@
       sorts: [{ key: "name", label: "Name A-Z", order: [[0, "asc"]] }],
       nonSortable: [5],
       empty: A.empty(k.icon, `No ${k.noun} yet`, CTX.can.setup ? `Add the ${k.noun} this place uses - the diocese's show here too once it adds them.` : `None set up yet.`),
-      rowHtml: (r) => `<tr data-pills="${r.own ? "ours" : "above"}${r.hidden || !r.is_active ? " off" : ""}"${r.hidden || !r.is_active ? ' class="opacity-75"' : ""}>
-          <td data-order="${esc(r.code || r.name)}"><div class="fw-semibold">${tab === "grade" ? `${esc(r.code)} · ` : ""}${esc(r.name)}</div>${r.description ? `<div class="acc-sub">${esc(r.description)}</div>` : ""}<div class="acc-sub d-md-none">${details(tab, r)}</div></td>
+      rowHtml: (r) => `<tr class="acc-row${r.hidden || !r.is_active ? " opacity-75" : ""}" data-href="${itemUrl(r)}" data-pills="${r.own ? "ours" : "above"}${r.hidden || !r.is_active ? " off" : ""}">
+          <td data-order="${esc(r.code || r.name)}"><div><a class="fw-semibold mb-link" href="${itemUrl(r)}">${tab === "grade" ? `${esc(r.code)} · ` : ""}${esc(r.name)}</a>${ours(r)}</div>${r.description ? `<div class="acc-sub">${esc(r.description)}</div>` : ""}<div class="acc-sub d-md-none">${details(tab, r)}</div></td>
           <td class="d-none d-md-table-cell">${details(tab, r)}</td>
           <td>${owner(r)}</td>
           <td class="d-none d-sm-table-cell">${state(r)}</td>
@@ -95,44 +96,10 @@
     render();
   }
 
-  // ------------------------------------------------------------ add or change
-
-  function itemWindow(kind, r = null) {
-    const k = KIND[kind];
-    const f = (id, label, v, col = "col-sm-6", extra = "") => `<div class="${col}"><label class="form-label" for="${id}">${label}</label><input type="text" class="form-control" id="${id}" value="${esc(v ?? "")}"${extra}></div>`;
-    const grades = data.grades.filter((g) => g.is_active && !g.hidden);
-    const body = {
-      position: `<div class="row g-2">${f("itName", "Name", r?.name, "col-sm-12", ' maxlength="100" placeholder="e.g. Church secretary"')}<div class="col-sm-6"><label class="form-label">Used at</label><div class="d-flex flex-wrap gap-3">${Object.entries(LEVELS).map(([l, label]) => `<label class="form-check mb-0"><input class="form-check-input" type="checkbox" data-level="${l}"${r?.levels?.includes(l) ? " checked" : ""}><span class="form-check-label">${label}</span></label>`).join("")}</div><small class="acc-sub">None ticked: any level</small></div><div class="col-sm-6"><label class="form-label" for="itGrade">Usual grade</label><select class="form-select" id="itGrade"><option value="">None</option>${grades.map((g) => `<option value="${g.id}"${String(g.id) === String(r?.grade_id) ? " selected" : ""}>${esc(`${g.code} · ${g.name}`)}</option>`).join("")}</select></div></div>`,
-      grade: `<div class="row g-2">${f("itCode", "Code", r?.code, "col-sm-4", ' maxlength="20" placeholder="e.g. G3"')}${f("itName", "Name", r?.name, "col-sm-8", ' maxlength="100" placeholder="e.g. Grade 3 - support staff"')}${f("itMin", "Least a month (KES)", r?.min_pay, "col-sm-4", ' inputmode="decimal"')}${f("itMax", "Most a month (KES)", r?.max_pay, "col-sm-4", ' inputmode="decimal"')}${f("itUsual", "Usual basic pay (KES)", r?.default_pay, "col-sm-4", ' inputmode="decimal"')}</div>`,
-      allowance: `<div class="row g-2">${f("itName", "Name", r?.name, "col-sm-7", ' maxlength="60" placeholder="e.g. House"')}${f("itAmount", "Usual amount a month (KES)", r?.default_amount, "col-sm-5", ' inputmode="decimal" placeholder="Optional"')}</div>`,
-    }[kind];
-    const el = K.confirmWindow({
-      title: r ? `Change ${r.name}` : k.add,
-      subtitle: kind === "allowance" ? "Allowances add to pay - there are no deductions here" : `Used at ${CTX.place.name || "this place"}${CTX.level !== "church" ? " and the places below" : ""}`,
-      icon: k.icon,
-      go: '<i class="ri-check-line me-1"></i>Save',
-      body: K.parts([
-        { icon: k.icon, title: `The ${k.one}`, body },
-        { icon: "ri-information-line", title: "More", body: `<div class="row g-2"><div class="col-12"><input type="text" class="form-control" id="itAbout" maxlength="255" placeholder="A note (optional)" value="${esc(r?.description || "")}"></div></div>${r ? `<label class="form-check form-switch mt-3 mb-0"><input class="form-check-input" type="checkbox" id="itOn"${r.is_active ? " checked" : ""}><span class="form-check-label">In use (switched off, nobody new can be given it)</span></label>` : ""}` },
-      ]),
-      run: async () => {
-        const v = (id) => el.querySelector(`#${id}`)?.value.trim() ?? null;
-        const payload = { name: v("itName"), description: v("itAbout") || null, ...(r ? { is_active: el.querySelector("#itOn").checked } : {}) };
-        if (kind === "position") Object.assign(payload, { levels: [...el.querySelectorAll("[data-level]:checked")].map((x) => x.dataset.level), grade_id: v("itGrade") ? Number(v("itGrade")) : null });
-        if (kind === "grade") Object.assign(payload, { code: v("itCode"), min_pay: n(v("itMin")), max_pay: n(v("itMax")), default_pay: n(v("itUsual")) });
-        if (kind === "allowance") payload.default_amount = n(v("itAmount"));
-        const out = await API.saveItem(kind, r?.id, payload);
-        if (out.ok) load();
-        return out;
-      },
-    });
-    if (el.querySelector("#itGrade")) UI.enhanceSelect(el.querySelector("#itGrade"), { search: false });
-  }
-
   // ------------------------------------------------------------ wiring
 
   document.addEventListener("DOMContentLoaded", () => {
-    $("addBtn")?.addEventListener("click", () => itemWindow(tab));
+    $("addBtn")?.addEventListener("click", () => HrWindows.item(tab, null, data.grades, load));
     document.querySelectorAll("#hrTabs [data-tab]").forEach((b) =>
       b.addEventListener("click", () => {
         tab = b.dataset.tab;
@@ -145,8 +112,10 @@
     );
     $("setTable").addEventListener("click", async (ev) => {
       const list = data[KIND[tab].key];
+      const tr = ev.target.closest("tr[data-href]");
+      if (tr && !ev.target.closest("a, button, input, label")) return (window.location.href = tr.dataset.href);
       const ed = ev.target.closest("[data-edit]");
-      if (ed) return itemWindow(tab, list.find((r) => String(r.id) === ed.dataset.edit));
+      if (ed) return HrWindows.item(tab, list.find((r) => String(r.id) === ed.dataset.edit), data.grades, load);
       const rm = ev.target.closest("[data-remove]");
       if (rm) {
         const r = list.find((x) => String(x.id) === rm.dataset.remove);

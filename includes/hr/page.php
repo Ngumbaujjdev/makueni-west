@@ -1,11 +1,14 @@
 <?php
 // Staff - the same pages for every level (docs/specs/hr-spec.md). The wrapper sets $hrCtx
 // (includes/hr/context.php); the body is includes/hr/body-{page}.php.
-$pageTitle = $hrCtx['page'] === 'positions' ? 'Positions & pay' : 'Staff';
+$pageTitle = ['positions' => 'Positions & pay', 'person' => 'Staff member', 'item' => 'Position'][$hrCtx['page']] ?? 'Staff';
 $pageIcon = 'ri-team-line';
-$breadcrumbs = $hrCtx['page'] === 'positions'
-    ? ['Home' => $hrCtx['homeUrl'], 'Staff' => $hrCtx['baseUrl'] . '/', $pageTitle => null]
-    : ['Home' => $hrCtx['homeUrl'], 'Staff' => null];
+$breadcrumbs = match ($hrCtx['page']) {
+    'positions' => ['Home' => $hrCtx['homeUrl'], 'Staff' => $hrCtx['baseUrl'] . '/', $pageTitle => null],
+    'person' => ['Home' => $hrCtx['homeUrl'], 'Staff' => $hrCtx['baseUrl'] . '/', $pageTitle => null],
+    'item' => ['Home' => $hrCtx['homeUrl'], 'Staff' => $hrCtx['baseUrl'] . '/', 'Positions & pay' => $hrCtx['baseUrl'] . '/positions.php', $pageTitle => null],
+    default => ['Home' => $hrCtx['homeUrl'], 'Staff' => null],
+};
 ?>
 <!DOCTYPE html>
 <html lang="en" dir="ltr" class="<?= appearanceHtmlClasses() ?>" data-nav-layout="vertical" <?= appearanceThemeAttributes() ?>
