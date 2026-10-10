@@ -57,24 +57,32 @@ final class Statements
 
         $rows = ['income' => [], 'expense' => []];
         $used = [];
-        foreach ($now->groupBy('account_id') as $accountId => $parts) {
+        $roll = count($ids) > 1;
+        // Consolidated, a place's own finer line (4010-01 Youth offering) shows on its standard account.
+        $add = function (int $accountId, float $amount, ?int $fund, string $col) use (&$rows, &$used, $accounts, $roll) {
             $a = $accounts[$accountId] ?? null;
             if (! $a || ! isset($rows[$a->type])) {
-                continue;
+                return;
             }
-            $byFund = [];
-            foreach ($parts as $p) {
-                $amount = $this->normal($a, $p->d, $p->c);
-                $fund = (int) ($p->fund_id ?: $funds->first()->id);
-                $byFund[$fund] = round(($byFund[$fund] ?? 0) + $amount, 2);
+            $shown = $this->shownAs($a, $roll, $accounts);
+            $rows[$a->type][$shown->id] ??= $this->row($shown, 0, 0) + ['by_fund' => []];
+            $r = &$rows[$a->type][$shown->id];
+            $r[$col] = round($r[$col] + $amount, 2);
+            if ($fund !== null) {
+                $r['by_fund'][$fund] = round(($r['by_fund'][$fund] ?? 0) + $amount, 2);
                 $used[$fund] = true;
             }
-            $rows[$a->type][$accountId] = $this->row($a, array_sum($byFund), $before->has($accountId) ? $this->normal($a, $before[$accountId]->d, $before[$accountId]->c) : 0) + ['by_fund' => $byFund];
+        };
+        foreach ($now as $p) {
+            $a = $accounts[$p->account_id] ?? null;
+            if ($a) {
+                $add((int) $p->account_id, $this->normal($a, $p->d, $p->c), (int) ($p->fund_id ?: $funds->first()->id), 'amount');
+            }
         }
         foreach ($before as $accountId => $p) {
             $a = $accounts[$accountId] ?? null;
-            if ($a && isset($rows[$a->type]) && ! isset($rows[$a->type][$accountId])) {
-                $rows[$a->type][$accountId] = $this->row($a, 0, $this->normal($a, $p->d, $p->c)) + ['by_fund' => []];
+            if ($a) {
+                $add((int) $accountId, $this->normal($a, $p->d, $p->c), null, 'last_year');
             }
         }
         $income = $this->sorted($rows['income']);

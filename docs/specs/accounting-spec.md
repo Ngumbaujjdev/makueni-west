@@ -744,6 +744,18 @@ What a giver gives for (Tithe, Offering, a region's conference...) and the funds
 
 **Part 1 (built 2026-10-10):** the table, `App\Services\Accounting\GivingPurposes` (`all`, `active`, `find`, `usable`, static `label`, `default`, `byWord`, `target`, `accountNumber`, `present`) and every reader switched to it - the parser, account numbers, Ask to pay, claims, the giving page, receipts, SMS and lists. `Paybill::PURPOSES/SUFFIX/WORDS` are gone.
 
+## Setup - finer lines, headings and the checklist (built 2026-10-10)
+
+- **A place's own finer lines.** `POST /accounting/accounts {name, parent_id}` (`accounts.manage`) adds a place's own sub-account under a standard **income or expense** account, e.g. `4010-01` "Youth offering" under 4010 Offerings.
+  - Only that place posts to it.
+  - Budgets count it on the parent's line: `Chart::budgetLineFor` falls back to the parent, and a chosen line may be the parent's.
+  - Consolidated statements show it on the standard account.
+  - The same endpoint still adds bank, M-Pesa and Airtel accounts (`cash_kind`).
+- **Headings in the chart.** `POST /accounting/chart` (the diocese) takes `parent_id`, a standard heading of the same kind, and `is_header` to make a new heading.
+- **The checklist.** `GET /accounting/setup` returns `{place, can, steps, jobs, done, of, unheld}`.
+  - **`steps`:** each is `{key, title, done, detail, page, optional}`. The keys are `accounts`, `opening`, `close` (needed) and `petty`, `funds`, `lines`, `suppliers`, `staff` (optional).
+  - **`jobs`:** each is `{ability, label, permission, holders[], held}`. They cover collections (churches), receipts, prepare, authorise, pay, reconcile and close. Each job shows who holds it at the place; one nobody holds says so, and the diocese admin gives it in Roles & permissions.
+
 ## Later phases (outline - specified when built)
 - **A2 Reconciliation:** built 2026-10-09, see "A2 - Reconciliation" above.
 - **A3 Sunday collections:** built 2026-10-09, see "A3 - Sunday collections" above.

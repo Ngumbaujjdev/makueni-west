@@ -236,7 +236,9 @@ final class Documents
         if ($id !== null && $id !== '') {
             $line = BudgetLine::forPlace($place->territory_type->value, $place->id)->find((int) $id);
             $ours = (bool) $line;
-            if (! $ours || ($line->account_id && (int) $line->account_id !== (int) $account->id) || (! $line->account_id && $this->chart->forBudgetLine($line)->id !== $account->id)) {
+            // A place's own sub-account counts on its parent's lines.
+            $fits = fn (int $id) => $id === (int) $account->id || ($account->territory_id && ! $account->cash_kind && $id === (int) $account->parent_id);
+            if (! $ours || ($line->account_id && ! $fits((int) $line->account_id)) || (! $line->account_id && ! $fits((int) $this->chart->forBudgetLine($line)->id))) {
                 throw ValidationException::withMessages([$field => ['That budget line doesn\'t go with this account.']]);
             }
 

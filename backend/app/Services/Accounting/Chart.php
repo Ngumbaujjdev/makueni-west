@@ -199,12 +199,18 @@ final class Chart
         return $this->account($line->budgetCategory?->slug === 'income' ? 'other_income' : 'other_expense');
     }
 
-    /** The budget line of this place that posts to an account (the first, when several do). */
+    /** The budget line of this place that posts to an account (the first, when several do); a place's own sub-account counts on its parent's. */
     public function budgetLineFor(Territory $place, int $accountId): ?BudgetLine
     {
-        return BudgetLine::where('account_id', $accountId)->where('is_active', true)
+        $line = BudgetLine::where('account_id', $accountId)->where('is_active', true)
             ->forPlace($place->territory_type->value, $place->id)
             ->orderByRaw('territory_id IS NULL')->orderBy('display_order')->first();
+        if ($line) {
+            return $line;
+        }
+        $parent = AccountingAccount::whereKey($accountId)->whereNotNull('territory_id')->whereNull('cash_kind')->value('parent_id');
+
+        return $parent ? $this->budgetLineFor($place, (int) $parent) : null;
     }
 
     /** The accounts a place can post to (standard + its own), headers left out. */
@@ -272,6 +278,36 @@ final class Chart
                 'is_active' => true,
                 'display_order' => $header->display_order,
                 'created_by' => $by,
+            ]);
+        });
+    }
+
+    /**
+     * A place's own sub-account under a standard income or expense account
+     * (4010-01 "Youth offering" under 4010 Offerings): the place sees its
+     * money in finer lines, while budgets and the places above still count it
+     * on the standard account.
+     */
+    public function addSubAccount(Territory $place, AccountingAccount $parent, array $data, ?int $by = null): AccountingAccount
+    {
+        if ($parent->territory_id !== null || ! in_array($parent->type, ['income', 'expense'], true) || $parent->is_header || ! $parent->is_active) {
+            throw ValidationException::withMessages(['parent_id' => ['Pick a standard income or expense account to put it under.']]);
+        }
+        $name = trim((string) ($data['name'] ?? ''));
+        if (AccountingAccount::where('territory_id', $place->id)->where('parent_id', $parent->id)->where('name', $name)->exists()) {
+            throw ValidationException::withMessages(['name' => ["There is already a {$name} under {$parent->name}."]]);
+        }
+
+        return DB::transaction(function () use ($place, $parent, $data, $by, $name) {
+            $n = AccountingAccount::where('territory_id', $place->id)->where('parent_id', $parent->id)->lockForUpdate()->count() + 1;
+            do {
+                $code = $parent->code.'-'.str_pad((string) $n++, 2, '0', STR_PAD_LEFT);
+            } while (AccountingAccount::where('territory_id', $place->id)->where('code', $code)->exists());
+
+            return AccountingAccount::create([
+                'territory_id' => $place->id, 'parent_id' => $parent->id, 'code' => $code, 'name' => mb_substr($name, 0, 150),
+                'description' => $data['description'] ?? null, 'type' => $parent->type, 'is_active' => true,
+                'display_order' => $parent->display_order, 'created_by' => $by,
             ]);
         });
     }
