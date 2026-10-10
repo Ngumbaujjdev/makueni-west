@@ -97,7 +97,7 @@ class GivingTest extends TestCase
         $page = $this->getJson('/api/give/SHR027')->assertOk()->json('data');
         $this->assertSame('My Church', $page['place']['name']);
         $this->assertTrue($page['methods']['paystack']);
-        $ref = $this->postJson('/api/give/shr-027', ['purpose' => 'T', 'amount' => 1000, 'method' => 'paystack', 'name' => 'Jane Mutua', 'email' => 'jane@example.test'])
+        $ref = $this->postJson('/api/give/shr-027', ['purpose' => 'T', 'amount' => 1000, 'method' => 'paystack', 'name' => 'Jane Mutua', 'phone' => '0712345678', 'email' => 'jane@example.test'])
             ->assertCreated()->assertJsonPath('data.payment_url', 'https://checkout.paystack.com/abc')->json('data.reference');
         Http::assertSent(fn ($r) => str_contains($r->url(), 'transaction/initialize') && $r['amount'] === 100000 && $r['subaccount'] === 'ACCT_church27'
             && $r['transaction_charge'] === 10000 && $r['bearer'] === 'subaccount' && $r['reference'] === $ref);
@@ -128,8 +128,8 @@ class GivingTest extends TestCase
     public function test_without_a_subaccount_the_diocese_holds_it_and_the_sweep_completes_it(): void
     {
         $this->fakePaystack(['status' => 'success', 'amount' => 100000, 'currency' => 'KES', 'fees' => 2000, 'channel' => 'mobile_money', 'paid_at' => now()->toIso8601String()]);
-        $ref = $this->postJson('/api/give/SHR028', ['purpose' => 'O', 'amount' => 1000, 'method' => 'paystack', 'name' => 'Peter'])->assertCreated()->json('data.reference');
-        Http::assertSent(fn ($r) => str_contains($r->url(), 'transaction/initialize') && ! isset($r['subaccount']) && str_starts_with($r['email'], 'give+'));
+        $ref = $this->postJson('/api/give/SHR028', ['purpose' => 'O', 'amount' => 1000, 'method' => 'paystack', 'name' => 'Peter Musyoka', 'phone' => '0722000111', 'email' => 'peter@example.test'])->assertCreated()->json('data.reference');
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'transaction/initialize') && ! isset($r['subaccount']) && $r['email'] === 'peter@example.test');
         Gift::where('reference', $ref)->update(['created_at' => now()->subMinutes(11)]);
         $old = Gift::create(['reference' => 'GFT-OLD', 'territory_id' => $this->otherChurch->id, 'purpose' => 'O', 'amount' => 50, 'method' => 'paystack', 'status' => 'pending']);
         Gift::whereKey($old->id)->update(['created_at' => now()->subDays(2)]);
@@ -180,5 +180,22 @@ class GivingTest extends TestCase
         $this->assertStringEndsWith('/give.php?c=SHR027', $this->getJson('/api/accounting/giving')->json('data.link'));
         Sanctum::actingAs($this->dfo);
         $this->getJson('/api/accounting/gateways')->assertOk()->assertJsonPath('data.ready', true);
+    }
+
+    public function test_the_giver_must_say_who_they_are(): void
+    {
+        $this->fakePaystack();
+        $base = ['purpose' => 'T', 'amount' => 500];
+        // M-Pesa: a name and the M-Pesa number.
+        $this->postJson('/api/give/SHR027', $base + ['method' => 'mpesa', 'phone' => '0712345678'])->assertUnprocessable()->assertJsonValidationErrors('name');
+        $this->postJson('/api/give/SHR027', $base + ['method' => 'mpesa', 'name' => 'Ruth Mwende'])->assertUnprocessable()->assertJsonValidationErrors('phone');
+        // Card: a name, a phone and an email - Paystack gets the giver's own email, never a made-up one.
+        $this->postJson('/api/give/SHR027', $base + ['method' => 'paystack', 'name' => 'Ruth Mwende', 'phone' => '0712345678'])->assertUnprocessable()->assertJsonValidationErrors('email');
+        $this->postJson('/api/give/SHR027', $base + ['method' => 'paystack', 'name' => 'Ruth Mwende', 'email' => 'ruth@example.test'])->assertUnprocessable()->assertJsonValidationErrors('phone');
+        $this->postJson('/api/give/SHR027', $base + ['method' => 'paystack', 'name' => 'Ruth Mwende', 'phone' => '+44 7700 900123', 'email' => 'not-an-email'])->assertUnprocessable()->assertJsonValidationErrors('email');
+        $this->assertSame(0, Gift::count(), 'nothing is started until the details are right');
+        $this->postJson('/api/give/SHR027', $base + ['method' => 'paystack', 'name' => 'Ruth Mwende', 'phone' => '+44 7700 900123', 'email' => 'ruth@example.test'])->assertCreated();
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'transaction/initialize') && $r['email'] === 'ruth@example.test');
+        $this->assertSame(['Ruth Mwende', '+447700900123'], [Gift::first()->giver_name, Gift::first()->giver_phone], 'a phone from abroad is fine for card');
     }
 }

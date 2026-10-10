@@ -124,7 +124,7 @@ class OwnPaybillTest extends TestCase
         // The giving page sends the prompt through the church's own app, and only its key answers it.
         $page = $this->getJson('/api/give/SHR027')->assertOk()->json('data');
         $this->assertSame('4123456', $page['paybill']['number']);
-        $ref = $this->postJson('/api/give/SHR027', ['purpose' => 'B', 'amount' => 300, 'method' => 'mpesa', 'phone' => '0712345678'])->assertCreated()->json('data.reference');
+        $ref = $this->postJson('/api/give/SHR027', ['purpose' => 'B', 'amount' => 300, 'method' => 'mpesa', 'phone' => '0712345678', 'name' => 'Mary Wanza'])->assertCreated()->json('data.reference');
         Http::assertSent(fn ($r) => str_contains($r->url(), 'stkpush') && $r['BusinessShortCode'] === '4123456' && str_contains($r['CallBackURL'], "/daraja/{$ch->callback_key}/stk"));
         $callback = ['Body' => ['stkCallback' => ['MerchantRequestID' => 'm-1', 'CheckoutRequestID' => 'ws_CO_own1', 'ResultCode' => 0, 'ResultDesc' => 'ok', 'CallbackMetadata' => ['Item' => [
             ['Name' => 'Amount', 'Value' => 300], ['Name' => 'MpesaReceiptNumber', 'Value' => 'OWNSTK0001'], ['Name' => 'TransactionDate', 'Value' => (int) now('Africa/Nairobi')->format('YmdHis')], ['Name' => 'PhoneNumber', 'Value' => 254712345678],
@@ -167,7 +167,7 @@ class OwnPaybillTest extends TestCase
 
         // A prompt whose callback never came: the sweep asks PayHero.
         $this->payheroStatus = ['status' => 'FAILED', 'ResultDesc' => 'Request cancelled by user'];
-        $ref2 = $this->postJson('/api/give/SHR027', ['purpose' => 'O', 'amount' => 50, 'method' => 'mpesa', 'phone' => '0712345678'])->assertCreated()->json('data.reference');
+        $ref2 = $this->postJson('/api/give/SHR027', ['purpose' => 'O', 'amount' => 50, 'method' => 'mpesa', 'phone' => '0712345678', 'name' => 'Mary Wanza'])->assertCreated()->json('data.reference');
         Gift::where('reference', $ref2)->update(['created_at' => now()->subMinutes(11)]);
         $this->artisan('payments:reconcile')->assertSuccessful();
         $this->assertSame(['failed', 'Request cancelled by user'], [Gift::where('reference', $ref2)->value('status'), Gift::where('reference', $ref2)->value('result')]);
