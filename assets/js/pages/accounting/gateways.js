@@ -9,6 +9,8 @@
  * A10b: a church's own paybill or till - through PayHero or its own Daraja
  * app - so M-Pesa gifts land straight in its own M-Pesa. Keys go in and are
  * only ever shown as "saved".
+ * A10c: Requests - churches asking for their own Paystack, checked here -
+ * and Payouts per place, each opening that place's payouts.
  * ============================================================================
  */
 (function () {
@@ -23,8 +25,12 @@
   const esc = A.esc;
   let data = null;
   let kit = null;
+  let po = null;
+  let poKit = null;
+  let tab = "places";
+  let period = "year";
 
-  const pill = (c) => (!c ? '<span class="badge bg-secondary">Not set up</span>' : c.status === "active" ? '<span class="badge bg-success"><i class="ri-checkbox-circle-line me-1"></i>On</span>' : '<span class="badge bg-warning text-dark"><i class="ri-pause-circle-line me-1"></i>Off</span>');
+  const pill = (c) => (!c ? '<span class="badge bg-secondary">Not set up</span>' : c.status === "pending" ? '<span class="badge bg-warning text-dark"><i class="ri-inbox-archive-line me-1"></i>Asked</span>' : c.status === "active" ? '<span class="badge bg-success"><i class="ri-checkbox-circle-line me-1"></i>On</span>' : '<span class="badge bg-warning text-dark"><i class="ri-pause-circle-line me-1"></i>Off</span>');
 
   function cards() {
     const ch = data.places.filter((p) => p.level !== "diocese");
@@ -57,7 +63,7 @@
     <td class="d-none d-md-table-cell">${p.channel ? `${esc(p.channel.bank || "")} ${esc(p.channel.account_number || "")}<div class="acc-sub">into ${esc(p.channel.settles_into?.name || "-")}</div>` : '<span class="acc-sub">-</span>'}</td>
     <td>${p.level === "diocese" ? (p.channel ? '<span class="badge bg-success">Payouts recorded</span>' : '<span class="badge bg-secondary">Pick its bank account</span>') : pill(p.channel)}${p.channel?.subaccount ? `<div class="acc-sub mt-1">${esc(p.channel.subaccount)}</div>` : ""}</td>
     <td>${mpesaCell(p)}</td>
-    <td class="text-end text-nowrap">${!p.channel ? `<button type="button" class="btn btn-sm btn-primary" data-setup="${p.id}"><i class="ri-add-line me-1"></i>Set up</button>` : p.level === "diocese" ? "" : `<button type="button" class="btn btn-sm ${p.channel.status === "active" ? "btn-outline-warning" : "btn-success"}" data-toggle="${p.channel.id}" data-to="${p.channel.status === "active" ? "off" : "active"}">${p.channel.status === "active" ? "Switch off" : "Switch on"}</button>`}</td>
+    <td class="text-end text-nowrap">${p.channel?.status === "pending" ? (p.channel.request ? '<button type="button" class="btn btn-sm btn-warning" data-gotab="requests"><i class="ri-search-eye-line me-1"></i>Check</button>' : `<button type="button" class="btn btn-sm btn-primary" data-setup="${p.id}"><i class="ri-add-line me-1"></i>Set up</button>`) : !p.channel ? `<button type="button" class="btn btn-sm btn-primary" data-setup="${p.id}"><i class="ri-add-line me-1"></i>Set up</button>` : p.level === "diocese" ? "" : `<button type="button" class="btn btn-sm ${p.channel.status === "active" ? "btn-outline-warning" : "btn-success"}" data-toggle="${p.channel.id}" data-to="${p.channel.status === "active" ? "off" : "active"}">${p.channel.status === "active" ? "Switch off" : "Switch on"}</button>`}</td>
   </tr>`;
 
   function places() {
@@ -144,6 +150,118 @@
     ["#mpInto", "#mpEnv"].forEach((s) => el.querySelector(s) && UI.enhanceSelect(el.querySelector(s)));
   }
 
+  // ------------------------------------------------------------ requests and payouts (A10c)
+
+  const PERIODS = { month: "This month", year: "This year", last: "Last year" };
+  const range = () => {
+    const d = new Date();
+    const iso = (x) => x.toISOString().slice(0, 10);
+    if (period === "month") return [iso(new Date(d.getFullYear(), d.getMonth(), 1, 12)), iso(d)];
+    if (period === "last") return [`${d.getFullYear() - 1}-01-01`, `${d.getFullYear() - 1}-12-31`];
+    return [`${d.getFullYear()}-01-01`, iso(d)];
+  };
+  const ROUTE = { own: ["Own Paystack", "success"], diocese: ["Through the diocese", "secondary"], main: ["Main account", "primary"] };
+
+  function requests() {
+    $("gwRequestsFigure").textContent = po.requests.length ? `${po.requests.length} to check` : "Nothing waiting";
+    $("gwRequestRows").innerHTML = po.requests.length
+      ? po.requests.map((r) => `<tr><td><div class="fw-semibold">${esc(r.place.name)}</div><div class="acc-sub">${esc(r.place.code || "")}${r.change ? ' · <span class="soft-chip soft-primary">A change</span>' : ""}</div></td>
+          <td><div class="fw-semibold">${esc(r.bank)} · ${esc(r.account_number)}</div><div class="acc-sub">${esc(r.account_name)} · into ${esc(r.into?.name || "-")}</div></td>
+          <td class="d-none d-md-table-cell">${A.day(r.on)}<div class="acc-sub">${esc(r.by || "")}</div></td>
+          <td class="text-end text-nowrap"><button type="button" class="btn btn-sm btn-primary" data-review="${r.id}"><i class="ri-search-eye-line me-1"></i>Check</button></td></tr>`).join("")
+      : `<tr><td colspan="4">${A.empty("ri-inbox-archive-line", "Nothing to check", "When a church asks for its own Paystack on its Online giving page, it waits here.")}</td></tr>`;
+  }
+
+  const poRow = (p) => `<tr data-id="${p.id}" data-pills="${p.route} ${p.failed ? "failed" : ""}" class="acc-row">
+    ${K.checkCell(p.id, p.name)}
+    <td data-search="${esc(`${p.name} ${p.code}`)}" data-order="${esc(p.name)}"><div class="fw-semibold">${esc(p.name)}</div><div class="acc-sub">${esc(p.code)} · ${esc(p.level)}</div></td>
+    <td><span class="soft-chip soft-${ROUTE[p.route][1]}">${ROUTE[p.route][0]}</span>${p.waiting ? ' <span class="badge bg-warning text-dark">Asked</span>' : ""}${p.failed ? ` <span class="badge bg-danger">${p.failed} failed</span>` : ""}</td>
+    <td class="d-none d-md-table-cell" data-order="${p.payouts}">${p.payouts || '<span class="acc-sub">-</span>'}</td>
+    <td class="d-none d-lg-table-cell" data-order="${p.share}">${p.share ? A.money(p.share) : '<span class="acc-sub">-</span>'}</td>
+    <td class="d-none d-lg-table-cell" data-order="${p.last?.date || ""}">${p.last ? `${A.day(p.last.date)}<div class="acc-sub">${A.money(p.last.amount)}</div>` : '<span class="acc-sub">-</span>'}</td>
+    <td class="d-none d-md-table-cell" data-order="${p.on_the_way}">${p.on_the_way ? A.money(p.on_the_way) : '<span class="acc-sub">-</span>'}</td>
+    <td class="text-end" data-order="${p.paid}"><strong>${A.money(p.paid)}</strong></td>
+  </tr>`;
+
+  function payouts() {
+    const paid = po.places.reduce((t, p) => t + p.paid, 0);
+    $("gwPayoutsFigure").textContent = `${A.short(paid)} ${PERIODS[period].toLowerCase()}`;
+    $("gwPeriods").innerHTML = Object.entries(PERIODS).map(([k, l]) => `<button type="button" class="btn btn-sm ${k === period ? "btn-primary" : "btn-outline-primary"}" data-period="${k}">${l}</button>`).join("");
+    poKit?.destroy();
+    poKit = K.listTable({
+      tableId: "gwPoTable", stripId: "gwPoFilters", pillsId: "gwPoPills", rowsId: "gwPoRows", items: po.places, rowHtml: poRow, noun: "places", defaultPill: "all",
+      searchPlaceholder: "Search a place...",
+      pills: [
+        { key: "own", label: "Own Paystack", icon: "ri-bank-card-line", color: "success", test: (p) => p.route === "own" },
+        { key: "diocese", label: "Through the diocese", icon: "ri-community-line", color: "secondary", test: (p) => p.route === "diocese" },
+        { key: "failed", label: "Failed payouts", icon: "ri-error-warning-line", color: "danger", test: (p) => p.failed > 0 },
+      ],
+      sorts: [{ key: "paid", label: "Most paid", order: [[7, "desc"]] }, { key: "name", label: "By name", order: [[1, "asc"]] }],
+      actions: [],
+    });
+  }
+
+  async function loadPayouts() {
+    $("gwPoRows").innerHTML = UI.renderTableLoading(8);
+    const [from, to] = range();
+    const res = await API.gatewayPayouts(from, to);
+    if (!res.ok) {
+      $("gwPoRows").innerHTML = `<tr><td colspan="8">${A.errorBox(res.message)}</td></tr>`;
+      return;
+    }
+    po = res.data;
+    requests();
+    payouts();
+  }
+
+  function reviewWindow(r) {
+    const el = K.confirmWindow({
+      title: `${r.change ? "A change for" : "Own Paystack for"} ${r.place.name}`,
+      subtitle: "Check it against the church's bank letter - Paystack can't look up a Kenyan account name",
+      icon: "ri-search-eye-line",
+      go: '<i class="ri-check-line me-1"></i>Approve',
+      body: K.parts([
+        { icon: "ri-bank-line", title: "What they asked for", body: `<div class="acc-facts"><div><span>Bank</span><strong>${esc(r.bank)}</strong></div><div><span>Account number</span><strong>${esc(r.account_number)}</strong></div><div><span>Account name</span><strong>${esc(r.account_name)}</strong></div><div><span>Recorded into</span><strong>${esc(r.into?.name || "-")}</strong></div></div><div class="acc-sub mt-2">Asked ${A.day(r.on)}${r.by ? ` by ${esc(r.by)}` : ""}</div>` },
+        { icon: "ri-toggle-line", title: "Once approved", body: r.change ? '<p class="mb-0">Paystack\'s subaccount is changed to these details; it stays as it is (on or off).</p>' : '<div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="rvOn" checked><label class="form-check-label" for="rvOn">Switch it on at once - card gifts then settle to this bank</label></div>' },
+        { icon: "ri-reply-line", title: "Or send it back", hint: "The church sees your note", body: `<textarea class="form-control" id="rvNote" rows="2" maxlength="255" placeholder="What needs changing"></textarea><button type="button" class="btn btn-outline-danger btn-sm mt-2" id="rvBack"><i class="ri-reply-line me-1"></i>Send back</button>` },
+      ]),
+      run: async () => {
+        const out = await API.reviewChannel(r.id, { decision: "approve", switch_on: !!el.querySelector("#rvOn")?.checked });
+        if (out.ok) (loadPayouts(), load());
+        return out;
+      },
+    });
+    el.querySelector("#rvBack").addEventListener("click", async (e) => {
+      const btn = e.currentTarget;
+      UI.setButtonLoading(btn, "...");
+      const out = await API.reviewChannel(r.id, { decision: "return", note: el.querySelector("#rvNote").value.trim() || null });
+      UI.restoreButton(btn);
+      if (!out.ok) return Toast.error(out.message);
+      bootstrap.Modal.getInstance(el)?.hide();
+      Toast.success(out.message);
+      loadPayouts();
+      load();
+    });
+  }
+
+  function showTab() {
+    document.querySelectorAll("#gwTabs [data-tab]").forEach((b) => {
+      b.classList.toggle("active", b.dataset.tab === tab);
+      b.setAttribute("aria-selected", b.dataset.tab === tab);
+    });
+    $("gwPlacesPane").hidden = tab !== "places";
+    $("gwRequestsPane").hidden = tab !== "requests";
+    $("gwPayoutsPane").hidden = tab !== "payouts";
+  }
+
+  function setTab(t) {
+    tab = t;
+    const p = new URLSearchParams(window.location.search);
+    tab === "places" ? p.delete("tab") : p.set("tab", tab);
+    history.replaceState(null, "", `${window.location.pathname}${p.toString() ? `?${p}` : ""}`);
+    showTab();
+  }
+
   async function load() {
     $("statCardsRow").innerHTML = UI.skeletonCards(4, "col-xl-3 col-sm-6");
     $("gwRows").innerHTML = UI.renderTableLoading(6);
@@ -155,10 +273,14 @@
     data = res.data;
     cards();
     places();
+    const ch = data.places.filter((p) => p.level !== "diocese");
+    $("gwPlacesFigure").textContent = `${ch.filter((p) => p.channel?.status === "active").length} on their own Paystack`;
   }
 
   document.addEventListener("DOMContentLoaded", () => {
     $("gwRows").addEventListener("click", async (e) => {
+      const g = e.target.closest("[data-gotab]");
+      if (g) return setTab(g.dataset.gotab);
       const s = e.target.closest("[data-setup]");
       const t = e.target.closest("[data-toggle]");
       const mNew = e.target.closest("[data-mpesa-new]");
@@ -184,6 +306,25 @@
         out.ok ? (Toast.success(out.message), load()) : Toast.error(out.message);
       }
     });
+    const q = new URLSearchParams(window.location.search).get("tab");
+    if (["requests", "payouts"].includes(q)) tab = q;
+    showTab();
+    $("gwTabs").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-tab]");
+      if (b) setTab(b.dataset.tab);
+    });
+    $("gwRequestRows").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-review]");
+      if (b) reviewWindow(po.requests.find((r) => r.id === Number(b.dataset.review)));
+    });
+    $("gwPayoutsPane").addEventListener("click", (e) => {
+      const p = e.target.closest("[data-period]");
+      if (p) return ((period = p.dataset.period), loadPayouts());
+      if (e.target.closest("input, .pp-check")) return;
+      const tr = e.target.closest("#gwPoRows tr[data-id]");
+      if (tr) window.location.href = `${CTX.siteUrl}/diocese/accounting/giving.php?territory_id=${tr.dataset.id}&tab=payouts`;
+    });
     load();
+    loadPayouts();
   });
 })();

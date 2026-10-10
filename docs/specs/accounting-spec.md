@@ -575,6 +575,37 @@ A church that has its own Safaricom paybill or till (from Safaricom, or a bank p
 Public: `POST /api/payments/payhero/{key}`; the Daraja routes of A8 take a church channel's key too.
 Under `/api/accounting`: `POST gateways/channels` takes `provider` paystack | payhero | daraja with its fields; `POST gateways/channels/{id}/register` (own Daraja).
 
+## A10c - Getting paid: payout details, payouts per place, refunds (built 2026-10-10)
+
+How each place gets its card money, and seeing it arrive - borrowed from v1-events' client "Getting paid" and Settlements screens, but stored in the books instead of read live.
+
+### Getting paid (the church asks, the diocese checks)
+- On its **Online giving** page (tab "Getting paid") a place's treasurer (`accounting.accounts.manage` there) sees **how it gets paid**: card gifts - its own Paystack subaccount (settled to its bank) or held by the diocese and settled monthly; M-Pesa - its own paybill (A10b) or the diocese paybill.
+- The treasurer **asks** for its own Paystack: the bank (Paystack's list), account number, account name exactly as the bank has it, and which of its bank accounts in the books it lands in. The request waits **"Being checked"**; it can be withdrawn while it waits.
+- Changing the details of a subaccount already on is a new request; card gifts keep going to the old account until the diocese approves the change.
+- The diocese finance officer sees the requests on **Gateways** (tab "Requests"): the details in full, **Approve** (Paystack makes - or updates - the subaccount; optionally switched on at once) or **Send back** with a reason the church sees. Paystack can't look up a Kenyan account name, so this check is by eye, like v1-events' "Mark as checked".
+- The diocese can still set a church up itself on Gateways (A10a).
+
+### Payouts
+- Each Paystack payout (settlement) is recorded once with its status - pending, processing, success, failed - its gross, fees and net. A successful payout posts Dr the place's bank / Cr 1170 (A10a); a failed one is kept and flagged, never posted.
+- **Which gifts it paid:** Paystack doesn't list the payments in a subaccount's payout, so they are matched by day (Lagos time): the unpaid gifts of the day two days before, else one, else three, else a run of up to five days (a weekend). Exact = **"Adds up"**; otherwise the nearest day is taken as **"Closest match"**. The church's part of a gift (after the fee and the diocese share) is matched to its payouts; the diocese's part (the share, a held gift, its own gifts) to the diocese's main-account payouts.
+- **Payouts tab** on Online giving, every level: paid to our bank this year, the last payout, **on the way** (paid gifts not yet in a payout), the average; each payout with the days it covered, its amount, status and receipt in the books; **a window per payout** - its gifts, gross less Paystack's fee less the diocese share = to the bank. A place without its own Paystack sees the diocese's monthly settlements (A8) there instead.
+- **Gateways, tab "Payouts":** every place - how it is paid, payouts and amount paid to its bank in the period, the diocese share split off, the last payout, on the way - each opening that place's payouts.
+
+### Refunds and disputes (Paystack webhooks, signed)
+- `refund.processed` for a whole gift: the gift's journals are reversed (both books; the budget entries go with them), a split-off share's remittance is cancelled (so Remittances shows it owed again), and the gift is **Refunded**. Once only.
+- A part refund is recorded on the gift and flagged to adjust with a journal - it is never guessed.
+- `charge.dispute.create` marks the gift **Disputed**; `charge.dispute.resolve` lost (merchant-accepted) is handled as a whole refund; won clears the mark.
+- **Month-end warnings:** a failed Paystack payout, a gift still disputed, a part refund not adjusted.
+
+### Data
+- `payment_channels`: `request` (the details asked for, JSON), `requested_by/at`, `review_note`, `checked_by/at`; status `pending` = asked for, not made yet.
+- `paystack_settlements`: `status`, `gross`, `fees`, `covers_from`, `covers_to`, `matched` (adds_up | closest | none).
+- `gifts`: `settlement_id` (the place's payout), `main_settlement_id` (the diocese's), `refunded_amount`, `refunded_at`, `disputed_at`; status `refunded`.
+
+### API (under /api/accounting)
+`GET giving/payouts`, `GET giving/payouts/{id}`, `GET giving/payout-options`, `POST|DELETE giving/payout-request`; `POST gateways/channels/{id}/review` {decision: approve|return, note, switch_on}; `GET gateways/payouts?from&to`.
+
 ## Later phases (outline - specified when built)
 - **A2 Reconciliation:** built 2026-10-09, see "A2 - Reconciliation" above.
 - **A3 Sunday collections:** built 2026-10-09, see "A3 - Sunday collections" above.
@@ -585,7 +616,7 @@ Under `/api/accounting`: `POST gateways/channels` takes `provider` paystack | pa
 - **A8 The diocese M-Pesa paybill:** built 2026-10-10, see "A8 - The diocese M-Pesa paybill" above.
 - **A9 Financial statements:** I&E, financial position, receipts & payments,
   changes in funds, consolidation, year-end close, the audit pack.
-- **A10 Church gateways:** built 2026-10-10, see "A10a" and "A10b" above.
+- **A10 Church gateways:** built 2026-10-10, see "A10a", "A10b" and "A10c" above.
 
 ## Demo data (2026-10-10)
 `php artisan db:seed --class=AccountingDemoSeeder` fills **CCI SULTAN HAMUD**'s books from **1 January 2025 to today**, so the pages make sense with data. `--class=AccountingDemoRemoveSeeder` takes it all away again.
