@@ -736,6 +736,11 @@ What a giver gives for (Tithe, Offering, a region's conference...) and the funds
   - The diocese as owner: diocese income.
   - An owned option paid into a church's own paybill waits in To sort.
 
+**Part 3 (built 2026-10-10):** the pages.
+- Settings › Giving options & funds (`assets/js/pages/settings/sections/giving-options.js`): "Our giving options" (name, Pay Bill ending with the account number it makes, booked to, kept in, who can give for it, other words, icon, colour, on/off, order); at the diocese "Standard options" with "When no ending is typed"; elsewhere "From the diocese (and region)", each with "Show on our giving page"; "Our funds" (name, code, kept apart, who can use it, on/off) and the funds from above. One Save; a new fund can be picked on an option before saving.
+- The giving page draws each option's icon and colour from its settings and names the owner ("For Sultan Hamud Region"); Pay Bill account numbers are matched by key; an option a church's own paybill can't take says to pick M-Pesa or Card.
+- Paybill, Online giving and Transactions take the option list (colours, filters, "Given for" pickers) from the API.
+
 **Part 2 (built 2026-10-10):** owners and place funds.
 - `Funds` service (`forPlace`, `usableIds`, `present`, `inUse`, `save`); `Ledger::checkLines` refuses a fund that isn't the place's ("One of the funds isn't one of this place's"); every fund list (options, accounts, procurement, requisitions, collections, the dashboard's by-fund) is per place. `Statements::fundOf` maps equity accounts from standard funds only; `fundInfo` carries `owner`.
 - `GivingPurposes` adds `visibleAt`, `usableAt`, `forPlace` (less hidden), `ownFor` (what a church's own paybill takes), `booksFor`, `hidden`/`hide`, `inUse`, `save`.

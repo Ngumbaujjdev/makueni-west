@@ -107,6 +107,7 @@ One **Settings** page for each level: church, region and diocese. Each place fil
 | | Service times (custom) | ✓ | — | ✓ |
 | | Leadership & team (custom) | ✓ | ✓ | ✓ |
 | Money | Payment details (form, S5) | later | ✓ | ✓ |
+| | Giving options & funds (custom, `givingoptions`, accounting-spec A11) | ✓ own options and funds; inherited ones with "Show on our giving page" | ✓ + "for every church under us" | ✓ + the standard options and the default |
 | | Budgets (link → Budget Settings) | ✓ | ✓ | ✓ |
 | Messages | Email, SMS (forms, S4a) | — | — | email server, SMS gateway, sender ID (global admins) |
 | Ministry | Attendance: gathering types (link) | ✓ | — | — |
