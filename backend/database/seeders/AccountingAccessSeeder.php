@@ -36,6 +36,7 @@ class AccountingAccessSeeder extends Seeder
         'collections' => ['collections.php', 'Collections', 'Sunday collections: counted by one, confirmed by another, receipted per fund, banked', ['church']],
         'approvals' => ['approvals.php', 'Approvals', 'What waits for my approval, what I asked for, and who I hand it to while away', null],
         'requisitions' => ['requisitions.php', 'Requisitions', 'Ask for money - to pay, to buy, or an advance - approved, then paid', null],
+        'remittances' => ['remittances.php', 'Remittances', 'The share sent up and support sent down - due from the books, sent by voucher, confirmed by the place receiving it', null],
         'procurement' => ['procurement.php', 'Procurement', 'Bigger purchases: quotations, the order, goods received, the supplier\'s bill, then payment', null],
         'rules' => ['approval-rules.php', 'Approval rules', 'Who approves what, by level and amount, and who it goes to when late', ['diocese']],
     ];
@@ -53,6 +54,7 @@ class AccountingAccessSeeder extends Seeder
             'accounting.collections.read' => 'collections',
             'accounting.requisitions.read' => 'requisitions',
             'accounting.procurement.read' => 'procurement',
+            'accounting.remittances.read' => 'remittances',
         ],
         'receipt' => ['accounting.receipts.create' => 'receipts'],
         'prepare' => ['accounting.payments.prepare' => 'payments'],

@@ -732,6 +732,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('procurement/bills/{id}/pay', [$pro, 'payBill'])->whereNumber('id');
         Route::post('procurement/bills/{id}/reverse', [$pro, 'reverseBill'])->whereNumber('id');
         Route::get('procurement/bills/{id}/file', [$pro, 'billFile'])->whereNumber('id');
+        // A6 - remittances between levels.
+        $rem = \App\Http\Controllers\Api\Accounting\RemittanceController::class;
+        Route::get('remittances', [$rem, 'index']);
+        Route::get('remittances/options', [$rem, 'options']);
+        Route::get('remittances/board', [$rem, 'board']);
+        Route::get('remittances/statement', [$rem, 'statement']);
+        Route::post('remittances', [$rem, 'store']);
+        Route::get('remittances/{id}', [$rem, 'show'])->whereNumber('id');
+        Route::post('remittances/{id}/confirm', [$rem, 'confirm'])->whereNumber('id');
+        Route::post('remittances/{id}/unconfirm', [$rem, 'unconfirm'])->whereNumber('id');
+        Route::post('remittances/{id}/query', [$rem, 'query'])->whereNumber('id');
+        Route::post('remittances/{id}/answer', [$rem, 'answer'])->whereNumber('id');
     });
 
     // Approvals (docs/specs/accounting-spec.md, A4) - my inbox, decisions, delegations, the rules.

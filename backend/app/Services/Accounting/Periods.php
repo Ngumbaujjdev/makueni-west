@@ -107,6 +107,33 @@ final class Periods
             $warnings[] = 'Petty cash is KES '.number_format($petty['top_up'], 2).' below its float - top it up.';
         }
 
+        // A4 - advances not accounted for by their date.
+        $overdue = \App\Models\StaffAdvance::where('territory_id', $place->id)->where('status', 'open')->where('due_on', '<=', $e)->get();
+        if ($overdue->isNotEmpty()) {
+            $warnings[] = "{$overdue->count()} staff ".($overdue->count() === 1 ? 'advance is' : 'advances are').' past the date to account for '.($overdue->count() === 1 ? 'it' : 'them').' (KES '.number_format($overdue->sum(fn ($a) => $a->outstanding()), 2).' still out).';
+        }
+        // A5 - supplier bills past their due date.
+        $bills = \App\Models\SupplierInvoice::where('territory_id', $place->id)->where('status', 'posted')->whereNotNull('due_on')->where('due_on', '<=', $e)->get();
+        if ($bills->isNotEmpty()) {
+            $warnings[] = "{$bills->count()} supplier ".($bills->count() === 1 ? 'bill is' : 'bills are').' past due (KES '.number_format((float) $bills->sum('amount'), 2).').';
+        }
+        // A6 - money between places.
+        $out = \App\Models\Remittance::where('from_territory_id', $place->id)->whereIn('status', ['sent', 'queried'])->where('sent_on', '<=', $e)->get();
+        if ($out->where('status', 'queried')->isNotEmpty()) {
+            $warnings[] = $out->where('status', 'queried')->count().' sent '.($out->where('status', 'queried')->count() === 1 ? 'remittance is' : 'remittances are').' queried by the place receiving it - answer under Remittances.';
+        }
+        if ($out->where('status', 'sent')->isNotEmpty()) {
+            $warnings[] = 'KES '.number_format((float) $out->where('status', 'sent')->sum('amount'), 2).' sent to other places is not confirmed received yet.';
+        }
+        $in = \App\Models\Remittance::where('to_territory_id', $place->id)->whereIn('status', ['sent', 'queried'])->where('sent_on', '<=', $e)->get();
+        if ($in->isNotEmpty()) {
+            $warnings[] = 'KES '.number_format((float) $in->sum('amount'), 2).' from other places is waiting for you to confirm it reached you.';
+        }
+        $owed = collect(app(Remittances::class)->owing($place, $year))->sum(fn ($r) => collect($r['months'])->firstWhere('month', $start->format('Y-m'))['owed'] ?? 0);
+        if ($owed > 0.009) {
+            $warnings[] = 'KES '.number_format($owed, 2).' of the '.$start->format('F').' share is not sent yet.';
+        }
+
         return ['checks' => $checks, 'blockers' => $blockers, 'warnings' => $warnings];
     }
 

@@ -36,9 +36,10 @@ final class PaymentVouchers
                 'payee_phone' => $data['payee_phone'] ?? null,
                 'pay_from_account_id' => $from->id,
                 'narration' => trim($data['narration']),
-                'purpose' => in_array($data['purpose'] ?? 'payment', ['imprest_topup', 'advance', 'bill'], true) ? $data['purpose'] : 'payment',
+                'purpose' => in_array($data['purpose'] ?? 'payment', ['imprest_topup', 'advance', 'bill', 'remittance'], true) ? $data['purpose'] : 'payment',
                 'requisition_id' => $data['requisition_id'] ?? null,
                 'supplier_invoice_id' => $data['supplier_invoice_id'] ?? null,
+                'remittance_id' => $data['remittance_id'] ?? null,
                 'amount' => $total,
                 'status' => ($data['status'] ?? 'prepared') === 'authorised' ? 'authorised' : 'prepared',
                 'authorised_by' => ($data['status'] ?? '') === 'authorised' ? ($data['authorised_by'] ?? null) : null,
@@ -176,6 +177,9 @@ final class PaymentVouchers
             if ($pv->supplier_invoice_id) {
                 app(Procurement::class)->voucherPaid($pv->fresh());
             }
+            if ($pv->remittance_id) {
+                app(Remittances::class)->voucherPaid($pv->fresh());
+            }
 
             return $pv->fresh('lines');
         });
@@ -185,6 +189,9 @@ final class PaymentVouchers
     public function reversePayment(PaymentVoucher $pv, User $user, string $reason): PaymentVoucher
     {
         $this->assertStatus($pv, ['paid'], 'Only a paid voucher can have its payment reversed.');
+        if ($pv->remittance_id) {
+            app(Remittances::class)->assertPaymentReversible($pv);
+        }
 
         return DB::transaction(function () use ($pv, $user, $reason) {
             $journal = Journal::findOrFail($pv->journal_id);
@@ -193,6 +200,9 @@ final class PaymentVouchers
             $pv->update(['status' => 'authorised', 'paid_by' => null, 'paid_at' => null, 'paid_on' => null, 'journal_id' => null]);
             if ($pv->supplier_invoice_id) {
                 app(Procurement::class)->voucherUnpaid($pv);
+            }
+            if ($pv->remittance_id) {
+                app(Remittances::class)->voucherUnpaid($pv);
             }
 
             return $pv->fresh('lines');
@@ -208,6 +218,9 @@ final class PaymentVouchers
         $pv->update(['status' => 'cancelled', 'cancelled_by' => $user->id, 'cancelled_at' => now()]);
         if ($pv->supplier_invoice_id) {
             app(Procurement::class)->voucherCancelled($pv);
+        }
+        if ($pv->remittance_id) {
+            app(Remittances::class)->voucherCancelled($pv);
         }
 
         return $pv->fresh('lines');
