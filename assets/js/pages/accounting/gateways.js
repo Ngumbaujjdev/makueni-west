@@ -6,6 +6,9 @@
  * made on Paystack from the church's bank details, off until switched on,
  * and which of its bank accounts the payouts are recorded into. The diocese
  * sets where its own payouts land. The latest payouts below.
+ * A10b: a church's own paybill or till - through PayHero or its own Daraja
+ * app - so M-Pesa gifts land straight in its own M-Pesa. Keys go in and are
+ * only ever shown as "saved".
  * ============================================================================
  */
 (function () {
@@ -26,20 +29,34 @@
   function cards() {
     const ch = data.places.filter((p) => p.level !== "diocese");
     const on = ch.filter((p) => p.channel?.status === "active");
+    const own = ch.filter((p) => p.mpesa.some((m) => m.status === "active"));
     K.statRow($("statCardsRow"), [
       { icon: "ri-bank-card-line", label: "Paystack", sub: data.ready ? "Keys saved" : "Add the keys in Settings", value: data.ready ? (data.mode === "live" ? "Live" : "Test") : "Off", color: data.ready ? "success" : "danger" },
       { icon: "ri-community-line", label: "Churches on their own Paystack", sub: `${ch.length - on.length} through the diocese`, value: `${on.length}/${ch.length}`, color: "primary" },
       { icon: "ri-time-line", label: "Card gifts waiting", sub: "Checked every 10 minutes", value: A.num(data.gifts_pending), color: "warning" },
-      { icon: "ri-exchange-funds-line", label: "Payouts recorded", sub: "The latest 50 below", value: A.num(data.settlements.length), color: "purple" },
+      { icon: "ri-smartphone-line", label: "Churches on their own M-Pesa", sub: `${ch.length - own.length} through the diocese paybill`, value: `${own.length}/${ch.length}`, color: "purple" },
     ]);
     $("gwReady").innerHTML = data.ready ? "" : `<div class="alert alert-warning">Paystack isn't set up - add the secret key in <a href="${CTX.siteUrl}/diocese/settings/?section=giving">Settings, Online giving</a>. Until then the giving page offers M-Pesa only.</div>`;
   }
 
-  const rowHtml = (p) => `<tr data-id="${p.id}" data-pills="${p.channel ? p.channel.status : "none"} ${p.level}">
+  const MPESA_ICON = { payhero: "ri-flashlight-line", daraja: "ri-smartphone-line" };
+
+  /** The place's own M-Pesa: each channel with its state and what can be done next. */
+  const mpesaCell = (p) => {
+    if (p.level === "diocese") return '<span class="soft-chip soft-success"><i class="ri-smartphone-line me-1"></i>The diocese paybill</span>';
+    const rows = p.mpesa.map((m) => `<div class="mb-2"><div class="d-flex flex-wrap align-items-center gap-1"><span class="fw-semibold"><i class="${MPESA_ICON[m.provider]} me-1"></i>${esc(m.provider_label)}</span>${pill(m)}${m.environment === "sandbox" ? '<span class="soft-chip soft-warning">Sandbox</span>' : ""}</div>
+      <div class="acc-sub">${m.till ? "Till" : "Paybill"} ${esc(m.number || "")} · into ${esc(m.settles_into?.name || "-")}${m.ready ? "" : ' · <span class="text-danger">details missing</span>'}</div>
+      <div class="d-flex flex-wrap gap-1 mt-1"><button type="button" class="btn btn-sm ${m.status === "active" ? "btn-outline-warning" : "btn-success"}" data-toggle="${m.id}" data-to="${m.status === "active" ? "off" : "active"}">${m.status === "active" ? "Switch off" : "Switch on"}</button><button type="button" class="btn btn-sm btn-outline-primary" data-mpesa-edit="${m.id}" data-place="${p.id}">Change</button>${m.provider === "daraja" ? `<button type="button" class="btn btn-sm btn-outline-primary" data-register="${m.id}">Register</button>` : ""}</div></div>`).join("");
+    const more = p.mpesa.length < 2 ? `<button type="button" class="btn btn-sm btn-outline-primary" data-mpesa-new="${p.id}"><i class="ri-add-line me-1"></i>${p.mpesa.length ? "Another route" : "Own paybill"}</button>` : "";
+    return `${rows || '<div class="acc-sub mb-1">Through the diocese paybill</div>'}${more}`;
+  };
+
+  const rowHtml = (p) => `<tr data-id="${p.id}" data-pills="${p.channel ? p.channel.status : "none"} ${p.mpesa.some((m) => m.status === "active") ? "ownmpesa" : ""} ${p.level}">
     ${K.checkCell(p.id, p.name)}
     <td data-search="${esc(`${p.name} ${p.code}`)}" data-order="${esc(p.name)}"><div class="fw-semibold">${esc(p.name)}</div><div class="acc-sub">${esc(p.code)} · ${esc(p.level)}</div></td>
     <td class="d-none d-md-table-cell">${p.channel ? `${esc(p.channel.bank || "")} ${esc(p.channel.account_number || "")}<div class="acc-sub">into ${esc(p.channel.settles_into?.name || "-")}</div>` : '<span class="acc-sub">-</span>'}</td>
     <td>${p.level === "diocese" ? (p.channel ? '<span class="badge bg-success">Payouts recorded</span>' : '<span class="badge bg-secondary">Pick its bank account</span>') : pill(p.channel)}${p.channel?.subaccount ? `<div class="acc-sub mt-1">${esc(p.channel.subaccount)}</div>` : ""}</td>
+    <td>${mpesaCell(p)}</td>
     <td class="text-end text-nowrap">${!p.channel ? `<button type="button" class="btn btn-sm btn-primary" data-setup="${p.id}"><i class="ri-add-line me-1"></i>Set up</button>` : p.level === "diocese" ? "" : `<button type="button" class="btn btn-sm ${p.channel.status === "active" ? "btn-outline-warning" : "btn-success"}" data-toggle="${p.channel.id}" data-to="${p.channel.status === "active" ? "off" : "active"}">${p.channel.status === "active" ? "Switch off" : "Switch on"}</button>`}</td>
   </tr>`;
 
@@ -52,6 +69,7 @@
         { key: "active", label: "On", icon: "ri-checkbox-circle-line", color: "success", test: (p) => p.channel?.status === "active" },
         { key: "off", label: "Off", icon: "ri-pause-circle-line", color: "warning", test: (p) => p.channel?.status === "off" },
         { key: "none", label: "Not set up", icon: "ri-add-circle-line", color: "secondary", test: (p) => !p.channel },
+        { key: "ownmpesa", label: "Own M-Pesa", icon: "ri-smartphone-line", color: "purple", test: (p) => p.mpesa.some((m) => m.status === "active") },
       ],
       sorts: [{ key: "name", label: "By name", order: [[1, "asc"]] }],
       actions: [],
@@ -85,12 +103,53 @@
     ["#chBank", "#chInto"].forEach((s) => el.querySelector(s) && UI.enhanceSelect(el.querySelector(s), { search: true }));
   }
 
+  /** A church's own paybill or till: PayHero or its own Daraja app (A10b). */
+  async function mpesaWindow(place, channel) {
+    const res = await API.gatewayBanks(place.id);
+    if (!res.ok) return Toast.error(res.message);
+    const accounts = res.data.mpesa_accounts;
+    const taken = place.mpesa.map((m) => m.provider);
+    let provider = channel?.provider || (taken.includes("payhero") ? "daraja" : "payhero");
+    const saved = (k) => (channel?.keys?.[k] ? "Saved - leave blank to keep" : "");
+    const tile = (k, t, sub, icon, color) => `<label class="acc-tile" style="--q: var(--${color}-rgb)"><input type="radio" name="mpProvider" value="${k}"${provider === k ? " checked" : ""}${channel || taken.includes(k) ? " disabled" : ""}><span class="acc-tile-icon"><i class="${icon}"></i></span><span class="acc-tile-text"><strong>${t}</strong><small>${sub}</small></span></label>`;
+    const keys = {
+      payhero: `<div class="row g-2"><div class="col-sm-6"><input type="text" class="form-control" id="mpUser" autocomplete="off" placeholder="${saved("username") || "API username"}"></div><div class="col-sm-6"><input type="password" class="form-control" id="mpPass" autocomplete="new-password" placeholder="${saved("password") || "API password"}"></div><div class="col-sm-6"><input type="text" inputmode="numeric" class="form-control" id="mpChannel" placeholder="${saved("channel_id") || "Payment channel id, e.g. 911"}"></div></div><div class="acc-sub mt-2">In PayHero: API Keys for the username and password; Payment Channels for the id of the church's paybill or till.</div>`,
+      daraja: `<div class="row g-2"><div class="col-sm-6"><select class="form-select" id="mpEnv"><option value="sandbox"${channel?.environment === "production" ? "" : " selected"}>Sandbox (testing)</option><option value="production"${channel?.environment === "production" ? " selected" : ""}>Live</option></select></div><div class="col-sm-6"><input type="text" class="form-control" id="mpCk" autocomplete="off" placeholder="${saved("consumer_key") || "Consumer key"}"></div><div class="col-sm-6"><input type="password" class="form-control" id="mpCs" autocomplete="new-password" placeholder="${saved("consumer_secret") || "Consumer secret"}"></div><div class="col-sm-6"><input type="password" class="form-control" id="mpPk" autocomplete="new-password" placeholder="${saved("passkey") || "Lipa na M-Pesa passkey"}"></div></div><div class="acc-sub mt-2">From the church's app on developer.safaricom.co.ke. After saving, press Register so Safaricom tells us about each payment.</div>`,
+    };
+    const el = K.confirmWindow({
+      title: channel ? `${channel.provider_label} for ${place.name}` : `Own M-Pesa for ${place.name}`,
+      subtitle: "M-Pesa gifts on the giving page go straight to the church's own paybill or till, into its own books",
+      icon: "ri-smartphone-line",
+      go: '<i class="ri-check-line me-1"></i>' + (channel ? "Save" : "Save it (off until switched on)"),
+      body: K.parts([
+        { icon: "ri-links-line", title: "How it connects", body: `<div class="acc-tiles">${tile("payhero", "PayHero", "Any paybill or till, bank paybills too", "ri-flashlight-line", "purple")}${tile("daraja", "Its own Daraja app", "A Safaricom paybill with a developer app", "ri-smartphone-line", "success")}</div>` },
+        { icon: "ri-hashtag", title: "The paybill or till", body: `<div class="row g-2 align-items-center"><div class="col-sm-6"><input type="text" inputmode="numeric" class="form-control" id="mpNumber" value="${esc(channel?.number || "")}" placeholder="e.g. 4123456"></div><div class="col-sm-6"><div class="btn-group w-100" role="group"><input type="radio" class="btn-check" name="mpKind" id="mpKindP" value="0"${channel?.till ? "" : " checked"}><label class="btn btn-outline-primary" for="mpKindP">Paybill</label><input type="radio" class="btn-check" name="mpKind" id="mpKindT" value="1"${channel?.till ? " checked" : ""}><label class="btn btn-outline-primary" for="mpKindT">Till</label></div></div></div>` },
+        { icon: "ri-key-2-line", title: "Its keys", hint: "Kept encrypted - never shown again", body: `<div id="mpKeys">${keys[provider]}</div>` },
+        { icon: "ri-book-2-line", title: "Recorded into", hint: "Which M-Pesa account in the church's books", body: `<select class="form-select" id="mpInto">${channel ? "" : '<option value="">A new M-Pesa account for it</option>'}${accounts.map((a) => `<option value="${a.id}"${channel?.settles_into?.id === a.id ? " selected" : ""}>${esc(a.code)} · ${esc(a.name)}${a.number ? ` (${esc(a.number)})` : ""}</option>`).join("")}</select>` },
+      ]),
+      run: async () => {
+        const v = (id) => el.querySelector(id)?.value.trim() || null;
+        const body = { number: v("#mpNumber"), till: el.querySelector('input[name="mpKind"]:checked').value === "1", settles_into_id: Number(v("#mpInto")) || null };
+        Object.assign(body, provider === "payhero" ? { username: v("#mpUser"), password: v("#mpPass"), channel_id: v("#mpChannel") ? Number(v("#mpChannel")) : null } : { environment: v("#mpEnv"), consumer_key: v("#mpCk"), consumer_secret: v("#mpCs"), passkey: v("#mpPk") });
+        const out = channel ? await API.updateChannel(channel.id, body) : await API.saveChannel({ ...body, provider, territory_id: place.id });
+        if (out.ok) load();
+        return out;
+      },
+    });
+    el.querySelectorAll('input[name="mpProvider"]').forEach((r) => r.addEventListener("change", () => {
+      provider = r.value;
+      el.querySelector("#mpKeys").innerHTML = keys[provider];
+      el.querySelector("#mpEnv") && UI.enhanceSelect(el.querySelector("#mpEnv"));
+    }));
+    ["#mpInto", "#mpEnv"].forEach((s) => el.querySelector(s) && UI.enhanceSelect(el.querySelector(s)));
+  }
+
   async function load() {
     $("statCardsRow").innerHTML = UI.skeletonCards(4, "col-xl-3 col-sm-6");
-    $("gwRows").innerHTML = UI.renderTableLoading(5);
+    $("gwRows").innerHTML = UI.renderTableLoading(6);
     const res = await API.gateways();
     if (!res.ok) {
-      $("gwRows").innerHTML = `<tr><td colspan="5">${A.errorBox(res.message)}</td></tr>`;
+      $("gwRows").innerHTML = `<tr><td colspan="6">${A.errorBox(res.message)}</td></tr>`;
       return;
     }
     data = res.data;
@@ -102,7 +161,22 @@
     $("gwRows").addEventListener("click", async (e) => {
       const s = e.target.closest("[data-setup]");
       const t = e.target.closest("[data-toggle]");
-      if (s) return setupWindow(data.places.find((p) => p.id === Number(s.dataset.setup)));
+      const mNew = e.target.closest("[data-mpesa-new]");
+      const mEdit = e.target.closest("[data-mpesa-edit]");
+      const reg = e.target.closest("[data-register]");
+      const placeOf = (id) => data.places.find((p) => p.id === Number(id));
+      if (s) return setupWindow(placeOf(s.dataset.setup));
+      if (mNew) return mpesaWindow(placeOf(mNew.dataset.mpesaNew), null);
+      if (mEdit) {
+        const place = placeOf(mEdit.dataset.place);
+        return mpesaWindow(place, place.mpesa.find((m) => m.id === Number(mEdit.dataset.mpesaEdit)));
+      }
+      if (reg) {
+        UI.setButtonLoading(reg, "...");
+        const out = await API.registerChannel(Number(reg.dataset.register));
+        UI.restoreButton(reg);
+        return out.ok ? (Toast.success(out.message), load()) : Toast.error(out.message);
+      }
       if (t) {
         UI.setButtonLoading(t, "...");
         const out = await API.updateChannel(Number(t.dataset.toggle), { status: t.dataset.to });

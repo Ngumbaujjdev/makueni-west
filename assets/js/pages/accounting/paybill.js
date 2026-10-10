@@ -52,11 +52,11 @@
     ]);
     $("pbPaymentsFigure").textContent = `${A.short(sum(month0))} this month`;
     if ($("pbSortFigure")) $("pbSortFigure").textContent = data.to_sort ? `${data.to_sort} waiting` : "Nothing waiting";
-    if ($("pbNumbersFigure")) $("pbNumbersFigure").textContent = data.shortcode ? `Paybill ${data.shortcode}` : "Not set up yet";
+    if ($("pbNumbersFigure")) $("pbNumbersFigure").textContent = data.own ? `Our ${data.own.till ? "till" : "paybill"} ${data.own.number}` : data.shortcode ? `Paybill ${data.shortcode}` : "Not set up yet";
     if ($("pbSetupFigure")) $("pbSetupFigure").textContent = data.setup.ready ? (data.setup.environment === "production" ? "Live" : "Sandbox") : "Not set up";
   }
 
-  const rowHtml = (p) => `<tr class="acc-row" data-id="${p.id}" data-pills="${p.status}${p.purpose ? ` p${p.purpose}` : ""}">
+  const rowHtml = (p) => `<tr class="acc-row" data-id="${p.id}" data-pills="${p.status}${p.purpose ? ` p${p.purpose}` : ""}${p.own ? " own" : ""}">
     ${K.checkCell(p.id, p.trans_id)}
     <td data-search="${esc(`${p.payer_name || ""} ${p.phone || ""} ${p.trans_id} ${p.bill_ref || ""} ${p.place?.name || ""}`)}"><div class="fw-semibold">${esc(p.payer_name || "M-Pesa payer")}</div><div class="acc-sub">${esc(p.trans_id)}${p.phone ? ` · ${esc(p.phone)}` : ""}</div></td>
     <td data-order="${p.paid_at}" class="text-nowrap">${when(p.paid_at)}</td>
@@ -70,7 +70,7 @@
     if (!data.payments.length) {
       $("pbPills").innerHTML = "";
       $("pbFilters").innerHTML = "";
-      $("pbRows").innerHTML = `<tr><td colspan="6">${A.empty("ri-smartphone-line", "No paybill payments yet", data.diocese ? (data.setup.ready ? "Payments show here as Safaricom sends them." : "Set up the paybill first - Setup tab.") : "When members pay the diocese paybill with our account number, it shows here.")}</td></tr>`;
+      $("pbRows").innerHTML = `<tr><td colspan="6">${A.empty("ri-smartphone-line", "No paybill payments yet", data.diocese ? (data.setup.ready ? "Payments show here as Safaricom sends them." : "Set up the paybill first - Setup tab.") : (data.own ? `When members pay our ${data.own.till ? "till" : "paybill"} ${data.own.number}, each payment shows here.` : "When members pay the diocese paybill with our account number, it shows here."))}</td></tr>`;
       return;
     }
     kit = K.listTable({
@@ -103,13 +103,22 @@
       : `<tr><td colspan="5">${A.empty("ri-checkbox-circle-line", "Nothing to sort", "Every payment named its place.")}</td></tr>`;
   }
 
+  const quote = (a) => `<div class="acc-quote"><div class="min-w-0 flex-fill"><div class="fw-semibold">${esc(a.label)}</div><div class="acc-sub">Account number</div></div><strong class="fs-5 text-nowrap">${esc(a.account)}</strong><button type="button" class="btn btn-sm btn-icon btn-outline-primary" data-copy="${esc(a.account)}" aria-label="Copy ${esc(a.account)}"><i class="ri-file-copy-line"></i></button></div>`;
+
   function numbers() {
     if (!$("pbNumbers")) return;
+    const own = data.own;
+    if (own) {
+      // Our own paybill or till (A10b): straight into our books, nothing held by the diocese.
+      $("pbNumbers").innerHTML = `<div class="row g-3"><div class="col-lg-5"><div class="acc-facts"><div><span>Our own ${own.till ? "till (Buy Goods)" : "paybill"}</span><strong class="fs-4">${esc(own.number)}</strong></div><div><span>Steps on the phone</span><strong>M-Pesa → Lipa na M-Pesa → ${own.till ? `Buy Goods → ${esc(own.number)}` : `Pay Bill → ${esc(own.number)} → the account number`} → the amount → PIN</strong></div></div><p class="acc-sub mt-2 mb-0">Through ${esc(own.label)} - the money comes straight to us and is in our books at once. We send the diocese share under Remittances as usual.</p></div>
+        <div class="col-lg-7">${own.till ? `<p class="mb-0">A till takes no account number - gifts paid to it straight count as ${esc(data.account_numbers[0]?.label?.replace(/^Any \(|\)$/g, "") || "offering")}. The giving page asks what each gift is for.</p>` : `<div class="acc-quotes">${own.accounts.map(quote).join("")}</div>`}</div></div>`;
+      return;
+    }
     const short = data.shortcode;
     $("pbNumbers").innerHTML = !short
       ? A.empty("ri-smartphone-line", "The diocese paybill isn't set up yet", "Once it is, members pay with our account number below.")
       : `<div class="row g-3"><div class="col-lg-5"><div class="acc-facts"><div><span>Business number (paybill)</span><strong class="fs-4">${esc(short)}</strong></div><div><span>Steps on the phone</span><strong>M-Pesa → Lipa na M-Pesa → Pay Bill → ${esc(short)} → the account number → the amount → PIN</strong></div></div><p class="acc-sub mt-2 mb-0">The giving is in our books the same day. The diocese holds the money and pays it to us monthly, less the diocese share we owe.</p></div>
-        <div class="col-lg-7"><div class="acc-quotes">${data.account_numbers.map((a) => `<div class="acc-quote"><div class="min-w-0 flex-fill"><div class="fw-semibold">${esc(a.label)}</div><div class="acc-sub">Account number</div></div><strong class="fs-5 text-nowrap">${esc(a.account)}</strong><button type="button" class="btn btn-sm btn-icon btn-outline-primary" data-copy="${esc(a.account)}" aria-label="Copy ${esc(a.account)}"><i class="ri-file-copy-line"></i></button></div>`).join("")}</div></div></div>`;
+        <div class="col-lg-7"><div class="acc-quotes">${data.account_numbers.map(quote).join("")}</div></div></div>`;
   }
 
   async function settlements() {

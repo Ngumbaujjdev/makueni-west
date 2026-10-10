@@ -9,10 +9,14 @@ include __DIR__ . '/toolbar.php';
             <div class="card-header"><div><div class="card-title">Our giving link</div><span class="card-subtitle-text">Share it on WhatsApp, the bulletin or a screen in church</span></div></div>
             <div class="card-body" id="gvLink"></div>
         </div>
+        <div class="card custom-card">
+            <div class="card-header"><div><div class="card-title">Our own M-Pesa</div><span class="card-subtitle-text">Gifts straight to our own paybill or till</span></div></div>
+            <div class="card-body" id="gvMpesa"></div>
+        </div>
     </div>
     <div class="col-xl-8">
         <div class="card custom-card">
-            <div class="card-header"><div><div class="card-title">Gifts made online</div><span class="card-subtitle-text">By M-Pesa through the diocese paybill, or by card on Paystack - each in our books when paid</span></div></div>
+            <div class="card-header"><div><div class="card-title">Gifts made online</div><span class="card-subtitle-text">By M-Pesa (our own paybill, or the diocese's) or by card on Paystack - each in our books when paid</span></div></div>
             <div class="card-body pb-0 pt-3" id="gvPills"></div>
             <div class="card-body p-0" id="gvTableWrap">
                 <div id="gvFilters" class="list-filterbar-wrap"></div>

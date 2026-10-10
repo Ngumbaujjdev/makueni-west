@@ -2,7 +2,7 @@
 /**
  * Public giving page (docs/specs/accounting-spec.md, A10a) - give.php?c=SHR027.
  * No sign-in. A member gives to their church by M-Pesa (the prompt on their
- * phone, through the diocese paybill) or by card / M-Pesa on Paystack's page.
+ * phone, through the church's own paybill (A10b) or the diocese paybill) or by card / M-Pesa on Paystack's page.
  * It never shows any figure from the books.
  */
 require_once __DIR__ . '/includes/session-manager.php';
@@ -86,7 +86,7 @@ $code = strtoupper(preg_replace('/[^A-Za-z0-9-]/', '', $_GET['c'] ?? ''));
                         <div class="col-sm-6" data-for="paystack" hidden><input type="email" class="form-control" id="gEmail" placeholder="Email for your receipt (optional)" autocomplete="email"></div></div>
                     <button type="button" class="btn btn-primary btn-lg w-100" id="gGo"><i class="ri-hand-heart-line me-1"></i><span id="gGoText">Give</span></button>
                     <div id="gMsg" class="mt-3" aria-live="polite"></div>
-                    ${p.paybill ? `<details class="give-paybill mt-3"><summary>Or pay with M-Pesa yourself</summary><div class="mt-2">Lipa na M-Pesa, Pay Bill, business number <strong>${esc(p.paybill.number)}</strong>, account number:<div class="give-accounts mt-2">${p.paybill.accounts.filter((a) => a.label && !a.label.startsWith("Any")).map((a) => `<span><small>${esc(a.label)}</small><strong>${esc(a.account)}</strong></span>`).join("")}</div></div></details>` : ""}`;
+                    ${p.paybill ? `<details class="give-paybill mt-3"><summary>Or pay with M-Pesa yourself</summary><div class="mt-2">${p.paybill.till ? `Lipa na M-Pesa, Buy Goods, till number <strong>${esc(p.paybill.number)}</strong>.` : `Lipa na M-Pesa, Pay Bill, business number <strong>${esc(p.paybill.number)}</strong>, account number:<div class="give-accounts mt-2">${p.paybill.accounts.filter((a) => a.label && !a.label.startsWith("Any")).map((a) => `<span><small>${esc(a.label)}</small><strong>${esc(a.account)}</strong></span>`).join("")}</div>`}</div></details>` : ""}`;
                 const amount = body.querySelector("#gAmount");
                 const label = () => {
                     const v = Number(String(amount.value).replace(/[^0-9.]/g, "")) || 0;

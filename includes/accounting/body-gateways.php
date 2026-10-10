@@ -5,7 +5,7 @@ include __DIR__ . '/toolbar.php';
 <div class="row" id="statCardsRow"></div>
 <div id="gwReady"></div>
 <div class="card custom-card">
-    <div class="card-header"><div><div class="card-title">Paystack per church</div><span class="card-subtitle-text">Each church's own subaccount: card gifts settle to its bank with the diocese share split off at source. Without one, card gifts are held by the diocese and settled monthly.</span></div></div>
+    <div class="card-header"><div><div class="card-title">Each church's gateways</div><span class="card-subtitle-text">Paystack: card gifts settle to the church's bank with the diocese share split off at source. Own M-Pesa: gifts go straight to its own paybill or till, through PayHero or its own Daraja app. Without them, the diocese holds the money and settles monthly.</span></div></div>
     <div class="card-body pb-0 pt-3" id="gwPills"></div>
     <div class="card-body p-0">
         <div id="gwFilters" class="list-filterbar-wrap"></div>
@@ -13,7 +13,7 @@ include __DIR__ . '/toolbar.php';
             <table class="table table-hover mb-0 pp-table acc-table" id="gwTable">
                 <thead><tr>
                     <th class="pp-check"><input type="checkbox" class="form-check-input pp-pick-page" aria-label="Pick everything on this page"></th>
-                    <th>Place</th><th class="d-none d-md-table-cell">Settles to</th><th>Paystack</th><th class="text-end">Action</th>
+                    <th>Place</th><th class="d-none d-md-table-cell">Settles to</th><th>Paystack</th><th>M-Pesa</th><th class="text-end">Paystack</th>
                 </tr></thead>
                 <tbody id="gwRows"></tbody>
             </table>

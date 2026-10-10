@@ -207,6 +207,7 @@ const AccountingAPI = (function () {
     gatewayBanks: (place) => request("GET", "/accounting/gateways/banks", { params: { place } }),
     saveChannel: (body) => request("POST", "/accounting/gateways/channels", { body }),
     updateChannel: (id, body) => request("PUT", `/accounting/gateways/channels/${id}`, { body }),
+    registerChannel: (id) => request("POST", `/accounting/gateways/channels/${id}/register`),
     // A8 - the diocese paybill
     paybill: () => request("GET", "/accounting/paybill"),
     sortPayment: (id, body) => request("POST", `/accounting/paybill/payments/${id}/sort`, { body }),
