@@ -87,7 +87,7 @@ class ModuleController extends Controller
                             ->with([
                                 'submodules' => function ($subQuery) {
                                     $subQuery->active()
-                                        ->orderBy('order')->orderBy('title')
+                                        ->menuOrder()
                                         ->with(['subSubmodules' => function ($subSubQuery) {
                                             $subSubQuery->active()
                                                 ->orderBy('title');
@@ -245,7 +245,7 @@ class ModuleController extends Controller
                                 'submodules' => function ($subQuery) use ($permittedSubmoduleIds, $permittedSubSubmoduleIds) {
                                     $subQuery->active()
                                         ->whereIn('id', $permittedSubmoduleIds)
-                                        ->orderBy('order')->orderBy('title')
+                                        ->menuOrder()
                                         ->with(['subSubmodules' => function ($subSubQuery) use ($permittedSubSubmoduleIds) {
                                             $subSubQuery->active()
                                                 ->whereIn('id', $permittedSubSubmoduleIds)
@@ -576,7 +576,7 @@ class ModuleController extends Controller
                     $query->active()->orderBy('title');
                 },
                 'submodules' => function ($query) {
-                    $query->active()->orderBy('order')->orderBy('title');
+                    $query->active()->menuOrder();
                 },
             ]);
 
@@ -841,7 +841,7 @@ class ModuleController extends Controller
             $submodules = $module->submodules()
                 ->withCount(['subSubmodules', 'permissions'])
                 ->active()
-                ->orderBy('order')->orderBy('title')
+                ->menuOrder()
                 ->get();
 
             $submodulesData = $submodules->map(function ($submodule) {

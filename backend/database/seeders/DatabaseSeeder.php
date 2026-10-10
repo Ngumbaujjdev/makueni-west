@@ -277,6 +277,10 @@ class DatabaseSeeder extends Seeder
             // ==========================================
             AccountingAccessSeeder::class,
             ApprovalWorkflowsSeeder::class,
+
+            // The order of each module's pages on the menu, for the modules
+            // whose own seeders don't set it (main page first, reports last).
+            MenuOrderSeeder::class,
         ]);
     }
 }

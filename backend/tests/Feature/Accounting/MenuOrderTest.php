@@ -6,7 +6,9 @@ use App\Models\Module;
 use App\Models\ModuleGroup;
 use App\Models\Submodule;
 use Database\Seeders\AccountingAccessSeeder;
+use Database\Seeders\MenuOrderSeeder;
 use Database\Seeders\PeopleCareAccessSeeder;
+use Database\Seeders\SettingsHubSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -69,5 +71,35 @@ class MenuOrderTest extends TestCase
             Submodule::create(['module_id' => $other->id, 'title' => $t, 'path' => '/church/x/'.strtolower($t), 'is_active' => true]);
         }
         $this->assertSame(['Apple', 'Mango', 'Zebra'], $pages('Unordered'));
+    }
+
+    public function test_the_other_modules_get_their_order_and_new_pages_go_after(): void
+    {
+        $this->group('church-finance', 'church');
+        $budgets = Module::create(['module_group_id' => ModuleGroup::where('slug', 'church-finance')->value('id'), 'name' => 'Budgets', 'number' => 1, 'is_active' => true]);
+        foreach (['Reports', 'Income', 'Budgets', 'Overview', 'New budget', 'Expenses', 'Contributions'] as $t) {
+            Submodule::create(['module_id' => $budgets->id, 'title' => $t, 'path' => '/church/budget/'.str_replace(' ', '-', strtolower($t)).'.php', 'is_active' => true]);
+        }
+        $this->seed(MenuOrderSeeder::class);
+        $this->seed(MenuOrderSeeder::class);
+        $pages = fn () => $budgets->submodules()->active()->menuOrder()->pluck('title')->all();
+        $this->assertSame(['Overview', 'Budgets', 'New budget', 'Income', 'Expenses', 'Contributions', 'Reports'], $pages());
+
+        // A page added later, with no place set, goes after the ordered ones.
+        Submodule::create(['module_id' => $budgets->id, 'title' => 'Archive', 'path' => '/church/budget/archive.php', 'is_active' => true]);
+        $this->assertSame('Archive', last($pages()));
+    }
+
+    public function test_settings_pages_follow_the_hubs_rail(): void
+    {
+        foreach (['church', 'region', 'diocese'] as $level) {
+            $this->group("{$level}-settings", $level);
+        }
+        $this->seed(SettingsHubSeeder::class);
+
+        $module = Module::where('name', 'Settings')->whereHas('moduleGroup', fn ($q) => $q->where('slug', 'church-settings'))->firstOrFail();
+        $titles = $module->submodules()->active()->menuOrder()->pluck('title')->all();
+        $this->assertSame(['Overview', 'View profile', 'Profile', 'Service times', 'Leadership & team'], array_slice($titles, 0, 5));
+        $this->assertLessThan(array_search('Facilities', $titles, true), array_search('Communication', $titles, true));
     }
 }

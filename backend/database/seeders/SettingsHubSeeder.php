@@ -91,15 +91,16 @@ class SettingsHubSeeder extends Seeder
             );
 
             $granted = 0;
+            $places = $this->railOrder($level);
             foreach (SettingsRegistry::sections($level) as $key => $section) {
                 if (($section['kind'] ?? null) === 'link' || isset($section['absorbs'][$level])) {
-                    $this->absorb($module, $level, $key, $section);
+                    $this->absorb($module, $level, $key, $section, $places[$key]);
 
                     continue;
                 }
                 $submodule = Submodule::updateOrCreate(
                     ['module_id' => $module->id, 'title' => $section['label']],
-                    ['path' => $this->path($level, $key, $section), 'description' => $section['sentence'] ?? $section['label'], 'is_active' => true],
+                    ['path' => $this->path($level, $key, $section), 'description' => $section['sentence'] ?? $section['label'], 'is_active' => true, 'order' => $places[$key]],
                 );
 
                 foreach ($section['actions'] ?? ['read', 'update'] as $action) {
@@ -125,8 +126,23 @@ class SettingsHubSeeder extends Seeder
         $this->command?->info('✅ Settings hub menu ready.');
     }
 
+    /** section key => its place on the menu, as the hub's rail shows them: the overview, then each group in turn. */
+    private function railOrder(string $level): array
+    {
+        $groups = array_keys(SettingsRegistry::groups());
+        $keys = array_keys(SettingsRegistry::sections($level));
+        $sections = SettingsRegistry::sections($level);
+        usort($keys, function ($a, $b) use ($groups, $sections, $keys) {
+            $rank = fn ($k) => ($g = $sections[$k]['group'] ?? null) === null ? -1 : (int) array_search($g, $groups, true);
+
+            return [$rank($a), array_search($a, $keys, true)] <=> [$rank($b), array_search($b, $keys, true)];
+        });
+
+        return array_combine($keys, range(1, count($keys)));
+    }
+
     /** Move an existing settings page's menu row (and its permissions) under the Settings module. */
-    private function absorb(Module $settings, string $level, string $key, array $section): void
+    private function absorb(Module $settings, string $level, string $key, array $section, int $place = 0): void
     {
         $path = $section['absorbs'][$level] ?? null;
         $page = $path ? Submodule::where('path', $path)->first() : null;
@@ -145,7 +161,7 @@ class SettingsHubSeeder extends Seeder
             }
         }
         // A link keeps its own page; a hub section (Access control) opens the hub on it.
-        $page->forceFill(['title' => $section['label'], 'is_active' => true]
+        $page->forceFill(['title' => $section['label'], 'is_active' => true, 'order' => $place]
             + (($section['kind'] ?? null) === 'link' ? [] : ['path' => $this->path($level, $key, $section)]))->save();
     }
 
