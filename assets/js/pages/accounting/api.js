@@ -210,7 +210,7 @@ const AccountingAPI = (function () {
     addSlip: (id, employee) => request("POST", `/accounting/payroll/runs/${id}/payslips`, { body: { employee_id: employee } }),
     removeSlip: (id, slip) => request("DELETE", `/accounting/payroll/runs/${id}/payslips/${slip}`),
     runAct: (id, act, body) => request("POST", `/accounting/payroll/runs/${id}/${act}`, { body }),
-    payRun: (id, kind, payFrom) => request("POST", `/accounting/payroll/runs/${id}/pay`, { body: { kind, pay_from_account_id: payFrom } }),
+    payRun: (id, payFrom) => request("POST", `/accounting/payroll/runs/${id}/pay`, { body: { pay_from_account_id: payFrom } }),
     runReferences: (id, refs) => request("PUT", `/accounting/payroll/runs/${id}/references`, { body: { refs } }),
   };
 })();
