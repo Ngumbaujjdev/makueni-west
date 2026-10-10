@@ -17,7 +17,10 @@ class PaymentChannel extends Model
 {
     public const PROVIDERS = ['paystack' => 'Paystack', 'payhero' => 'PayHero', 'daraja' => 'Own Daraja paybill'];
 
-    protected $fillable = ['territory_id', 'provider', 'status', 'subaccount_code', 'bank_code', 'bank_name', 'account_number', 'account_name', 'settles_into_id', 'credentials', 'callback_key', 'created_by'];
+    protected $fillable = ['territory_id', 'provider', 'status', 'subaccount_code', 'bank_code', 'bank_name', 'account_number', 'account_name', 'settles_into_id', 'credentials', 'callback_key', 'created_by',
+        'request', 'requested_by', 'requested_at', 'review_note', 'checked_by', 'checked_at'];
+
+    protected $casts = ['request' => 'array', 'requested_at' => 'datetime', 'checked_at' => 'datetime'];
 
     protected $hidden = ['credentials', 'callback_key'];
 

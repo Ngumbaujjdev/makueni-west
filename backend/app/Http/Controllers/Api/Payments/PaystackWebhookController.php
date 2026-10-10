@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Gift;
 use App\Models\PaymentEvent;
 use App\Services\Accounting\Giving;
+use App\Services\Accounting\Payouts;
 use App\Services\Payments\Paystack;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,7 @@ use Throwable;
  * v1-events webhook never passed, because it checked a secret nobody set).
  * Even a signed charge.success is verified with Paystack again before the
  * gift is completed, and completing is once only. Logged as it arrived.
+ * A10c: a refund or a dispute on a gift (refund.processed, charge.dispute.*).
  */
 class PaystackWebhookController extends Controller
 {
@@ -38,9 +40,25 @@ class PaystackWebhookController extends Controller
             return response()->json(['message' => 'Not signed.'], 401);
         }
         try {
-            $gift = ($payload['event'] ?? '') === 'charge.success' ? Gift::where('reference', (string) ($payload['data']['reference'] ?? ''))->first() : null;
+            $kind = (string) ($payload['event'] ?? '');
+            $d = (array) ($payload['data'] ?? []);
+            $ref = (string) match ($kind) {
+                'charge.success' => $d['reference'] ?? '',
+                'refund.processed' => $d['transaction_reference'] ?? $d['transaction']['reference'] ?? '',
+                'charge.dispute.create', 'charge.dispute.resolve' => $d['transaction']['reference'] ?? $d['transaction_reference'] ?? '',
+                default => '',
+            };
+            $gift = $ref !== '' ? Gift::where('reference', $ref)->first() : null;
             if ($gift) {
-                $gift = $this->giving->complete($gift);
+                $payouts = app(Payouts::class);
+                $cents = fn ($v) => $v !== null && $v !== '' ? round((int) $v / 100, 2) : null;
+                $gift = match ($kind) {
+                    'charge.success' => $this->giving->complete($gift),
+                    // A10c: refunds and disputes, signed like everything else.
+                    'refund.processed' => $payouts->refund($gift, (float) $cents($d['amount'] ?? null), 'Paystack refund '.($d['id'] ?? $d['refund_reference'] ?? '')),
+                    'charge.dispute.create' => $payouts->disputed($gift),
+                    'charge.dispute.resolve' => $payouts->disputeResolved($gift, (string) ($d['resolution'] ?? ''), $cents($d['refund_amount'] ?? null)),
+                };
                 $event->update(['status' => 'handled', 'subject_type' => 'gift', 'subject_id' => $gift->id]);
             } else {
                 $event->update(['status' => 'ignored', 'error' => 'Not a gift we know, or not an event we act on.']);

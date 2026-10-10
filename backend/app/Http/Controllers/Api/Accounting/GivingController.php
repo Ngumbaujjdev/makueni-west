@@ -58,7 +58,8 @@ class GivingController extends AccountingBase
                 'id' => $g->id, 'reference' => $g->reference, 'amount' => (float) $g->amount, 'purpose' => $g->purpose, 'purpose_label' => Paybill::PURPOSES[$g->purpose][0] ?? $g->purpose,
                 'giver' => $g->giver_name, 'phone' => $g->giver_phone, 'method' => $g->method, 'channel' => $g->channel, 'status' => $g->status, 'status_label' => Gift::STATUSES[$g->status],
                 'fee' => (float) $g->fee, 'split' => (float) $g->split, 'net' => (float) $g->net, 'receipt' => $numbers[$g->journal_id] ?? null,
-                'created_at' => $g->created_at?->toIso8601String(), 'paid_at' => $g->paid_at?->toIso8601String(), 'result' => $g->status === 'failed' ? $g->result : null,
+                'created_at' => $g->created_at?->toIso8601String(), 'paid_at' => $g->paid_at?->toIso8601String(), 'result' => in_array($g->status, ['failed', 'refunded'], true) || $g->disputed_at || (float) $g->refunded_amount > 0 ? $g->result : null,
+                'disputed' => (bool) $g->disputed_at, 'refunded_amount' => (float) $g->refunded_amount,
             ])->values(),
         ]);
     }
@@ -125,9 +126,12 @@ class GivingController extends AccountingBase
         if (! $into) {
             throw ValidationException::withMessages(['settles_into_id' => ["Pick one of {$place->name}'s bank accounts - add it under Cash & bank first."]]);
         }
-        if (PaymentChannel::where('territory_id', $place->id)->where('provider', 'paystack')->exists()) {
+        $existing = PaymentChannel::where('territory_id', $place->id)->where('provider', 'paystack')->first();
+        if ($existing && ($existing->subaccount_code || $existing->status !== 'pending')) {
             throw ValidationException::withMessages(['territory_id' => ["{$place->name} already has its Paystack set up - change it instead."]]);
         }
+        // A request from the church that was never made (A10c) is taken over by setting it up here.
+        $existing?->delete();
         $fields = ['territory_id' => $place->id, 'provider' => 'paystack', 'settles_into_id' => $into->id, 'created_by' => $request->user()->id];
         if ($place->territory_type->value === 'diocese') {
             $channel = PaymentChannel::create($fields + ['status' => 'active', 'bank_name' => $into->bank_name, 'account_number' => $into->account_number, 'account_name' => $into->name]);
@@ -175,6 +179,9 @@ class GivingController extends AccountingBase
             $this->fillMpesa($channel, $data);
         }
         if (! empty($data['status'])) {
+            if ($data['status'] === 'active' && ! $mpesa && ! $channel->subaccount_code && $channel->place?->territory_type->value !== 'diocese') {
+                throw ValidationException::withMessages(['status' => ['Its subaccount isn\'t made yet - approve its request first.']]);
+            }
             if ($data['status'] === 'active' && $mpesa && ! $channel->mpesaReady()) {
                 throw ValidationException::withMessages(['status' => ['Fill in all its details first.']]);
             }
@@ -288,6 +295,7 @@ class GivingController extends AccountingBase
             'id' => $c->id, 'provider' => $c->provider, 'provider_label' => PaymentChannel::PROVIDERS[$c->provider], 'status' => $c->status, 'subaccount' => $c->subaccount_code,
             'bank' => $c->bank_name, 'account_number' => $c->account_number ? '•••• '.substr($c->account_number, -4) : null, 'account_name' => $c->account_name,
             'settles_into' => $into ? ['id' => $into->id, 'name' => $into->name] : null,
+            'request' => (bool) $c->request, 'sent_back' => ! $c->request && $c->review_note ? $c->review_note : null,
         ];
         if ($c->provider !== 'paystack') {
             // A paybill or till number is public (givers type it); the keys are only ever said to be there.

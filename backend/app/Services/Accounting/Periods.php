@@ -141,6 +141,17 @@ final class Periods
                 $warnings[] = "{$left} ".($left === 1 ? 'place\'s' : 'places\'').' paybill money for '.$start->format('F').' is not settled yet.';
             }
         }
+        // A10c - card money: a failed payout, a gift still disputed, a part refund not adjusted.
+        if ($failed = \App\Models\PaystackSettlement::where('territory_id', $place->id)->where('status', 'failed')->whereBetween('settled_on', [$s, $e])->count()) {
+            $warnings[] = "{$failed} Paystack ".($failed === 1 ? 'payout' : 'payouts').' failed - check the bank details under Online giving, Getting paid.';
+        }
+        $gifts = \App\Models\Gift::where('territory_id', $place->id)->where('method', 'paystack')->where('status', 'paid')->where('paid_at', '<=', $end->endOfDay());
+        if ($disputed = (clone $gifts)->whereNotNull('disputed_at')->count()) {
+            $warnings[] = "{$disputed} card ".($disputed === 1 ? 'gift is' : 'gifts are').' disputed by the giver\'s bank - see Online giving.';
+        }
+        if ($part = (clone $gifts)->where('refunded_amount', '>', 0)->count()) {
+            $warnings[] = "{$part} card ".($part === 1 ? 'gift was' : 'gifts were').' part refunded - adjust '.($part === 1 ? 'it' : 'them').' with a journal.';
+        }
         $owed = collect(app(Remittances::class)->owing($place, $year))->sum(fn ($r) => collect($r['months'])->firstWhere('month', $start->format('Y-m'))['owed'] ?? 0);
         if ($owed > 0.009) {
             $warnings[] = 'KES '.number_format($owed, 2).' of the '.$start->format('F').' share is not sent yet.';

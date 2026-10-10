@@ -208,6 +208,14 @@ const AccountingAPI = (function () {
     saveChannel: (body) => request("POST", "/accounting/gateways/channels", { body }),
     updateChannel: (id, body) => request("PUT", `/accounting/gateways/channels/${id}`, { body }),
     registerChannel: (id) => request("POST", `/accounting/gateways/channels/${id}/register`),
+    // A10c - getting paid and payouts
+    payouts: (year) => request("GET", "/accounting/giving/payouts", { params: { year } }),
+    payout: (id) => request("GET", `/accounting/giving/payouts/${id}`),
+    payoutOptions: () => request("GET", "/accounting/giving/payout-options"),
+    askPayout: (body) => request("POST", "/accounting/giving/payout-request", { body }),
+    withdrawPayout: () => request("DELETE", "/accounting/giving/payout-request"),
+    gatewayPayouts: (from, to) => request("GET", "/accounting/gateways/payouts", { params: { from, to, territory_id: "" } }),
+    reviewChannel: (id, body) => request("POST", `/accounting/gateways/channels/${id}/review`, { body }),
     // A8 - the diocese paybill
     paybill: () => request("GET", "/accounting/paybill"),
     sortPayment: (id, body) => request("POST", `/accounting/paybill/payments/${id}/sort`, { body }),
