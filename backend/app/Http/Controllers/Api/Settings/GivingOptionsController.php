@@ -88,7 +88,7 @@ class GivingOptionsController extends SettingsController
             $this->funds->save($place, $data['funds'], $request->user());
             // A new fund can be picked by its code in the same save.
             $byCode = AccountingFund::where('territory_id', $place->id)->pluck('id', 'code');
-            $rows = array_map(fn ($r) => empty($r['fund_id']) && ! empty($r['fund_code']) ? $r + ['fund_id' => $byCode[strtoupper($r['fund_code'])] ?? null] : $r, $data['purposes']);
+            $rows = array_map(fn ($r) => empty($r['fund_id']) && ! empty($r['fund_code']) ? array_merge($r, ['fund_id' => $byCode[strtoupper($r['fund_code'])] ?? null]) : $r, $data['purposes']);
             $this->purposes->save($place, $rows, $request->user());
             if ($isDiocese && isset($data['standard'])) {
                 $this->purposes->save(null, $data['standard'], $request->user(), $data['default'] ?? $this->purposes->default()->key);

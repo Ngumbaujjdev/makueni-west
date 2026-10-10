@@ -53,7 +53,7 @@ final class Funds
     /** As the pages list them. */
     public function present(Collection $funds, bool $withAbout = false): array
     {
-        return $funds->map(fn (AccountingFund $f) => ['id' => $f->id, 'code' => $f->code, 'name' => $f->name, 'is_restricted' => (bool) $f->is_restricted]
+        return $funds->map(fn (AccountingFund $f) => ['id' => $f->id, 'code' => $f->code, 'name' => $f->name, 'is_restricted' => (bool) $f->is_restricted, 'reach' => $f->reach]
             + ($withAbout ? ['description' => $f->description, 'is_active' => (bool) $f->is_active] : [])
             + ['owner' => $f->owner ? ['id' => $f->owner->id, 'name' => $f->owner->name, 'level' => $f->owner->territory_type->value] : null])->values()->all();
     }

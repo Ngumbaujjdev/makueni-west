@@ -73,6 +73,7 @@ final class Transactions
             'stats' => $stats,
             'total' => $shown->count(), 'page' => $page, 'pages' => max(1, (int) ceil($shown->count() / $per)),
             'rows' => $shown->slice(($page - 1) * $per, $per)->values(),
+            'purposes' => app(GivingPurposes::class)->present($place->territory_type->value === 'diocese' ? null : app(GivingPurposes::class)->forPlace($place, true)),
             'places' => $place->territory_type->value === 'church' ? [] : Territory::whereIn('id', $this->scope($place))->whereNotNull('code')->orderBy('name')->get(['id', 'name'])->values(),
         ];
     }

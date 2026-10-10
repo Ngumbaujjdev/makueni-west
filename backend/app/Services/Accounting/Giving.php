@@ -56,7 +56,7 @@ final class Giving
         $paybill = $own
             // A church's own paybill takes only its own options (A11); another place's option is given by Paystack or the diocese paybill.
             ? ['number' => $own->account_number, 'till' => $own->account_name === 'Till', 'accounts' => app(GivingPurposes::class)->ownFor($place)->map(fn ($p) => ['purpose' => $p->key, 'label' => $p->label, 'account' => $p->suffix])->values()->all()]
-            : ($paybillReady ? ['number' => $this->settings->system('paybill.shortcode'), 'till' => false, 'accounts' => array_values($this->paybill->accountNumbers($place)),
+            : ($paybillReady ? ['number' => $this->settings->system('paybill.shortcode'), 'till' => false, 'accounts' => collect($this->paybill->accountNumbers($place))->map(fn ($a, $k) => $a + ['purpose' => (string) $k])->values()->all(),
                 // "I've paid - here's my code" is checked against the diocese paybill (A10f).
                 'claim' => true] : null);
 
