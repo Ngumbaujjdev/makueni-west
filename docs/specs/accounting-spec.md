@@ -442,14 +442,46 @@ Money between a church, its region and the diocese, on a cash basis in both sets
 ### Permissions
 `{level}.accounting.remittances.read` (with reading the books). Sending needs `payments.prepare` (the voucher, then approval and paying as usual); confirming, querying and undoing need `receipts.create` at the receiving place; the board and statements of places below need `below.read`.
 
+## A7 - Payroll (built 2026-10-10)
+
+A simple register of the people a place pays, a monthly run with Kenyan statutory deductions worked out from rates kept in Settings, approval through the engine, and the standard postings. Every level.
+
+### Rates (Settings > Payroll, diocese)
+- PAYE monthly bands - 10% up to 24,000; 25% to 32,333; 30% to 500,000; 32.5% to 800,000; 35% above - and personal relief 2,400.
+- NSSF 6% of pay between the lower (9,000) and upper (108,000) earnings limits, Tier I and II; the employer matches it.
+- SHIF 2.75% of gross, at least 300. Affordable Housing Levy 1.5% of gross; the employer matches it.
+- NSSF, SHIF and the Housing Levy come off before PAYE (Tax Laws (Amendment) Act 2024, from December 2024). The defaults are the rates in force in October 2026 and must be confirmed with KRA, NSSF and SHA when they change.
+
+### Data
+- `employees`: place, optional user, name, phone, email, position, start and end dates, how they are paid (M-Pesa, bank, cash) and to what, basic pay, allowances (name + amount), `statutory` (off for someone paid an allowance only: no deductions), active. ID number, KRA PIN, NSSF and SHIF numbers are stored encrypted and only ever returned masked (`•••• 5678`).
+- `payroll_runs`: place, `month` (one run per place and month), status draft | submitted | returned | posted | paid | cancelled, totals (gross, deductions, net, employer contributions), `journal_id` (the posting), prepared/approved by.
+- `payslips`: per person - a snapshot of name, position and how paid; basic, allowances, gross, NSSF, SHIF, Housing Levy, taxable pay, PAYE, other deductions (with a note), total deductions, net; the employer's NSSF and Housing Levy; `manual` when a statutory figure was typed over; the payment reference (e.g. the M-Pesa code).
+- `payroll_payments`: what was paid out of a run - `net` or one authority (`paye`, `nssf`, `shif`, `ahl`) - with its payment voucher.
+- Journal type `payroll` (number `PRL`); `payment_vouchers.purpose` gains `payroll`.
+
+### Rules
+- **Start the month** (whoever manages payroll): a draft run with a payslip for everyone active in that month, worked out by `PayrollCalculator`. In the draft, basic, allowances and other deductions can be changed and statutory figures typed over (marked as changed); Recalculate puts the worked-out figures back. People can be added or taken off.
+- **Submit**: through the approval rules (the context amount is the gross); with no rule, anyone who authorises payments here but the person who prepared it. Returned or rejected, it is a draft again.
+- **Approved = posted**: Dr 5000 Salaries & wages (gross + the employer's NSSF and Housing Levy), on the salaries budget line / Cr 2310 Net pay payable (net) / Cr 2300 Payroll deductions payable (everything withheld + the employer's share). Budgets count it then.
+- **Pay the run**: one payment voucher already authorised - Dr 2310 / Cr the account paid from - with a line per person; paid as any voucher. Each person's reference can be recorded on their payslip.
+- **Remit deductions**: a voucher already authorised per authority - PAYE to KRA, NSSF (both shares) to NSSF, SHIF to SHA, the Housing Levy (both shares) to KRA - Dr 2300 / Cr bank. The run is paid when net pay and every authority are paid.
+- **Other deductions** (a SACCO, a loan) are withheld into 2300 with the rest and paid on with an ordinary payment voucher; Recalculate keeps them.
+- Reversing a run's payment, or cancelling its voucher, opens that payment again. A posted run can't be changed; a mistake is corrected next month or with a journal.
+- **Outputs**: printable payslips, the run register (CSV) and the deductions schedule.
+
+### API (under `/api/accounting/payroll`)
+`GET employees` · `POST employees` · `PUT employees/{id}` · `GET runs` · `POST runs {month}` · `GET runs/{id}` · `PUT runs/{id}/payslips/{payslip}` · `POST runs/{id}/payslips` (add a person) · `DELETE runs/{id}/payslips/{payslip}` · `POST runs/{id}/recalculate|submit|approve|reject|return|cancel` · `POST runs/{id}/pay {pay_from_account_id}` · `POST runs/{id}/remit {authority, pay_from_account_id}` · `PUT runs/{id}/references`.
+
+### Permissions
+`{level}.accounting.payroll.manage` (Church Treasurer; Regional Treasurer; Diocese Finance Officer, Diocese Treasurer) and `{level}.accounting.payroll.read` (with manage; and Senior Pastor, Regional Overseer, Bishop). Salaries are not in the general read bundle. Paying and remitting need `payments.prepare`. Approving needs no permission - being assigned is what lets someone act.
+
 ## Later phases (outline - specified when built)
 - **A2 Reconciliation:** built 2026-10-09, see "A2 - Reconciliation" above.
 - **A3 Sunday collections:** built 2026-10-09, see "A3 - Sunday collections" above.
 - **A4 Approvals engine + requisitions:** built 2026-10-09, see "A4 - Approvals and requisitions" above.
 - **A5 Procurement by threshold:** built 2026-10-09, see "A5 - Procurement" above.
 - **A6 Between levels:** built 2026-10-10, see "A6 - Remittances between levels" above.
-- **A7 Payroll:** employees, monthly runs, Kenyan deductions with their rates in
-  Settings, payslips.
+- **A7 Payroll:** built 2026-10-10, see "A7 - Payroll" above.
 - **A8 The diocese M-Pesa paybill (Daraja C2B):** the account number is the
   church code + purpose; a unique TransID; a To-sort queue; STK Pay now.
 - **A9 Financial statements:** I&E, financial position, receipts & payments,

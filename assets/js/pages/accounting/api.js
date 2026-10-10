@@ -201,6 +201,17 @@ const AccountingAPI = (function () {
     remittanceAct: (id, act, body) => request("POST", `/accounting/remittances/${id}/${act}`, { body }),
     remittanceBoard: (year) => request("GET", "/accounting/remittances/board", { params: { year } }),
     remittanceStatement: (place, year) => request("GET", "/accounting/remittances/statement", { params: { place, year } }),
+    // A7 - payroll
+    payroll: () => request("GET", "/accounting/payroll"),
+    saveEmployee: (id, body) => request(id ? "PUT" : "POST", id ? `/accounting/payroll/employees/${id}` : "/accounting/payroll/employees", { body }),
+    startRun: (month) => request("POST", "/accounting/payroll/runs", { body: { month } }),
+    payrollRun: (id) => request("GET", `/accounting/payroll/runs/${id}`),
+    saveSlip: (id, slip, body) => request("PUT", `/accounting/payroll/runs/${id}/payslips/${slip}`, { body }),
+    addSlip: (id, employee) => request("POST", `/accounting/payroll/runs/${id}/payslips`, { body: { employee_id: employee } }),
+    removeSlip: (id, slip) => request("DELETE", `/accounting/payroll/runs/${id}/payslips/${slip}`),
+    runAct: (id, act, body) => request("POST", `/accounting/payroll/runs/${id}/${act}`, { body }),
+    payRun: (id, kind, payFrom) => request("POST", `/accounting/payroll/runs/${id}/pay`, { body: { kind, pay_from_account_id: payFrom } }),
+    runReferences: (id, refs) => request("PUT", `/accounting/payroll/runs/${id}/references`, { body: { refs } }),
   };
 })();
 
