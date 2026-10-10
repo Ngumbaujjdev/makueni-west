@@ -622,6 +622,16 @@ final class Paybill
         if (! $request || (int) $request->channel_id !== (int) $channel?->id) {
             return null;
         }
+        // Already completed by asking Safaricom (checkPrompt): the callback brings the real M-Pesa code - swap it in, post nothing twice.
+        if ($request->status === 'paid' && $request->mpesa_payment_id) {
+            $payment = MpesaPayment::find($request->mpesa_payment_id);
+            $code = (string) (Daraja::metadata($callback)['MpesaReceiptNumber'] ?? '');
+            if ($payment && $code !== '' && str_starts_with($payment->trans_id, self::PROVISIONAL)) {
+                $this->swapReceipt($payment, $code);
+            }
+
+            return $payment?->fresh();
+        }
         if ((int) ($callback['ResultCode'] ?? -1) !== 0) {
             if ($request->status === 'pending') {
                 $request->update(['status' => 'failed', 'result' => mb_substr((string) ($callback['ResultDesc'] ?? 'Not paid'), 0, 255)]);
@@ -648,6 +658,111 @@ final class Paybill
         app(Giving::class)->mpesaAnswered($request->fresh(), $payment);
 
         return $payment;
+    }
+
+    // ------------------------------------------------------------ asking Safaricom how a prompt went
+
+    /** The mark on a payment completed by asking Safaricom, until its callback brings the real M-Pesa code. */
+    public const PROVISIONAL = 'Q-';
+
+    /**
+     * Ask how a prompt went when its callback hasn't come (a lost callback, or
+     * a computer Safaricom can't reach): paid is recorded once - marked with
+     * the prompt's id until the callback brings the M-Pesa code; refused or
+     * timed out is kept on the prompt; still at the phone waits. At most once
+     * every 15 seconds per prompt.
+     */
+    public function checkPrompt(MpesaRequest $request): ?MpesaPayment
+    {
+        if ($request->status !== 'pending' || ! $request->checkout_request_id || ! \Illuminate\Support\Facades\Cache::add("prompt-check:{$request->id}", 1, 15)) {
+            return null;
+        }
+        $channel = $request->channel_id ? PaymentChannel::find($request->channel_id) : null;
+        if ($channel?->provider === 'payhero') {
+            return $this->payheroCheck($request);
+        }
+        try {
+            $daraja = $channel ? Daraja::forChannel($channel) : Daraja::diocese();
+            $out = $daraja->stkQuery($request->checkout_request_id);
+        } catch (Throwable $e) {
+            // "The transaction is being processed" - the giver is still at the PIN.
+            return null;
+        }
+        if (! isset($out['ResultCode'])) {
+            return null;
+        }
+        $request = MpesaRequest::whereKey($request->id)->firstOrFail();
+        if ($request->status !== 'pending') {
+            return null;
+        }
+        if ((int) $out['ResultCode'] !== 0) {
+            $request->update(['status' => 'failed', 'result' => mb_substr((string) ($out['ResultDesc'] ?? 'Not paid'), 0, 255)]);
+            app(Giving::class)->mpesaAnswered($request->fresh(), null);
+
+            return null;
+        }
+        $payment = $this->record([
+            'trans_id' => mb_substr(self::PROVISIONAL.$request->checkout_request_id, 0, 30),
+            'channel_id' => $request->channel_id,
+            'remittance_id' => $request->remittance_id,
+            'kind' => 'stk',
+            'shortcode' => $request->shortcode,
+            'amount' => (float) $request->amount,
+            'phone' => $request->phone,
+            'bill_ref' => $request->account_ref,
+            'paid_at' => now(),
+            'mpesa_request_id' => $request->id,
+            'raw' => $out,
+        ]);
+        $request->update(['status' => 'paid', 'result' => 'Paid (confirmed by asking M-Pesa)', 'mpesa_payment_id' => $payment->id]);
+        app(Giving::class)->mpesaAnswered($request->fresh(), $payment);
+
+        return $payment;
+    }
+
+    /** The real M-Pesa code for a payment first recorded by asking: on the payment, its journals, voucher, remittance and gift. */
+    private function swapReceipt(MpesaPayment $payment, string $code): void
+    {
+        $old = $payment->trans_id;
+        $code = strtoupper(trim($code));
+        if (MpesaPayment::where('trans_id', $code)->exists()) {
+            return;
+        }
+        DB::transaction(function () use ($payment, $old, $code) {
+            $payment->update(['trans_id' => $code]);
+            $ids = array_filter([$payment->diocese_journal_id, $payment->place_journal_id, $payment->sort_journal_id]);
+            Journal::whereIn('id', $ids)->where('reference', $old)->update(['reference' => $code]);
+            if ($payment->remittance_id) {
+                $rem = Remittance::find($payment->remittance_id);
+                \App\Models\PaymentVoucher::whereKey($rem?->payment_voucher_id)->where('reference', $old)->update(['reference' => $code]);
+                Journal::whereIn('id', array_filter([$rem?->sent_journal_id, $rem?->received_journal_id]))->where('reference', $old)->update(['reference' => $code]);
+                Remittance::whereKey($payment->remittance_id)->where('reference', $old)->update(['reference' => $code]);
+            }
+            \App\Models\Gift::where('mpesa_payment_id', $payment->id)->where('provider_ref', $old)->update(['provider_ref' => $code]);
+        });
+    }
+
+    /** payments:reconcile - prompts still waiting after 2 minutes are asked about; after an hour they are given up. */
+    public function sweepPrompts(): array
+    {
+        $done = ['checked' => 0, 'paid' => 0, 'expired' => 0];
+        foreach (MpesaRequest::where('status', 'pending')->where('created_at', '<', now()->subMinutes(2))->orderBy('id')->limit(200)->get() as $request) {
+            if ($request->created_at->lt(now()->subHour())) {
+                $request->update(['status' => 'failed', 'result' => 'No answer from M-Pesa within an hour.']);
+                app(Giving::class)->mpesaAnswered($request->fresh(), null);
+                $done['expired']++;
+
+                continue;
+            }
+            try {
+                $done['checked']++;
+                $done['paid'] += $this->checkPrompt($request) ? 1 : 0;
+            } catch (Throwable $e) {
+                report($e);
+            }
+        }
+
+        return $done;
     }
 
     // ------------------------------------------------------------ callbacks setup
@@ -694,7 +809,7 @@ final class Paybill
         return Daraja::forChannel($channel)->registerUrls($this->channelUrl($channel, 'confirmation'), $this->channelUrl($channel, 'validation'));
     }
 
-    public function register(User $user): array
+    public function register(?User $user = null): array
     {
         $this->callbackKey($user);
         $out = Daraja::diocese()->registerUrls($this->callbackUrl('confirmation'), $this->callbackUrl('validation'));

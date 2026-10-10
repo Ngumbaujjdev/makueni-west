@@ -49,7 +49,7 @@ class GiveController extends Controller
             'message' => $data['method'] === 'mpesa' ? 'Check your phone and enter your M-Pesa PIN.' : 'Opening the secure payment page...'], 201);
     }
 
-    /** GET /give/status/{reference} - where a gift stands (a Paystack one still waiting is checked). */
+    /** GET /give/status/{reference} - where a gift stands (a Paystack gift or an M-Pesa prompt still waiting is checked). */
     public function status(string $reference): JsonResponse
     {
         $gift = Gift::where('reference', $reference)->first();
@@ -59,6 +59,16 @@ class GiveController extends Controller
         if ($gift->status === 'pending' && $gift->method === 'paystack' && $gift->created_at->lt(now()->subSeconds(20))) {
             try {
                 $gift = $this->giving->complete($gift);
+            } catch (Throwable $e) {
+                report($e);
+            }
+        }
+        // An M-Pesa prompt whose answer hasn't come back (A10, dev or a lost callback): ask M-Pesa.
+        if ($gift->status === 'pending' && $gift->method === 'mpesa' && $gift->mpesa_request_id && $gift->created_at->lt(now()->subSeconds(25))) {
+            try {
+                $request = \App\Models\MpesaRequest::find($gift->mpesa_request_id);
+                $request && app(Paybill::class)->checkPrompt($request);
+                $gift = $gift->fresh();
             } catch (Throwable $e) {
                 report($e);
             }

@@ -313,12 +313,12 @@ final class Giving
                 continue;
             }
             if ($gift->method === 'mpesa') {
-                // The church's PayHero: its callback may never have come - ask PayHero.
+                // Its prompt may never have been answered back - ask M-Pesa (or PayHero).
                 $request = $gift->mpesa_request_id ? MpesaRequest::find($gift->mpesa_request_id) : null;
-                if ($request && $request->channel_id && $request->status === 'pending') {
+                if ($request && $request->status === 'pending') {
                     try {
                         $done['checked']++;
-                        $this->paybill->payheroCheck($request);
+                        $this->paybill->checkPrompt($request);
                         $done['paid'] += $gift->fresh()->status === 'paid' ? 1 : 0;
                     } catch (Throwable $e) {
                         report($e);
