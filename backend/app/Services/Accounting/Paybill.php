@@ -634,7 +634,7 @@ final class Paybill
         }
         if ((int) ($callback['ResultCode'] ?? -1) !== 0) {
             if ($request->status === 'pending') {
-                $request->update(['status' => 'failed', 'result' => mb_substr((string) ($callback['ResultDesc'] ?? 'Not paid'), 0, 255)]);
+                $request->update(['status' => 'failed', 'result' => self::reason($callback)]);
                 app(Giving::class)->mpesaAnswered($request->fresh(), null);
             }
 
@@ -664,6 +664,28 @@ final class Paybill
 
     /** The mark on a payment completed by asking Safaricom, until its callback brings the real M-Pesa code. */
     public const PROVISIONAL = 'Q-';
+
+    /** Why a prompt wasn't paid, in the giver's words - Safaricom's own text for anything else. */
+    private const REASONS = [
+        1 => 'Not enough M-Pesa balance.',
+        1032 => 'You cancelled the prompt.',
+        1037 => 'Your phone couldn\'t be reached - is it on?',
+        2001 => 'Wrong M-Pesa PIN.',
+    ];
+
+    /** Safaricom's 4999 "still under processing": the giver is still at the PIN, not refused. */
+    public static function stillWaiting(array $out): bool
+    {
+        $code = (string) ($out['ResultCode'] ?? '');
+
+        return $code === '4999' || ($code !== '0' && str_contains(strtolower((string) ($out['ResultDesc'] ?? '')), 'under processing'));
+    }
+
+    /** @param  array{ResultCode?: int|string, ResultDesc?: string}  $out */
+    public static function reason(array $out): string
+    {
+        return self::REASONS[(int) ($out['ResultCode'] ?? -1)] ?? mb_substr((string) ($out['ResultDesc'] ?? 'Not paid'), 0, 255);
+    }
 
     /**
      * Ask how a prompt went when its callback hasn't come (a lost callback, or
@@ -695,8 +717,11 @@ final class Paybill
         if ($request->status !== 'pending') {
             return null;
         }
+        if (self::stillWaiting($out)) {
+            return null;
+        }
         if ((int) $out['ResultCode'] !== 0) {
-            $request->update(['status' => 'failed', 'result' => mb_substr((string) ($out['ResultDesc'] ?? 'Not paid'), 0, 255)]);
+            $request->update(['status' => 'failed', 'result' => self::reason($out)]);
             app(Giving::class)->mpesaAnswered($request->fresh(), null);
 
             return null;

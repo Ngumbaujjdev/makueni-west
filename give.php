@@ -311,7 +311,9 @@ $code = strtoupper(preg_replace('/[^A-Za-z0-9-]/', '', $_GET['c'] ?? ''));
                 setTimeout(tick, 5000);
             }
 
+            /** Paid: the receipt lives on the thanks page (PDF, Print), the same as after Paystack. */
             function done(d) {
+                window.location.href = `give-thanks.php?ref=${encodeURIComponent(d.reference)}`;
                 body.innerHTML = `<div class="verify-result is-good mb-3"><i class="ri-checkbox-circle-fill"></i><div><strong>Thank you - ${esc(d.place)} has received your ${esc((d.purpose || "gift").toLowerCase())} of ${money(d.amount)}.</strong><span>${d.receipt ? `Receipt ${esc(d.receipt)} · ` : ""}Reference ${esc(d.reference)}</span></div></div><p class="mb-0">God bless you. A receipt is on its way to your phone.</p>`;
             }
 
