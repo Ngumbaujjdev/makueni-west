@@ -41,6 +41,9 @@ class GiftReceiptTest extends TestCase
 
         $pdf = $this->get("/api/give/receipt/{$gift->reference}")->assertOk()->assertHeader('Content-Type', 'application/pdf');
         $this->assertStringStartsWith('%PDF', $pdf->getContent());
+        // Every PDF is set in Times (reports-spec, Outputs).
+        $this->assertStringContainsString('/BaseFont /Times-Roman', $pdf->getContent());
+        $this->assertStringContainsString('/BaseFont /Times-Bold', $pdf->getContent());
     }
 
     public function test_an_unpaid_or_unknown_gift_has_no_receipt(): void
