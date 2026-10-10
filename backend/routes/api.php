@@ -649,6 +649,31 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Accounting (docs/specs/accounting-spec.md) - the real money of every church, region and diocese:
     // one engine for every level; the place is the acting role's (or one below, read-only, ?territory_id=).
+    // Staff (HR) - docs/specs/hr-spec.md: the people each place employs, and the positions, grades and allowances each level sets up.
+    Route::prefix('hr')->group(function () {
+        $hr = \App\Http\Controllers\Api\HR\StaffController::class;
+        $hrs = \App\Http\Controllers\Api\HR\SetupController::class;
+        Route::get('overview', [$hr, 'overview']);
+        Route::get('options', [$hr, 'options']);
+        Route::get('people', [$hr, 'people']);
+        Route::get('logins', [$hr, 'logins']);
+        Route::get('staff', [$hr, 'index']);
+        Route::post('staff', [$hr, 'save']);
+        Route::get('staff/{id}', [$hr, 'show'])->whereNumber('id');
+        Route::put('staff/{id}', [$hr, 'save'])->whereNumber('id');
+        Route::delete('staff/{id}', [$hr, 'destroy'])->whereNumber('id');
+        Route::post('staff/{id}/transfer', [$hr, 'transfer'])->whereNumber('id');
+        Route::post('staff/{id}/end', [$hr, 'end'])->whereNumber('id');
+        Route::post('staff/{id}/documents', [$hr, 'addDocument'])->whereNumber('id');
+        Route::get('staff/{id}/documents/{media}', [$hr, 'showDocument'])->whereNumber(['id', 'media']);
+        Route::delete('staff/{id}/documents/{media}', [$hr, 'removeDocument'])->whereNumber(['id', 'media']);
+        Route::get('setup', [$hrs, 'index']);
+        Route::post('setup/{kind}', [$hrs, 'save'])->whereIn('kind', \App\Http\Controllers\Api\HR\SetupController::KINDS);
+        Route::put('setup/{kind}/{id}', [$hrs, 'save'])->whereIn('kind', \App\Http\Controllers\Api\HR\SetupController::KINDS)->whereNumber('id');
+        Route::delete('setup/{kind}/{id}', [$hrs, 'remove'])->whereIn('kind', \App\Http\Controllers\Api\HR\SetupController::KINDS)->whereNumber('id');
+        Route::post('setup/{kind}/{id}/here', [$hrs, 'here'])->whereIn('kind', \App\Http\Controllers\Api\HR\SetupController::KINDS)->whereNumber('id');
+    });
+
     Route::prefix('accounting')->group(function () {
         $books = \App\Http\Controllers\Api\Accounting\BooksController::class;
         $pvs = \App\Http\Controllers\Api\Accounting\PaymentVoucherController::class;
