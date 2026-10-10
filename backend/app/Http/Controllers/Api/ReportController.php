@@ -196,6 +196,11 @@ class ReportController extends Controller
             // Monthly report: the report; reports sent: the year (with month).
             'report_id' => 'nullable|integer',
             'year' => 'nullable|integer|between:2000,2100',
+            // Accounting: the money account, the one record (voucher, receipt...), a date range.
+            'account_id' => 'nullable|integer',
+            'record_id' => 'nullable|integer',
+            'date_from' => ['nullable', 'date_format:Y-m-d', 'required_with:date_to'],
+            'date_to' => ['nullable', 'date_format:Y-m-d', 'required_with:date_from', 'after_or_equal:date_from'],
         ]);
         if ($validator->fails()) {
             return $this->fail(422, $validator->errors()->first(), $validator->errors()->toArray());
@@ -253,7 +258,14 @@ class ReportController extends Controller
             }
         }
 
-        $params = array_filter($request->only(['fiscal_year_id', 'years', 'demographic_id', 'metric', 'month', 'gathering_type_id', 'from', 'to', 'budget_id', 'line_id', 'activity_id', 'report_id', 'year']), fn ($v) => $v !== null && $v !== '');
+        $params = array_filter($request->only(['fiscal_year_id', 'years', 'demographic_id', 'metric', 'month', 'gathering_type_id', 'from', 'to', 'budget_id', 'line_id', 'activity_id', 'report_id', 'year', 'account_id', 'record_id', 'date_from', 'date_to']), fn ($v) => $v !== null && $v !== '');
+        foreach (['account' => ['account_id'], 'record' => ['record_id'], 'dates' => ['date_from', 'date_to']] as $input => $keys) {
+            if (! in_array($input, $report->inputs(), true)) {
+                foreach ($keys as $k) {
+                    unset($params[$k]);
+                }
+            }
+        }
         if (! in_array('monthly_report', $report->inputs(), true)) {
             unset($params['report_id']);
         }
@@ -283,6 +295,11 @@ class ReportController extends Controller
             } elseif (! GatheringType::whereKey($params['gathering_type_id'])->whereIn('territory_id', $context->churchIds())->exists()) {
                 return $this->fail(422, 'That gathering type does not belong to this church.', ['gathering_type_id' => ['Invalid gathering type for this church.']]);
             }
+        }
+
+        // The report's own checks on what it was given (an accounting record of this place...).
+        if ($reason = $report->checkParams($context)) {
+            return $this->fail(422, $reason);
         }
 
         return [$report, $context];

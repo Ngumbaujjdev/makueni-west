@@ -82,6 +82,15 @@ abstract class Report
         return null;
     }
 
+    /**
+     * Checks on the params beyond their shape - the record or account belongs
+     * to the place: null when fine, otherwise the reason (422).
+     */
+    public function checkParams(ReportContext $context): ?string
+    {
+        return null;
+    }
+
     /** Reports sharing a group are shown together in the export modal. */
     public function group(): ?string
     {

@@ -185,8 +185,10 @@ class DioceseReportPdf extends TCPDF
             $this->Cell(110, 3.5, 'Verification code '.$this->verificationCode, 0, 2, 'L');
         }
         $this->Cell(110, 3.5, 'Generated '.now()->format('j M Y \a\t H:i').' by '.$this->generatedBy, 0, 2, 'L');
-        if ($this->words['note'] !== '') {
-            $this->Cell(110, 3.5, $this->fit($this->words['note'], 110, '', 6.9), 0, 0, 'L');
+        // A document with places to sign doesn't say "no signature needed".
+        $note = $this->data->signatures !== [] ? 'Signed copies are kept with the books.' : $this->words['note'];
+        if ($note !== '') {
+            $this->Cell(110, 3.5, $this->fit($note, 110, '', 6.9), 0, 0, 'L');
         }
 
         $this->SetXY($w - $lm - 60, $top + 4);
@@ -206,7 +208,10 @@ class DioceseReportPdf extends TCPDF
         $this->SetAutoPageBreak(true, 30);
 
         $sections = array_values(array_filter($this->data->sections, fn (ReportSection $s) => $s->rows !== [] || $s->note));
-        $this->AddPage($this->orientationFor($sections));
+        if ($this->data->cover) {
+            $this->coverPage($this->data->cover);
+        }
+        $this->AddPage($this->data->orientation ?? $this->orientationFor($sections));
 
         $cw = $this->contentWidth();
         $this->titleBlock($cw);
@@ -218,11 +223,141 @@ class DioceseReportPdf extends TCPDF
             $this->section($section, $i === 0);
         }
 
+        if ($this->data->signatures !== []) {
+            $this->signatures($this->data->signatures);
+        }
+
         if ($this->data->hasInsights()) {
             $this->insights();
         }
 
         return $this;
+    }
+
+    /**
+     * A book's cover (the cashbook): the place's logo large, its name, what
+     * the book is and for which account and period, and who prepared it. No
+     * letterhead on this page; the footer (QR, page) still runs.
+     */
+    private function coverPage(array $cover): void
+    {
+        $this->setPrintHeader(false);
+        $this->AddPage('P');
+        $w = $this->getPageWidth();
+        $lm = self::LM;
+        $cw = $w - 2 * $lm;
+
+        // The brand bands, top and bottom, flat.
+        $this->SetFillColor(...$this->teal);
+        $this->Rect(0, 0, $w, 6, 'F');
+        $this->SetFillColor(...$this->gold);
+        $this->Rect(0, 0, 70, 6, 'F');
+
+        $logo = $cover['logo_path'] ?? null;
+        if (! $logo || ! is_file($logo)) {
+            $logo = public_path(self::LOGO);
+            if (! is_file($logo)) {
+                $logo = public_path(DioceseBranding::MAIN_LOGO->value);
+            }
+        }
+        if (is_file($logo)) {
+            $this->Image($logo, ($w - 46) / 2, 34, 46, 0, '', '', 'T', false, 300, '', false, false, 0, 'CM');
+        }
+
+        $this->SetXY($lm, 92);
+        $this->SetFont('helvetica', 'B', 20);
+        $this->SetTextColor(...self::INK);
+        $this->Cell($cw, 10, $this->fit($this->data->scopeLabel, $cw, 'B', 20), 0, 1, 'C');
+        $this->SetX($lm);
+        $this->SetFont('helvetica', '', 10);
+        $this->SetTextColor(...self::MUTE);
+        $this->Cell($cw, 6, $this->fit(trim($this->words['name'].' · '.$this->words['subtitle'], ' ·'), $cw, '', 10), 0, 1, 'C');
+
+        $y = $this->GetY() + 14;
+        $this->SetDrawColor(...$this->gold);
+        $this->SetLineWidth(1.1);
+        $this->Line($w / 2 - 22, $y, $w / 2 + 22, $y);
+
+        $this->SetXY($lm, $y + 10);
+        $this->SetFont('helvetica', 'B', 34);
+        $this->SetFontSpacing(1.2);
+        $this->SetTextColor(...$this->teal);
+        $this->Cell($cw, 16, strtoupper((string) $cover['title']), 0, 1, 'C');
+        $this->SetFontSpacing(0);
+        if (! empty($cover['subtitle'])) {
+            $this->SetX($lm);
+            $this->SetFont('helvetica', 'B', 14);
+            $this->SetTextColor(...self::INK);
+            $this->Cell($cw, 9, $this->fit((string) $cover['subtitle'], $cw, 'B', 14), 0, 1, 'C');
+        }
+        $this->SetX($lm);
+        $this->SetFont('helvetica', '', 11);
+        $this->SetTextColor(...self::MUTE);
+        $this->Cell($cw, 7, $this->data->periodLabel, 0, 1, 'C');
+
+        $lines = $cover['lines'] ?? [];
+        if ($lines !== []) {
+            $boxW = 130;
+            $x = ($w - $boxW) / 2;
+            $top = $this->GetY() + 16;
+            $h = 8 + 8 * count($lines);
+            $this->SetFillColor(...self::TINT);
+            $this->Rect($x, $top, $boxW, $h, 'F');
+            $i = 0;
+            foreach ($lines as $label => $value) {
+                $this->SetXY($x + 8, $top + 5 + $i * 8);
+                $this->SetFont('helvetica', 'B', 7);
+                $this->SetFontSpacing(0.4);
+                $this->SetTextColor(...self::MUTE);
+                $this->Cell(42, 5, strtoupper((string) $label), 0, 0, 'L');
+                $this->SetFontSpacing(0);
+                $this->SetFont('helvetica', 'B', 10);
+                $this->SetTextColor(...self::INK);
+                $this->Cell($boxW - 58, 5, $this->fit((string) $value, $boxW - 58, 'B', 10), 0, 0, 'L');
+                $i++;
+            }
+        }
+
+        $this->SetFillColor(...$this->teal);
+        $this->Rect(0, $this->getPageHeight() - 30, $w, 1.2, 'F');
+        $this->setPrintHeader(true);
+    }
+
+    /** Boxes to sign in: a line, who signs, their name and the date. */
+    private function signatures(array $signatures): void
+    {
+        $signatures = array_slice($signatures, 0, 4);
+        if ($this->GetY() + 34 > $this->getPageHeight() - $this->getBreakMargin()) {
+            $this->AddPage($this->CurOrientation);
+        }
+        $lm = self::LM;
+        $cw = $this->contentWidth();
+        $n = count($signatures);
+        $gap = 6;
+        $boxW = ($cw - $gap * ($n - 1)) / $n;
+        $this->Ln(6);
+        $this->SetX($lm);
+        $this->eyebrow('Signatures', $cw, 7, $this->teal);
+        $y = $this->GetY() + 2;
+        foreach ($signatures as $i => $sig) {
+            $x = $lm + $i * ($boxW + $gap);
+            $this->SetDrawColor(...self::LINE);
+            $this->SetLineWidth(0.3);
+            $this->RoundedRect($x, $y, $boxW, 30, 1.8, '1111', 'D');
+            $this->SetDrawColor(...self::INK);
+            $this->SetLineWidth(0.25);
+            $this->Line($x + 4, $y + 15, $x + $boxW - 4, $y + 15);
+            $this->SetXY($x + 2, $y + 16);
+            $this->eyebrow((string) $sig['label'], $boxW - 4, 6.4);
+            $this->SetX($x + 2);
+            $this->SetFont('helvetica', 'B', 8.6);
+            $this->SetTextColor(...self::INK);
+            $this->Cell($boxW - 4, 4.6, $this->fit((string) ($sig['name'] ?? ''), $boxW - 4, 'B', 8.6), 0, 2, 'L');
+            $this->SetFont('helvetica', '', 7.6);
+            $this->SetTextColor(...self::MUTE);
+            $this->Cell($boxW - 4, 4, $this->fit('Date: '.($sig['date'] ?? '______________'), $boxW - 4, '', 7.6), 0, 0, 'L');
+        }
+        $this->SetY($y + 36);
     }
 
     /** The finished file as a string (PHP method names are case-insensitive, so not output()). */
