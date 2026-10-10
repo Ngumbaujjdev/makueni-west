@@ -94,7 +94,7 @@
       if (e.target.closest("[data-first]")) return prepare();
       if (e.target.closest("a, input, .pp-check, button")) return;
       const tr = e.target.closest("tr[data-id]");
-      if (tr) W.viewVoucher(Number(tr.dataset.id), { onChange: load });
+      if (tr) window.location.href = A.link("record.php", { type: "voucher", id: tr.dataset.id });
     });
     const open = new URLSearchParams(window.location.search).get("voucher");
     if (open) W.viewVoucher(Number(open), { onChange: load });

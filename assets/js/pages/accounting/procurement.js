@@ -501,7 +501,7 @@
     $("prRows").addEventListener("click", (e) => {
       if (e.target.closest("input, .pp-check")) return;
       const tr = e.target.closest("tr[data-id]");
-      if (tr) orderWindow(Number(tr.dataset.id));
+      if (tr) window.location.href = A.link("record.php", { type: "order", id: tr.dataset.id });
     });
     wireBillButtons($("prBillRows"));
     $("prSupplierRows").addEventListener("click", async (e) => {

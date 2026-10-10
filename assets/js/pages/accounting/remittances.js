@@ -374,7 +374,7 @@
           return confirmWindow(r, load);
         }
         const tr = e.target.closest("tr[data-id]");
-        if (tr) view(Number(tr.dataset.id));
+        if (tr) window.location.href = A.link("record.php", { type: "remittance", id: tr.dataset.id });
       }),
     );
     $("rmBoardRows")?.addEventListener("click", (e) => {
