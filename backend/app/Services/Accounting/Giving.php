@@ -27,6 +27,8 @@ use Throwable;
  * checking with Paystack; it posts to the church's books with Paystack's fee
  * and the diocese share split off at source, or - for a church without a
  * subaccount - is held by the diocese and settled monthly like the paybill.
+ * M-Pesa goes through the church's own paybill when it has one on (A10b,
+ * PayHero or its own Daraja), straight into its books.
  */
 final class Giving
 {
@@ -51,13 +53,17 @@ final class Giving
     public function page(Territory $place): array
     {
         $paybillReady = (bool) ($this->settings->system('paybill.shortcode') && $this->settings->system('paybill.passkey') && $this->settings->system('paybill.consumer_key'));
+        $own = $this->paybill->mpesaChannel($place);
+        $paybill = $own
+            ? ['number' => $own->account_number, 'till' => $own->account_name === 'Till', 'accounts' => collect(Paybill::PURPOSES)->map(fn ($p, $k) => ['label' => $p[0], 'account' => Paybill::SUFFIX[$k]])->values()->all()]
+            : ($paybillReady ? ['number' => $this->settings->system('paybill.shortcode'), 'till' => false, 'accounts' => array_values($this->paybill->accountNumbers($place))] : null);
 
         return [
             'place' => ['name' => $place->name, 'code' => Paybill::code($place), 'level' => $place->territory_type->value],
             'logo' => url("/api/settings/logo/{$place->id}"),
             'purposes' => collect(Paybill::PURPOSES)->map(fn ($p, $k) => ['key' => $k, 'label' => $p[0]])->values(),
-            'methods' => ['mpesa' => $paybillReady, 'paystack' => Paystack::ready()],
-            'paybill' => $paybillReady ? ['number' => $this->settings->system('paybill.shortcode'), 'accounts' => array_values($this->paybill->accountNumbers($place))] : null,
+            'methods' => ['mpesa' => $own !== null || $paybillReady, 'paystack' => Paystack::ready()],
+            'paybill' => $paybill,
             'note' => $this->settings->system('giving.page_note'),
         ];
     }
@@ -93,12 +99,12 @@ final class Giving
         ]);
         if ($method === 'mpesa') {
             try {
-                $request = $this->paybill->ask($place, null, $phone, (float) $gift->amount, $purpose);
+                $request = $this->paybill->ask($place, null, $phone, (float) $gift->amount, $purpose, $gift->giver_name);
             } catch (ValidationException $e) {
                 $gift->update(['status' => 'failed', 'result' => mb_substr(collect($e->errors())->flatten()->first() ?? 'M-Pesa refused', 0, 255)]);
                 throw $e;
             }
-            $gift->update(['mpesa_request_id' => $request->id, 'provider_ref' => $request->checkout_request_id]);
+            $gift->update(['mpesa_request_id' => $request->id, 'provider_ref' => $request->checkout_request_id, 'channel' => $this->channelName($request)]);
 
             return ['reference' => $gift->reference, 'method' => 'mpesa'];
         }
@@ -278,13 +284,25 @@ final class Giving
             return;
         }
         $gift->update($payment
-            ? ['status' => 'paid', 'mpesa_payment_id' => $payment->id, 'journal_id' => $payment->place_journal_id, 'diocese_journal_id' => $payment->diocese_journal_id, 'paid_at' => $payment->paid_at, 'provider_ref' => $payment->trans_id, 'net' => $gift->amount, 'channel' => 'paybill', 'result' => 'Paid by M-Pesa']
+            ? ['status' => 'paid', 'mpesa_payment_id' => $payment->id, 'journal_id' => $payment->place_journal_id, 'diocese_journal_id' => $payment->diocese_journal_id, 'paid_at' => $payment->paid_at, 'provider_ref' => $payment->trans_id, 'net' => $gift->amount, 'channel' => $this->channelName($request), 'result' => 'Paid by M-Pesa']
             : ['status' => 'failed', 'result' => $request->result]);
+    }
+
+    /** paybill (the diocese's), payhero or own_daraja. */
+    private function channelName(MpesaRequest $request): string
+    {
+        $provider = $request->channel_id ? PaymentChannel::whereKey($request->channel_id)->value('provider') : null;
+
+        return match ($provider) {
+            'payhero' => 'payhero',
+            'daraja' => 'own_daraja',
+            default => 'paybill',
+        };
     }
 
     // ------------------------------------------------------------ the sweep and the payouts
 
-    /** Paystack gifts still pending after 10 minutes are checked and completed; after a day, abandoned. */
+    /** Paystack and PayHero gifts still pending after 10 minutes are checked and completed; after a day, abandoned. */
     public function sweep(): array
     {
         $done = ['checked' => 0, 'paid' => 0, 'abandoned' => 0];
@@ -295,7 +313,22 @@ final class Giving
 
                 continue;
             }
-            if ($gift->method !== 'paystack') {
+            if ($gift->method === 'mpesa') {
+                // The church's PayHero: its callback may never have come - ask PayHero.
+                $request = $gift->mpesa_request_id ? MpesaRequest::find($gift->mpesa_request_id) : null;
+                if ($request && $request->channel_id && $request->status === 'pending') {
+                    try {
+                        $done['checked']++;
+                        $this->paybill->payheroCheck($request);
+                        $done['paid'] += $gift->fresh()->status === 'paid' ? 1 : 0;
+                    } catch (Throwable $e) {
+                        report($e);
+                    }
+                }
+
+                continue;
+            }
+            if (! Paystack::ready()) {
                 continue;
             }
             try {

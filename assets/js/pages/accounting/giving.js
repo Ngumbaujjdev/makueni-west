@@ -5,6 +5,8 @@
  * The place's gifts from its public giving page (docs/specs/accounting-spec.md,
  * A10a) - by M-Pesa through the diocese paybill or by card on Paystack - and
  * its giving link to share. Each gift is in the books once it is paid.
+ * A10b: its own M-Pesa (PayHero or its own Daraja app) - where it stands, or
+ * the steps to set it up.
  * ============================================================================
  */
 (function () {
@@ -30,10 +32,37 @@
     const month = paid.filter((g) => (g.paid_at || "").startsWith(ym));
     K.statRow($("statCardsRow"), [
       { icon: "ri-hand-heart-line", label: "Given online this month", sub: `${month.length} gifts`, value: A.short(sum(month)), color: "success" },
-      { icon: "ri-smartphone-line", label: "By M-Pesa", sub: "Through the diocese paybill", value: A.short(sum(month.filter((g) => g.method === "mpesa"))), color: "primary" },
+      { icon: "ri-smartphone-line", label: "By M-Pesa", sub: OWN[data.mpesa.route] ? `Straight to our own ${ownChannel()?.till ? "till" : "paybill"}` : "Through the diocese paybill", value: A.short(sum(month.filter((g) => g.method === "mpesa"))), color: "primary" },
       { icon: "ri-bank-card-line", label: "By card (Paystack)", sub: `Fees ${A.short(sum(month, (g) => g.fee))} this month`, value: A.short(sum(month.filter((g) => g.method === "paystack"))), color: "purple" },
       { icon: "ri-percent-line", label: "Diocese share split off", sub: "At source on card tithes", value: A.short(sum(month, (g) => g.split)), color: "warning" },
     ]);
+  }
+
+  const OWN = { payhero: "PayHero", daraja: "our own Daraja app" };
+  const ownChannel = () => data.mpesa.channels.find((c) => c.provider === data.mpesa.route);
+
+  /** Our own M-Pesa: where it stands, or the steps to get there. */
+  function mpesa() {
+    const box = $("gvMpesa");
+    if (data.place.level === "diocese") {
+      box.closest(".card").hidden = true;
+      return;
+    }
+    const ch = ownChannel();
+    const saved = data.mpesa.channels.length > 0;
+    const on = !!ch;
+    const steps = [
+      [saved, "Get a paybill or till", "Apply to Safaricom (M-Pesa for Business), or ask our bank for a bank paybill."],
+      [saved, "Link it", 'Add it as a payment channel in a <a href="https://payhero.co.ke" target="_blank" rel="noopener">PayHero</a> account - or, for a Safaricom paybill, make an app on <a href="https://developer.safaricom.co.ke" target="_blank" rel="noopener">Daraja</a>.'],
+      [saved, "Hand it to the diocese", "The diocese finance officer enters the number and its keys on Gateways - keys are kept encrypted."],
+      [on, "Switched on", "M-Pesa on our giving page then comes straight to our own number, into our books."],
+    ];
+    box.innerHTML = `${on
+      ? `<div class="d-flex align-items-center gap-3 mb-3"><span class="avatar avatar-md bg-success text-white"><i class="ri-smartphone-line fs-5"></i></span><div><div class="fw-semibold">${ch.till ? "Till" : "Paybill"} ${esc(ch.number)}</div><div class="acc-sub">Through ${esc(OWN[ch.provider])} · into ${esc(ch.settles_into?.name || "our M-Pesa")}</div></div></div>
+         ${ch.till ? "" : `<div class="acc-sub mb-2">Members paying it themselves type what it's for as the account number:</div><div class="d-flex flex-wrap gap-1 mb-3">${data.mpesa.accounts.map((p) => `<span class="soft-chip soft-primary">${esc(p.label)} · <strong>${esc(p.account)}</strong></span>`).join("")}</div>`}`
+      : `<p class="mb-3">M-Pesa gifts now go ${data.mpesa.diocese_paybill ? `through the diocese paybill ${esc(data.mpesa.diocese_paybill)} and are settled to us monthly` : "nowhere yet - the diocese paybill isn't set up"}. With our own paybill or till they come straight to us:</p>`}
+      <ol class="list-unstyled mb-0">${steps.map(([done, t, sub], i) => `<li class="d-flex gap-2 mb-2"><span class="avatar avatar-xs avatar-rounded ${done ? "bg-success" : "bg-secondary"} text-white flex-shrink-0">${done ? '<i class="ri-check-line"></i>' : i + 1}</span><div><div class="fw-semibold">${t}</div><div class="acc-sub">${sub}</div></div></li>`).join("")}</ol>
+      ${saved && !on ? `<div class="alert alert-warning mt-2 mb-0 py-2">Saved on Gateways${data.mpesa.channels.some((c) => !c.ready) ? " but some details are missing" : ""} - waiting to be switched on.</div>` : ""}`;
   }
 
   function link() {
@@ -46,7 +75,7 @@
     ${K.checkCell(g.id, g.reference)}
     <td data-search="${esc(`${g.giver || ""} ${g.phone || ""} ${g.reference} ${g.receipt || ""}`)}"><div class="fw-semibold">${esc(g.giver || "Online giver")}</div><div class="acc-sub">${esc(g.reference)}${g.phone ? ` · ${esc(g.phone)}` : ""}</div></td>
     <td data-order="${g.paid_at || g.created_at}" class="text-nowrap">${when(g.paid_at || g.created_at)}</td>
-    <td class="d-none d-md-table-cell"><span class="badge bg-${PURPOSE_COLOR[g.purpose] || "secondary"} ${A.textOn(PURPOSE_COLOR[g.purpose] || "secondary")}">${esc(g.purpose_label)}</span><div class="acc-sub mt-1">${g.method === "mpesa" ? "M-Pesa" : "Card"}</div></td>
+    <td class="d-none d-md-table-cell"><span class="badge bg-${PURPOSE_COLOR[g.purpose] || "secondary"} ${A.textOn(PURPOSE_COLOR[g.purpose] || "secondary")}">${esc(g.purpose_label)}</span><div class="acc-sub mt-1">${g.method === "mpesa" ? (g.channel === "payhero" || g.channel === "own_daraja" ? "M-Pesa · our paybill" : "M-Pesa") : "Card"}</div></td>
     <td class="d-none d-lg-table-cell"><span class="badge bg-${ST[g.status][0]} ${A.textOn(ST[g.status][0])}"><i class="${ST[g.status][1]} me-1"></i>${esc(g.status_label)}</span><div class="acc-sub mt-1">${g.status === "paid" ? `${g.receipt ? esc(g.receipt) : ""}${g.fee ? ` · fee ${A.short(g.fee)}` : ""}${g.split ? ` · share ${A.short(g.split)}` : ""}` : esc(g.result || "")}</div></td>
     <td class="text-end" data-order="${g.amount}"><strong>${A.money(g.amount)}</strong></td>
   </tr>`;
@@ -95,6 +124,7 @@
     A.placeLine($("accPlaceLine"), data.place);
     cards();
     link();
+    mpesa();
     gifts();
   }
 

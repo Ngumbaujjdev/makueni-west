@@ -2,6 +2,7 @@
 
 namespace App\Services\Payments;
 
+use App\Models\PaymentChannel;
 use App\Services\Settings\Settings;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -44,6 +45,18 @@ final class Daraja
 
         return new self($s->system('paybill.environment') === 'production' ? 'production' : 'sandbox', (string) $s->system('paybill.shortcode'),
             (string) $s->system('paybill.consumer_key'), (string) $s->system('paybill.consumer_secret'), $s->system('paybill.passkey') ?: null);
+    }
+
+    /** A church's own Daraja app (A10b), from its encrypted channel. */
+    public static function forChannel(PaymentChannel $channel): self
+    {
+        $s = $channel->secrets();
+        if ($channel->provider !== 'daraja' || ! $channel->mpesaReady()) {
+            throw new RuntimeException('That church\'s Daraja app isn\'t fully set up - add its keys on Gateways.');
+        }
+
+        return new self(($s['environment'] ?? '') === 'production' ? 'production' : 'sandbox', (string) $channel->account_number,
+            (string) $s['consumer_key'], (string) $s['consumer_secret'], (string) $s['passkey']);
     }
 
     public function isSandbox(): bool

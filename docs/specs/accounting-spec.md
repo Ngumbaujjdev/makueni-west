@@ -546,6 +546,35 @@ Under `/api/accounting`: `GET giving` · `GET gateways` · `GET gateways/banks` 
 ### Permissions
 `{level}.accounting.giving.read` with reading the books; `diocese.accounting.gateways.manage` (Diocese Finance Officer, Diocese Treasurer).
 
+## A10b - A church's own paybill: PayHero or its own Daraja (built 2026-10-10)
+
+A church that has its own Safaricom paybill or till (from Safaricom, or a bank paybill) can take M-Pesa straight into its own books - no diocese holding, no monthly settlement - through **PayHero** (the paybill linked in its PayHero account as a payment channel) or its **own Daraja app**. The diocese finance officer sets it up on Gateways; the giving page then uses it for M-Pesa.
+
+### Setup (Gateways, diocese finance officer)
+- **PayHero**: the church's PayHero API username and password, and the payment channel id of its paybill/till (PayHero, Payment Channels). Stored encrypted on the church's channel.
+- **Own Daraja**: the church's Daraja app - consumer key and secret, its paybill shortcode, the Lipa na M-Pesa passkey, sandbox or live. Stored encrypted; a callback key is made for it; **Register the addresses** sends them to Safaricom.
+- Either way, the M-Pesa money account it lands in: one of the church's M-Pesa accounts, or a new one made for it (`1150-xx`, the paybill as its number). Off until switched on.
+
+### Rules
+- **The giving page** sends the M-Pesa prompt through the church's own channel when it has one switched on - its own Daraja first, then PayHero - and through the diocese paybill (A8) otherwise.
+- **PayHero**: `POST https://backend.payhero.co.ke/api/v2/payments` (Basic auth; amount, phone, channel id, provider m-pesa, our gift reference as `external_reference`, our callback address). Its callback (`/api/payments/payhero/{key}`) is not signed, so the gift is completed only after asking PayHero for that payment's status, and once per M-Pesa code. A gift still waiting is checked by the 10-minute sweep the same way.
+- **Own Daraja**: the same C2B (`/api/payments/daraja/{key}/confirmation`) and STK (`.../stk`) as A8, with the church's own key. A payment is recorded once per M-Pesa code and posted **straight into the church's books**: Dr its M-Pesa account / Cr the purpose's income and fund, on its budget line. The account number only needs the purpose (`T`, `OFF`, `BLD`...; the church's code in front is allowed); anything else counts as the default purpose. The church sends its share through Remittances (A6) as usual.
+- PayHero money lands in the church's own paybill too, so a paid PayHero gift posts the same way (Dr its M-Pesa account / Cr income) - PayHero's charges come from its service wallet, not the gift.
+- Payments typed straight into a PayHero-linked paybill (not through the giving page) are brought in with the monthly M-Pesa statement import (A2), as for any M-Pesa account.
+- **Paybill or till**: the channel says which. A till takes no account number, so the giving page and the Paybill page show only the number; the page still asks what each gift is for.
+- **PayHero's answer**: the status lookup (`GET /api/v2/transaction-status?reference=`) is QUEUED, SUCCESS or FAILED; only SUCCESS is paid, its M-Pesa code is PayHero's `provider_reference`, and the amount must match the prompt. Every callback is kept raw in `payment_events`.
+- **The sweep** (`payments:reconcile`) runs even where Paystack isn't set up, so a PayHero gift is never left waiting.
+- **The diocese Paybill page** leaves out a church's own-paybill payments - they are its own business - except one that couldn't be posted (e.g. a closed month) and waits To sort; sorting it can only put it into that church's books.
+- **Keys** go in on Gateways and never come back out - the page only says each one is saved. A key left blank on a change is kept.
+
+### Data
+- `payment_channels` (A10a) holds the PayHero / Daraja credentials (encrypted) and callback key; `settles_into_id` is the church's M-Pesa account.
+- `mpesa_payments.channel_id` and `mpesa_requests.channel_id`: whose paybill (null = the diocese paybill).
+
+### API
+Public: `POST /api/payments/payhero/{key}`; the Daraja routes of A8 take a church channel's key too.
+Under `/api/accounting`: `POST gateways/channels` takes `provider` paystack | payhero | daraja with its fields; `POST gateways/channels/{id}/register` (own Daraja).
+
 ## Later phases (outline - specified when built)
 - **A2 Reconciliation:** built 2026-10-09, see "A2 - Reconciliation" above.
 - **A3 Sunday collections:** built 2026-10-09, see "A3 - Sunday collections" above.
@@ -556,8 +585,7 @@ Under `/api/accounting`: `GET giving` · `GET gateways` · `GET gateways/banks` 
 - **A8 The diocese M-Pesa paybill:** built 2026-10-10, see "A8 - The diocese M-Pesa paybill" above.
 - **A9 Financial statements:** I&E, financial position, receipts & payments,
   changes in funds, consolidation, year-end close, the audit pack.
-- **A10 Church gateways:** Paystack subaccounts, PayHero, churches' own Daraja,
-  giving pages.
+- **A10 Church gateways:** built 2026-10-10, see "A10a" and "A10b" above.
 
 ## Demo data (2026-10-10)
 `php artisan db:seed --class=AccountingDemoSeeder` fills **CCI SULTAN HAMUD**'s books from **1 January 2025 to today**, so the pages make sense with data. `--class=AccountingDemoRemoveSeeder` takes it all away again.

@@ -80,8 +80,10 @@ Route::prefix('give')->group(function () {
     Route::post('{code}', [$give, 'store'])->middleware('throttle:10,1');
 });
 Route::post('payments/paystack/webhook', [\App\Http\Controllers\Api\Payments\PaystackWebhookController::class, 'handle'])->middleware('throttle:600,1');
-// Public: Safaricom's callbacks for the diocese paybill (docs/specs/accounting-spec.md, A8).
+// Public: Safaricom's callbacks for the diocese paybill (docs/specs/accounting-spec.md, A8), and a church's own Daraja app (A10b).
 // The callback key in the address is the guard; a wrong key is a 404.
+// A church's own paybill through PayHero (A10b) - unsigned, so it is checked with PayHero before anything posts.
+Route::post('payments/payhero/{key}', [\App\Http\Controllers\Api\Payments\PayHeroController::class, 'handle'])->middleware('throttle:600,1');
 Route::prefix('payments/daraja/{key}')->middleware('throttle:600,1')->group(function () {
     $daraja = \App\Http\Controllers\Api\Payments\DarajaController::class;
     Route::post('validation', [$daraja, 'validation']);
@@ -779,6 +781,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('gateways/banks', [$gv, 'banks']);
         Route::post('gateways/channels', [$gv, 'storeChannel']);
         Route::put('gateways/channels/{id}', [$gv, 'updateChannel'])->whereNumber('id');
+        Route::post('gateways/channels/{id}/register', [$gv, 'registerChannel'])->whereNumber('id');
         // A7 - payroll.
         $pay = \App\Http\Controllers\Api\Accounting\PayrollController::class;
         Route::get('payroll', [$pay, 'index']);

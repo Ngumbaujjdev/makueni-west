@@ -36,7 +36,7 @@ include __DIR__ . '/toolbar.php';
 
 <div id="pbPaymentsPane">
     <div class="card custom-card">
-        <div class="card-header"><div><div class="card-title"><?= $isDiocese ? 'Paybill payments' : 'Our paybill giving' ?></div><span class="card-subtitle-text"><?= $isDiocese ? 'Everything paid into the diocese paybill, with the place and purpose its account number named' : 'What members paid to the diocese paybill with our code - in our books the same day' ?></span></div></div>
+        <div class="card-header"><div><div class="card-title"><?= $isDiocese ? 'Paybill payments' : 'Our paybill giving' ?></div><span class="card-subtitle-text"><?= $isDiocese ? 'Everything paid into the diocese paybill, with the place and purpose its account number named' : 'What members paid by M-Pesa - to our own paybill or with our code to the diocese paybill - in our books the same day' ?></span></div></div>
         <div class="card-body pb-0 pt-3" id="pbPills"></div>
         <div class="card-body p-0" id="pbTableWrap">
             <div id="pbFilters" class="list-filterbar-wrap"></div>
