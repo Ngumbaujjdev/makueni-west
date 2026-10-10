@@ -631,6 +631,17 @@ How each place gets its card money, and seeing it arrive - borrowed from v1-even
   - Refused, cancelled or timed out: kept on the prompt (and the gift). Still at the PIN ("being processed"), or Safaricom busy: it waits.
 - **Testing on a computer the internet can't reach:** a tunnel (`cloudflared tunnel --url http://localhost:8004`), then `php artisan payments:dev-tunnel {https address}` - points the sandbox paybill's callbacks at it, registers them with Safaricom, and shows the Paystack webhook address to set in Paystack's test dashboard. Refuses a live paybill. Without a tunnel, prompts still complete by asking.
 
+## A10e - Transactions: every attempt to pay (built 2026-10-10)
+
+One list of every attempt to pay, the way v1-events shows its transactions - failed ones included:
+- **What's in it:** gifts from the giving page (M-Pesa or Paystack, whatever became of them), M-Pesa prompts that aren't gifts (Ask to pay, a share paid by M-Pesa), and paybill payments typed by hand. Each with when, who paid (name, phone, email), what for and where, how (M-Pesa or card, and the route - diocese paybill, own paybill, Paystack), the amount and fee, where it stands (paid, waiting, not paid, abandoned, refunded, to sort, returned), **why it failed**, the M-Pesa code or Paystack reference, and its receipt in the books.
+- **Who sees what:** a church its own; a region itself and its churches; the diocese everything (and the paybill payments nobody's account number matched), with a place picker. Reading it needs the books (`accounting.transactions.read`).
+- **The page** (Accounting, after Online giving): Paid, Went through (% of the finished ones), Not paid, Waiting; a period switch (Today, 7 days, 30 days, this month, this year); status and method pills, search (payer, phone, reference, M-Pesa code); a warning when payments have waited more than 10 minutes.
+- **One transaction:** the payment, where the money went (gross, Paystack's fee, the diocese share, to the church), who paid, and **what happened when** - started, prompt sent, every answer from Safaricom/Paystack/PayHero as it arrived (`payment_events`), paid or not paid with the reason, the receipts in the books, a dispute or refund.
+- **Check now / Check the waiting ones:** asks Paystack or M-Pesa again (`Giving::complete`, `Paybill::checkPrompt`), for whoever writes receipts there or runs the diocese paybill.
+
+API (under `/api/accounting`): `GET transactions?from&to&status&method&source&q&place_id&page&per`, `GET transactions/{gift|prompt|paybill}/{id}`, `POST transactions/{source}/{id}/check`, `POST transactions/check-waiting`.
+
 ## Later phases (outline - specified when built)
 - **A2 Reconciliation:** built 2026-10-09, see "A2 - Reconciliation" above.
 - **A3 Sunday collections:** built 2026-10-09, see "A3 - Sunday collections" above.
