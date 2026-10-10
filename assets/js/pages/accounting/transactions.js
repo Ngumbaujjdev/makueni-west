@@ -159,7 +159,7 @@
 
   /** A treasurer checks an M-Pesa code someone says they paid with (A10f). */
   function checkCodeWindow() {
-    const purposes = [["T", "Tithe"], ["O", "Offering"], ["TH", "Thanksgiving"], ["B", "Building fund"], ["K", "KYS"]];
+    const purposes = (data.purposes || []).map((u) => [u.key, u.owner ? `${u.label} (${u.owner.name})` : u.label]);
     const el = K.confirmWindow({
       title: "Check an M-Pesa code",
       subtitle: "Someone says they paid the paybill - Safaricom confirms it, then it goes into the books once",
