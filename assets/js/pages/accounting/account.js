@@ -22,9 +22,10 @@
   const ID = Number(new URLSearchParams(window.location.search).get("id"));
   const TYPE_COLOR = { asset: "primary", liability: "danger", fund: "warning", income: "success", expense: "purple" };
   let chart = null;
+  let data = null;
 
-  const card = (icon, title, body, { color = "primary", extra = "", sub = "" } = {}) =>
-    `<div class="card custom-card acc-rec-card"><div class="card-header"><div><div class="card-title d-flex align-items-center gap-2"><span class="acc-rec-icon bg-${color}"><i class="${icon}"></i></span>${esc(title)}</div>${sub ? `<span class="card-subtitle-text">${esc(sub)}</span>` : ""}</div>${extra}</div><div class="card-body">${body}</div></div>`;
+  const card = (icon, title, body, { color = "primary", extra = "", sub = "", flex = false } = {}) =>
+    `<div class="card custom-card acc-rec-card${flex ? " flex-fill" : ""}"><div class="card-header"><div><div class="card-title d-flex align-items-center gap-2"><span class="acc-rec-icon bg-${color}"><i class="${icon}"></i></span>${esc(title)}</div>${sub ? `<span class="card-subtitle-text">${esc(sub)}</span>` : ""}</div>${extra}</div><div class="card-body">${body}</div></div>`;
 
   function hero(d) {
     const a = d.account;
@@ -33,13 +34,14 @@
     const rec = d.reconciled;
     const facts = [
       ["Code", esc(a.code)],
-      ["Kind", esc(a.kind_label || a.type_label)],
+      ["Kind", a.cash_kind ? A.methodChip(a.cash_kind === "petty_cash" ? "cash" : a.cash_kind, a.kind_label) : esc(a.type_label)],
       a.bank_name ? ["Bank", esc(`${a.bank_name}${a.branch ? ` · ${a.branch}` : ""}`)] : a.number_masked ? ["Number", esc(a.number_masked)] : ["Type", esc(a.type_label)],
       a.cash_kind ? ["Last reconciled", rec ? `${A.dateChip(rec.date)} <span class="badge bg-${rec.status === "approved" ? "success" : "warning"} ${A.textOn(rec.status === "approved" ? "success" : "warning")}">${esc(rec.status === "approved" ? "Approved" : rec.status)}</span>` : '<span class="badge bg-warning text-dark">Never</span>'] : ["Ours", a.own ? "Our own account" : "Standard diocese account"],
     ];
+    const tileHtml = ["mpesa", "airtel"].includes(a.cash_kind) ? A.tile(a.cash_kind, "lg") : `<span class="avatar avatar-lg avatar-rounded bg-${color} ${A.textOn(color)} flex-shrink-0"><i class="${icon} fs-22"></i></span>`;
     return `<div class="card custom-card acc-rec-hero"><div class="card-body">
       <div class="acc-rec-top">
-        <span class="avatar avatar-lg avatar-rounded bg-${color} ${A.textOn(color)} flex-shrink-0"><i class="${icon} fs-22"></i></span>
+        ${tileHtml}
         <div class="min-w-0 flex-fill"><span class="acc-rec-kind">${esc(a.type_label || "Account")}${a.number_masked ? ` · ${esc(a.number_masked)}` : ""}</span><h4 class="acc-rec-number">${esc(a.name)}</h4><p class="acc-rec-title">${esc(a.description || (a.cash_kind ? "Money the church holds here" : "An account in the books"))}</p>${a.is_active ? "" : '<span class="badge bg-secondary">Switched off</span>'}</div>
         <div class="acc-rec-amount"><span>Balance today</span>${A.figure(d.balance)}</div>
       </div>
@@ -50,12 +52,36 @@
   function stats(d) {
     const s = d.series;
     const L = d.labels;
+    const yIn = d.this_year.in;
+    const yOut = d.this_year.out;
+    const net = yIn - yOut;
+    const share = yIn ? Math.min(100, Math.round((yOut / yIn) * 100)) : 0;
     K.statRow($("acStats"), [
       { icon: "ri-arrow-down-circle-line", label: `${L.in} this month`, sub: "vs last month", value: A.figure(d.this_month.in), color: "success", delta: UI.periodDelta(d.this_month.in, d.last_month.in), series: { labels: s.labels, data: s.in }, trim: true },
       { icon: "ri-arrow-up-circle-line", label: `${L.out} this month`, sub: "vs last month", value: A.figure(d.this_month.out), color: "danger", delta: UI.periodDelta(d.this_month.out, d.last_month.out), series: { labels: s.labels, data: s.out }, trim: true },
-      { icon: "ri-calendar-check-line", label: `${L.in} this year`, sub: `Since 1 January ${new Date().getFullYear()}`, value: A.figure(d.this_year.in), color: "primary" },
-      { icon: "ri-calendar-2-line", label: `${L.out} this year`, sub: `Since 1 January ${new Date().getFullYear()}`, value: A.figure(d.this_year.out), color: "purple" },
+      { icon: "ri-calendar-check-line", label: `${L.in} this year`, sub: `Since 1 January ${new Date().getFullYear()}`, value: A.figure(yIn), color: "primary", series: { labels: s.labels, data: s.in }, trim: true },
+      { icon: "ri-calendar-2-line", label: `${L.out} this year`, sub: `Net ${A.money(net)}`, value: A.figure(yOut), color: "purple", bar: { pct: share, text: `${share}% of ${L.in.toLowerCase()}` } },
     ]);
+  }
+
+  /** The year in a few lines: net, monthly averages, the biggest month, how many movements, the last one. */
+  function glance(d) {
+    const s = d.series;
+    const year = String(new Date().getFullYear());
+    const idx = s.months.map((m, i) => (m.startsWith(year) ? i : -1)).filter((i) => i >= 0);
+    const months = Math.max(1, idx.length);
+    const net = d.this_year.in - d.this_year.out;
+    const best = idx.reduce((b, i) => (s.in[i] > (b === null ? -1 : s.in[b]) ? i : b), null);
+    const last = d.movements[0];
+    const row = (icon, color, label, value) => `<div class="acc-glance-row"><span class="avatar avatar-sm avatar-rounded bg-${color} ${A.textOn(color)}"><i class="${icon}"></i></span><span class="flex-fill">${esc(label)}</span><strong>${value}</strong></div>`;
+    return `<div class="acc-glance">
+      ${row("ri-scales-3-line", net >= 0 ? "success" : "danger", "Net this year", `<span class="${net >= 0 ? "text-success" : "text-danger"}">${A.money(net)}</span>`)}
+      ${row("ri-arrow-down-line", "success", `Average ${d.labels.in.toLowerCase()} a month`, A.money(d.this_year.in / months))}
+      ${row("ri-arrow-up-line", "danger", `Average ${d.labels.out.toLowerCase()} a month`, A.money(d.this_year.out / months))}
+      ${best !== null && s.in[best] > 0 ? row("ri-trophy-line", "warning", `Biggest month (${s.labels[best]})`, A.money(s.in[best])) : ""}
+      ${row("ri-exchange-line", "purple", "Movements this year", A.num(d.year_count))}
+      ${last ? row("ri-time-line", "primary", "Last movement", esc(A.since(last.date))) : ""}
+    </div>`;
   }
 
   function drawChart(d) {
@@ -82,7 +108,7 @@
   }
 
   function budgetLines(d) {
-    if (!d.budget_lines.length) return '<p class="acc-muted-line mb-0">No budget line posts to this account.</p>';
+    if (!d.budget_lines.length) return A.empty("ri-wallet-3-line", "No budget line posts here", "Budget lines are tied to income and expense accounts - money accounts like this one only move the money.");
     const head = d.budget ? `<p class="acc-sub mb-3">Planned and actual from <strong>${esc(d.budget.name || "the budget in use")}</strong>.</p>` : '<p class="acc-sub mb-3">No budget is in use today - these lines post here when one is.</p>';
     return (
       head +
@@ -96,13 +122,42 @@
     );
   }
 
-  function movements(d) {
-    if (!d.movements.length) return A.empty("ri-exchange-line", "Nothing moved yet", "Receipts, payments and transfers on this account show here.");
-    return `<div class="table-responsive"><table class="table table-hover mb-0 acc-table"><thead><tr><th>Date</th><th>Document</th><th class="d-none d-md-table-cell">Against</th><th class="text-end">${esc(d.labels.in)}</th><th class="text-end">${esc(d.labels.out)}</th></tr></thead><tbody>${d.movements
-      .map(
-        (m) => `<tr data-id="${m.journal_id}"><td class="text-nowrap">${A.day(m.date, { day: "numeric", month: "short", year: "numeric" })}</td><td><div class="d-flex align-items-center gap-2">${A.docTile(m.doc_type)}<div class="min-w-0"><div class="fw-semibold">${esc(m.number)}${m.reversed ? ` ${A.reversedChip()}` : ""}</div><div class="acc-sub text-truncate">${esc(m.party || m.details || "")}</div></div></div></td><td class="d-none d-md-table-cell"><span class="acc-sub">${esc(m.against.join(", "))}</span></td><td class="text-end">${m.in ? `<strong class="text-success">${A.amount(m.in)}</strong>` : ""}</td><td class="text-end">${m.out ? `<strong class="text-danger">${A.amount(m.out)}</strong>` : ""}</td></tr>`,
-      )
-      .join("")}</tbody></table></div>`;
+  /** A statement of money in and out: by day, newest first, each with its direction, who or what it was against, and the balance after it. */
+  function movements(d, filter = "all") {
+    const list = d.movements.filter((m) => filter === "all" || m.direction === filter);
+    if (!list.length) return A.empty("ri-exchange-line", filter === "all" ? "Nothing moved yet" : "Nothing like that lately", "Receipts, payments and transfers on this account show here.");
+    const days = [];
+    list.forEach((m) => {
+      const last = days[days.length - 1];
+      if (last && last.date === m.date) last.items.push(m);
+      else days.push({ date: m.date, items: [m] });
+    });
+    const against = (m) =>
+      m.against
+        .slice(0, 2)
+        .map((x) => `<span class="acc-against">${x.cash_kind ? A.methodLogo(x.cash_kind === "petty_cash" ? "cash" : x.cash_kind, "xs") : '<i class="ri-book-2-line"></i>'}${esc(x.name)}</span>`)
+        .join("") + (m.against.length > 2 ? `<span class="acc-sub">+${m.against.length - 2}</span>` : "");
+    return `<div class="acc-statement">${days
+      .map((g) => {
+        const tin = g.items.reduce((t, m) => t + m.in, 0);
+        const tout = g.items.reduce((t, m) => t + m.out, 0);
+        return `<div class="acc-st-day"><div class="acc-st-dayhead">${A.dateTile(g.date)}<div class="flex-fill min-w-0"><strong>${A.day(g.date, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</strong><small>${esc(A.since(g.date))}</small></div><div class="acc-st-daysum">${tin ? `<span class="text-success">In ${A.money(tin)}</span>` : ""}${tout ? `<span class="text-danger">Out ${A.money(tout)}</span>` : ""}</div></div>
+          ${g.items
+            .map((m) => {
+              const rec = A.sourceRecord(m);
+              const who = m.party || m.against.map((x) => x.name).join(", ");
+              return `<div class="acc-st-row${m.reversed ? " is-reversed" : ""}" data-journal="${m.journal_id}"${rec ? ` data-record="${A.link("record.php", rec)}"` : ""} role="button" tabindex="0">
+                <span class="acc-st-dir is-${m.direction}"><i class="${m.direction === "in" ? "ri-arrow-left-down-line" : "ri-arrow-right-up-line"}"></i></span>
+                <div class="acc-st-main"><div class="acc-st-line"><strong>${m.direction === "in" ? `${esc(d.labels.in)} from` : `${esc(d.labels.out)} to`} ${esc(who || "-")}</strong></div>
+                  <div class="acc-st-meta"><span class="fw-semibold">${esc(m.number)}</span>${A.docPill(m.doc_type)}${m.method ? A.methodChip(m.method, m.method_label) : ""}${m.reversed ? '<span class="badge bg-danger">Reversed</span>' : ""}${m.attachments ? `<span class="badge bg-primary"><i class="ri-attachment-2 me-1"></i>${m.attachments}</span>` : ""}</div>
+                  ${m.details ? `<div class="acc-sub text-truncate">${esc(m.details)}</div>` : ""}
+                  <div class="acc-st-against">${against(m)}</div></div>
+                <div class="acc-st-money"><span class="acc-st-amount is-${m.direction}">${m.direction === "in" ? "+" : "−"} ${A.money(m.direction === "in" ? m.in : m.out)}</span><small>Balance ${A.money(m.balance_after)}</small></div>
+              </div>`;
+            })
+            .join("")}</div>`;
+      })
+      .join("")}</div>`;
   }
 
   async function load() {
@@ -122,13 +177,18 @@
       $("acCashbook").hidden = false;
     }
     const last = d.movements.length ? `<a class="btn btn-sm btn-outline-primary" href="${a.cash_kind ? A.link("cashbook.php", { account_id: a.id, from: `${new Date().getFullYear()}-01-01` }) : A.link("documents.php")}"><i class="ri-book-open-line me-1"></i>${a.cash_kind ? "Full cashbook" : "All documents"}</a>` : "";
+    const tin = d.movements.reduce((t, m) => t + m.in, 0);
+    const tout = d.movements.reduce((t, m) => t + m.out, 0);
+    const pills = `<div class="d-flex flex-wrap align-items-center gap-2"><div class="pp-pills" role="tablist">${[["all", "All", "ri-apps-2-line", "primary"], ["in", d.labels.in, "ri-arrow-left-down-line", "success"], ["out", d.labels.out, "ri-arrow-right-up-line", "danger"]].map(([k, l, i, c]) => `<button type="button" class="pp-pill${k === "all" ? " is-on" : ""}" style="--q: var(--${c}-rgb)" data-filter="${k}"><i class="${i}"></i>${esc(l)}</button>`).join("")}</div>${last}</div>`;
+    data = d;
     $("acApp").innerHTML = `${hero(d)}
       <div class="row" id="acStats"></div>
       <div class="row">
-        <div class="col-xl-8">${card("ri-bar-chart-2-line", `${d.labels.in} and ${d.labels.out.toLowerCase()}`, '<div id="acChart" class="acc-chart"></div>', { color: "success", sub: "The last 12 months" })}</div>
-        <div class="col-xl-4">${card("ri-wallet-3-line", "Budget lines using it", budgetLines(d), { color: "warning" })}</div>
+        <div class="col-xl-8 d-flex">${card("ri-bar-chart-2-line", `${d.labels.in} and ${d.labels.out.toLowerCase()}`, '<div id="acChart" class="acc-chart"></div>', { color: "success", sub: "The last 12 months", flex: true })}</div>
+        <div class="col-xl-4 d-flex flex-column">${card("ri-wallet-3-line", "Budget lines using it", budgetLines(d), { color: "warning" })}${card("ri-dashboard-3-line", "This year at a glance", glance(d), { color: "primary", flex: true })}</div>
       </div>
-      ${card("ri-exchange-line", "Latest movements", movements(d), { color: "purple", extra: last, sub: "The 15 most recent - open one for its lines and papers" })}`;
+      ${card("ri-exchange-line", "Money in and out", '<div id="acStatement"></div>', { color: "purple", extra: pills, sub: `The ${d.movements.length} latest movements · in ${A.money(tin)} · out ${A.money(tout)} - with the balance after each` })}`;
+    $("acStatement").innerHTML = movements(d);
     stats(d);
     drawChart(d);
   }
@@ -137,8 +197,17 @@
 
   function init() {
     $("acApp").addEventListener("click", (e) => {
-      const tr = e.target.closest("tr[data-id]");
-      if (tr) W.viewJournal(Number(tr.dataset.id), { onChange: load });
+      const f = e.target.closest("[data-filter]");
+      if (f) {
+        document.querySelectorAll("[data-filter]").forEach((b) => b.classList.toggle("is-on", b === f));
+        $("acStatement").innerHTML = movements(data, f.dataset.filter);
+        return;
+      }
+      if (e.target.closest("a, button")) return;
+      const row = e.target.closest("[data-journal]");
+      if (!row) return;
+      if (row.dataset.record) window.location.href = row.dataset.record;
+      else W.viewJournal(Number(row.dataset.journal), { onChange: load });
     });
     if (!ID) {
       $("acApp").innerHTML = A.errorBox("Pick an account on Cash & bank.");

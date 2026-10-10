@@ -305,6 +305,7 @@ const AccountingUI = (function () {
   const dateChip = (iso, opts) => (iso ? `<span class="acc-date"><i class="ri-calendar-line"></i>${day(iso, opts)}</span>` : "-");
   function accountChip(acc) {
     if (!acc) return "-";
+    if (LOGOS[acc.kind]) return `<span class="acc-acct">${methodLogo(acc.kind, "xs")}<span>${esc(acc.name)}</span></span>`;
     const m = kind(acc.kind);
     return `<span class="acc-acct"><span class="acc-acct-tile bg-${m.color} ${textOn(m.color)}"><i class="${m.icon}"></i></span><span>${esc(acc.name)}</span></span>`;
   }

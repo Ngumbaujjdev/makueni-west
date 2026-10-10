@@ -39760,29 +39760,10 @@ a.acc-chain-item:hover, button.acc-chain-item:hover { border-color: rgba(var(--p
 .acc-chain-num { overflow-wrap: anywhere; }
 
 /* ===========================================================================
-   ACCOUNTING REDESIGN R2 (2026-10-10) - lighter windows, key data in colour
-   The user found the navy band and bold black text heavy ("hard to find the
-   important data"): Accounting windows get a white header with a coloured
-   top line and icon, calmer text, and colour only on the key data.
+   ACCOUNTING REDESIGN R2 (2026-10-10) - calmer windows, key data in colour
+   Accounting windows keep the navy band like every other window (no top
+   line - R2c); inside, values are calm and only the key data is coloured.
    =========================================================================== */
-.acc-body .app-modal .modal-header { border-top: 3px solid rgb(var(--acc-tone, var(--primary-rgb))); border-bottom: 1px solid var(--default-border); background: #fff; color: var(--v2-heading); }
-.acc-body .app-modal.is-danger { --acc-tone: var(--danger-rgb); }
-.acc-body .app-modal.is-done, .acc-body .app-modal:has(.app-modal-state.is-done) { --acc-tone: var(--success-rgb); }
-.acc-body .app-modal.is-danger .modal-header, .acc-body .app-modal.is-done .modal-header, .acc-body .app-modal:has(.app-modal-state.is-done) .modal-header { background: #fff; }
-.acc-body .app-modal-icon { background: rgb(var(--acc-tone, var(--primary-rgb))) !important; color: #fff !important; }
-.acc-body .app-modal .modal-title { font-weight: 600; color: var(--v2-heading); }
-.acc-body .app-modal-subtitle { color: var(--default-text-color); }
-.acc-body .app-modal .modal-header .btn-close { background: rgba(var(--dark-rgb, 15, 23, 42), .06) url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23334155'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e") center / .7rem auto no-repeat; }
-.acc-body .app-modal .modal-header .btn-close:hover { background-color: rgba(15, 23, 42, .12); }
-.acc-body .app-modal .modal-header .btn-close:focus { box-shadow: 0 0 0 3px rgba(var(--primary-rgb), .3); }
-.acc-tone-primary { --acc-tone: var(--primary-rgb); }
-.acc-tone-success { --acc-tone: var(--success-rgb); }
-.acc-tone-danger { --acc-tone: var(--danger-rgb); }
-.acc-tone-warning { --acc-tone: var(--warning-rgb); }
-.acc-tone-purple { --acc-tone: var(--purple-rgb); }
-.acc-tone-pink { --acc-tone: var(--pink-rgb); }
-.acc-tone-secondary { --acc-tone: var(--secondary-rgb); }
-.acc-body .acc-tone-warning .app-modal-icon, .acc-body .acc-tone-secondary .app-modal-icon { color: var(--diocese-black) !important; }
 
 /* Each part's head: a solid icon tile in its own colour */
 .acc-body .app-modal-part-head { font-weight: 600; }
@@ -39964,3 +39945,44 @@ a.acc-chain-item:hover, button.acc-chain-item:hover { border-color: rgba(var(--p
 .acc-logo-xs { width: 2.1rem; height: 1.35rem; }
 .acc-logo-xs img { max-width: 88%; max-height: 80%; }
 .acc-method { padding-left: .15rem; }
+
+/* ===========================================================================
+   ACCOUNTING REDESIGN R2c (2026-10-10) - an account's money in and out as a
+   statement (by day, direction, against what, balance after); no half-empty
+   cards
+   =========================================================================== */
+.acc-statement { display: flex; flex-direction: column; gap: 1rem; }
+.acc-st-day { border: 1px solid var(--default-border); border-radius: .9rem; overflow: hidden; }
+.acc-st-dayhead { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; padding: .6rem .9rem; border-bottom: 1px solid var(--default-border); background: #f6f7fb; }
+.acc-st-dayhead strong { display: block; font-size: .86rem; color: var(--v2-heading); }
+.acc-st-dayhead small { font-size: .72rem; color: var(--default-text-color); }
+.acc-st-daysum { display: flex; flex-wrap: wrap; gap: .75rem; font-size: .8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.acc-st-row { display: flex; align-items: flex-start; gap: .85rem; padding: .85rem .95rem; background: #fff; cursor: pointer; transition: background .15s; }
+.acc-st-row + .acc-st-row { border-top: 1px dashed var(--default-border); }
+.acc-st-row:hover { background: rgba(var(--primary-rgb), .035); }
+.acc-st-row.is-reversed { opacity: .65; }
+.acc-st-dir { display: grid; flex: 0 0 2.4rem; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 50%; font-size: 1.15rem; color: #fff; }
+.acc-st-dir.is-in { background: rgb(var(--success-rgb)); }
+.acc-st-dir.is-out { background: rgb(var(--danger-rgb)); }
+.acc-st-main { display: flex; flex: 1 1 auto; flex-direction: column; gap: .3rem; min-width: 0; }
+.acc-st-line strong { font-size: .9rem; font-weight: 600; color: var(--v2-heading); }
+.acc-st-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; font-size: .8rem; color: var(--v2-heading); }
+.acc-st-against { display: flex; flex-wrap: wrap; gap: .35rem; }
+.acc-against { display: inline-flex; align-items: center; gap: .3rem; padding: .12rem .5rem .12rem .2rem; border-radius: 1rem; background: rgba(var(--primary-rgb), .07); font-size: .72rem; font-weight: 500; color: var(--v2-heading); }
+.acc-against > i { display: inline-grid; place-items: center; width: 1.15rem; height: 1.15rem; border-radius: 50%; background: rgb(var(--purple-rgb)); font-size: .65rem; color: #fff; }
+.acc-st-money { display: flex; flex-shrink: 0; flex-direction: column; align-items: flex-end; gap: .2rem; text-align: right; }
+.acc-st-amount { font-size: 1rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.acc-st-amount.is-in { color: rgb(var(--success-rgb)); }
+.acc-st-amount.is-out { color: rgb(var(--danger-rgb)); }
+.acc-st-money small { padding: .1rem .5rem; border-radius: 1rem; background: #f1f3f8; font-size: .72rem; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--v2-heading); white-space: nowrap; }
+
+/* This year at a glance */
+.acc-glance { display: flex; flex-direction: column; gap: .7rem; }
+.acc-glance-row { display: flex; align-items: center; gap: .65rem; font-size: .85rem; color: var(--v2-heading); }
+.acc-glance-row strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.acc-page .col-xl-4.d-flex.flex-column > .card:last-child { margin-bottom: 1.5rem; }
+
+@media (max-width: 575.98px) {
+  .acc-st-row { flex-wrap: wrap; }
+  .acc-st-money { width: 100%; flex-direction: row; justify-content: space-between; align-items: center; padding-left: 3.25rem; }
+}
