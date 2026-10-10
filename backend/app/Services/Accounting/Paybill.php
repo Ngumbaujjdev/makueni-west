@@ -11,10 +11,12 @@ use App\Models\JournalLine;
 use App\Models\MpesaPayment;
 use App\Models\MpesaRequest;
 use App\Models\PaybillSettlement;
+use App\Models\PaymentChannel;
 use App\Models\Remittance;
 use App\Models\Territory;
 use App\Models\User;
 use App\Services\Payments\Daraja;
+use App\Services\Payments\PayHero;
 use App\Services\Settings\Settings;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
@@ -32,6 +34,10 @@ use Throwable;
  * income). Payments that match no place wait To sort (Cr 2410). Each month the
  * diocese settles every place: what it holds, less the diocese share the place
  * still owes, is paid by a voucher approved as usual.
+ *
+ * A church with its own paybill (A10b) takes M-Pesa through its PayHero or
+ * its own Daraja app instead: the same payments and prompts, marked with the
+ * channel, posted straight into its own books (Dr its M-Pesa / Cr income).
  */
 final class Paybill
 {
@@ -165,9 +171,13 @@ final class Paybill
      */
     public function record(array $p): MpesaPayment
     {
-        $parsed = $this->parse($p['bill_ref'] ?? null);
+        $channel = ! empty($p['channel_id']) ? PaymentChannel::find((int) $p['channel_id']) : null;
+        $parsed = $channel
+            ? ['place' => Territory::find($channel->territory_id), 'purpose' => $this->parseOwn($channel, $p['bill_ref'] ?? null)]
+            : $this->parse($p['bill_ref'] ?? null);
         try {
             $payment = MpesaPayment::create([
+                'channel_id' => $channel?->id,
                 'trans_id' => strtoupper(trim($p['trans_id'])),
                 'kind' => $p['kind'] ?? 'c2b',
                 'shortcode' => (string) $p['shortcode'],
@@ -214,6 +224,11 @@ final class Paybill
                 $date = $payment->paid_at->copy()->setTimezone('Africa/Nairobi')->toDateString();
                 $head = fn (string $narration) => ['doc_type' => 'receipt', 'date' => $date, 'narration' => $narration, 'party_name' => $payment->payer_name ?: 'M-Pesa payer',
                     'party_phone' => $payment->phone, 'method' => 'mpesa', 'reference' => $payment->trans_id, 'source_type' => 'mpesa_payment', 'source_id' => $payment->id];
+                if ($payment->channel_id && $place && $payment->purpose) {
+                    $this->postOwn($payment, $place);
+
+                    return;
+                }
                 if (! $place || ! $payment->purpose) {
                     $j = $this->ledger->post($diocese, $head("Paybill payment to sort ({$payment->bill_ref})"), [
                         ['account_id' => $paybill->id, 'debit' => $amount],
@@ -242,6 +257,54 @@ final class Paybill
             report($e);
             $payment->update(['status' => 'to_sort', 'note' => mb_substr('Couldn\'t be posted: '.$e->getMessage(), 0, 255)]);
         }
+    }
+
+    /** Into a church's own paybill (A10b): Dr its M-Pesa account / Cr the purpose's income, on its budget line. */
+    private function postOwn(MpesaPayment $payment, Territory $place, ?User $by = null): void
+    {
+        $channel = PaymentChannel::findOrFail($payment->channel_id);
+        $into = $this->ownAccount($channel);
+        [$account, $fund] = $this->target($payment->purpose);
+        $label = self::PURPOSES[$payment->purpose][0];
+        $j = $this->ledger->post($place, ['doc_type' => 'receipt', 'date' => $payment->paid_at->copy()->setTimezone('Africa/Nairobi')->toDateString(),
+            'narration' => "{$label} by M-Pesa to our paybill", 'party_name' => $payment->payer_name ?: 'M-Pesa payer', 'party_phone' => $payment->phone,
+            'method' => 'mpesa', 'reference' => $payment->trans_id, 'source_type' => 'mpesa_payment', 'source_id' => $payment->id], [
+                ['account_id' => $into->id, 'debit' => (float) $payment->amount],
+                ['account_id' => $account->id, 'credit' => (float) $payment->amount, 'fund_id' => $fund?->id, 'budget_line_id' => $this->chart->budgetLineFor($place, $account->id)?->id, 'memo' => $label],
+            ], $by);
+        $this->bridge->journalPosted($j, $by);
+        $payment->update(['status' => 'posted', 'place_journal_id' => $j->id, 'account_id' => $account->id, 'fund_id' => $fund?->id, 'note' => null]);
+    }
+
+    /** The church's M-Pesa account its own paybill money is recorded into. */
+    public function ownAccount(PaymentChannel $channel): AccountingAccount
+    {
+        $into = $channel->settles_into_id ? AccountingAccount::where('territory_id', $channel->territory_id)->where('cash_kind', 'mpesa')->find($channel->settles_into_id) : null;
+        if (! $into) {
+            throw new \RuntimeException('Pick which of the church\'s M-Pesa accounts its paybill money is recorded into (Gateways).');
+        }
+
+        return $into;
+    }
+
+    /** What a payment into a church's own paybill was for: its account number names only the purpose (the church's code in front is fine). */
+    public function parseOwn(PaymentChannel $channel, ?string $billRef): string
+    {
+        $ref = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $billRef));
+        $place = Territory::find($channel->territory_id);
+        $code = $place ? self::code($place) : '';
+        if ($code !== '' && str_starts_with($ref, $code)) {
+            $ref = substr($ref, strlen($code));
+        }
+
+        return self::WORDS[$ref] ?? $this->defaultPurpose();
+    }
+
+    /** The church's own M-Pesa route, if it has one on: its own Daraja first, then PayHero. */
+    public function mpesaChannel(Territory $place): ?PaymentChannel
+    {
+        return PaymentChannel::where('territory_id', $place->id)->whereIn('provider', ['daraja', 'payhero'])->where('status', 'active')->get()
+            ->filter(fn ($c) => $c->mpesaReady())->sortBy(fn ($c) => $c->provider === 'daraja' ? 0 : 1)->first();
     }
 
     /** Diocese: Dr paybill (or from to-sort) / Cr held for the place. Place: Dr held by the diocese / Cr its income. @return array{0: Journal, 1: Journal} */
@@ -273,6 +336,19 @@ final class Paybill
             $payment = MpesaPayment::whereKey($payment->id)->lockForUpdate()->firstOrFail();
             if ($payment->status !== 'to_sort') {
                 throw ValidationException::withMessages(['payment' => ['It was already sorted.']]);
+            }
+            if ($payment->channel_id) {
+                // It came into a church's own paybill: it can only go into that church's books.
+                $purpose = (string) ($data['purpose'] ?? '');
+                if (! isset(self::PURPOSES[$purpose])) {
+                    throw ValidationException::withMessages(['purpose' => ['Pick what it was given for.']]);
+                }
+                $place = Territory::findOrFail(PaymentChannel::findOrFail($payment->channel_id)->territory_id);
+                $payment->update(['territory_id' => $place->id, 'purpose' => $purpose]);
+                $this->postOwn($payment, $place, $user);
+                $payment->update(['note' => isset($data['note']) ? (mb_substr(trim((string) $data['note']), 0, 255) ?: null) : null, 'sorted_by' => $user->id, 'sorted_at' => now()]);
+
+                return $payment->fresh();
             }
             $to = (string) ($data['to'] ?? '');
             $diocese = $this->diocese();
@@ -326,8 +402,12 @@ final class Paybill
 
     // ------------------------------------------------------------ ask to pay (STK)
 
-    /** Send the M-Pesa prompt to a phone, with the place's account number filled in. */
-    public function ask(Territory $place, ?User $user, string $phone, float $amount, string $purpose): MpesaRequest
+    /**
+     * Send the M-Pesa prompt to a phone, with the place's account number
+     * filled in - through the church's own paybill when it has one on (A10b),
+     * else the diocese paybill.
+     */
+    public function ask(Territory $place, ?User $user, string $phone, float $amount, string $purpose, ?string $name = null): MpesaRequest
     {
         if (! Daraja::validPhone($phone)) {
             throw ValidationException::withMessages(['phone' => ['Enter a Safaricom number, e.g. 0712 345 678.']]);
@@ -339,8 +419,12 @@ final class Paybill
         if (! isset(self::PURPOSES[$purpose])) {
             throw ValidationException::withMessages(['purpose' => ['Pick what it is for.']]);
         }
-        $daraja = Daraja::diocese();
         $ref = self::code($place).self::SUFFIX[$purpose];
+        $channel = $this->mpesaChannel($place);
+        if ($channel) {
+            return $this->askOwn($channel, $place, $user, $phone, $amount, $purpose, $ref, $name);
+        }
+        $daraja = Daraja::diocese();
         $request = MpesaRequest::create(['territory_id' => $place->id, 'account_ref' => $ref, 'amount' => $amount, 'phone' => Daraja::phone($phone), 'shortcode' => $daraja->shortcode, 'requested_by' => $user?->id]);
         try {
             $out = $daraja->stkPush($phone, $amount, $ref, mb_substr(self::PURPOSES[$purpose][0], 0, 13), $this->callbackUrl('stk'));
@@ -353,11 +437,75 @@ final class Paybill
         return $request->fresh();
     }
 
-    /** The prompt's answer from Safaricom: paid becomes a payment; anything else is kept on the request. */
-    public function stkResult(array $callback): ?MpesaPayment
+    private function askOwn(PaymentChannel $channel, Territory $place, ?User $user, string $phone, float $amount, string $purpose, string $ref, ?string $name): MpesaRequest
+    {
+        $request = MpesaRequest::create(['channel_id' => $channel->id, 'territory_id' => $place->id, 'account_ref' => $ref, 'amount' => $amount, 'phone' => Daraja::phone($phone),
+            'shortcode' => (string) $channel->account_number, 'requested_by' => $user?->id]);
+        try {
+            if ($channel->provider === 'daraja') {
+                $out = Daraja::forChannel($channel)->stkPush($phone, $amount, $ref, mb_substr(self::PURPOSES[$purpose][0], 0, 13), $this->channelUrl($channel, 'stk'));
+                $request->update(['merchant_request_id' => $out['MerchantRequestID'] ?? null, 'checkout_request_id' => $out['CheckoutRequestID'] ?? null, 'result' => $out['CustomerMessage'] ?? null]);
+            } else {
+                $out = PayHero::forChannel($channel)->stkPush($amount, $phone, "MR-{$request->id}-{$ref}", $name, $this->channelUrl($channel));
+                $request->update(['merchant_request_id' => $out['reference'] ?: null, 'checkout_request_id' => $out['checkout_request_id'] ?: null, 'result' => $out['status'] ?: null]);
+            }
+        } catch (Throwable $e) {
+            $request->update(['status' => 'failed', 'result' => mb_substr($e->getMessage(), 0, 255)]);
+            throw ValidationException::withMessages(['phone' => ['M-Pesa didn\'t take it: '.$e->getMessage()]]);
+        }
+
+        return $request->fresh();
+    }
+
+    /**
+     * A PayHero prompt: ask PayHero how it went (its callback isn't signed,
+     * so it is never taken at its word) - paid becomes a payment, once per
+     * M-Pesa code; failed is kept on the request; still queued waits.
+     */
+    public function payheroCheck(MpesaRequest $request): ?MpesaPayment
+    {
+        if ($request->status === 'paid') {
+            return $request->mpesa_payment_id ? MpesaPayment::find($request->mpesa_payment_id) : null;
+        }
+        $channel = $request->channel_id ? PaymentChannel::find($request->channel_id) : null;
+        if ($request->status !== 'pending' || ! $channel || $channel->provider !== 'payhero' || ! $request->merchant_request_id) {
+            return null;
+        }
+        $s = PayHero::forChannel($channel)->status($request->merchant_request_id);
+        if ($s['status'] === 'FAILED') {
+            $request->update(['status' => 'failed', 'result' => mb_substr((string) ($s['raw']['ResultDesc'] ?? $s['raw']['result_desc'] ?? 'Not paid'), 0, 255)]);
+            app(Giving::class)->mpesaAnswered($request->fresh(), null);
+
+            return null;
+        }
+        if ($s['status'] !== 'SUCCESS' || ! $s['receipt']) {
+            return null;
+        }
+        if ($s['amount'] !== null && round($s['amount']) !== round((float) $request->amount)) {
+            $request->update(['result' => 'PayHero\'s amount doesn\'t match the prompt - check it on PayHero.']);
+
+            return null;
+        }
+        $payment = $this->record([
+            'channel_id' => $channel->id, 'trans_id' => (string) $s['receipt'], 'kind' => 'stk', 'shortcode' => (string) $channel->account_number,
+            'amount' => (float) $request->amount, 'phone' => $request->phone, 'bill_ref' => $request->account_ref,
+            'paid_at' => now(), 'mpesa_request_id' => $request->id, 'raw' => $s['raw'],
+        ]);
+        $request->update(['status' => 'paid', 'result' => 'Paid', 'mpesa_payment_id' => $payment->id]);
+        app(Giving::class)->mpesaAnswered($request->fresh(), $payment);
+
+        return $payment;
+    }
+
+    /**
+     * The prompt's answer from Safaricom: paid becomes a payment; anything
+     * else is kept on the request. $channel is whose callback key it came
+     * with (null = the diocese's) - it only answers that paybill's prompts.
+     */
+    public function stkResult(array $callback, ?PaymentChannel $channel = null): ?MpesaPayment
     {
         $request = MpesaRequest::where('checkout_request_id', $callback['CheckoutRequestID'] ?? '')->first();
-        if (! $request) {
+        if (! $request || (int) $request->channel_id !== (int) $channel?->id) {
             return null;
         }
         if ((int) ($callback['ResultCode'] ?? -1) !== 0) {
@@ -371,6 +519,7 @@ final class Paybill
         $m = Daraja::metadata($callback);
         $payment = $this->record([
             'trans_id' => (string) ($m['MpesaReceiptNumber'] ?? ''),
+            'channel_id' => $request->channel_id,
             'kind' => 'stk',
             'shortcode' => $request->shortcode,
             'amount' => (float) ($m['Amount'] ?? $request->amount),
@@ -402,10 +551,32 @@ final class Paybill
 
     public function callbackUrl(string $what): string
     {
-        $base = rtrim((string) ($this->settings->system('paybill.callback_base') ?: config('app.url')), '/');
-        $base = str_ends_with($base, '/api') ? $base : $base.'/api';
+        return "{$this->callbackBase()}/payments/daraja/{$this->callbackKey()}/{$what}";
+    }
 
-        return "{$base}/payments/daraja/{$this->callbackKey()}/{$what}";
+    private function callbackBase(): string
+    {
+        $base = rtrim((string) ($this->settings->system('paybill.callback_base') ?: config('app.url')), '/');
+
+        return str_ends_with($base, '/api') ? $base : $base.'/api';
+    }
+
+    /** A church channel's callback address (A10b): /payments/daraja/{key}/{what} or /payments/payhero/{key}. */
+    public function channelUrl(PaymentChannel $channel, string $what = ''): string
+    {
+        if (! $channel->callback_key) {
+            $channel->forceFill(['callback_key' => Str::random(40)])->save();
+        }
+
+        return "{$this->callbackBase()}/payments/{$channel->provider}/{$channel->callback_key}".($channel->provider === 'daraja' ? "/{$what}" : '');
+    }
+
+    /** Send a church's own Daraja addresses to Safaricom. */
+    public function registerChannel(PaymentChannel $channel): array
+    {
+        $this->ownAccount($channel);
+
+        return Daraja::forChannel($channel)->registerUrls($this->channelUrl($channel, 'confirmation'), $this->channelUrl($channel, 'validation'));
     }
 
     public function register(User $user): array

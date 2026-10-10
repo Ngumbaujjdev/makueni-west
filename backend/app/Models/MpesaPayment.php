@@ -6,7 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * A payment into the diocese paybill (docs/specs/accounting-spec.md, A8) -
+ * A payment into the diocese paybill (docs/specs/accounting-spec.md, A8), or
+ * a church's own paybill (A10b, channel_id) -
  * one per M-Pesa code: who paid, the account number they typed, the place
  * and purpose it was for, and the journals it made.
  */
@@ -15,7 +16,7 @@ class MpesaPayment extends Model
     public const STATUSES = ['posted' => 'In the books', 'to_sort' => 'To sort', 'returned' => 'Returned to the payer'];
 
     protected $fillable = [
-        'trans_id', 'kind', 'shortcode', 'amount', 'phone', 'payer_name', 'bill_ref', 'paid_at', 'territory_id', 'purpose', 'account_id', 'fund_id',
+        'channel_id', 'trans_id', 'kind', 'shortcode', 'amount', 'phone', 'payer_name', 'bill_ref', 'paid_at', 'territory_id', 'purpose', 'account_id', 'fund_id',
         'status', 'note', 'diocese_journal_id', 'place_journal_id', 'sort_journal_id', 'return_voucher_id', 'sorted_by', 'sorted_at', 'mpesa_request_id', 'raw',
     ];
 
@@ -26,6 +27,11 @@ class MpesaPayment extends Model
     public function place(): BelongsTo
     {
         return $this->belongsTo(Territory::class, 'territory_id');
+    }
+
+    public function channel(): BelongsTo
+    {
+        return $this->belongsTo(PaymentChannel::class, 'channel_id');
     }
 
     public function sorter(): BelongsTo

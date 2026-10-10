@@ -46,6 +46,9 @@ class PaybillController extends AccountingBase
         $q = MpesaPayment::with('place:id,name,code')->orderByDesc('paid_at')->orderByDesc('id')->limit(1000);
         if (! $isDiocese) {
             $q->where('territory_id', $place->id)->where('status', 'posted');
+        } else {
+            // A church's own paybill (A10b) is its own business - unless it couldn't be posted and waits to be sorted.
+            $q->where(fn ($w) => $w->whereNull('channel_id')->orWhere('status', 'to_sort'));
         }
         $payments = $q->get();
         $this->numbers = Journal::whereIn('id', $payments->pluck($isDiocese ? 'diocese_journal_id' : 'place_journal_id')->filter()->all())->pluck('number', 'id')->all();
@@ -64,6 +67,10 @@ class PaybillController extends AccountingBase
             'to_sort' => $isDiocese ? $payments->where('status', 'to_sort')->count() : 0,
             'shortcode' => $this->settings->system('paybill.shortcode'),
         ];
+        if (! $isDiocese && ($own = $this->paybill->mpesaChannel($place))) {
+            $out['own'] = ['provider' => $own->provider, 'label' => \App\Models\PaymentChannel::PROVIDERS[$own->provider], 'number' => $own->account_number, 'till' => $own->account_name === 'Till',
+                'accounts' => collect(Paybill::PURPOSES)->map(fn ($p, $k) => ['purpose' => $k, 'label' => $p[0], 'account' => Paybill::SUFFIX[$k]])->values()];
+        }
         if ($isDiocese && $manage) {
             $out['places'] = Territory::whereIn('territory_type', ['church', 'region'])->whereNotNull('code')->orderBy('name')->get(['id', 'name', 'code', 'territory_type'])
                 ->map(fn ($t) => ['id' => $t->id, 'name' => $t->name, 'code' => Paybill::code($t), 'level' => $t->territory_type->value])->values();
@@ -251,12 +258,12 @@ class PaybillController extends AccountingBase
     private function present(MpesaPayment $p, bool $full): array
     {
         return [
-            'id' => $p->id, 'trans_id' => $p->trans_id, 'kind' => $p->kind, 'amount' => (float) $p->amount,
+            'id' => $p->id, 'trans_id' => $p->trans_id, 'kind' => $p->kind, 'amount' => (float) $p->amount, 'own' => (bool) $p->channel_id,
             'phone' => $p->phone, 'payer_name' => $p->payer_name, 'bill_ref' => $p->bill_ref, 'paid_at' => $p->paid_at?->toIso8601String(),
             'place' => $p->place ? ['id' => $p->place->id, 'name' => $p->place->name, 'code' => $p->place->code] : null,
             'purpose' => $p->purpose, 'purpose_label' => Paybill::PURPOSES[$p->purpose][0] ?? null,
             'status' => $p->status, 'status_label' => MpesaPayment::STATUSES[$p->status], 'note' => $p->note,
-            'receipt' => $this->numbers[$full ? $p->diocese_journal_id : $p->place_journal_id] ?? Journal::find($full ? $p->diocese_journal_id : $p->place_journal_id)?->number,
+            'receipt' => ($j = ($full && ! $p->channel_id) ? $p->diocese_journal_id : $p->place_journal_id) ? ($this->numbers[$j] ?? Journal::find($j)?->number) : null,
         ];
     }
 

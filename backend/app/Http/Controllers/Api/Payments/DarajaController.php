@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Payments;
 
 use App\Http\Controllers\Controller;
+use App\Models\PaymentChannel;
 use App\Models\PaymentEvent;
 use App\Services\Accounting\Paybill;
 use App\Services\Payments\Daraja;
@@ -14,14 +15,17 @@ use Throwable;
 
 /**
  * Safaricom's callbacks for the diocese paybill (docs/specs/accounting-spec.md,
- * A8): C2B validation and confirmation, and the answer to an "Ask to pay"
- * prompt. Public, so the callback key in the address is the guard (a wrong
+ * A8) - and for a church's own Daraja app (A10b), under that channel's key:
+ * C2B validation and confirmation, and the answer to an "Ask to pay" prompt. Public, so the callback key in the address is the guard (a wrong
  * key is a 404, nothing more), plus Safaricom's published addresses when the
  * diocese asks for that. Every call is logged as it arrived; Safaricom always
  * gets "accepted" for a payment - refusing would lose a giver's money.
  */
 class DarajaController extends Controller
 {
+    /** The church channel the callback key belongs to (null = the diocese paybill). */
+    private ?PaymentChannel $channel = null;
+
     public function __construct(private Paybill $paybill, private Settings $settings) {}
 
     public function validation(Request $request, string $key): JsonResponse
@@ -41,12 +45,14 @@ class DarajaController extends Controller
         }
         $d = $request->json()->all();
         try {
-            if ((string) ($d['BusinessShortCode'] ?? '') !== (string) $this->settings->system('paybill.shortcode') || empty($d['TransID'])) {
+            $shortcode = $this->channel ? (string) $this->channel->account_number : (string) $this->settings->system('paybill.shortcode');
+            if ((string) ($d['BusinessShortCode'] ?? '') !== $shortcode || empty($d['TransID'])) {
                 $event->update(['status' => 'ignored', 'error' => 'Not for our paybill, or no M-Pesa code.']);
 
                 return $this->accepted();
             }
             $payment = $this->paybill->record([
+                'channel_id' => $this->channel?->id,
                 'trans_id' => (string) $d['TransID'],
                 'kind' => 'c2b',
                 'shortcode' => (string) $d['BusinessShortCode'],
@@ -74,7 +80,7 @@ class DarajaController extends Controller
         }
         try {
             $callback = (array) $request->json('Body.stkCallback', []);
-            $payment = $this->paybill->stkResult($callback);
+            $payment = $this->paybill->stkResult($callback, $this->channel);
             $event->update(['status' => $payment ? 'handled' : 'ignored', 'subject_type' => $payment ? 'mpesa_payment' : null, 'subject_id' => $payment?->id,
                 'error' => $payment ? null : ($callback['ResultDesc'] ?? 'Not paid')]);
         } catch (Throwable $e) {
@@ -90,8 +96,13 @@ class DarajaController extends Controller
     {
         $saved = (string) $this->settings->system('paybill.callback_key');
         $keyOk = $saved !== '' && hash_equals($saved, $key);
+        if (! $keyOk && strlen($key) >= 20) {
+            $channel = PaymentChannel::where('provider', 'daraja')->where('callback_key', $key)->first();
+            $keyOk = $channel && hash_equals((string) $channel->callback_key, $key);
+            $this->channel = $keyOk ? $channel : null;
+        }
         $ipOk = ! $this->settings->system('paybill.safaricom_only') || in_array($request->ip(), Daraja::SAFARICOM_IPS, true);
-        $event = PaymentEvent::create(['provider' => 'daraja', 'kind' => $kind, 'key_ok' => $keyOk && $ipOk, 'ip' => $request->ip(),
+        $event = PaymentEvent::create(['provider' => 'daraja', 'kind' => $kind, 'subject_type' => $this->channel ? 'payment_channel' : null, 'subject_id' => $this->channel?->id, 'key_ok' => $keyOk && $ipOk, 'ip' => $request->ip(),
             'payload' => $request->json()->all(), 'status' => $keyOk && $ipOk ? 'received' : 'ignored', 'error' => $keyOk ? ($ipOk ? null : 'Not from a Safaricom address.') : 'Wrong callback key.']);
 
         return $keyOk && $ipOk ? $event : null;

@@ -41,6 +41,18 @@ class PaymentChannel extends Model
         $this->credentials = $values ? Crypt::encryptString(json_encode($values)) : null;
     }
 
+    /** Own Daraja: environment, consumer_key, consumer_secret, passkey. PayHero: username, password, channel_id. */
+    public const SECRETS = ['daraja' => ['consumer_key', 'consumer_secret', 'passkey'], 'payhero' => ['username', 'password', 'channel_id']];
+
+    /** An M-Pesa channel (own Daraja / PayHero) with everything it needs to take money. */
+    public function mpesaReady(): bool
+    {
+        $s = $this->secrets();
+
+        return isset(self::SECRETS[$this->provider]) && filled($this->account_number)
+            && collect(self::SECRETS[$this->provider])->every(fn ($k) => filled($s[$k] ?? null));
+    }
+
     public function isActive(): bool
     {
         return $this->status === 'active';
