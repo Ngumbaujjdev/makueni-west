@@ -39,15 +39,16 @@ const AccountingDocList = (function () {
     const rowHtml = (j) => {
       const pills = [j.doc_type, j.method || "", j.status === "reversed" ? "reversed" : "", j.attachments ? "files" : "nofiles"].join(" ");
       const signed = j.doc_type === "receipt" ? "text-success" : j.doc_type === "payment" ? "text-danger" : "";
-      return `<tr class="acc-row${j.status === "reversed" ? " is-reversed" : ""}" data-id="${j.id}" data-pills="${pills}">
+      const rec = A.sourceRecord(j);
+      return `<tr class="acc-row${j.status === "reversed" ? " is-reversed" : ""}" data-id="${j.id}" data-pills="${pills}"${rec ? ` data-record="${A.link("record.php", rec)}"` : ""}>
         ${K.checkCell(j.id, j.number)}
         <td data-search="${esc(`${j.number} ${j.party_name || ""} ${j.narration || ""} ${j.reference || ""} ${(j.accounts || []).join(" ")}`)}" data-order="${esc(j.number)}">
-          <div class="d-flex align-items-center gap-2">${A.docTile(j.doc_type)}<div class="min-w-0"><div class="fw-semibold">${esc(j.number)}</div><div class="acc-sub text-truncate">${esc(j.narration || A.doc(j.doc_type).label)}</div></div></div>
+          <div class="d-flex align-items-center gap-2">${A.docTile(j.doc_type)}<div class="min-w-0"><div class="d-flex align-items-center gap-2 flex-wrap"><span class="fw-semibold">${esc(j.number)}</span>${A.docPill(j.doc_type)}</div><div class="acc-sub text-truncate">${esc(j.narration || A.doc(j.doc_type).label)}</div></div></div>
         </td>
-        <td data-order="${j.date}${String(j.id).padStart(8, "0")}" class="text-nowrap">${A.day(j.date)}</td>
-        <td class="d-none d-md-table-cell">${esc(j.party_name || "-")}${j.reference ? `<div class="acc-sub">${esc(j.reference)}</div>` : ""}</td>
-        <td class="d-none d-lg-table-cell"><div class="text-truncate acc-cell-accounts">${esc((j.accounts || []).join(", ") || "-")}</div><div class="acc-sub">${esc((j.cash_accounts || []).join(", "))}</div></td>
-        <td class="text-end" data-order="${j.amount}"><strong class="${signed}">${A.money(j.amount)}</strong><div class="d-flex justify-content-end gap-1 mt-1">${A.methodChip(j.method, j.method_label)}${j.status === "reversed" ? A.reversedChip() : ""}${j.attachments ? `<span class="soft-chip soft-primary"><i class="ri-attachment-2"></i>${j.attachments}</span>` : ""}</div></td>
+        <td data-order="${j.date}${String(j.id).padStart(8, "0")}" class="text-nowrap"><div class="d-flex align-items-center gap-2">${A.dateTile(j.date)}<small class="acc-sub">${esc(A.since(j.date))}</small></div></td>
+        <td class="d-none d-md-table-cell">${j.party_name ? A.person(j.party_name) : '<span class="acc-sub">Between our accounts</span>'}${j.reference ? `<div class="acc-sub mt-1">${esc(j.reference)}</div>` : ""}</td>
+        <td class="d-none d-lg-table-cell">${A.methodChip(j.method, j.method_label)}<div class="acc-sub mt-1 text-truncate acc-cell-accounts">${esc((j.accounts || []).join(", ") || "-")}</div></td>
+        <td class="text-end" data-order="${j.amount}">${A.signedAmount(j.doc_type, j.amount)}<div class="d-flex justify-content-end flex-wrap gap-1 mt-1">${j.status === "reversed" ? '<span class="badge bg-danger">Reversed</span>' : '<span class="badge bg-success">Posted</span>'}${j.attachments ? `<span class="badge bg-primary"><i class="ri-attachment-2 me-1"></i>${j.attachments}</span>` : ""}</div></td>
       </tr>`;
     };
 
@@ -103,7 +104,9 @@ const AccountingDocList = (function () {
     $("docRows").addEventListener("click", (e) => {
       if (e.target.closest("a, input, .pp-check, button")) return;
       const tr = e.target.closest("tr[data-id]");
-      if (tr) W.viewJournal(Number(tr.dataset.id), { onChange: load });
+      if (!tr) return;
+      if (tr.dataset.record) window.location.href = tr.dataset.record;
+      else W.viewJournal(Number(tr.dataset.id), { onChange: load });
     });
     A.placePicker($("accPlacePick"), load);
     load();

@@ -10,7 +10,7 @@
             <table class="table table-hover mb-0 pp-table acc-table" id="docTable">
                 <thead><tr>
                     <th class="pp-check"><input type="checkbox" class="form-check-input pp-pick-page" aria-label="Pick everything on this page"></th>
-                    <th>Document</th><th>Date</th><th class="d-none d-md-table-cell">From / to</th><th class="d-none d-lg-table-cell">Account</th><th class="text-end">Amount</th>
+                    <th>Document</th><th>Date</th><th class="d-none d-md-table-cell">From / to</th><th class="d-none d-lg-table-cell">How</th><th class="text-end">Amount</th>
                 </tr></thead>
                 <tbody id="docRows"></tbody>
             </table>

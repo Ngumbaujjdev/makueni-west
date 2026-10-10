@@ -12,6 +12,8 @@ include __DIR__ . '/toolbar.php';
 
 <div class="row" id="statCardsRow"></div>
 
+<div id="channelRow" hidden></div>
+
 <div class="row">
     <div class="col-xl-5 d-flex">
         <div class="card custom-card flex-fill">
@@ -56,13 +58,13 @@ include __DIR__ . '/toolbar.php';
 
 <div class="card custom-card">
     <div class="card-header justify-content-between flex-wrap gap-2">
-        <div><div class="card-title">Latest documents</div><span class="card-subtitle-text">Receipts, payments, transfers and journals - open one to see its lines and papers</span></div>
+        <div><div class="card-title">Latest documents</div><span class="card-subtitle-text">Receipts, payments, transfers and journals - open one for its lines, papers and where it came from</span></div>
         <a class="btn btn-sm btn-outline-primary" href="<?= $accCtx['baseUrl'] ?>/documents.php" data-keep-place>All documents<i class="ri-arrow-right-line ms-1"></i></a>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover mb-0 acc-table">
-                <thead><tr><th>Document</th><th>Date</th><th class="d-none d-md-table-cell">From / to</th><th class="text-end">Amount</th></tr></thead>
+                <thead><tr><th>Date</th><th>Document</th><th class="d-none d-md-table-cell">From / to</th><th class="d-none d-lg-table-cell">How</th><th class="text-end">Amount</th></tr></thead>
                 <tbody id="latestRows"></tbody>
             </table>
         </div>

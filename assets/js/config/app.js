@@ -7,10 +7,10 @@
 
 const AppConfig = {
   // Backend API Configuration
-  API_BASE_URL: "http://127.0.0.1:8004/api",
+  API_BASE_URL: "http://127.0.0.1:8014/api",
 
   // Frontend Base URL
-  FRONTEND_BASE_URL: "/makueni-west",
+  FRONTEND_BASE_URL: "/mwd-life-wt",
 
   // Application Information
   APP_NAME: "Makueni West Diocese Management System",
