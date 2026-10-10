@@ -47,9 +47,30 @@ $ref = strtoupper(preg_replace('/[^A-Za-z0-9-]/', '', $_GET['ref'] ?? ''));
                     d = r.ok ? (await r.json()).data : null;
                 } catch (e) {}
                 if (d && d.status === "paid") {
-                    body.innerHTML = `<div class="verify-result is-good mb-3"><i class="ri-checkbox-circle-fill"></i><div><strong>Thank you - ${esc(d.place)} has received your ${esc((d.purpose || "gift").toLowerCase())} of ${money(d.amount)}.</strong><span>${d.receipt ? `Receipt ${esc(d.receipt)} · ` : ""}Reference ${esc(d.reference)}</span></div></div>
-                        <div class="d-flex align-items-center gap-2 mb-3">${paidWith(d.paid_with)}<span>Paid ${d.paid_with === "mpesa" ? "by M-Pesa" : "by card"} · ${money(d.amount)}</span></div>
-                        <p>God bless you. Your receipt is on its way.</p><a class="btn btn-outline-primary" href="give.php?c=${encodeURIComponent(d.code || "")}">Give again</a>`;
+                    const when = d.paid_at ? new Date(d.paid_at).toLocaleString("en-GB", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+                    const amt = (n) => "KES " + Number(n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const lines = (d.lines || []).map((l) => `<tr><td>${esc(l.for)}${l.fund && l.fund !== "General fund" ? `<div class="give-receipt-sub">${esc(l.fund)}</div>` : ""}</td><td class="text-end">${amt(l.amount)}</td></tr>`).join("");
+                    body.innerHTML = `<div class="verify-result is-good mb-3 give-noprint"><i class="ri-checkbox-circle-fill"></i><div><strong>Thank you${d.giver ? ` ${esc(d.giver)}` : ""} - ${esc(d.place)} has received your ${esc((d.purpose || "gift").toLowerCase())} of ${amt(d.amount)}.</strong><span>God bless you.</span></div></div>
+                        <div class="give-receipt" id="giveReceipt">
+                            <div class="give-receipt-head"><img src="<?= SITE_URL ?>/assets/images/brand-logos/toggle-logo.png" alt="" width="40" height="40"><div><strong>${esc(d.place)}</strong><span>Christian Church International · Makueni West Diocese</span></div><div class="give-receipt-no"><span>Official receipt</span><strong>${esc(d.receipt || d.reference)}</strong></div></div>
+                            <div class="give-receipt-amount"><span>Amount received</span><strong>${amt(d.amount)}</strong></div>
+                            <div class="give-receipt-facts">
+                                ${d.giver ? `<div><span>Received from</span><strong>${esc(d.giver)}</strong></div>` : ""}
+                                <div><span>For</span><strong>${esc(d.purpose || "Gift")}</strong></div>
+                                <div><span>Paid by</span><strong class="d-flex align-items-center gap-2">${paidWith(d.paid_with)}${d.paid_with === "mpesa" ? "M-Pesa" : "Card"}</strong></div>
+                                ${d.mpesa_code ? `<div><span>M-Pesa code</span><strong>${esc(d.mpesa_code)}</strong></div>` : ""}
+                                <div><span>Date</span><strong>${esc(when)}</strong></div>
+                                <div><span>Our reference</span><strong>${esc(d.reference)}</strong></div>
+                            </div>
+                            <table class="table give-receipt-lines mb-0"><thead><tr><th>Received for</th><th class="text-end">KES</th></tr></thead><tbody>${lines}</tbody><tfoot><tr><th>Total</th><th class="text-end">${amt(d.amount)}</th></tr></tfoot></table>
+                            <p class="give-receipt-note">Computer-generated receipt - no signature needed.</p>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mt-3 give-noprint">
+                            ${d.receipt_url ? `<a class="btn btn-primary" href="${esc(d.receipt_url)}" target="_blank" rel="noopener"><i class="ri-file-pdf-line me-1"></i>Download receipt (PDF)</a>` : ""}
+                            <button type="button" class="btn btn-outline-primary" onclick="window.print()"><i class="ri-printer-line me-1"></i>Print</button>
+                            <a class="btn btn-outline-primary" href="give.php?c=${encodeURIComponent(d.code || "")}"><i class="ri-hand-heart-line me-1"></i>Give again</a>
+                        </div>
+                        ${d.phone ? `<p class="small mt-3 mb-0 give-noprint">We've also sent the receipt by SMS to ${esc(d.phone)}.</p>` : ""}`;
                     return;
                 }
                 if (d && (d.status === "failed" || d.status === "abandoned")) {
