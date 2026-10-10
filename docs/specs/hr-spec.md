@@ -75,6 +75,36 @@ Partial months are paid in full (no pro-rating).
 
 Staff replies show ID number and KRA PIN masked, always.
 
+## Our version (2026-10-10)
+
+A place can give a position, grade or allowance **set above it** its own version (`hr_place_settings`: place, kind, item, settings json):
+- **a position:** its pay package here - usual grade, usual basic pay, the allowances that come with it (an amount, or empty to follow the allowance's usual amount), duties and notes;
+- **a grade:** its range here (least, most, usual);
+- **an allowance:** its usual amount here.
+
+**Nearest wins:** the place's own version, else its region's, up to the owner's row. A place's own rows are changed directly, not versioned.
+- **Adding someone:** given a position, a staff member gets the package that applies here (grade, basic pay and allowances) unless the window says otherwise.
+- **Checks:** the grade range check and an allowance's usual amount use the values that apply here.
+
+**API:**
+- `GET hr/setup/{kind}/{id}` returns:
+  - what applies here, with `ours` and `version_from`;
+  - `as_set`, `from_above` and `our_version`;
+  - `holders` (here, and below with `below`).
+- `PUT hr/setup/{kind}/{id}/ours` and `DELETE hr/setup/{kind}/{id}/ours` (setup permission).
+
+**Pages:**
+- **`hr/item.php?kind=&id=`:** what applies here beside the owner's and the region's versions, with "Set our version" or "Back to theirs", and who holds it.
+- **`hr/person.php?id=`:** a person's own page. The hero has Change, Move, They leave and Remove. Its tabs:
+  - **Overview:** job, pay, how they are paid, at a glance, and their member record or login;
+  - **Payslips:** every approved or paid month, with its PDF;
+  - **Where they have served;**
+  - **Papers.**
+
+  `GET hr/staff/{id}` gains `payslips`, `totals` (this year, all, months) and `member_link` (for whoever may open that member).
+
+Every field in the Staff windows has a placeholder.
+
 ## Permissions
 
 | Permission | Lets you | Starting grants (the admin changes them in Roles) |

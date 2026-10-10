@@ -86,6 +86,9 @@ const HrAPI = (function () {
     saveItem: (kind, id, body) => request(id ? "PUT" : "POST", id ? `/hr/setup/${kind}/${id}` : `/hr/setup/${kind}`, { body }),
     removeItem: (kind, id) => request("DELETE", `/hr/setup/${kind}/${id}`),
     here: (kind, id, on) => request("POST", `/hr/setup/${kind}/${id}/here`, { body: { on } }),
+    item: (kind, id) => request("GET", `/hr/setup/${kind}/${id}`),
+    setOurs: (kind, id, body) => request("PUT", `/hr/setup/${kind}/${id}/ours`, { body }),
+    clearOurs: (kind, id) => request("DELETE", `/hr/setup/${kind}/${id}/ours`),
   };
 })();
 
