@@ -29,7 +29,13 @@ class SetupController extends HrBase
         $out = ['place' => $this->placeInfo($place), 'can' => $can];
         foreach (['position' => 'positions', 'grade' => 'grades', 'allowance' => 'allowances'] as $kind => $key) {
             $hidden = $this->lists->hidden($place, $kind);
-            $out[$key] = $this->lists->rows($place, $kind)->map(fn ($r) => $this->lists->present($place, $kind, $r, $hidden, $can['setup']))->values();
+            $rows = $this->lists->rows($place, $kind);
+            if ($kind === 'position') {
+                // Only the jobs this place, or a place below it, can give - not a region's or the diocese's own.
+                $levels = array_slice(['church', 'region', 'diocese'], 0, array_search($place->territory_type->value, ['church', 'region', 'diocese'], true) + 1);
+                $rows = $rows->filter(fn ($r) => ! $r->levels || array_intersect($r->levels, $levels));
+            }
+            $out[$key] = $rows->map(fn ($r) => $this->lists->present($place, $kind, $r, $hidden, $can['setup']))->values();
         }
 
         return $this->ok($out);
