@@ -560,6 +560,10 @@ Under `/api/accounting`: `GET giving` · `GET gateways` · `GET gateways/banks` 
 ### Permissions
 `{level}.accounting.giving.read` with reading the books; `diocese.accounting.gateways.manage` (Diocese Finance Officer, Diocese Treasurer).
 
+### A10a addendum - who is giving (2026-10-10)
+- The giving page asks for a **full name** and a **phone** every time (M-Pesa: the number the prompt goes to; card: for the SMS receipt) and an **email for card** (Paystack's receipt - never a made-up address). The server refuses a gift without them.
+- It shows the real M-Pesa, Visa and Mastercard marks, a one-line summary of the gift before "Give", and can remember the giver's details on their own device. A church without a logo shows the CCI logo. The thanks page shows how it was paid.
+
 ## A10b - A church's own paybill: PayHero or its own Daraja (built 2026-10-10)
 
 A church that has its own Safaricom paybill or till (from Safaricom, or a bank paybill) can take M-Pesa straight into its own books - no diocese holding, no monthly settlement - through **PayHero** (the paybill linked in its PayHero account as a payment channel) or its **own Daraja app**. The diocese finance officer sets it up on Gateways; the giving page then uses it for M-Pesa.

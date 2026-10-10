@@ -77,6 +77,8 @@ class GiveController extends Controller
 
         return response()->json(['success' => true, 'data' => [
             'reference' => $gift->reference, 'status' => $gift->status, 'amount' => (float) $gift->amount,
+            // How it was paid, for the thanks page's logo: Paystack records its channel (card, mobile_money) on a paid gift.
+            'paid_with' => $gift->status !== 'paid' ? null : ($gift->method === 'mpesa' || $gift->result === 'mobile_money' ? 'mpesa' : 'card'),
             'purpose' => Paybill::PURPOSES[$gift->purpose][0] ?? null, 'place' => $place?->name, 'code' => $place ? Paybill::code($place) : null,
             'receipt' => $gift->status === 'paid' ? Journal::find($gift->journal_id)?->number : null,
             'result' => $gift->status === 'failed' ? $gift->result : null,

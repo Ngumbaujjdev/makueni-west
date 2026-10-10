@@ -81,19 +81,29 @@ final class Giving
         if ($amount < 10 || $amount > ($method === 'mpesa' ? 250000 : 1000000)) {
             throw ValidationException::withMessages(['amount' => [$method === 'mpesa' ? 'Give between KES 10 and 250,000 by M-Pesa.' : 'Give between KES 10 and 1,000,000.']]);
         }
+        // Who is giving - always a name and a phone (the prompt, or the SMS receipt); an email for card (Paystack's receipt).
+        if (mb_strlen(trim((string) ($data['name'] ?? ''))) < 2) {
+            throw ValidationException::withMessages(['name' => ['Please enter your full name.']]);
+        }
         $phone = trim((string) ($data['phone'] ?? ''));
         if ($method === 'mpesa' && ! Daraja::validPhone($phone)) {
-            throw ValidationException::withMessages(['phone' => ['Enter your M-Pesa number, e.g. 0712 345 678.']]);
+            throw ValidationException::withMessages(['phone' => ['Please enter your M-Pesa number, e.g. 0712 345 678.']]);
+        }
+        if ($method === 'paystack' && ! preg_match('/^\+?\d{9,15}$/', preg_replace('/[\s\-()]/', '', $phone))) {
+            throw ValidationException::withMessages(['phone' => ['Please enter a valid phone number, e.g. 0712 345 678.']]);
         }
         $email = trim((string) ($data['email'] ?? ''));
+        if ($method === 'paystack' && $email === '') {
+            throw ValidationException::withMessages(['email' => ['Please enter your email address - Paystack sends your receipt there.']]);
+        }
         if ($email !== '' && ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            throw ValidationException::withMessages(['email' => ['That email doesn\'t look right.']]);
+            throw ValidationException::withMessages(['email' => ['Please enter a valid email address.']]);
         }
         $gift = Gift::create([
             'reference' => 'GFT-'.now('Africa/Nairobi')->format('ymd').'-'.strtoupper(Str::random(6)),
             'territory_id' => $place->id, 'purpose' => $purpose, 'amount' => $method === 'mpesa' ? round($amount) : $amount,
             'giver_name' => mb_substr(trim((string) ($data['name'] ?? '')), 0, 150) ?: null,
-            'giver_phone' => $phone !== '' ? Daraja::phone($phone) : null, 'giver_email' => $email ?: null,
+            'giver_phone' => $phone !== '' ? ($method === 'mpesa' || Daraja::validPhone($phone) ? Daraja::phone($phone) : preg_replace('/[^0-9+]/', '', $phone)) : null, 'giver_email' => $email ?: null,
             'method' => $method, 'status' => 'pending', 'ip' => $ip,
         ]);
         if ($method === 'mpesa') {
@@ -110,7 +120,7 @@ final class Giving
         $channel = $this->channel($place);
         $split = $channel ? $this->shareFor($place, $purpose, (float) $gift->amount) : 0.0;
         try {
-            $out = Paystack::diocese()->initialize((float) $gift->amount, $email ?: "give+{$gift->reference}@".(parse_url((string) config('app.url'), PHP_URL_HOST) ?: 'example.org'),
+            $out = Paystack::diocese()->initialize((float) $gift->amount, $email,
                 $gift->reference, url('/api/give/callback'), ['gift' => $gift->reference, 'place' => $place->name, 'purpose' => Paybill::PURPOSES[$purpose][0]],
                 $channel?->subaccount_code, $split);
         } catch (Throwable $e) {

@@ -100,7 +100,7 @@ class PayoutsTest extends TestCase
 
     private function gift(float $amount = 1000): string
     {
-        $ref = $this->postJson('/api/give/SHR027', ['purpose' => 'T', 'amount' => $amount, 'method' => 'paystack', 'name' => 'Jane'])->assertCreated()->json('data.reference');
+        $ref = $this->postJson('/api/give/SHR027', ['purpose' => 'T', 'amount' => $amount, 'method' => 'paystack', 'name' => 'Jane Mutua', 'phone' => '0712345678', 'email' => 'jane@example.test'])->assertCreated()->json('data.reference');
         $this->webhook(['event' => 'charge.success', 'data' => ['reference' => $ref]]);
         $this->assertSame('paid', Gift::where('reference', $ref)->value('status'));
 
