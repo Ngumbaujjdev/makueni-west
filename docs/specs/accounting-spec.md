@@ -522,3 +522,29 @@ Under `/api/accounting/paybill`: `GET /` (payments, filters) · `GET to-sort` ·
   changes in funds, consolidation, year-end close, the audit pack.
 - **A10 Church gateways:** Paystack subaccounts, PayHero, churches' own Daraja,
   giving pages.
+
+## Demo data (2026-10-10)
+`php artisan db:seed --class=AccountingDemoSeeder` fills **CCI SULTAN HAMUD**'s books from **1 January 2025 to today**, so the pages make sense with data. `--class=AccountingDemoRemoveSeeder` takes it all away again.
+
+**What it records:**
+- opening balances, then every Sunday's collection (counted, confirmed, banked, with a little cash kept back);
+- monthly bills paid by voucher (Kenya Power, water, internet, cleaning, transport);
+- hall hire, two harambees and gifts;
+- a repair and a youth camp advance (paid, then accounted for with the change returned);
+- a sound mixer bought on an order with three quotes, which appears in Facilities › Equipment;
+- three staff paid monthly;
+- the diocese's 10% share sent every month and confirmed by the diocese;
+- each month counted, reconciled and **closed up to August 2026**.
+
+**Left waiting**, so Approvals has something:
+- a voucher;
+- a requisition;
+- this month's payroll;
+- September's share not yet confirmed.
+
+**How it keeps clear of real data:**
+- **Through the services:** everything goes through the Accounting services and the approval rules, so every journal balances.
+- **No messages:** jobs, mail and notifications are faked, so nobody is texted or emailed.
+- **Budgets are untouched:** while it writes, no budget counts as "in use", so nothing is copied into the 2025 or January–March 2026 budgets.
+- **The leaders' role start dates** (they were added in August 2026) are moved back while it writes, so the approval rules find them, then put back. They are kept in the church's metadata (`accounting_demo_roles`) first, so even a crash is put right on the next run or removal.
+- **Removal:** what it made is recorded as id ranges in the church's metadata (`accounting_demo`), and the remover deletes only those rows at those places.
