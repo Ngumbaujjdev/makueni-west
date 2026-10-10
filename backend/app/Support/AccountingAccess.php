@@ -36,6 +36,7 @@ final class AccountingAccess
         'payroll' => 'accounting.payroll.manage',
         'payrollread' => 'accounting.payroll.read',
         'paybill' => 'accounting.paybill.manage',
+        'gateways' => 'accounting.gateways.manage',
     ];
 
     /** Abilities that let someone open the books (they can see what they write). */

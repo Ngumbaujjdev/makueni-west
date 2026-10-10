@@ -105,8 +105,8 @@ class AccountingAccessTest extends TestCase
         $this->seed(AccountingAccessSeeder::class);
         $this->seed(AccountingAccessSeeder::class);
         $this->assertSame(1, \App\Models\Module::where('name', 'Accounting')->whereHas('moduleGroup', fn ($q) => $q->where('slug', 'church-finance'))->count());
-        $this->assertSame(16, \App\Models\Submodule::where('path', 'like', '/church/accounting/%')->where('is_active', true)->count(), 'Approvals, Requisitions, Procurement, Remittances and Payroll at every level');
-        $this->assertSame(17, \App\Models\Submodule::where('path', 'like', '/diocese/accounting/%')->where('is_active', true)->count(), 'the chart and Approval rules pages are the diocese\'s; Collections the churches\'');
+        $this->assertSame(17, \App\Models\Submodule::where('path', 'like', '/church/accounting/%')->where('is_active', true)->count(), 'Approvals, Requisitions, Procurement, Remittances and Payroll at every level');
+        $this->assertSame(19, \App\Models\Submodule::where('path', 'like', '/diocese/accounting/%')->where('is_active', true)->count(), 'the chart and Approval rules pages are the diocese\'s; Collections the churches\'');
         $treasurer = \App\Models\Role::where('name', 'Church Treasurer')->first();
         $this->assertTrue($treasurer->hasPermissionTo('church.accounting.payments.pay'));
         $this->assertFalse(\App\Models\Role::where('name', 'Senior Pastor')->first()->hasPermissionTo('church.accounting.payments.pay'));

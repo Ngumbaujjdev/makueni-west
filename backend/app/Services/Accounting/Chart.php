@@ -29,6 +29,7 @@ final class Chart
         '1020' => ['Petty cash', 'asset', ['parent' => '1000', 'key' => 'petty_cash', 'cash' => 'petty_cash', 'about' => 'The small float for day-to-day spending']],
         '1100' => ['Bank accounts', 'asset', ['parent' => '1000', 'header' => true, 'key' => 'banks', 'cash' => 'bank', 'about' => 'Each place adds its own bank accounts here']],
         '1150' => ['M-Pesa accounts', 'asset', ['parent' => '1000', 'header' => true, 'key' => 'mpesa', 'cash' => 'mpesa', 'about' => 'Each place adds its till, paybill or phone here']],
+        '1170' => ['Online payments clearing', 'asset', ['key' => 'online_clearing', 'about' => 'Paid online (Paystack) but not yet settled to the bank']],
         '1200' => ['Staff advances', 'asset', ['key' => 'staff_advances', 'about' => 'Money given out ahead, still to be accounted for']],
         '1300' => ['Due from places below', 'asset', ['key' => 'due_from_below', 'about' => 'What churches and regions owe us']],
         '1310' => ['Held by the diocese for us', 'asset', ['key' => 'held_by_diocese', 'about' => 'Paybill money the diocese holds for this place until it settles']],

@@ -71,6 +71,15 @@ Route::get('/user', function (Request $request) {
 // Public: the Verify page behind every report PDF's QR code. Says whether a
 // report is genuine and who made it - never any figures.
 Route::get('reports/verify/{code}', [ReportController::class, 'verify'])->middleware('throttle:30,1');
+// Public: the giving page and Paystack's webhook (docs/specs/accounting-spec.md, A10a).
+Route::prefix('give')->group(function () {
+    $give = \App\Http\Controllers\Api\Payments\GiveController::class;
+    Route::get('callback', [$give, 'callback'])->middleware('throttle:60,1');
+    Route::get('status/{reference}', [$give, 'status'])->middleware('throttle:60,1');
+    Route::get('{code}', [$give, 'show'])->middleware('throttle:60,1');
+    Route::post('{code}', [$give, 'store'])->middleware('throttle:10,1');
+});
+Route::post('payments/paystack/webhook', [\App\Http\Controllers\Api\Payments\PaystackWebhookController::class, 'handle'])->middleware('throttle:600,1');
 // Public: Safaricom's callbacks for the diocese paybill (docs/specs/accounting-spec.md, A8).
 // The callback key in the address is the guard; a wrong key is a 404.
 Route::prefix('payments/daraja/{key}')->middleware('throttle:600,1')->group(function () {
@@ -763,6 +772,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('paybill/settlements/{id}/cancel', [$pb, 'cancelSettlement'])->whereNumber('id');
         Route::post('paybill/setup/register', [$pb, 'register']);
         Route::post('paybill/setup/simulate', [$pb, 'simulate'])->middleware('throttle:10,1');
+        // A10a - online giving: the place's gifts; the diocese's gateways.
+        $gv = \App\Http\Controllers\Api\Accounting\GivingController::class;
+        Route::get('giving', [$gv, 'index']);
+        Route::get('gateways', [$gv, 'gateways']);
+        Route::get('gateways/banks', [$gv, 'banks']);
+        Route::post('gateways/channels', [$gv, 'storeChannel']);
+        Route::put('gateways/channels/{id}', [$gv, 'updateChannel'])->whereNumber('id');
         // A7 - payroll.
         $pay = \App\Http\Controllers\Api\Accounting\PayrollController::class;
         Route::get('payroll', [$pay, 'index']);
