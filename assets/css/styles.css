@@ -40074,3 +40074,20 @@ a.acc-chain-item:hover, button.acc-chain-item:hover { border-color: rgba(var(--p
   .acc-setup-steps li { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: .75rem; row-gap: .4rem; }
   .acc-setup-steps li > :nth-child(n+3) { grid-column: 2; justify-self: start; }
 }
+
+/* ==========================================================================
+   Giving options in plain words (2026-10-10): choice cards for "what kind of
+   money" and "keep it apart", a folded "More", rows that wrap on a phone.
+   ========================================================================== */
+.go-kinds { display: grid; gap: .9rem; }
+.go-kind-head { margin-bottom: .4rem; font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--default-text-color); }
+.go-kind-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: .5rem; }
+.go-kind-group .go-kind-head { grid-column: 1 / -1; margin-bottom: 0; }
+.go-kind { display: flex; align-items: flex-start; gap: .6rem; margin: 0; padding: .65rem .8rem; border: 1px solid var(--default-border); border-radius: .6rem; cursor: pointer; background: var(--custom-white); }
+.go-kind input { margin-top: .2rem; flex: none; accent-color: rgb(var(--primary-rgb)); }
+.go-kind strong { display: block; font-size: .9rem; color: var(--v2-heading); }
+.go-kind small { display: block; font-size: .78rem; color: var(--default-text-color); }
+.go-kind.is-on { border-color: rgb(var(--primary-rgb)); box-shadow: 0 0 0 1px rgb(var(--primary-rgb)); }
+.go-more { margin-top: 1rem; padding-top: .75rem; border-top: 1px dashed var(--default-border); }
+.go-more summary { cursor: pointer; font-weight: 600; color: rgb(var(--primary-rgb)); }
+#goWrap .fs-row { flex-wrap: wrap; }
