@@ -818,3 +818,27 @@ The user found the pages bare. The redesign ships in five parts:
   - Statements (income & expenditure, balance sheet, funds, audit pack), shown as "coming with the year-end statements" (A9, makueni-west-6b's API).
 - **Buttons:** `AccountingUI.pdf(key, params, title)` opens the export window locked to the report. It is used by the Cashbook, the record pages' hero, the journal and voucher windows, Procurement, Payroll, Collections and Reconcile.
 - **Deploy:** run `AccountingAccessSeeder` (new page and permission) and `php artisan queue:restart`, so the reports worker loads the new report classes.
+
+**R4b: sorting and filters everywhere; PDFs on the rows; exports never stall:**
+- **`AccountingUI.tableKit(o)`.** It gives a table pills with counts, a search, a Sort menu and sortable headers, in place, with the state in the URL (a prefix keeps two tables on one page apart). It's used on:
+  - Payroll (runs, people);
+  - Procurement (to order, bills, suppliers);
+  - Remittances (sent, received);
+  - Requisitions (advances);
+  - Reconciliation (history);
+  - Cash & bank (chart);
+  - Chart of accounts;
+  - Cashbook (brought and carried forward now sit outside the table);
+  - Journals (trial balance).
+
+  Approvals gets kind pills, a search and a sort on its feed; the account page gets a search and a sort on its statement. The other lists already used `PeopleKit.listTable`.
+- **`AccountingUI.pdfButton()`** puts a PDF button on the row itself:
+  - receipts, and the voucher behind a payment, on Overview and documents;
+  - payment vouchers;
+  - payroll runs (payslips);
+  - procurement orders (LPO);
+  - collections (sheet);
+  - remittances (advice);
+  - reconciliations (statement).
+- **Reports page › "My recent PDFs"** lists what the person exported from Accounting, from `GET reports/runs`, ready to download again.
+- **`POST reports/runs/{uuid}/now`.** It builds a run that has waited at least 10 s (your own run, still queued) in the request, and the queued copy then does nothing. The export window offers "Build it now" after 15 s when no worker has picked the run up.

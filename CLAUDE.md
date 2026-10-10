@@ -27,6 +27,9 @@ cd backend && cp .env.example .env && php artisan key:generate
 php artisan migrate --seed
 PHP_CLI_SERVER_WORKERS=4 php artisan serve --port=8004   # 4 workers: a page's API calls run side by side, not one after another
 php artisan queue:work --queue=reports,default   # PDF/Excel reports are built in the background (docs/specs/reports-spec.md)
+# After deploying new job or report code, stop that worker and start it again. On this dev machine nothing supervises it,
+# so `php artisan queue:restart` alone stops it for good and every export waits forever (2026-10-10).
+# If it is off, the export window offers "Build it now" (POST reports/runs/{uuid}/now) after 15 s.
 nohup /opt/homebrew/bin/mailhog > /tmp/mailhog.log 2>&1 &   # dev email: SMTP 127.0.0.1:1025 (backend .env), inbox at http://localhost:8025
 php artisan reverb:start            # Chat in real time (Laravel Reverb, ws://localhost:8080); without it Chat still works, checking every few seconds
 
