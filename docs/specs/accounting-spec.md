@@ -620,6 +620,13 @@ How each place gets its card money, and seeing it arrive - borrowed from v1-even
 ### API (under /api/accounting)
 `GET giving/payouts`, `GET giving/payouts/{id}`, `GET giving/payout-options`, `POST|DELETE giving/payout-request`; `POST gateways/channels/{id}/review` {decision: approve|return, note, switch_on}; `GET gateways/payouts?from&to`.
 
+## A10d - When the answer doesn't come back, and testing on a computer (built 2026-10-10)
+
+- **Asking M-Pesa:** a prompt (a gift, Ask to pay, a share paid by M-Pesa) whose callback hasn't come is asked about - Safaricom's STK query (or PayHero's status for a PayHero channel) - from the giving page's wait (after 25 seconds), the "waiting for the phone" check, and `payments:reconcile` (every 10 minutes: prompts older than 2 minutes; given up after an hour). At most once every 15 seconds a prompt.
+  - Paid: recorded once, marked `Q-{checkout id}` until the callback brings the real M-Pesa code, which then replaces it on the payment, its journals, its voucher and remittance (A6b) and the gift - nothing is posted twice.
+  - Refused, cancelled or timed out: kept on the prompt (and the gift). Still at the PIN ("being processed"), or Safaricom busy: it waits.
+- **Testing on a computer the internet can't reach:** a tunnel (`cloudflared tunnel --url http://localhost:8004`), then `php artisan payments:dev-tunnel {https address}` - points the sandbox paybill's callbacks at it, registers them with Safaricom, and shows the Paystack webhook address to set in Paystack's test dashboard. Refuses a live paybill. Without a tunnel, prompts still complete by asking.
+
 ## Later phases (outline - specified when built)
 - **A2 Reconciliation:** built 2026-10-09, see "A2 - Reconciliation" above.
 - **A3 Sunday collections:** built 2026-10-09, see "A3 - Sunday collections" above.
