@@ -50,6 +50,14 @@ class DioceseReportPdf extends TCPDF
         Insight::CONCERN => ['rgb' => [214, 48, 48], 'tint' => [253, 236, 236], 'label' => 'Needs attention'],
     ];
 
+    /**
+     * Every PDF is set in Times (Times New Roman), the user's choice for easier
+     * reading (2026-10-10). Times reads smaller than Helvetica at the same size,
+     * so text under 10pt is set 10% larger (never past 10pt, so the hierarchy
+     * holds) and nothing goes below 7.5pt; titles keep their size.
+     */
+    private const FONT = 'times';
+
     private const LM = 14;
 
     private const LOGO = 'assets/images/logos/logo-report.png';
@@ -130,18 +138,18 @@ class DioceseReportPdf extends TCPDF
             $this->Image($logo, $lm, 7.5, 0, 17, 'PNG', '', 'T', false, 300);
         }
         $this->SetXY($lm + 20, 10.5);
-        $this->SetFont('helvetica', 'B', 10);
+        $this->font('B', 10);
         $this->SetTextColor(...self::INK);
         $this->Cell(90, 5, $this->fit($this->words['name'], 90, 'B', 10), 0, 2, 'L');
-        $this->SetFont('helvetica', '', 7.2);
+        $this->font('', 7.2);
         $this->SetTextColor(...self::MUTE);
         $this->Cell(90, 4, $this->fit($this->words['subtitle'], 90, '', 7.2), 0, 0, 'L');
 
         $this->SetXY($w / 2, 10.5);
-        $this->SetFont('helvetica', 'B', 9);
+        $this->font('B', 9);
         $this->SetTextColor(...$this->teal);
         $this->Cell($w / 2 - $lm, 5, $this->fit($this->data->scopeLabel, $w / 2 - $lm, 'B', 9), 0, 2, 'R');
-        $this->SetFont('helvetica', '', 7.2);
+        $this->font('', 7.2);
         $this->SetTextColor(...self::MUTE);
         $this->Cell($w / 2 - $lm, 4, $this->data->periodLabel, 0, 0, 'R');
 
@@ -176,10 +184,10 @@ class DioceseReportPdf extends TCPDF
         }
 
         $this->SetXY($textX, $top + 4);
-        $this->SetFont('helvetica', 'B', 7.4);
+        $this->font('B', 7.4);
         $this->SetTextColor(...self::INK);
         $this->Cell(110, 3.9, $this->verifyUrl !== '' ? 'Scan to verify this report is genuine' : $this->words['name'], 0, 2, 'L');
-        $this->SetFont('helvetica', '', 6.9);
+        $this->font('', 6.9);
         $this->SetTextColor(...self::MUTE);
         if ($this->verificationCode !== '') {
             $this->Cell(110, 3.5, 'Verification code '.$this->verificationCode, 0, 2, 'L');
@@ -192,10 +200,10 @@ class DioceseReportPdf extends TCPDF
         }
 
         $this->SetXY($w - $lm - 60, $top + 4);
-        $this->SetFont('helvetica', 'B', 7.4);
+        $this->font('B', 7.4);
         $this->SetTextColor(...$this->teal);
         $this->Cell(60, 3.9, $this->fit($this->words['name'], 60, 'B', 7.4), 0, 2, 'R');
-        $this->SetFont('helvetica', 'B', 7.4);
+        $this->font('B', 7.4);
         $this->SetTextColor(...self::INK);
         $this->Cell(60, 3.9, 'Page '.$this->getAliasNumPage().' / '.$this->getAliasNbPages(), 0, 0, 'R');
     }
@@ -265,11 +273,11 @@ class DioceseReportPdf extends TCPDF
         }
 
         $this->SetXY($lm, 92);
-        $this->SetFont('helvetica', 'B', 20);
+        $this->font('B', 20);
         $this->SetTextColor(...self::INK);
         $this->Cell($cw, 10, $this->fit($this->data->scopeLabel, $cw, 'B', 20), 0, 1, 'C');
         $this->SetX($lm);
-        $this->SetFont('helvetica', '', 10);
+        $this->font('', 10);
         $this->SetTextColor(...self::MUTE);
         $this->Cell($cw, 6, $this->fit(trim($this->words['name'].' · '.$this->words['subtitle'], ' ·'), $cw, '', 10), 0, 1, 'C');
 
@@ -279,19 +287,19 @@ class DioceseReportPdf extends TCPDF
         $this->Line($w / 2 - 22, $y, $w / 2 + 22, $y);
 
         $this->SetXY($lm, $y + 10);
-        $this->SetFont('helvetica', 'B', 34);
-        $this->SetFontSpacing(1.2);
+        $this->font('B', 34);
+        $this->spacing(1.2);
         $this->SetTextColor(...$this->teal);
         $this->Cell($cw, 16, strtoupper((string) $cover['title']), 0, 1, 'C');
-        $this->SetFontSpacing(0);
+        $this->spacing(0);
         if (! empty($cover['subtitle'])) {
             $this->SetX($lm);
-            $this->SetFont('helvetica', 'B', 14);
+            $this->font('B', 14);
             $this->SetTextColor(...self::INK);
             $this->Cell($cw, 9, $this->fit((string) $cover['subtitle'], $cw, 'B', 14), 0, 1, 'C');
         }
         $this->SetX($lm);
-        $this->SetFont('helvetica', '', 11);
+        $this->font('', 11);
         $this->SetTextColor(...self::MUTE);
         $this->Cell($cw, 7, $this->data->periodLabel, 0, 1, 'C');
 
@@ -306,12 +314,12 @@ class DioceseReportPdf extends TCPDF
             $i = 0;
             foreach ($lines as $label => $value) {
                 $this->SetXY($x + 8, $top + 5 + $i * 8);
-                $this->SetFont('helvetica', 'B', 7);
-                $this->SetFontSpacing(0.4);
+                $this->font('B', 7);
+                $this->spacing(0.4);
                 $this->SetTextColor(...self::MUTE);
                 $this->Cell(42, 5, strtoupper((string) $label), 0, 0, 'L');
-                $this->SetFontSpacing(0);
-                $this->SetFont('helvetica', 'B', 10);
+                $this->spacing(0);
+                $this->font('B', 10);
                 $this->SetTextColor(...self::INK);
                 $this->Cell($boxW - 58, 5, $this->fit((string) $value, $boxW - 58, 'B', 10), 0, 0, 'L');
                 $i++;
@@ -350,10 +358,10 @@ class DioceseReportPdf extends TCPDF
             $this->SetXY($x + 2, $y + 16);
             $this->eyebrow((string) $sig['label'], $boxW - 4, 6.4);
             $this->SetX($x + 2);
-            $this->SetFont('helvetica', 'B', 8.6);
+            $this->font('B', 8.6);
             $this->SetTextColor(...self::INK);
             $this->Cell($boxW - 4, 4.6, $this->fit((string) ($sig['name'] ?? ''), $boxW - 4, 'B', 8.6), 0, 2, 'L');
-            $this->SetFont('helvetica', '', 7.6);
+            $this->font('', 7.6);
             $this->SetTextColor(...self::MUTE);
             $this->Cell($boxW - 4, 4, $this->fit('Date: '.($sig['date'] ?? '______________'), $boxW - 4, '', 7.6), 0, 0, 'L');
         }
@@ -383,12 +391,12 @@ class DioceseReportPdf extends TCPDF
         if (! $first) {
             $this->Ln(3);
         }
-        $this->SetFont('helvetica', 'B', 11.5);
+        $this->font('B', 11.5);
         $this->SetTextColor(...self::INK);
         $this->Cell($cw, 6.5, $section->heading, 0, 1, 'L');
         if ($section->note) {
             $this->SetX(self::LM);
-            $this->SetFont('helvetica', 'I', 8.2);
+            $this->font('I', 8.2);
             $this->SetTextColor(...self::MUTE);
             $this->MultiCell($cw, 4.4, $section->note, 0, 'L');
         }
@@ -425,7 +433,7 @@ class DioceseReportPdf extends TCPDF
         $this->eyebrow($this->data->kicker, $cw, 7, $this->teal);
 
         $this->SetX($lm);
-        $this->SetFont('helvetica', 'B', 20);
+        $this->font('B', 20);
         $this->SetTextColor(...self::INK);
         $this->Cell($cw, 10, $this->data->title, 0, 1, 'L');
 
@@ -437,7 +445,7 @@ class DioceseReportPdf extends TCPDF
         $this->Line($lm, $y, $lm + $titleW, $y);
 
         $this->SetXY($lm, $y + 2.5);
-        $this->SetFont('helvetica', '', 9.5);
+        $this->font('', 9.5);
         $this->SetTextColor(...self::MUTE);
         $this->Cell($cw, 5, $this->data->periodLabel.'   ·   '.$this->data->scopeLabel, 0, 1, 'L');
         $this->Ln(4);
@@ -466,10 +474,10 @@ class DioceseReportPdf extends TCPDF
             $this->eyebrow($tile['label'], $inner, 6.4, self::MUTE, 'L', 0.25);
             // A long figure gets smaller type (down to 9pt) before it's ever shortened.
             $size = 13;
-            $this->SetFont('helvetica', 'B', $size);
+            $this->font('B', $size);
             while ($size > 9 && $this->GetStringWidth((string) $tile['value']) > $inner - 2 * self::CELL_INSET) {
                 $size -= 0.5;
-                $this->SetFont('helvetica', 'B', $size);
+                $this->font('B', $size);
             }
             $this->SetX($x + ($i ? 5 : 0));
             $this->SetTextColor(...(self::TONES[$tile['tone'] ?? 'primary'] ?? $this->teal));
@@ -500,12 +508,12 @@ class DioceseReportPdf extends TCPDF
         foreach ($meta as $key => $value) {
             $x = $lm + 7 + ($i % 2) * $colW;
             $this->SetXY($x, $y + 4.2 + intdiv($i, 2) * 6.2);
-            $this->SetFont('helvetica', 'B', 6.6);
-            $this->SetFontSpacing(0.2);
+            $this->font('B', 6.6);
+            $this->spacing(0.2);
             $this->SetTextColor(...self::MUTE);
             $this->Cell(37, 4.6, strtoupper((string) $key), 0, 0, 'L');
-            $this->SetFontSpacing(0);
-            $this->SetFont('helvetica', '', 9);
+            $this->spacing(0);
+            $this->font('', 9);
             $this->SetTextColor(...self::INK);
             $this->Cell($colW - 39, 4.6, $this->fit((string) $value, $colW - 39, '', 9), 0, 0, 'L');
             $i++;
@@ -522,7 +530,7 @@ class DioceseReportPdf extends TCPDF
         foreach ($this->cols as $i => $col) {
             $style = $col->strong ? 'B' : '';
             $text = $this->fit((string) ($row[$i] ?? ''), $this->widths[$i], $style, 9);
-            $this->SetFont('helvetica', $style, 9);
+            $this->font($style, 9);
             $this->Cell($this->widths[$i], $this->rowHeight, $text, 'B', $i === count($this->cols) - 1 ? 1 : 0, $col->align);
         }
     }
@@ -532,7 +540,7 @@ class DioceseReportPdf extends TCPDF
         $this->SetFillColor(...self::TINT);
         $this->SetTextColor(...$this->teal);
         foreach ($this->cols as $i => $col) {
-            $this->SetFont('helvetica', 'B', 9);
+            $this->font('B', 9);
             $text = $this->fit((string) ($cells[$i] ?? ''), $this->widths[$i], 'B', 9);
             $this->Cell($this->widths[$i], $this->rowHeight, $text === '-' && $i > 0 ? '' : $text, 0, $i === count($this->cols) - 1 ? 1 : 0, $col->align, true);
         }
@@ -551,14 +559,14 @@ class DioceseReportPdf extends TCPDF
         $this->SetX($lm);
         $this->eyebrow('Insights', $cw, 7, $this->teal);
         $this->SetX($lm);
-        $this->SetFont('helvetica', 'B', 13);
+        $this->font('B', 13);
         $this->SetTextColor(...self::INK);
         $this->Cell($cw, 7, 'What we noticed', 0, 1, 'L');
         $this->Ln(2);
 
         foreach ($this->data->insights as $insight) {
             $tone = self::INSIGHT_TONES[$insight->tone] ?? self::INSIGHT_TONES[Insight::WATCH];
-            $this->SetFont('helvetica', '', 8.8);
+            $this->font('', 8.8);
             $detailH = $this->getStringHeight($cw - 12, $insight->detail);
             $h = 5 + 5.2 + $detailH + 3;
             if ($this->GetY() + $h > $this->getPageHeight() - $this->getBreakMargin()) {
@@ -572,17 +580,17 @@ class DioceseReportPdf extends TCPDF
             $this->Rect($lm, $y, 1.4, $h, 'F');
 
             $this->SetXY($lm + 5, $y + 3);
-            $this->SetFont('helvetica', 'B', 6.4);
-            $this->SetFontSpacing(0.5);
+            $this->font('B', 6.4);
+            $this->spacing(0.5);
             $this->SetTextColor(...$tone['rgb']);
             $this->Cell(40, 3.6, strtoupper($tone['label']), 0, 0, 'L');
-            $this->SetFontSpacing(0);
+            $this->spacing(0);
             $this->SetXY($lm + 5, $y + 6.8);
-            $this->SetFont('helvetica', 'B', 10);
+            $this->font('B', 10);
             $this->SetTextColor(...self::INK);
             $this->Cell($cw - 10, 5, $this->fit($insight->title, $cw - 10, 'B', 10), 0, 1, 'L');
             $this->SetX($lm + 5);
-            $this->SetFont('helvetica', '', 8.8);
+            $this->font('', 8.8);
             $this->SetTextColor(...self::MUTE);
             $this->MultiCell($cw - 12, 4.2, $insight->detail, 0, 'L');
             $this->SetY($y + $h + 2.2);
@@ -598,13 +606,13 @@ class DioceseReportPdf extends TCPDF
         }
         $this->Ln(3);
         $this->SetX($lm);
-        $this->SetFont('helvetica', 'B', 13);
+        $this->font('B', 13);
         $this->SetTextColor(...self::INK);
         $this->Cell($cw, 7, 'Recommendations', 0, 1, 'L');
         $this->Ln(1.5);
 
         foreach ($recommendations as $n => $text) {
-            $this->SetFont('helvetica', '', 9.2);
+            $this->font('', 9.2);
             $h = max(7, $this->getStringHeight($cw - 12, $text) + 2);
             if ($this->GetY() + $h > $this->getPageHeight() - $this->getBreakMargin()) {
                 $this->AddPage($this->CurOrientation);
@@ -613,11 +621,11 @@ class DioceseReportPdf extends TCPDF
             $this->SetFillColor(...$this->teal);
             $this->RoundedRect($lm, $y + 0.6, 5.4, 5.4, 2.7, '1111', 'F');
             $this->SetXY($lm, $y + 0.6);
-            $this->SetFont('helvetica', 'B', 7.4);
+            $this->font('B', 7.4);
             $this->SetTextColor(255, 255, 255);
             $this->Cell(5.4, 5.4, (string) ($n + 1), 0, 0, 'C');
             $this->SetXY($lm + 8, $y + 0.8);
-            $this->SetFont('helvetica', '', 9.2);
+            $this->font('', 9.2);
             $this->SetTextColor(...self::INK);
             $this->MultiCell($cw - 10, 4.6, $text, 0, 'L');
             $this->SetY(max($this->GetY(), $y + $h) + 1.2);
@@ -663,7 +671,7 @@ class DioceseReportPdf extends TCPDF
             foreach ($row as $k => $chart) {
                 $x = $lm + $k * ($colW + $gap);
                 $this->SetXY($x, $top);
-                $this->SetFont('helvetica', 'B', count($row) > 1 ? 10 : 11);
+                $this->font('B', count($row) > 1 ? 10 : 11);
                 $this->SetTextColor(...self::INK);
                 $titleW = count($row) > 1 ? $colW : $colW * 0.55;
                 $this->Cell($titleW, 6, $this->fit($chart->title, $titleW, 'B', count($row) > 1 ? 10 : 11), 0, 0, 'L');
@@ -678,7 +686,7 @@ class DioceseReportPdf extends TCPDF
                 $chart->kind === 'hbars' ? $this->hbars($chart, $x, $y, $colW) : $this->bars($chart, $x, $y, $colW, $h - 8);
                 if ($chart->note) {
                     $this->SetXY($x, $top + $h + (count($row) > 1 ? 0 : 1));
-                    $this->SetFont('helvetica', 'I', 7.5);
+                    $this->font('I', 7.5);
                     $this->SetTextColor(...self::MUTE);
                     $this->Cell($colW, 4, $this->fit($chart->note, $colW, 'I', 7.5), 0, 0, 'L');
                 }
@@ -691,7 +699,7 @@ class DioceseReportPdf extends TCPDF
     /** The series names with their colour keys, right-aligned on the title line. */
     private function chartLegend(\App\Reports\ReportChart $chart, float $x, float $w, string $align = 'R'): void
     {
-        $this->SetFont('helvetica', '', 7.5);
+        $this->font('', 7.5);
         $items = array_map(fn ($s) => $s['name'], $chart->series);
         $total = array_sum(array_map(fn ($n) => $this->GetStringWidth($n) + 7, $items));
         $cx = $align === 'L' ? $x : $x + max(0, $w - $total);
@@ -722,7 +730,7 @@ class DioceseReportPdf extends TCPDF
         $top = self::niceCeiling($max);
 
         // Gridlines and ticks
-        $this->SetFont('helvetica', '', 6.6);
+        $this->font('', 6.6);
         for ($t = 0; $t <= 4; $t++) {
             $gy = $y + $plotH - $plotH * $t / 4;
             $this->SetDrawColor(...self::LINE);
@@ -747,7 +755,7 @@ class DioceseReportPdf extends TCPDF
                     $this->Rect($gx + $k * $barW, $y + $plotH - $bh, $barW - 0.4, $bh, 'F');
                 }
             }
-            $this->SetFont('helvetica', 'B', 6.8);
+            $this->font('B', 6.8);
             $this->SetTextColor(...self::INK);
             $this->SetXY($plotX + $i * $groupW, $y + $plotH + 1);
             $this->Cell($groupW, 4, $this->fit((string) $label, $groupW + 2 * self::CELL_INSET, 'B', 6.8), 0, 0, 'C');
@@ -771,7 +779,7 @@ class DioceseReportPdf extends TCPDF
         foreach ($chart->categories as $i => $label) {
             $ry = $y + $i * self::HBAR_ROW;
             $this->SetXY($x, $ry);
-            $this->SetFont('helvetica', '', 7.6);
+            $this->font('', 7.6);
             $this->SetTextColor(...self::INK);
             $this->Cell($labelW - 1, 5.6, $this->fit((string) $label, $labelW - 1, '', 7.6), 0, 0, 'L');
             // The track
@@ -788,7 +796,7 @@ class DioceseReportPdf extends TCPDF
                 $this->SetFillColor(...($over ? self::TONES['danger'] : $this->tone($front)));
                 $this->Rect($plotX, $ry + 2.0, $plotW * min($f, $max) / $max, 1.6, 'F');
             }
-            $this->SetFont('helvetica', 'B', 7.4);
+            $this->font('B', 7.4);
             $this->SetTextColor(...(($chart->overIsBad && $f > $b && $b > 0) ? self::TONES['danger'] : self::INK));
             $this->SetXY($plotX + $plotW + 1, $ry);
             $this->Cell($valueW - 1, 6, self::short($f).($b > 0 ? ' / '.self::short($b) : ''), 0, 0, 'R');
@@ -833,6 +841,17 @@ class DioceseReportPdf extends TCPDF
         };
     }
 
+    private function font(string $style, float $size): void
+    {
+        $this->SetFont(self::FONT, $style, $size >= 10 ? $size : max(7.5, min(10.0, round($size * 1.1, 1))));
+    }
+
+    /** Times capitals are already wide - letterspacing is three quarters of what Helvetica needed. */
+    private function spacing(float $points): void
+    {
+        $this->SetFontSpacing($points * 0.75);
+    }
+
     private function contentWidth(): float
     {
         return $this->getPageWidth() - 2 * self::LM;
@@ -840,7 +859,7 @@ class DioceseReportPdf extends TCPDF
 
     private function fit(string $text, float $width, string $style = '', float $size = 9): string
     {
-        $this->SetFont('helvetica', $style, $size);
+        $this->font($style, $size);
         $usable = $width - 2 * self::CELL_INSET - 0.4;
         if ($usable <= 0 || $this->GetStringWidth($text) <= $usable) {
             return $text;
@@ -855,8 +874,8 @@ class DioceseReportPdf extends TCPDF
     /** Letterspaced small caps - every label in the document uses this. */
     private function eyebrow(string $text, float $w, float $size = 7, array $rgb = self::MUTE, string $align = 'L', float $spacing = 0.7): void
     {
-        $this->SetFont('helvetica', 'B', $size);
-        $this->SetFontSpacing($spacing);
+        $this->font('B', $size);
+        $this->spacing($spacing);
         $this->SetTextColor(...$rgb);
         $label = strtoupper($text);
         $usable = $w - 2 * self::CELL_INSET;
@@ -866,7 +885,7 @@ class DioceseReportPdf extends TCPDF
             $cut = true;
         }
         $this->Cell($w, 4.4, $cut ? rtrim($label).'…' : $label, 0, 1, $align);
-        $this->SetFontSpacing(0);
+        $this->spacing(0);
     }
 
     /**
@@ -891,9 +910,9 @@ class DioceseReportPdf extends TCPDF
         $chrome = 2 * self::CELL_INSET + 1.2;
         $need = [];
         foreach ($cols as $i => $col) {
-            $this->SetFont('helvetica', 'B', 7.4);
+            $this->font('B', 7.4);
             $widest = max(array_map(fn ($word) => $this->GetStringWidth($word), explode(' ', strtoupper($col->header))));
-            $this->SetFont('helvetica', $col->strong ? 'B' : '', 9);
+            $this->font($col->strong ? 'B' : '', 9);
             foreach ($rows as $row) {
                 $widest = max($widest, $this->GetStringWidth((string) ($row[$i] ?? '')));
             }
@@ -976,7 +995,7 @@ class DioceseReportPdf extends TCPDF
         $this->SetFillColor(...$this->teal);
         $this->Rect($x0, $y0, array_sum($this->widths), $h, 'F');
         $this->SetTextColor(255, 255, 255);
-        $this->SetFont('helvetica', 'B', 7.2);
+        $this->font('B', 7.2);
 
         $x = $x0;
         foreach ($this->cols as $i => $col) {
@@ -989,7 +1008,7 @@ class DioceseReportPdf extends TCPDF
             if ($this->GetStringWidth($label) <= $inner || ! str_contains($label, ' ')) {
                 $this->SetXY($ix, $y0);
                 $this->Cell($inner, $h, $this->fit($label, $cw, 'B', 7.2), 0, 0, $col->align);
-                $this->SetFont('helvetica', 'B', 7.2);
+                $this->font('B', 7.2);
             } else {
                 $words = explode(' ', $label);
                 $best = 1;
