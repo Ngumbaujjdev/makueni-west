@@ -236,6 +236,11 @@ final class Ledger
             $d += $debit;
             $c += $credit;
         }
+        // A fund is one of this place's: standard, its own, or one set up above it for the places below (A11).
+        $funds = array_values(array_unique(array_filter(array_column($clean, 'fund_id'))));
+        if ($funds && array_diff($funds, app(Funds::class)->usableIds($place))) {
+            throw ValidationException::withMessages(['lines' => ['One of the funds isn\'t one of this place\'s.']]);
+        }
         if ($d !== $c) {
             throw ValidationException::withMessages(['lines' => ['The debits (KES '.number_format($d / 100, 2).') and credits (KES '.number_format($c / 100, 2).') must be equal.']]);
         }

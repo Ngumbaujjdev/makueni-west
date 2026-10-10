@@ -53,7 +53,7 @@ class GivingController extends AccountingBase
                 'route' => $route ? $route->provider : ($place->territory_type->value === 'diocese' || $this->settings()->system('paybill.shortcode') ? 'paybill' : null),
                 'channels' => $own->map(fn ($c) => $this->presentChannel($c))->values(),
                 'diocese_paybill' => $this->settings()->system('paybill.shortcode'),
-                'accounts' => app(GivingPurposes::class)->active()->map(fn ($p) => ['purpose' => $p->key, 'label' => $p->label, 'account' => $p->suffix])->values(),
+                'accounts' => app(GivingPurposes::class)->ownFor($place)->map(fn ($p) => ['purpose' => $p->key, 'label' => $p->label, 'account' => $p->suffix])->values(),
             ],
             'gifts' => $gifts->map(fn ($g) => [
                 'id' => $g->id, 'reference' => $g->reference, 'amount' => (float) $g->amount, 'purpose' => $g->purpose, 'purpose_label' => GivingPurposes::label($g->purpose, $g->purpose),

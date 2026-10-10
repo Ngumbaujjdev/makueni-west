@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\Accounting;
 
 use App\Approval\Services\ApprovalService;
 use App\Approval\Services\Inbox;
-use App\Models\AccountingFund;
 use App\Models\Requisition;
 use App\Models\StaffAdvance;
 use App\Models\Territory;
@@ -72,7 +71,7 @@ class RequisitionController extends AccountingBase
                 ->map(fn ($a) => ['id' => $a->id, 'code' => $a->code, 'name' => $a->name, 'type' => $a->type,
                     'left' => isset($lines[$a->id]) && $left->has($lines[$a->id]->id) ? $left[$lines[$a->id]->id] : null])->values(),
             'cash' => $usable->filter(fn ($a) => $a->cash_kind)->map(fn ($a) => ['id' => $a->id, 'code' => $a->code, 'name' => $a->name, 'cash_kind' => $a->cash_kind])->values(),
-            'funds' => AccountingFund::where('is_active', true)->orderBy('display_order')->get(['id', 'code', 'name', 'is_restricted']),
+            'funds' => app(\App\Services\Accounting\Funds::class)->present(app(\App\Services\Accounting\Funds::class)->forPlace($place)),
             'kinds' => collect(Requisition::KINDS)->map(fn ($l, $k) => ['key' => $k, 'label' => $l])->values(),
             'budget' => $budget ? ['id' => $budget->id, 'label' => $budget->period_label] : null,
             'overdue_advance' => StaffAdvance::where('user_id', $request->user()->id)->where('status', 'open')->where('due_on', '<', now()->toDateString())->exists(),

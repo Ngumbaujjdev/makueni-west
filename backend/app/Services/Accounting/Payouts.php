@@ -228,7 +228,7 @@ final class Payouts
 
         return Gift::where('method', 'paystack')->whereIn('status', ['paid', 'refunded'])->whereNull($col)
             ->where('paid_at', '>=', $from->startOfDay()->utc())->where('paid_at', '<', $to->endOfDay()->utc())
-            ->when(! $row->main, fn ($q) => $q->where('territory_id', $row->territory_id)->where('channel', 'subaccount'))
+            ->when(! $row->main, fn ($q) => $q->whereRaw('COALESCE(owner_territory_id, territory_id) = ?', [$row->territory_id])->where('channel', 'subaccount'))
             ->when($row->main, fn ($q) => $q->where(fn ($w) => $w->where('channel', 'diocese')->orWhere(fn ($x) => $x->where('channel', 'subaccount')->where('split', '>', 0))))
             ->get()->filter(fn ($g) => self::part($g, $row->main) > 0);
     }
@@ -282,7 +282,7 @@ final class Payouts
         $col = $main ? 'main_settlement_id' : 'settlement_id';
 
         return round(Gift::where('method', 'paystack')->where('status', 'paid')->whereNull($col)
-            ->when(! $main, fn ($q) => $q->where('territory_id', $place->id)->where('channel', 'subaccount'))
+            ->when(! $main, fn ($q) => $q->whereRaw('COALESCE(owner_territory_id, territory_id) = ?', [$place->id])->where('channel', 'subaccount'))
             ->when($main, fn ($q) => $q->where(fn ($w) => $w->where('channel', 'diocese')->orWhere(fn ($x) => $x->where('channel', 'subaccount')->where('split', '>', 0))))
             ->when($last, fn ($q) => $q->where('paid_at', '>=', CarbonImmutable::parse($last, self::TZ)->addDay()->startOfDay()->utc()))
             ->get()->sum(fn ($g) => self::part($g, $main)), 2);
@@ -352,7 +352,7 @@ final class Payouts
         $settled = PaystackSettlement::whereBetween('settled_on', [$from, $to])->get()->groupBy('territory_id');
         $shares = Gift::where('method', 'paystack')->where('status', 'paid')->where('channel', 'subaccount')
             ->whereBetween('paid_at', [CarbonImmutable::parse($from, 'Africa/Nairobi')->startOfDay()->utc(), CarbonImmutable::parse($to, 'Africa/Nairobi')->endOfDay()->utc()])
-            ->selectRaw('territory_id, SUM(split) as s')->groupBy('territory_id')->pluck('s', 'territory_id');
+            ->selectRaw('COALESCE(owner_territory_id, territory_id) as books, SUM(split) as s')->groupBy('books')->pluck('s', 'books');
         $lastAll = PaystackSettlement::whereIn('status', ['success', 'processed'])->orderByDesc('settled_on')->get()->unique('territory_id')->keyBy('territory_id');
 
         return Territory::whereIn('territory_type', ['diocese', 'region', 'church'])->whereNotNull('code')->orderByRaw("FIELD(territory_type, 'diocese', 'region', 'church')")->orderBy('name')->get()

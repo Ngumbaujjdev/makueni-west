@@ -47,7 +47,8 @@ class PaybillController extends AccountingBase
         $q = MpesaPayment::with('place:id,name,code')->orderByDesc('paid_at')->orderByDesc('id')->limit(1000);
         if (! $isDiocese) {
             // A share paid to the diocese by M-Pesa (A6b) is a payment out, not giving in.
-            $q->where('territory_id', $place->id)->where('status', 'posted')->whereNull('remittance_id');
+            // A gift for a place's own option given at a church below is the owner's (A11).
+            $q->whereRaw('COALESCE(owner_territory_id, territory_id) = ?', [$place->id])->where('status', 'posted')->whereNull('remittance_id');
         } else {
             // A church's own paybill (A10b) is its own business - unless it couldn't be posted and waits to be sorted.
             $q->where(fn ($w) => $w->whereNull('channel_id')->orWhere('status', 'to_sort'));
@@ -63,7 +64,7 @@ class PaybillController extends AccountingBase
                 'own' => AccountingAccess::abilities($user, $place)['own'],
             ],
             'setup' => $this->setup(),
-            'purposes' => app(GivingPurposes::class)->present(),
+            'purposes' => app(GivingPurposes::class)->present($isDiocese ? null : app(GivingPurposes::class)->forPlace($place)),
             'account_numbers' => $isDiocese ? [] : array_values(array_map(fn ($k, $v) => $v + ['purpose' => $k], array_keys($this->paybill->accountNumbers($place)), $this->paybill->accountNumbers($place))),
             'payments' => $payments->map(fn ($p) => $this->present($p, $isDiocese))->values(),
             'to_sort' => $isDiocese ? $payments->where('status', 'to_sort')->count() : 0,
@@ -71,7 +72,7 @@ class PaybillController extends AccountingBase
         ];
         if (! $isDiocese && ($own = $this->paybill->mpesaChannel($place))) {
             $out['own'] = ['provider' => $own->provider, 'label' => \App\Models\PaymentChannel::PROVIDERS[$own->provider], 'number' => $own->account_number, 'till' => $own->account_name === 'Till',
-                'accounts' => app(GivingPurposes::class)->active()->map(fn ($p) => ['purpose' => $p->key, 'label' => $p->label, 'account' => $p->suffix])->values()];
+                'accounts' => app(GivingPurposes::class)->ownFor($place)->map(fn ($p) => ['purpose' => $p->key, 'label' => $p->label, 'account' => $p->suffix])->values()];
         }
         if ($isDiocese && $manage) {
             $out['places'] = Territory::whereIn('territory_type', ['church', 'region'])->whereNotNull('code')->orderBy('name')->get(['id', 'name', 'code', 'territory_type'])

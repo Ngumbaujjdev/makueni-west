@@ -3,7 +3,6 @@
 namespace App\Services\Accounting;
 
 use App\Models\AccountingAccount;
-use App\Models\AccountingFund;
 use App\Models\Journal;
 use App\Models\JournalLine;
 use App\Models\PaymentVoucher;
@@ -278,7 +277,7 @@ final class Books
             ->selectRaw("l.fund_id, COALESCE(SUM(CASE WHEN a.type = 'income' THEN l.credit - l.debit END), 0) AS income, COALESCE(SUM(CASE WHEN a.type = 'expense' THEN l.debit - l.credit END), 0) AS expense")
             ->get()->keyBy('fund_id');
 
-        return AccountingFund::where('is_active', true)->orderBy('display_order')->get()->map(fn ($f) => [
+        return app(Funds::class)->forPlace($place)->map(fn ($f) => [
             'id' => $f->id, 'code' => $f->code, 'name' => $f->name, 'restricted' => $f->is_restricted,
             'in' => round((float) ($rows[$f->id]->income ?? 0), 2), 'out' => round((float) ($rows[$f->id]->expense ?? 0), 2),
         ])->all();

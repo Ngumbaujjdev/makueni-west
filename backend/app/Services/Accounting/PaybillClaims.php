@@ -38,7 +38,7 @@ final class PaybillClaims
             throw ValidationException::withMessages(['code' => ['That doesn\'t look like an M-Pesa code - it has 10 letters and numbers, e.g. SJK1ABC234.']]);
         }
         $purpose = (string) ($d['purpose'] ?? '');
-        if (! app(GivingPurposes::class)->usable($purpose)) {
+        if (! app(GivingPurposes::class)->usableAt($purpose, $place)) {
             throw ValidationException::withMessages(['purpose' => ['Pick what you gave for.']]);
         }
         $name = trim((string) ($d['name'] ?? ''));

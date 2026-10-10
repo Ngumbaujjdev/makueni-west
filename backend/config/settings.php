@@ -323,6 +323,16 @@ return [
         ],
 
         // Online giving (docs/specs/accounting-spec.md, A10) - Paystack for the giving page.
+        'givingoptions' => [
+            'label' => 'Giving options & funds',
+            'icon' => 'ri-hand-coin-line',
+            'colour' => 'success',
+            'group' => 'money',
+            'levels' => ['church', 'region', 'diocese'],
+            'kind' => 'custom',
+            'grants' => ['update' => ['church' => ['Church Treasurer'], 'region' => ['Regional Treasurer'], 'diocese' => ['Diocese Finance Officer', 'Diocese Treasurer']]],
+            'sentence' => 'What givers can give for - Tithe, Offering, a conference - and the funds money is kept in. Set them up for this place alone or for every place below it.',
+        ],
         'giving' => [
             'label' => 'Online giving',
             'icon' => 'ri-hand-heart-line',

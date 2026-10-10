@@ -16,7 +16,7 @@ class Gift extends Model
     public const STATUSES = ['pending' => 'Waiting for payment', 'paid' => 'Paid', 'failed' => 'Not paid', 'abandoned' => 'Abandoned', 'refunded' => 'Refunded'];
 
     protected $fillable = [
-        'reference', 'territory_id', 'purpose', 'amount', 'giver_name', 'giver_phone', 'giver_email', 'method', 'provider_ref', 'status', 'channel',
+        'reference', 'territory_id', 'owner_territory_id', 'purpose', 'amount', 'giver_name', 'giver_phone', 'giver_email', 'method', 'provider_ref', 'status', 'channel',
         'fee', 'split', 'net', 'journal_id', 'diocese_journal_id', 'remittance_id', 'mpesa_request_id', 'mpesa_payment_id', 'paid_at', 'result', 'raw', 'ip',
         'settlement_id', 'main_settlement_id', 'refunded_amount', 'refunded_at', 'disputed_at',
     ];

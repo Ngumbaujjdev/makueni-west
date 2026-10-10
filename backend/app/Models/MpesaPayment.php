@@ -16,7 +16,7 @@ class MpesaPayment extends Model
     public const STATUSES = ['posted' => 'In the books', 'to_sort' => 'To sort', 'returned' => 'Returned to the payer'];
 
     protected $fillable = [
-        'channel_id', 'remittance_id', 'trans_id', 'kind', 'shortcode', 'amount', 'phone', 'payer_name', 'bill_ref', 'paid_at', 'territory_id', 'purpose', 'account_id', 'fund_id',
+        'channel_id', 'remittance_id', 'trans_id', 'kind', 'shortcode', 'amount', 'phone', 'payer_name', 'bill_ref', 'paid_at', 'territory_id', 'owner_territory_id', 'purpose', 'account_id', 'fund_id',
         'status', 'note', 'diocese_journal_id', 'place_journal_id', 'sort_journal_id', 'return_voucher_id', 'sorted_by', 'sorted_at', 'mpesa_request_id', 'raw',
     ];
 

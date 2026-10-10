@@ -54,7 +54,8 @@ final class Giving
         $paybillReady = (bool) ($this->settings->system('paybill.shortcode') && $this->settings->system('paybill.passkey') && $this->settings->system('paybill.consumer_key'));
         $own = $this->paybill->mpesaChannel($place);
         $paybill = $own
-            ? ['number' => $own->account_number, 'till' => $own->account_name === 'Till', 'accounts' => app(GivingPurposes::class)->active()->map(fn ($p) => ['purpose' => $p->key, 'label' => $p->label, 'account' => $p->suffix])->values()->all()]
+            // A church's own paybill takes only its own options (A11); another place's option is given by Paystack or the diocese paybill.
+            ? ['number' => $own->account_number, 'till' => $own->account_name === 'Till', 'accounts' => app(GivingPurposes::class)->ownFor($place)->map(fn ($p) => ['purpose' => $p->key, 'label' => $p->label, 'account' => $p->suffix])->values()->all()]
             : ($paybillReady ? ['number' => $this->settings->system('paybill.shortcode'), 'till' => false, 'accounts' => array_values($this->paybill->accountNumbers($place)),
                 // "I've paid - here's my code" is checked against the diocese paybill (A10f).
                 'claim' => true] : null);
@@ -62,7 +63,7 @@ final class Giving
         return [
             'place' => ['name' => $place->name, 'code' => Paybill::code($place), 'level' => $place->territory_type->value],
             'logo' => url("/api/settings/logo/{$place->id}"),
-            'purposes' => app(GivingPurposes::class)->present(),
+            'purposes' => app(GivingPurposes::class)->present(app(GivingPurposes::class)->forPlace($place)),
             'methods' => ['mpesa' => $own !== null || $paybillReady, 'paystack' => Paystack::ready()],
             'paybill' => $paybill,
             'note' => $this->settings->system('giving.page_note'),
@@ -85,9 +86,11 @@ final class Giving
         $pay = $method === 'paystack' && array_key_exists((string) ($data['pay'] ?? ''), self::PAY) ? (string) $data['pay'] : null;
         $mobile = in_array($pay, ['mpesa', 'airtel'], true);
         $purpose = (string) ($data['purpose'] ?? '');
-        if (! app(GivingPurposes::class)->usable($purpose)) {
+        if (! app(GivingPurposes::class)->usableAt($purpose, $place)) {
             throw ValidationException::withMessages(['purpose' => ['Pick what you are giving for.']]);
         }
+        // An option a place above owns is its money: its Paystack channel and its share rules (A11).
+        $books = app(GivingPurposes::class)->booksFor($purpose, $place);
         $amount = round((float) ($data['amount'] ?? 0), 2);
         if ($amount < 10 || $amount > ($method === 'mpesa' || $mobile ? 250000 : 1000000)) {
             throw ValidationException::withMessages(['amount' => [$method === 'mpesa' || $mobile ? 'Give between KES 10 and 250,000 by '.($pay === 'airtel' ? 'Airtel Money.' : 'M-Pesa.') : 'Give between KES 10 and 1,000,000.']]);
@@ -113,7 +116,7 @@ final class Giving
         }
         $gift = Gift::create([
             'reference' => 'GFT-'.now('Africa/Nairobi')->format('ymd').'-'.strtoupper(Str::random(6)),
-            'territory_id' => $place->id, 'purpose' => $purpose, 'amount' => $method === 'mpesa' ? round($amount) : $amount,
+            'territory_id' => $place->id, 'owner_territory_id' => (int) $books->id !== (int) $place->id ? $books->id : null, 'purpose' => $purpose, 'amount' => $method === 'mpesa' ? round($amount) : $amount,
             'giver_name' => mb_substr(trim((string) ($data['name'] ?? '')), 0, 150) ?: null,
             'giver_phone' => $phone !== '' ? ($method === 'mpesa' || Daraja::validPhone($phone) ? Daraja::phone($phone) : preg_replace('/[^0-9+]/', '', $phone)) : null, 'giver_email' => $email ?: null,
             'method' => $method, 'status' => 'pending', 'ip' => $ip,
@@ -129,8 +132,8 @@ final class Giving
 
             return ['reference' => $gift->reference, 'method' => 'mpesa'];
         }
-        $channel = $this->channel($place);
-        $split = $channel ? $this->shareFor($place, $purpose, (float) $gift->amount) : 0.0;
+        $channel = $this->channel($books);
+        $split = $channel ? $this->shareFor($books, $purpose, (float) $gift->amount) : 0.0;
         try {
             // Paystack needs an email; a mobile-money giver who gave none is receipted by SMS, so the diocese's own address stands in.
             $out = Paystack::diocese()->initialize((float) $gift->amount, $email !== '' ? $email : (string) config('mail.from.address'),
@@ -192,7 +195,7 @@ final class Giving
             if ($gift->status === 'paid') {
                 return $gift;
             }
-            $place = Territory::findOrFail($gift->territory_id);
+            $place = Territory::findOrFail($gift->owner_territory_id ?? $gift->territory_id);
             $fee = round((int) ($v['fees'] ?? 0) / 100, 2);
             $toSub = ! empty($v['subaccount']) || ! empty($v['fees_split']);
             $split = $toSub ? round((int) ($v['fees_split']['integration'] ?? Paystack::cents((float) $gift->split)) / 100, 2) : 0.0;
@@ -211,7 +214,8 @@ final class Giving
     {
         $diocese = $this->paybill->diocese();
         [$account, $fund] = $this->paybill->target($gift->purpose);
-        $label = GivingPurposes::label($gift->purpose);
+        $given = $gift->owner_territory_id ? Territory::find($gift->territory_id) : null;
+        $label = GivingPurposes::label($gift->purpose).($given ? " given at {$given->name}" : '');
         $clearing = $this->chart->account('online_clearing');
         $charges = $this->chart->account('bank_charges');
         $head = fn (string $narration, string $party) => ['doc_type' => 'receipt', 'date' => $date, 'narration' => $narration, 'party_name' => $party,
@@ -306,7 +310,8 @@ final class Giving
             return;
         }
         $gift->update($payment
-            ? ['status' => 'paid', 'mpesa_payment_id' => $payment->id, 'journal_id' => $payment->place_journal_id, 'diocese_journal_id' => $payment->diocese_journal_id, 'paid_at' => $payment->paid_at, 'provider_ref' => $payment->trans_id, 'net' => $gift->amount, 'channel' => $this->channelName($request), 'result' => 'Paid by M-Pesa']
+            ? ['status' => 'paid', 'mpesa_payment_id' => $payment->id, 'journal_id' => $payment->place_journal_id ?? $payment->diocese_journal_id, 'diocese_journal_id' => $payment->diocese_journal_id,
+                'owner_territory_id' => $payment->owner_territory_id, 'paid_at' => $payment->paid_at, 'provider_ref' => $payment->trans_id, 'net' => $gift->amount, 'channel' => $this->channelName($request), 'result' => 'Paid by M-Pesa']
             : ['status' => 'failed', 'result' => $request->result]);
     }
 
