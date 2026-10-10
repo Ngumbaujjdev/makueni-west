@@ -67,6 +67,12 @@
           ${more ? `<div class="dropdown"><button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">More</button><ul class="dropdown-menu dropdown-menu-end">${more}</ul></div>` : ""}
         </div>
       </div>
+      <div class="acc-rec-facts">
+        <div><span>Position</span><strong>${esc(p.position || "None")}</strong></div>
+        <div><span>Grade</span><strong>${p.grade ? esc(p.grade.code) : "None"}</strong></div>
+        <div><span>Place</span><strong>${esc(p.place.name)}</strong></div>
+        <div><span>Pay a month</span><strong>${A.money(p.gross)}</strong></div>
+      </div>
       ${p.status === "left" ? `<div class="alert alert-secondary d-flex gap-2 mt-3 mb-0"><i class="ri-information-line"></i><span>Left on ${A.day(p.end_date)} - their record and payslips are kept.</span></div>` : ""}
       ${!can.edit && p.place.id !== CTX.place.id ? `<div class="alert alert-light border d-flex gap-2 mt-3 mb-0"><i class="ri-eye-line"></i><span>Viewing only - ${esc(p.place.name)} keeps this record.</span></div>` : ""}
     </div>`;
@@ -78,23 +84,19 @@
   // ------------------------------------------------------------ the tabs
 
   function overview() {
-    const pay = `<div class="d-flex justify-content-between py-1"><span>Basic pay</span><span>${A.money(p.basic_pay)}</span></div>${p.allowances.map((a) => `<div class="d-flex justify-content-between py-1"><span>${esc(a.name)}</span><span>${A.money(a.amount)}</span></div>`).join("")}<div class="d-flex justify-content-between py-2 border-top mt-1"><strong>Pay a month</strong><strong>${A.money(p.gross)}</strong></div><p class="acc-sub mb-0">Before any SACCO or loan payroll takes in a month.</p>`;
-    $("hrMain").innerHTML = `
-      ${card('<i class="ri-briefcase-4-line me-1 text-primary"></i>The job', `<ul class="mr-rows">
-        ${row("ri-briefcase-4-line", "Position", p.position ? esc(p.position) : none)}
-        ${row("ri-bar-chart-box-line", "Grade", p.grade ? `${esc(p.grade.code)} · ${esc(p.grade.name)}` : none)}
-        ${row("ri-time-line", "Type", esc(p.employment_type_label))}
-        ${row("ri-calendar-check-line", "Started", p.start_date ? A.day(p.start_date) : none)}
-        ${row("ri-file-warning-line", "Contract ends", p.contract_end ? A.day(p.contract_end) : '<span class="acc-sub">No end date</span>')}
-        ${p.end_date ? row("ri-logout-box-r-line", "Left", A.day(p.end_date)) : ""}
-      </ul>`)}
-      ${card('<i class="ri-money-dollar-box-line me-1 text-success"></i>Pay a month', pay)}
-      ${card('<i class="ri-bank-card-line me-1 text-purple"></i>How they are paid', `<ul class="mr-rows">
-        ${row("ri-bank-card-line", "Paid by", `${A.methodChip({ paybill: "mpesa", till: "mpesa" }[p.pay_method] || p.pay_method, p.pay_method_label)}`)}
-        ${row("ri-send-plane-line", "Pay to", p.pay_to ? esc(p.pay_to) : none)}
-        ${row("ri-lock-line", "ID number", p.id_number ? esc(p.id_number) : none)}
-        ${row("ri-lock-line", "KRA PIN", p.kra_pin ? esc(p.kra_pin) : none)}
-      </ul><p class="acc-sub mb-0 mt-2"><i class="ri-shield-keyhole-line me-1"></i>Kept encrypted - only the last four are ever shown.</p>`)}`;
+    const kv = (rows) => `<table class="table table-borderless table-sm mb-0">${rows.filter(Boolean).map(([k, v]) => `<tr><td class="acc-sub ps-0" style="width:40%">${k}</td><td class="fw-semibold text-end pe-0">${v}</td></tr>`).join("")}</table>`;
+    $("hrMain").innerHTML = `<div class="row g-3">
+      <div class="col-lg-6">${card('<i class="ri-briefcase-4-line me-1 text-primary"></i>The job', kv([
+        ["Position", p.position ? esc(p.position) : none],
+        ["Grade", p.grade ? `${esc(p.grade.code)} · ${esc(p.grade.name)}` : none],
+        ["Type", esc(p.employment_type_label)],
+        ["Started", p.start_date ? A.day(p.start_date) : none],
+        ["Contract ends", p.contract_end ? A.day(p.contract_end) : "No end date"],
+        p.end_date && ["Left", A.day(p.end_date)],
+      ]))}</div>
+      <div class="col-lg-6">${card('<i class="ri-money-dollar-box-line me-1 text-success"></i>Pay a month', kv([["Basic pay", A.money(p.basic_pay)], ...p.allowances.map((a) => [esc(a.name), A.money(a.amount)])]) + `<div class="d-flex justify-content-between border-top pt-2 mt-1"><strong>Total</strong><strong class="fs-16">${A.money(p.gross)}</strong></div>`)}</div>
+      <div class="col-12">${card('<i class="ri-bank-card-line me-1 text-purple"></i>How they are paid', `<div class="row g-3"><div class="col-md-6">${kv([["Paid by", A.methodChip({ paybill: "mpesa", till: "mpesa" }[p.pay_method] || p.pay_method, p.pay_method_label)], ["Pay to", p.pay_to ? esc(p.pay_to) : none]])}</div><div class="col-md-6">${kv([["ID number", p.id_number ? esc(p.id_number) : none], ["KRA PIN", p.kra_pin ? esc(p.kra_pin) : none]])}</div></div>`)}</div>
+    </div>`;
     const memberLink = p.member_link ? `<a class="btn btn-sm btn-outline-primary mt-2" href="${CTX.membersUrl}/member?id=${p.member_link}"><i class="ri-contacts-book-2-line me-1"></i>Open their member record</a>` : "";
     $("hrSide").innerHTML = `
       ${card("At a glance", `<div class="glance-tiles">
@@ -109,39 +111,64 @@
       </ul>${memberLink}`)}`;
   }
 
+  /** A table with search, pills, sort and pages (the Accounting kit, one prefix per table). */
+  const tableCard = (title, icon, color, id, head, extra = "") =>
+    card(`<span class="d-inline-flex align-items-center gap-2"><span class="avatar avatar-xs avatar-rounded bg-${color} text-white"><i class="${icon}"></i></span>${title}</span>`, `<div class="table-responsive"><table class="table table-hover mb-0 acc-table" id="${id}"><thead><tr>${head}</tr></thead><tbody></tbody></table></div>`, extra).replace('<div class="card-body">', '<div class="card-body p-0">');
+
   function payslips() {
     $("hrSide").innerHTML = "";
-    $("hrMain").innerHTML = card(
-      '<i class="ri-file-list-3-line me-1 text-success"></i>Payslips',
-      p.payslips.length
-        ? `<div class="table-responsive"><table class="table table-hover mb-0 acc-table"><thead><tr><th>Month</th><th class="d-none d-md-table-cell">Place</th><th class="text-end d-none d-sm-table-cell">Gross</th><th class="text-end d-none d-sm-table-cell">Deductions</th><th class="text-end">Net</th><th>Status</th><th class="text-end">PDF</th></tr></thead><tbody>${p.payslips
-            .map((s) => `<tr><td><div class="fw-semibold">${esc(s.label)}</div><div class="acc-sub">${esc(s.position || "")}</div></td><td class="d-none d-md-table-cell">${esc(s.place || "")}</td><td class="text-end d-none d-sm-table-cell">${A.money(s.gross)}</td><td class="text-end d-none d-sm-table-cell">${s.deductions ? A.money(s.deductions) : '<span class="acc-sub">None</span>'}</td><td class="text-end"><strong>${A.money(s.net)}</strong></td><td><span class="badge bg-${RUN[s.status]?.[0] || "secondary"} text-white">${RUN[s.status]?.[1] || esc(s.status)}</span></td><td class="text-end">${A.pdfButton("accounting.payslips", { record_id: s.run_id }, `Payslips ${s.label}`, "Payslip")}</td></tr>`)
-            .join("")}</tbody></table></div>`
-        : A.empty("ri-file-list-3-line", "Not paid yet", "Their payslips show here once a month's payroll is approved."),
-      p.totals.months ? `<span class="soft-chip soft-success">${A.money(p.totals.all)} in all</span>` : "",
-    );
+    const years = [...new Set(p.payslips.map((s) => s.month.slice(0, 4)))];
+    const byYear = years.map((y) => {
+      const list = p.payslips.filter((s) => s.month.startsWith(y));
+      return `<div class="col-sm-4 col-lg-3"><div class="border rounded-3 p-3 h-100"><span class="acc-sub">${y}</span><div class="fw-semibold fs-16">${A.money(list.reduce((t, s) => t + s.net, 0), { cents: false })}</div><span class="acc-sub">${list.length} ${list.length === 1 ? "month" : "months"} paid</span></div></div>`;
+    });
+    $("hrMain").innerHTML = (years.length ? `<div class="row g-3 mb-3">${byYear.join("")}</div>` : "") + tableCard("Payslips", "ri-file-list-3-line", "success", "hrSlips", '<th>Month</th><th class="d-none d-md-table-cell">Place</th><th class="text-end d-none d-sm-table-cell">Gross</th><th class="text-end d-none d-sm-table-cell">Deductions</th><th class="text-end">Net</th><th>Status</th><th class="text-end">PDF</th>');
+    A.tableKit({
+      tableId: "hrSlips",
+      prefix: "s_",
+      items: p.payslips,
+      noun: "months",
+      search: "Search a month or place...",
+      pills: years.map((y, i) => ({ key: `y${y}`, label: y, icon: "ri-calendar-line", color: ["primary", "success", "purple", "warning"][i % 4], test: (s) => s.month.startsWith(y) })),
+      sorts: [
+        { key: "new", label: "Newest first", order: [[0, "desc"]] },
+        { key: "old", label: "Oldest first", order: [[0, "asc"]] },
+        { key: "net", label: "Highest net", order: [[4, "desc"]] },
+      ],
+      nonSortable: [6],
+      empty: A.empty("ri-file-list-3-line", "Not paid yet", "Payslips show here once a month's payroll is approved."),
+      rowHtml: (s) => `<tr data-pills="y${s.month.slice(0, 4)}"><td data-order="${s.month}"><div class="fw-semibold">${esc(s.label)}</div><div class="acc-sub">${esc(s.position || "")}</div></td><td class="d-none d-md-table-cell">${esc(s.place || "")}</td><td class="text-end d-none d-sm-table-cell" data-order="${s.gross}">${A.money(s.gross)}</td><td class="text-end d-none d-sm-table-cell" data-order="${s.deductions}">${s.deductions ? A.money(s.deductions) : '<span class="acc-sub">None</span>'}</td><td class="text-end" data-order="${s.net}"><strong>${A.money(s.net)}</strong></td><td><span class="badge bg-${RUN[s.status]?.[0] || "secondary"} text-white">${RUN[s.status]?.[1] || esc(s.status)}</span></td><td class="text-end">${A.pdfButton("accounting.payslips", { record_id: s.run_id }, `Payslips ${s.label}`, "Payslip")}</td></tr>`,
+    });
   }
 
   function served() {
     $("hrSide").innerHTML = "";
     const COLOR = { hired: "success", transferred: "purple", changed: "primary", left: "secondary" };
-    $("hrMain").innerHTML = card(
-      '<i class="ri-route-line me-1 text-purple"></i>Where they have served',
-      p.postings.length
-        ? `<ol class="ev-timeline">${p.postings
-            .map((x) => `<li style="--q: var(--${COLOR[x.reason]}-rgb)"><span class="ev-timeline-dot"></span><div><span class="ev-timeline-when">${A.day(x.from)}${x.reason !== "left" ? ` - ${x.to ? A.day(x.to) : "now"}` : ""}</span><span class="ev-timeline-what fw-semibold">${esc(x.reason_label)} · ${esc(x.place || "")}</span><div class="acc-sub">${esc(x.position || "")}${x.note ? ` · ${esc(x.note)}` : ""}</div></div></li>`)
-            .join("")}</ol>`
-        : '<p class="mb-0">No history yet.</p>',
-    );
+    const reasons = [...new Set(p.postings.map((x) => x.reason))];
+    $("hrMain").innerHTML = tableCard("Where they have served", "ri-route-line", "purple", "hrPosts", '<th>Place</th><th>Position</th><th>From</th><th>To</th><th>Why</th>');
+    A.tableKit({
+      tableId: "hrPosts",
+      prefix: "h_",
+      items: p.postings,
+      noun: "entries",
+      search: "Search a place or position...",
+      pills: reasons.length > 1 ? reasons.map((r) => ({ key: r, label: p.postings.find((x) => x.reason === r).reason_label, icon: "ri-route-line", color: COLOR[r] || "primary", test: (x) => x.reason === r })) : [],
+      sorts: [
+        { key: "new", label: "Newest first", order: [[2, "desc"]] },
+        { key: "old", label: "Oldest first", order: [[2, "asc"]] },
+      ],
+      empty: A.empty("ri-route-line", "No history yet", ""),
+      rowHtml: (x) => `<tr data-pills="${x.reason}"><td><div class="fw-semibold">${esc(x.place || "")}</div>${x.note ? `<div class="acc-sub">${esc(x.note)}</div>` : ""}</td><td>${esc(x.position || "-")}</td><td data-order="${x.from}">${A.dateChip(x.from)}</td><td data-order="${x.to || "9999"}">${x.reason === "left" ? "-" : x.to ? A.dateChip(x.to) : '<span class="soft-chip soft-success">Now</span>'}</td><td><span class="badge bg-${COLOR[x.reason] || "secondary"} ${A.textOn(COLOR[x.reason] || "secondary")}">${esc(x.reason_label)}</span></td></tr>`,
+    });
   }
 
   function papers() {
     $("hrSide").innerHTML = "";
-    const list = p.documents.length
-      ? `<ul class="list-unstyled mb-3">${p.documents.map((d) => `<li class="d-flex align-items-center gap-2 py-2 border-bottom"><i class="${d.mime === "application/pdf" ? "ri-file-pdf-line text-danger" : "ri-image-line text-primary"} fs-20"></i><a href="#" data-doc="${d.id}" class="flex-fill text-truncate fw-semibold">${esc(d.name)}</a><span class="acc-sub d-none d-sm-inline">${A.day(d.added_at)}</span>${p.can.edit ? `<button type="button" class="btn btn-sm btn-icon btn-outline-danger" data-undoc="${d.id}" aria-label="Remove ${esc(d.name)}"><i class="ri-delete-bin-line"></i></button>` : ""}</li>`).join("")}</ul>`
-      : '<p class="mb-3">No papers yet - a contract or an ID copy.</p>';
-    const add = p.can.edit && p.documents.length < 5 ? `<div class="row g-2"><div class="col-sm-5"><label class="form-label" for="docName">What is it?</label><input type="text" class="form-control" id="docName" maxlength="100" placeholder="e.g. Contract, ID copy"></div><div class="col-sm-7"><label class="form-label" for="docFile">The file</label><input type="file" class="form-control" id="docFile" accept=".jpg,.jpeg,.png,.webp,.pdf"></div><div class="col-12 acc-sub">A photo or a PDF, up to 5 MB.</div></div>` : "";
-    $("hrMain").innerHTML = card('<i class="ri-attachment-2 me-1 text-warning"></i>Papers', list + add, `<span class="soft-chip soft-warning">${p.documents.length} of 5</span>`);
+    const files = p.documents
+      .map((d) => `<div class="col-sm-6 col-lg-4"><div class="border rounded-3 p-3 d-flex align-items-center gap-3 h-100"><span class="avatar avatar-md avatar-rounded bg-${d.mime === "application/pdf" ? "danger" : "primary"} text-white flex-shrink-0"><i class="${d.mime === "application/pdf" ? "ri-file-pdf-line" : "ri-image-line"} fs-18"></i></span><div class="min-w-0 flex-fill"><a href="#" data-doc="${d.id}" class="fw-semibold d-block text-truncate">${esc(d.name)}</a><span class="acc-sub">${A.day(d.added_at)} · ${Math.max(1, Math.round((d.size || 0) / 1024))} KB</span></div>${p.can.edit ? `<button type="button" class="btn btn-sm btn-icon btn-outline-danger" data-undoc="${d.id}" title="Remove" aria-label="Remove ${esc(d.name)}"><i class="ri-delete-bin-line"></i></button>` : ""}</div></div>`)
+      .join("");
+    const add = p.can.edit && p.documents.length < 5 ? `<div class="col-sm-6 col-lg-4"><label class="border border-2 border-dashed rounded-3 p-3 d-flex flex-column gap-2 h-100 mb-0" for="docFile" style="cursor:pointer"><span class="fw-semibold"><i class="ri-upload-cloud-2-line me-1 text-primary"></i>Add a paper</span><input type="text" class="form-control form-control-sm" id="docName" maxlength="100" placeholder="What is it? e.g. Contract"><input type="file" class="form-control form-control-sm" id="docFile" accept=".jpg,.jpeg,.png,.webp,.pdf"><span class="acc-sub">Photo or PDF, up to 5 MB</span></label></div>` : "";
+    $("hrMain").innerHTML = card('<span class="d-inline-flex align-items-center gap-2"><span class="avatar avatar-xs avatar-rounded bg-warning text-dark"><i class="ri-attachment-2"></i></span>Papers</span>', files || add ? `<div class="row g-3">${files}${add}</div>` : A.empty("ri-attachment-2", "No papers", ""), `<span class="soft-chip soft-warning">${p.documents.length} of 5</span>`);
   }
 
   function showTab() {

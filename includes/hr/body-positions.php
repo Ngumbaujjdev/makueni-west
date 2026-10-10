@@ -1,5 +1,5 @@
 <div class="page-toolbar">
-    <div class="page-toolbar-sub d-flex flex-wrap align-items-center gap-2"><span class="fw-semibold"><?= htmlspecialchars($hrCtx['place']['name'] ?: 'Our place') ?></span><span class="soft-chip soft-primary"><i class="ri-git-branch-line"></i>Ours, plus those set above us</span></div>
+    <div class="page-toolbar-sub d-flex flex-wrap align-items-center gap-2"><span class="fw-semibold"><?= htmlspecialchars($hrCtx['place']['name'] ?: 'Our place') ?></span><span class="soft-chip soft-primary"><i class="ri-git-branch-line"></i>Ours and those set above us</span></div>
     <div class="page-toolbar-controls">
         <a class="btn btn-outline-primary" href="<?= $hrCtx['baseUrl'] ?>/"><i class="ri-team-line me-1"></i>Staff</a>
         <?php if ($hrCtx['can']['setup']): ?>
@@ -24,6 +24,26 @@
 </div>
 
 <div class="card custom-card">
-    <div class="card-header"><div><div class="card-title" id="setTitle">Positions</div><span class="card-subtitle-text" id="setSub">The jobs people hold. Those set by the diocese or region are shown too - switch one off if you don't use it</span></div></div>
-    <div class="card-body p-0" id="setWrap"><div class="table-responsive"><table class="table table-hover mb-0 acc-table" id="setTable"><thead><tr id="setHead"></tr></thead><tbody id="setRows"></tbody></table></div></div>
+    <div class="card-header justify-content-between flex-wrap gap-2">
+        <div class="card-title"><span id="setTitle">Positions</span> <span class="badge bg-primary text-white ms-1" id="setCount">0</span></div>
+    </div>
+    <div class="card-body pb-0 pt-3" id="setPills"></div>
+    <div class="card-body p-0" id="setWrap">
+        <div id="setFilters" class="list-filterbar-wrap"></div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 pp-table" id="setTable">
+                <thead>
+                    <tr>
+                        <th class="pp-check"><input type="checkbox" class="form-check-input pp-pick-page" aria-label="Pick everything on this page"></th>
+                        <th>Name</th>
+                        <th class="d-none d-md-table-cell">Set by</th>
+                        <th>Here</th>
+                        <th class="text-end d-none d-sm-table-cell">People</th>
+                        <th class="text-end"></th>
+                    </tr>
+                </thead>
+                <tbody id="setRows"></tbody>
+            </table>
+        </div>
+    </div>
 </div>
