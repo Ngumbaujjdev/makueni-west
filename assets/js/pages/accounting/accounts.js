@@ -19,6 +19,7 @@
   let data = null;
   let petty = null;
   let type = new URLSearchParams(window.location.search).get("type") || "asset";
+  let fresh = null; // a line just added - shown and marked
 
   function cashCards() {
     const own = !A.viewingBelow() && data.can.accounts;
@@ -96,7 +97,7 @@
         { key: "big", label: "Largest balance", order: [[3, "desc"]] },
       ],
       empty: A.empty("ri-scales-3-line", used ? "Nothing in these accounts yet" : "No accounts", used ? "Switch off \"Only accounts with money\" to see them all." : ""),
-      rowHtml: (a) => `<tr class="acc-row" data-id="${a.id}"><td data-order="${esc(a.code)}"><span class="${a.parent_id ? "ps-3" : ""}">${esc(a.code)}</span></td><td data-order="${esc(a.name)}"><span class="fw-semibold">${esc(a.name)}</span>${a.own ? ' <span class="soft-chip soft-primary">Ours</span>' : ""}${a.is_active ? "" : ' <span class="soft-chip soft-danger">Off</span>'}${a.description ? `<div class="acc-sub">${esc(a.description)}</div>` : ""}</td><td class="d-none d-md-table-cell">${a.cash_kind ? A.methodChip(a.cash_kind === "petty_cash" ? "cash" : a.cash_kind, A.kind(a.cash_kind).label) : `<span class="acc-sub">${esc(a.type_label)}</span>`}</td><td class="text-end" data-order="${a.balance || 0}"><strong class="${(a.balance || 0) < 0 ? "text-danger" : ""}">${a.balance ? A.money(a.balance) : '<span class="acc-sub">-</span>'}</strong></td></tr>`,
+      rowHtml: (a) => `<tr class="acc-row${a.id === fresh ? " is-fresh" : ""}" data-id="${a.id}"><td data-order="${esc(a.code)}"><span class="${a.parent_id ? "ps-3" : ""}">${esc(a.code)}</span></td><td data-order="${esc(a.name)}"><span class="fw-semibold">${esc(a.name)}</span>${a.own ? ' <span class="soft-chip soft-primary">Ours</span>' : ""}${a.is_active ? "" : ' <span class="soft-chip soft-danger">Off</span>'}${a.own && !a.cash_kind && data.can.accounts && !A.viewingBelow() ? ` <button type="button" class="btn btn-icon btn-sm btn-light border ms-1" data-line="${a.id}" aria-label="Change ${esc(a.name)}"><i class="ri-edit-line"></i></button>` : ""}${a.description ? `<div class="acc-sub">${esc(a.description)}</div>` : ""}</td><td class="d-none d-md-table-cell">${a.cash_kind ? A.methodChip(a.cash_kind === "petty_cash" ? "cash" : a.cash_kind, A.kind(a.cash_kind).label) : `<span class="acc-sub">${esc(a.type_label)}</span>`}</td><td class="text-end" data-order="${a.balance || 0}"><strong class="${(a.balance || 0) < 0 ? "text-danger" : ""}">${a.balance ? A.money(a.balance) : '<span class="acc-sub">-</span>'}</strong></td></tr>`,
     });
   }
 
@@ -113,11 +114,27 @@
     A.placeLine($("accPlaceLine"), data.place);
     cashCards();
     chartTable();
+    // From the overview's set-up checklist: open "Add our own line" straight away (once).
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("add") === "line" && data.can.accounts && !A.viewingBelow()) {
+      p.delete("add");
+      history.replaceState(null, "", `${window.location.pathname}${p.toString() ? `?${p}` : ""}`);
+      $("lineBtn")?.click();
+    }
   }
 
   function init() {
     const add = () => W.account({ onDone: load });
     $("addBtn")?.addEventListener("click", add);
+    // Our own line: after adding, show its kind with every account, and mark it.
+    const lineDone = async (acc) => {
+      fresh = acc.id;
+      type = acc.type;
+      $("usedOnly").checked = false;
+      await load();
+      document.querySelector(`#chartRows tr[data-id="${acc.id}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+    };
+    $("lineBtn")?.addEventListener("click", () => W.ownLine({ chart: data?.chart || [], onDone: lineDone }));
     $("openingBtn")?.addEventListener("click", () => W.journal({ opening: true, onDone: load }));
     $("transferBtn")?.addEventListener("click", () => W.transfer({ onDone: load }));
     $("cashCards").addEventListener("click", (e) => {
@@ -138,6 +155,8 @@
     });
     $("usedOnly").addEventListener("change", chartTable);
     $("chartRows").addEventListener("click", (e) => {
+      const ln = e.target.closest("[data-line]");
+      if (ln) return W.ownLine({ line: data.chart.find((a) => a.id === Number(ln.dataset.line)), onDone: lineDone });
       const tr = e.target.closest("tr[data-id]");
       if (tr) window.location.href = A.link("account.php", { id: tr.dataset.id });
     });

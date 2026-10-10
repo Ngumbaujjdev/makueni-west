@@ -68,6 +68,8 @@ function accountingPageContext(string $level, string $page): array
         'budgetsUrl' => SITE_URL . ($level === 'church' ? '/church/budget' : "/{$level}/budgets"),
         'homeUrl' => SITE_URL . "/{$level}/dashboard",
         'siteUrl' => SITE_URL,
+        // Who can open Roles & permissions (the setup checklist links there).
+        'canAdmin' => hasGlobalAccess() || hasPermission('diocesesettings.systemadministration.rolemanagement.read'),
         'userId' => (int) ($user['id'] ?? 0),
         'place' => ['id' => (int) ($role['territory_id'] ?? 0), 'name' => $role['territory']['name'] ?? $role['territory_name'] ?? ''],
         'can' => [

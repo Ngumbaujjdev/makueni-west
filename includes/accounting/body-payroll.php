@@ -1,6 +1,6 @@
 <?php
 $accButtons = $accCtx['can']['payroll']
-    ? '<button type="button" class="btn btn-outline-primary" id="personBtn" data-own-only><i class="ri-user-add-line me-1"></i>Add a person</button>'
+    ? '<a class="btn btn-outline-primary" href="' . SITE_URL . '/' . $accCtx['level'] . '/hr/" data-own-only><i class="ri-team-line me-1"></i>Manage staff</a>'
       . '<button type="button" class="btn btn-primary" id="startBtn" data-own-only><i class="ri-play-circle-line me-1"></i><span id="startLabel">Start the month</span></button>'
     : '';
 include __DIR__ . '/toolbar.php';
@@ -26,7 +26,7 @@ include __DIR__ . '/toolbar.php';
 </div>
 <div id="pyPeoplePane" hidden>
     <div class="card custom-card">
-        <div class="card-header"><div><div class="card-title">People on the payroll</div><span class="card-subtitle-text">What each is paid a month and how - ID numbers and KRA PINs are kept private and shown masked</span></div></div>
+        <div class="card-header justify-content-between flex-wrap gap-2"><div><div class="card-title">People on the payroll</div><span class="card-subtitle-text">What each is paid a month and how. People are managed in Staff - positions, grades and allowances come from Positions &amp; pay.</span></div><a class="btn btn-sm btn-outline-primary" href="<?= SITE_URL . '/' . htmlspecialchars($accCtx['level']) ?>/hr/"><i class="ri-team-line me-1"></i>Staff</a></div>
         <div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0 acc-table" id="pyPeopleTable"><thead><tr><th>Person</th><th class="d-none d-md-table-cell">Paid to</th><th class="d-none d-lg-table-cell">KRA PIN</th><th class="text-end">A month</th><th class="text-end">Action</th></tr></thead><tbody id="pyPeopleRows"></tbody></table></div></div>
     </div>
 </div>

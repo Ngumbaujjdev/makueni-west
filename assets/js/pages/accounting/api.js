@@ -91,6 +91,7 @@ const AccountingAPI = (function () {
     overview: () => request("GET", "/accounting/overview"),
     places: () => request("GET", "/accounting/places", { params: { territory_id: "" } }),
     options: () => request("GET", "/accounting/options"),
+    setup: () => request("GET", "/accounting/setup"),
     accounts: () => request("GET", "/accounting/accounts"),
     account: (id) => request("GET", `/accounting/accounts/${id}`),
     saveAccount: (id, body) => request(id ? "PUT" : "POST", id ? `/accounting/accounts/${id}` : "/accounting/accounts", { body }),
