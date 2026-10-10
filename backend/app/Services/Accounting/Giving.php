@@ -71,31 +71,41 @@ final class Giving
 
     // ------------------------------------------------------------ starting a gift
 
+    /**
+     * The giving page's options through Paystack, and the Paystack channels each
+     * opens on. Paystack can't narrow its page to M-Pesa or Airtel - both open on
+     * mobile money; Pesalink has no channel of its own, so it opens on them all.
+     */
+    public const PAY = ['mpesa' => ['mobile_money'], 'airtel' => ['mobile_money'], 'card' => ['card'], 'pesalink' => null];
+
     /** @return array{reference: string, method: string, payment_url?: string} */
     public function start(Territory $place, array $data, ?string $ip): array
     {
         $method = ($data['method'] ?? '') === 'paystack' ? 'paystack' : 'mpesa';
+        $pay = $method === 'paystack' && array_key_exists((string) ($data['pay'] ?? ''), self::PAY) ? (string) $data['pay'] : null;
+        $mobile = in_array($pay, ['mpesa', 'airtel'], true);
         $purpose = (string) ($data['purpose'] ?? '');
         if (! isset(Paybill::PURPOSES[$purpose])) {
             throw ValidationException::withMessages(['purpose' => ['Pick what you are giving for.']]);
         }
         $amount = round((float) ($data['amount'] ?? 0), 2);
-        if ($amount < 10 || $amount > ($method === 'mpesa' ? 250000 : 1000000)) {
-            throw ValidationException::withMessages(['amount' => [$method === 'mpesa' ? 'Give between KES 10 and 250,000 by M-Pesa.' : 'Give between KES 10 and 1,000,000.']]);
+        if ($amount < 10 || $amount > ($method === 'mpesa' || $mobile ? 250000 : 1000000)) {
+            throw ValidationException::withMessages(['amount' => [$method === 'mpesa' || $mobile ? 'Give between KES 10 and 250,000 by '.($pay === 'airtel' ? 'Airtel Money.' : 'M-Pesa.') : 'Give between KES 10 and 1,000,000.']]);
         }
         // Who is giving - always a name and a phone (the prompt, or the SMS receipt); an email for card (Paystack's receipt).
         if (mb_strlen(trim((string) ($data['name'] ?? ''))) < 2) {
             throw ValidationException::withMessages(['name' => ['Please enter your full name.']]);
         }
         $phone = trim((string) ($data['phone'] ?? ''));
-        if ($method === 'mpesa' && ! Daraja::validPhone($phone)) {
-            throw ValidationException::withMessages(['phone' => ['Please enter your M-Pesa number, e.g. 0712 345 678.']]);
+        if (($method === 'mpesa' || $mobile) && ! Daraja::validPhone($phone)) {
+            throw ValidationException::withMessages(['phone' => [$pay === 'airtel' ? 'Please enter your Airtel Money number, e.g. 0733 345 678.' : 'Please enter your M-Pesa number, e.g. 0712 345 678.']]);
         }
         if ($method === 'paystack' && ! preg_match('/^\+?\d{9,15}$/', preg_replace('/[\s\-()]/', '', $phone))) {
             throw ValidationException::withMessages(['phone' => ['Please enter a valid phone number, e.g. 0712 345 678.']]);
         }
         $email = trim((string) ($data['email'] ?? ''));
-        if ($method === 'paystack' && $email === '') {
+        // Mobile money's receipt comes by our SMS, so its email is optional.
+        if ($method === 'paystack' && $email === '' && ! $mobile) {
             throw ValidationException::withMessages(['email' => ['Please enter your email address - Paystack sends your receipt there.']]);
         }
         if ($email !== '' && ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -122,12 +132,13 @@ final class Giving
         $channel = $this->channel($place);
         $split = $channel ? $this->shareFor($place, $purpose, (float) $gift->amount) : 0.0;
         try {
-            $out = Paystack::diocese()->initialize((float) $gift->amount, $email,
-                $gift->reference, url('/api/give/callback'), ['gift' => $gift->reference, 'place' => $place->name, 'purpose' => Paybill::PURPOSES[$purpose][0]],
-                $channel?->subaccount_code, $split);
+            // Paystack needs an email; a mobile-money giver who gave none is receipted by SMS, so the diocese's own address stands in.
+            $out = Paystack::diocese()->initialize((float) $gift->amount, $email !== '' ? $email : (string) config('mail.from.address'),
+                $gift->reference, url('/api/give/callback'), ['gift' => $gift->reference, 'place' => $place->name, 'purpose' => Paybill::PURPOSES[$purpose][0], 'pay' => $pay],
+                $channel?->subaccount_code, $split, $pay ? self::PAY[$pay] : null);
         } catch (Throwable $e) {
             $gift->update(['status' => 'failed', 'result' => mb_substr($e->getMessage(), 0, 255)]);
-            throw ValidationException::withMessages(['method' => ['Card giving isn\'t available just now - try M-Pesa.']]);
+            throw ValidationException::withMessages(['method' => ['Paystack isn\'t available just now - please try again in a moment.']]);
         }
         $gift->update(['provider_ref' => $gift->reference, 'split' => $split, 'channel' => $channel ? 'subaccount' : 'diocese']);
 

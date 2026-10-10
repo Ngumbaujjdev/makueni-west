@@ -125,6 +125,45 @@ class GivingTest extends TestCase
         $this->assertStringNotContainsString('885', $this->getJson('/api/give/SHR027')->getContent(), 'the public page shows no figures');
     }
 
+    public function test_each_option_opens_paystack_on_its_own_channel(): void
+    {
+        $this->fakePaystack();
+        $give = fn (array $d) => $this->postJson('/api/give/SHR027', $d + ['purpose' => 'T', 'amount' => 500, 'method' => 'paystack', 'name' => 'Jane Mutua', 'phone' => '0712345678']);
+        $sent = fn (string $ref) => collect(Http::recorded())->map(fn ($p) => $p[0])->first(fn ($r) => str_contains($r->url(), 'transaction/initialize') && $r['reference'] === $ref);
+
+        // M-Pesa and Airtel open on mobile money; their receipt comes by SMS, so no email is needed.
+        $ref = $give(['pay' => 'mpesa'])->assertCreated()->json('data.reference');
+        $this->assertSame(['mobile_money'], $sent($ref)['channels']);
+        $this->assertSame(config('mail.from.address'), $sent($ref)['email']);
+        $this->assertNull(Gift::where('reference', $ref)->value('giver_email'));
+        $ref = $give(['pay' => 'airtel', 'phone' => '0733123456'])->assertCreated()->json('data.reference');
+        $this->assertSame(['mobile_money'], $sent($ref)['channels']);
+        $give(['pay' => 'airtel', 'phone' => '12345'])->assertStatus(422)->assertJsonPath('errors.phone.0', 'Please enter your Airtel Money number, e.g. 0733 345 678.');
+        $give(['pay' => 'mpesa', 'amount' => 300000])->assertStatus(422)->assertJsonPath('errors.amount.0', 'Give between KES 10 and 250,000 by M-Pesa.');
+
+        // Card needs an email (Paystack's receipt) and opens on card only.
+        $give(['pay' => 'card'])->assertStatus(422)->assertJsonValidationErrors('email');
+        $ref = $give(['pay' => 'card', 'email' => 'jane@example.test'])->assertCreated()->json('data.reference');
+        $this->assertSame(['card'], $sent($ref)['channels']);
+
+        // Pesalink has no channel of its own: Paystack's page opens with them all.
+        $ref = $give(['pay' => 'pesalink', 'email' => 'jane@example.test'])->assertCreated()->json('data.reference');
+        $this->assertArrayNotHasKey('channels', $sent($ref)->data());
+        $give(['pay' => 'bitcoin', 'email' => 'jane@example.test'])->assertStatus(422)->assertJsonValidationErrors('pay');
+    }
+
+    public function test_how_it_was_paid_is_read_from_paystack(): void
+    {
+        $r = app(\App\Services\Accounting\GiftReceipt::class);
+        $gift = fn (array $raw, ?string $result = null, string $method = 'paystack') => new Gift(['method' => $method, 'result' => $result ?? ($raw['channel'] ?? null), 'raw' => $raw]);
+        $this->assertSame('mpesa', $r->paidWith($gift([], null, 'mpesa')));
+        $this->assertSame('mpesa', $r->paidWith($gift(['channel' => 'mobile_money', 'authorization' => ['bank' => 'M-PESA', 'brand' => 'M-pesa']])));
+        $this->assertSame('airtel', $r->paidWith($gift(['channel' => 'mobile_money', 'authorization' => ['bank' => 'Airtel Money', 'brand' => 'Airtel']])));
+        $this->assertSame('card', $r->paidWith($gift(['channel' => 'card', 'authorization' => ['bank' => 'Equity Bank', 'brand' => 'visa']])));
+        $this->assertSame('bank', $r->paidWith($gift(['channel' => 'bank_transfer'])));
+        $this->assertSame('Airtel Money', $r->paidWithLabel($gift(['channel' => 'mobile_money', 'authorization' => ['bank' => 'Airtel Money']])));
+    }
+
     public function test_without_a_subaccount_the_diocese_holds_it_and_the_sweep_completes_it(): void
     {
         $this->fakePaystack(['status' => 'success', 'amount' => 100000, 'currency' => 'KES', 'fees' => 2000, 'channel' => 'mobile_money', 'paid_at' => now()->toIso8601String()]);

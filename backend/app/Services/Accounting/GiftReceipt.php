@@ -49,9 +49,35 @@ final class GiftReceipt
         return $code ? (string) $code : null;
     }
 
+    /** How a gift was paid, in the giver's words. */
+    public const PAID_WITH = ['mpesa' => 'M-Pesa', 'airtel' => 'Airtel Money', 'card' => 'Card', 'bank' => 'Pesalink (bank)'];
+
+    /**
+     * mpesa, airtel, card or bank: a paybill prompt is M-Pesa; through Paystack
+     * it is read from Paystack's verify (its channel, and the mobile-money
+     * provider it names as the "bank").
+     */
     public function paidWith(Gift $g): string
     {
-        return $g->method === 'mpesa' || $g->result === 'mobile_money' ? 'mpesa' : 'card';
+        if ($g->method === 'mpesa') {
+            return 'mpesa';
+        }
+        $raw = (array) ($g->raw ?? []);
+        $channel = (string) ($raw['channel'] ?? ($raw['authorization']['channel'] ?? $g->result ?? ''));
+        $provider = strtolower(($raw['authorization']['bank'] ?? '').' '.($raw['authorization']['brand'] ?? ''));
+        if ($channel === 'mobile_money' || $g->result === 'mobile_money') {
+            return str_contains($provider, 'airtel') ? 'airtel' : 'mpesa';
+        }
+        if (in_array($channel, ['bank_transfer', 'bank', 'pesalink', 'eft'], true) || str_contains($provider, 'pesalink')) {
+            return 'bank';
+        }
+
+        return 'card';
+    }
+
+    public function paidWithLabel(Gift $g): string
+    {
+        return self::PAID_WITH[$this->paidWith($g)];
     }
 
     /** The PDF, as a string. */
@@ -61,7 +87,7 @@ final class GiftReceipt
         $s = $this->summary($g);
         $purpose = Paybill::PURPOSES[$g->purpose][0] ?? 'Gift';
         $when = $g->paid_at?->setTimezone('Africa/Nairobi');
-        $how = $this->paidWith($g) === 'mpesa' ? 'M-Pesa' : 'Card (Paystack)';
+        $how = $this->paidWithLabel($g).($g->method === 'paystack' ? ' (Paystack)' : '');
         $data = new ReportData(
             kicker: 'Official receipt',
             title: 'Receipt '.($s['receipt'] ?? $g->reference),
