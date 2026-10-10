@@ -123,7 +123,7 @@ final class Transactions
             'key' => "gift-{$g->id}", 'source' => 'gift', 'id' => $g->id, 'kind' => 'Gift', 'reference' => $g->reference,
             'when' => $g->created_at?->toIso8601String(), 'paid_at' => $g->paid_at?->toIso8601String(),
             'payer' => ['name' => $g->giver_name, 'phone' => $g->giver_phone, 'email' => $g->giver_email],
-            'place' => ['id' => $g->territory_id, 'name' => $place], 'purpose' => Paybill::PURPOSES[$g->purpose][0] ?? $g->purpose,
+            'place' => ['id' => $g->territory_id, 'name' => $place], 'purpose' => GivingPurposes::label($g->purpose, $g->purpose),
             'method' => $card ? 'card' : 'mpesa', 'route' => self::ROUTES[$g->channel] ?? ($g->method === 'paystack' ? 'Paystack' : 'M-Pesa'),
             'amount' => (float) $g->amount, 'fee' => (float) $g->fee, 'status' => $g->status, 'status_label' => self::STATUSES[$g->status] ?? $g->status,
             'reason' => in_array($g->status, ['failed', 'abandoned', 'refunded'], true) || $g->disputed_at || (float) $g->refunded_amount > 0 ? $g->result : null,
@@ -154,7 +154,7 @@ final class Transactions
             'key' => "paybill-{$p->id}", 'source' => 'paybill', 'id' => $p->id, 'kind' => $p->remittance_id ? 'Diocese share' : 'Paybill payment', 'reference' => $p->trans_id,
             'when' => $p->paid_at?->toIso8601String(), 'paid_at' => $p->paid_at?->toIso8601String(),
             'payer' => ['name' => $p->payer_name, 'phone' => $p->phone, 'email' => null],
-            'place' => ['id' => $p->territory_id, 'name' => $place], 'purpose' => $p->remittance_id ? 'Diocese share' : (Paybill::PURPOSES[$p->purpose][0] ?? 'Not matched'),
+            'place' => ['id' => $p->territory_id, 'name' => $place], 'purpose' => $p->remittance_id ? 'Diocese share' : (GivingPurposes::label($p->purpose, 'Not matched')),
             'method' => 'mpesa', 'route' => $p->channel_id ? 'Own paybill' : 'Diocese paybill',
             'amount' => (float) $p->amount, 'fee' => 0.0, 'status' => $status, 'status_label' => self::STATUSES[$status] ?? $status,
             'reason' => $p->status !== 'posted' ? $p->note : null, 'disputed' => false, 'code' => $p->trans_id,
@@ -170,7 +170,7 @@ final class Transactions
             'key' => "claim-{$c->id}", 'source' => 'claim', 'id' => $c->id, 'kind' => 'Paid by Pay Bill - claimed', 'reference' => $c->trans_id,
             'when' => $c->created_at?->toIso8601String(), 'paid_at' => null,
             'payer' => ['name' => $c->giver_name, 'phone' => $c->giver_phone, 'email' => null],
-            'place' => ['id' => $c->territory_id, 'name' => $place], 'purpose' => Paybill::PURPOSES[$c->purpose][0] ?? $c->purpose,
+            'place' => ['id' => $c->territory_id, 'name' => $place], 'purpose' => GivingPurposes::label($c->purpose, $c->purpose),
             'method' => 'mpesa', 'route' => 'Diocese paybill', 'amount' => (float) ($c->amount ?? 0), 'fee' => 0.0, 'status' => $status, 'status_label' => self::STATUSES[$status],
             'reason' => $c->result, 'disputed' => false, 'code' => $c->trans_id, 'account_ref' => null, 'receipt' => null,
         ];
@@ -180,7 +180,7 @@ final class Transactions
     {
         $parsed = $this->paybill->parse($ref);
 
-        return $parsed['purpose'] ? Paybill::PURPOSES[$parsed['purpose']][0] : 'Ask to pay';
+        return $parsed['purpose'] ? GivingPurposes::label($parsed['purpose'], 'Ask to pay') : 'Ask to pay';
     }
 
     private function stats(Collection $rows): array

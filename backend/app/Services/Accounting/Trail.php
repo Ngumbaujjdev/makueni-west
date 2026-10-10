@@ -121,7 +121,7 @@ class Trail
             $record instanceof \App\Models\Gift => [
                 'title' => 'Gift'.($record->giver_name ? " from {$record->giver_name}" : ''), 'number' => $record->reference, 'amount' => (float) $record->amount, 'status' => $record->status,
                 'status_label' => \App\Models\Gift::STATUSES[$record->status] ?? $record->status, 'date' => ($record->paid_at ?? $record->created_at)?->toDateString(),
-                'facts' => $f([['For', Paybill::PURPOSES[$record->purpose][0] ?? $record->purpose], ['Giver', $record->giver_name], ['Phone', $record->giver_phone], ['Email', $record->giver_email],
+                'facts' => $f([['For', GivingPurposes::label($record->purpose, $record->purpose)], ['Giver', $record->giver_name], ['Phone', $record->giver_phone], ['Email', $record->giver_email],
                     ['Paid by', $record->status === 'paid' ? app(GiftReceipt::class)->paidWithLabel($record).($record->method === 'paystack' ? ' on Paystack' : '') : ($record->method === 'mpesa' ? 'M-Pesa' : 'Paystack')], ['Reference', $record->provider_ref],
                     ['Fee', (float) $record->fee ? $this->money($record->fee) : null], ['Diocese share', (float) $record->split ? $this->money($record->split) : null], ['Why', in_array($record->status, ['failed', 'abandoned', 'refunded'], true) ? $record->result : null]]),
                 'lines' => [],

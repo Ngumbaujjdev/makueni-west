@@ -45,25 +45,7 @@ use Throwable;
  */
 final class Paybill
 {
-    /** purpose => [label, account code, fund code (null = General)] */
-    public const PURPOSES = [
-        'T' => ['Tithe', '4000', null],
-        'O' => ['Offering', '4010', null],
-        'TH' => ['Thanksgiving', '4020', null],
-        'B' => ['Building fund', '4020', 'BLD'],
-        'K' => ['KYS', '4020', 'KYS'],
-    ];
-
-    /** How each purpose is shown after the code - never a lone O, which reads as a zero (MML002O ~ MML0020). */
-    public const SUFFIX = ['T' => 'T', 'O' => 'OFF', 'TH' => 'TH', 'B' => 'B', 'K' => 'KYS'];
-
-    /** What givers type after the code => the purpose. */
-    private const WORDS = [
-        'T' => 'T', 'TITHE' => 'T', 'TITHES' => 'T', 'O' => 'O', 'OFF' => 'O', 'OFFERING' => 'O', 'SADAKA' => 'O',
-        'TH' => 'TH', 'THANKS' => 'TH', 'THANKSGIVING' => 'TH', 'B' => 'B', 'BLD' => 'B', 'BUILDING' => 'B', 'K' => 'K', 'KYS' => 'K',
-    ];
-
-    public function __construct(private Ledger $ledger, private Chart $chart, private BudgetBridge $bridge, private Numbering $numbering, private Settings $settings) {}
+    public function __construct(private Ledger $ledger, private Chart $chart, private BudgetBridge $bridge, private Numbering $numbering, private Settings $settings, private GivingPurposes $purposes) {}
 
     // ------------------------------------------------------------ places and account numbers
 
@@ -82,9 +64,9 @@ final class Paybill
     public function accountNumbers(Territory $place): array
     {
         $code = self::code($place);
-        $out = ['' => ['label' => 'Any ('.self::PURPOSES[$this->defaultPurpose()][0].')', 'account' => $code]];
-        foreach (self::PURPOSES as $key => [$label]) {
-            $out[$key] = ['label' => $label, 'account' => $code.self::SUFFIX[$key]];
+        $out = ['' => ['label' => 'Any ('.$this->purposes->default()->label.')', 'account' => $code]];
+        foreach ($this->purposes->active() as $p) {
+            $out[$p->key] = ['label' => $p->label, 'account' => $code.$p->suffix];
         }
 
         return $out;
@@ -125,7 +107,7 @@ final class Paybill
             return ['place' => $place, 'purpose' => $this->defaultPurpose()];
         }
 
-        return ['place' => $place, 'purpose' => self::WORDS[$rest] ?? null];
+        return ['place' => $place, 'purpose' => $this->purposes->byWord($rest)?->key];
     }
 
     /** Every place's account code => the place (cached for the request). @return array<string, Territory> */
@@ -142,18 +124,13 @@ final class Paybill
 
     private function defaultPurpose(): string
     {
-        $p = (string) $this->settings->system('paybill.default_purpose');
-
-        return isset(self::PURPOSES[$p]) ? $p : 'O';
+        return $this->purposes->default()->key;
     }
 
     /** The purpose's account and fund. @return array{0: AccountingAccount, 1: ?AccountingFund} */
     public function target(string $purpose): array
     {
-        [, $code, $fund] = self::PURPOSES[$purpose] ?? self::PURPOSES['O'];
-        $this->chart->ensureStandard();
-
-        return [AccountingAccount::whereNull('territory_id')->where('code', $code)->firstOrFail(), $fund ? AccountingFund::where('code', $fund)->first() : null];
+        return $this->purposes->target($purpose);
     }
 
     /** The diocese's paybill money account (M-Pesa, its shortcode as the number) - made on first use. */
@@ -250,7 +227,7 @@ final class Paybill
                     return;
                 }
                 [$account, $fund] = $this->target($payment->purpose);
-                $label = self::PURPOSES[$payment->purpose][0];
+                $label = GivingPurposes::label($payment->purpose);
                 if ((int) $place->id === (int) $diocese->id) {
                     $j = $this->ledger->post($diocese, $head("{$label} by M-Pesa paybill"), [
                         ['account_id' => $paybill->id, 'debit' => $amount],
@@ -379,7 +356,7 @@ final class Paybill
         $channel = PaymentChannel::findOrFail($payment->channel_id);
         $into = $this->ownAccount($channel);
         [$account, $fund] = $this->target($payment->purpose);
-        $label = self::PURPOSES[$payment->purpose][0];
+        $label = GivingPurposes::label($payment->purpose);
         $j = $this->ledger->post($place, ['doc_type' => 'receipt', 'date' => $payment->paid_at->copy()->setTimezone('Africa/Nairobi')->toDateString(),
             'narration' => "{$label} by M-Pesa to our paybill", 'party_name' => $payment->payer_name ?: 'M-Pesa payer', 'party_phone' => $payment->phone,
             'method' => 'mpesa', 'reference' => $payment->trans_id, 'source_type' => 'mpesa_payment', 'source_id' => $payment->id], [
@@ -411,7 +388,7 @@ final class Paybill
             $ref = substr($ref, strlen($code));
         }
 
-        return self::WORDS[$ref] ?? $this->defaultPurpose();
+        return $this->purposes->byWord($ref)?->key ?? $this->defaultPurpose();
     }
 
     /** The church's own M-Pesa route, if it has one on: its own Daraja first, then PayHero. */
@@ -454,7 +431,7 @@ final class Paybill
             if ($payment->channel_id) {
                 // It came into a church's own paybill: it can only go into that church's books.
                 $purpose = (string) ($data['purpose'] ?? '');
-                if (! isset(self::PURPOSES[$purpose])) {
+                if (! $this->purposes->usable($purpose)) {
                     throw ValidationException::withMessages(['purpose' => ['Pick what it was given for.']]);
                 }
                 $place = Territory::findOrFail(PaymentChannel::findOrFail($payment->channel_id)->territory_id);
@@ -487,11 +464,11 @@ final class Paybill
                 return $payment->fresh();
             }
             $purpose = (string) ($data['purpose'] ?? '');
-            if (! isset(self::PURPOSES[$purpose])) {
+            if (! $this->purposes->usable($purpose)) {
                 throw ValidationException::withMessages(['purpose' => ['Pick what it was given for.']]);
             }
             [$account, $fund] = $this->target($purpose);
-            $label = self::PURPOSES[$purpose][0];
+            $label = GivingPurposes::label($purpose);
             $place = $to === 'diocese' ? $diocese : Territory::whereIn('territory_type', ['church', 'region'])->find((int) ($data['territory_id'] ?? 0));
             if (! $place) {
                 throw ValidationException::withMessages(['territory_id' => ['Pick the church it was for.']]);
@@ -530,10 +507,10 @@ final class Paybill
         if ($amount < 1 || $amount > 250000) {
             throw ValidationException::withMessages(['amount' => ['M-Pesa takes 1 to 250,000 shillings at a time.']]);
         }
-        if (! isset(self::PURPOSES[$purpose])) {
+        if (! $this->purposes->usable($purpose)) {
             throw ValidationException::withMessages(['purpose' => ['Pick what it is for.']]);
         }
-        $ref = self::code($place).self::SUFFIX[$purpose];
+        $ref = $this->purposes->accountNumber($place, $purpose);
         $channel = $this->mpesaChannel($place);
         if ($channel) {
             return $this->askOwn($channel, $place, $user, $phone, $amount, $purpose, $ref, $name);
@@ -541,7 +518,7 @@ final class Paybill
         $daraja = Daraja::diocese();
         $request = MpesaRequest::create(['territory_id' => $place->id, 'account_ref' => $ref, 'amount' => $amount, 'phone' => Daraja::phone($phone), 'shortcode' => $daraja->shortcode, 'requested_by' => $user?->id]);
         try {
-            $out = $daraja->stkPush($phone, $amount, $ref, mb_substr(self::PURPOSES[$purpose][0], 0, 13), $this->callbackUrl('stk'));
+            $out = $daraja->stkPush($phone, $amount, $ref, mb_substr(GivingPurposes::label($purpose), 0, 13), $this->callbackUrl('stk'));
         } catch (Throwable $e) {
             $request->update(['status' => 'failed', 'result' => mb_substr($e->getMessage(), 0, 255)]);
             throw ValidationException::withMessages(['phone' => ['M-Pesa didn\'t take it: '.$e->getMessage()]]);
@@ -557,7 +534,7 @@ final class Paybill
             'shortcode' => (string) $channel->account_number, 'requested_by' => $user?->id]);
         try {
             if ($channel->provider === 'daraja') {
-                $out = Daraja::forChannel($channel)->stkPush($phone, $amount, $ref, mb_substr(self::PURPOSES[$purpose][0], 0, 13), $this->channelUrl($channel, 'stk'));
+                $out = Daraja::forChannel($channel)->stkPush($phone, $amount, $ref, mb_substr(GivingPurposes::label($purpose), 0, 13), $this->channelUrl($channel, 'stk'));
                 $request->update(['merchant_request_id' => $out['MerchantRequestID'] ?? null, 'checkout_request_id' => $out['CheckoutRequestID'] ?? null, 'result' => $out['CustomerMessage'] ?? null]);
             } else {
                 $out = PayHero::forChannel($channel)->stkPush($amount, $phone, "MR-{$request->id}-{$ref}", $name, $this->channelUrl($channel));

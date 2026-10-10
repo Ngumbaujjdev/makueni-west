@@ -38,7 +38,7 @@ final class PaybillClaims
             throw ValidationException::withMessages(['code' => ['That doesn\'t look like an M-Pesa code - it has 10 letters and numbers, e.g. SJK1ABC234.']]);
         }
         $purpose = (string) ($d['purpose'] ?? '');
-        if (! isset(Paybill::PURPOSES[$purpose])) {
+        if (! app(GivingPurposes::class)->usable($purpose)) {
             throw ValidationException::withMessages(['purpose' => ['Pick what you gave for.']]);
         }
         $name = trim((string) ($d['name'] ?? ''));
@@ -122,7 +122,7 @@ final class PaybillClaims
         $payment = $this->paybill->record([
             'trans_id' => $claim->trans_id, 'kind' => 'c2b', 'shortcode' => $shortcode, 'amount' => (float) ($p['Amount'] ?? 0),
             'phone' => $phone ?: $claim->giver_phone, 'payer_name' => $payer ?: $claim->giver_name,
-            'bill_ref' => Paybill::code($place).Paybill::SUFFIX[$claim->purpose], 'paid_at' => $this->time($when), 'raw' => $result,
+            'bill_ref' => app(GivingPurposes::class)->accountNumber($place, $claim->purpose), 'paid_at' => $this->time($when), 'raw' => $result,
         ]);
         $claim->update(['status' => 'confirmed', 'amount' => $payment->amount, 'mpesa_payment_id' => $payment->id, 'result' => 'Confirmed by Safaricom', 'raw' => $result]);
 
@@ -146,7 +146,7 @@ final class PaybillClaims
 
         return [
             'id' => $c->id, 'code' => $c->trans_id, 'status' => $c->status, 'status_label' => PaymentClaim::STATUSES[$c->status], 'result' => $c->result,
-            'amount' => $c->amount !== null ? (float) $c->amount : null, 'purpose' => Paybill::PURPOSES[$c->purpose][0] ?? $c->purpose,
+            'amount' => $c->amount !== null ? (float) $c->amount : null, 'purpose' => GivingPurposes::label($c->purpose, $c->purpose),
             'place' => Territory::find($c->territory_id)?->name, 'receipt' => $journal?->number, 'sorted' => $payment ? $payment->status === 'posted' : null,
         ];
     }

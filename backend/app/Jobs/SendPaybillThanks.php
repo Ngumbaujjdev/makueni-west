@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Journal;
 use App\Models\MpesaPayment;
 use App\Models\Territory;
+use App\Services\Accounting\GivingPurposes;
 use App\Services\Accounting\Paybill;
 use App\Services\Messaging\PlaceMessenger;
 use App\Services\Settings\Settings;
@@ -40,7 +41,7 @@ class SendPaybillThanks implements ShouldQueue
             return;
         }
         $receipt = Journal::find($p->place_journal_id ?? $p->diocese_journal_id)?->number;
-        $what = strtolower(Paybill::PURPOSES[$p->purpose][0] ?? 'gift');
+        $what = strtolower(GivingPurposes::label($p->purpose, 'gift'));
         $name = trim((string) explode(' ', (string) $p->payer_name)[0]);
         $text = 'Thank you'.($name !== '' ? " {$name}" : '').'. '.$place->name.' has received your '.$what.' of KES '.number_format((float) $p->amount)
             .' (M-Pesa '.$p->trans_id.($receipt ? ", receipt {$receipt}" : '').'). God bless you.';

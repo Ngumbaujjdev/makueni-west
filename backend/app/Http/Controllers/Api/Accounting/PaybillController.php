@@ -9,6 +9,7 @@ use App\Models\PaybillSettlement;
 use App\Models\Remittance;
 use App\Models\Territory;
 use App\Services\Accounting\Chart;
+use App\Services\Accounting\GivingPurposes;
 use App\Services\Accounting\Ledger;
 use App\Services\Accounting\Paybill;
 use App\Services\Payments\Daraja;
@@ -62,7 +63,7 @@ class PaybillController extends AccountingBase
                 'own' => AccountingAccess::abilities($user, $place)['own'],
             ],
             'setup' => $this->setup(),
-            'purposes' => collect(Paybill::PURPOSES)->map(fn ($p, $k) => ['key' => $k, 'label' => $p[0]])->values(),
+            'purposes' => app(GivingPurposes::class)->present(),
             'account_numbers' => $isDiocese ? [] : array_values(array_map(fn ($k, $v) => $v + ['purpose' => $k], array_keys($this->paybill->accountNumbers($place)), $this->paybill->accountNumbers($place))),
             'payments' => $payments->map(fn ($p) => $this->present($p, $isDiocese))->values(),
             'to_sort' => $isDiocese ? $payments->where('status', 'to_sort')->count() : 0,
@@ -70,7 +71,7 @@ class PaybillController extends AccountingBase
         ];
         if (! $isDiocese && ($own = $this->paybill->mpesaChannel($place))) {
             $out['own'] = ['provider' => $own->provider, 'label' => \App\Models\PaymentChannel::PROVIDERS[$own->provider], 'number' => $own->account_number, 'till' => $own->account_name === 'Till',
-                'accounts' => collect(Paybill::PURPOSES)->map(fn ($p, $k) => ['purpose' => $k, 'label' => $p[0], 'account' => Paybill::SUFFIX[$k]])->values()];
+                'accounts' => app(GivingPurposes::class)->active()->map(fn ($p) => ['purpose' => $p->key, 'label' => $p->label, 'account' => $p->suffix])->values()];
         }
         if ($isDiocese && $manage) {
             $out['places'] = Territory::whereIn('territory_type', ['church', 'region'])->whereNotNull('code')->orderBy('name')->get(['id', 'name', 'code', 'territory_type'])
@@ -97,7 +98,7 @@ class PaybillController extends AccountingBase
         if (! $p) {
             return $this->notFound('That payment isn\'t here.');
         }
-        $data = $request->validate(['to' => ['required', 'in:place,diocese,return'], 'territory_id' => ['nullable', 'integer'], 'purpose' => ['nullable', 'string', 'max:3'], 'note' => ['nullable', 'string', 'max:255']]);
+        $data = $request->validate(['to' => ['required', 'in:place,diocese,return'], 'territory_id' => ['nullable', 'integer'], 'purpose' => ['nullable', 'string', 'max:8'], 'note' => ['nullable', 'string', 'max:255']]);
         $p = $this->paybill->sort($p, $request->user(), $data);
 
         return $this->ok($this->present($p->load('place:id,name,code'), true), match ($p->status) {
@@ -109,7 +110,7 @@ class PaybillController extends AccountingBase
     /** POST /accounting/paybill/ask {phone, amount, purpose, territory_id?} - the M-Pesa prompt on a phone. */
     public function ask(Request $request): JsonResponse
     {
-        $data = $request->validate(['phone' => ['required', 'string', 'max:20'], 'amount' => ['required', 'numeric', 'min:1', 'max:250000'], 'purpose' => ['required', 'string', 'max:3'], 'for_id' => ['nullable', 'integer']],
+        $data = $request->validate(['phone' => ['required', 'string', 'max:20'], 'amount' => ['required', 'numeric', 'min:1', 'max:250000'], 'purpose' => ['required', 'string', 'max:8'], 'for_id' => ['nullable', 'integer']],
             ['phone.required' => 'Whose phone?', 'amount.required' => 'How much?']);
         $user = $request->user();
         $place = $this->place($request);
@@ -271,7 +272,7 @@ class PaybillController extends AccountingBase
             'id' => $p->id, 'trans_id' => $p->trans_id, 'kind' => $p->kind, 'amount' => (float) $p->amount, 'own' => (bool) $p->channel_id,
             'phone' => $p->phone, 'payer_name' => $p->payer_name, 'bill_ref' => $p->bill_ref, 'paid_at' => $p->paid_at?->toIso8601String(),
             'place' => $p->place ? ['id' => $p->place->id, 'name' => $p->place->name, 'code' => $p->place->code] : null,
-            'purpose' => $p->purpose, 'purpose_label' => $p->remittance_id || $this->paybill->isShareRef($p->bill_ref) ? 'Diocese share' : (Paybill::PURPOSES[$p->purpose][0] ?? null),
+            'purpose' => $p->purpose, 'purpose_label' => $p->remittance_id || $this->paybill->isShareRef($p->bill_ref) ? 'Diocese share' : (GivingPurposes::label($p->purpose)),
             'status' => $p->status, 'status_label' => MpesaPayment::STATUSES[$p->status], 'note' => $p->note,
             'receipt' => ($j = ($full && ! $p->channel_id) ? $p->diocese_journal_id : $p->place_journal_id) ? ($this->numbers[$j] ?? Journal::find($j)?->number) : null,
         ];

@@ -330,7 +330,7 @@ final class Payouts
         $places = Territory::whereIn('id', $gifts->pluck('territory_id')->unique())->pluck('name', 'id');
         $lines = $gifts->map(fn ($g) => [
             'reference' => $g->reference, 'giver' => $g->giver_name ?: 'Online giver', 'place' => $places[$g->territory_id] ?? null, 'paid_at' => $g->paid_at?->toIso8601String(),
-            'purpose' => Paybill::PURPOSES[$g->purpose][0] ?? $g->purpose, 'gross' => (float) $g->amount, 'fee' => (float) $g->fee, 'share' => (float) $g->split,
+            'purpose' => GivingPurposes::label($g->purpose, $g->purpose), 'gross' => (float) $g->amount, 'fee' => (float) $g->fee, 'share' => (float) $g->split,
             'part' => self::part($g, $row->main), 'refunded' => $g->status === 'refunded',
         ])->values();
         $sum = round($lines->sum('part'), 2);

@@ -88,7 +88,7 @@ class TransactionController extends AccountingBase
         if ($place instanceof JsonResponse) {
             return $place;
         }
-        $data = $request->validate(['code' => ['required', 'string', 'max:20'], 'purpose' => ['required', 'string', 'max:3'], 'place_id' => ['nullable', 'integer']],
+        $data = $request->validate(['code' => ['required', 'string', 'max:20'], 'purpose' => ['required', 'string', 'max:8'], 'place_id' => ['nullable', 'integer']],
             ['code.required' => 'Enter the M-Pesa code.', 'purpose.required' => 'Pick what it was given for.']);
         $for = ! empty($data['place_id']) && in_array((int) $data['place_id'], $this->transactions->scope($place), true) ? Territory::findOrFail((int) $data['place_id']) : $place;
         if (! $this->canCheck($request, $for)) {

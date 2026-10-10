@@ -5,7 +5,7 @@ namespace App\Jobs;
 use App\Models\Gift;
 use App\Models\Journal;
 use App\Models\Territory;
-use App\Services\Accounting\Paybill;
+use App\Services\Accounting\GivingPurposes;
 use App\Services\Messaging\PlaceMessenger;
 use App\Services\Settings\Settings;
 use App\Support\Phone;
@@ -34,7 +34,7 @@ class SendGiftReceipt implements ShouldQueue
     public static function text(Gift $g, Territory $place): string
     {
         $receipt = Journal::find($g->journal_id)?->number;
-        $what = strtolower(Paybill::PURPOSES[$g->purpose][0] ?? 'gift');
+        $what = strtolower(GivingPurposes::label($g->purpose, 'gift'));
         $name = trim((string) explode(' ', (string) $g->giver_name)[0]);
 
         return 'Thank you'.($name !== '' ? " {$name}" : '').'. '.$place->name.' has received your '.$what.' of KES '.number_format((float) $g->amount, 2)
@@ -61,7 +61,7 @@ class SendGiftReceipt implements ShouldQueue
             return;
         }
         $receipt = Journal::find($g->journal_id)?->number;
-        $what = strtolower(Paybill::PURPOSES[$g->purpose][0] ?? 'gift');
+        $what = strtolower(GivingPurposes::label($g->purpose, 'gift'));
         $text = self::text($g, $place);
         $link = self::link($g);
         $phone = Phone::kenyaMobile((string) $g->giver_phone);

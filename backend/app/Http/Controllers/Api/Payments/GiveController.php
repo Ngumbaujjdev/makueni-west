@@ -9,6 +9,7 @@ use App\Models\PaymentClaim;
 use App\Models\Territory;
 use App\Services\Accounting\GiftReceipt;
 use App\Services\Accounting\Giving;
+use App\Services\Accounting\GivingPurposes;
 use App\Services\Accounting\Paybill;
 use App\Services\Accounting\PaybillClaims;
 use Illuminate\Http\JsonResponse;
@@ -41,7 +42,7 @@ class GiveController extends Controller
             return $this->missing();
         }
         $data = $request->validate([
-            'purpose' => ['required', 'string', 'max:3'],
+            'purpose' => ['required', 'string', 'max:8'],
             'amount' => ['required', 'numeric'],
             'method' => ['required', 'in:mpesa,paystack'],
             'pay' => ['nullable', 'in:'.implode(',', array_keys(Giving::PAY))],
@@ -84,7 +85,7 @@ class GiveController extends Controller
             'reference' => $gift->reference, 'status' => $gift->status, 'amount' => (float) $gift->amount,
             // How it was paid, for the thanks page's logo: mpesa, airtel, card or bank (A10).
             'paid_with' => $gift->status !== 'paid' ? null : app(GiftReceipt::class)->paidWith($gift),
-            'purpose' => Paybill::PURPOSES[$gift->purpose][0] ?? null, 'place' => $place?->name, 'code' => $place ? Paybill::code($place) : null,
+            'purpose' => GivingPurposes::label($gift->purpose), 'place' => $place?->name, 'code' => $place ? Paybill::code($place) : null,
             'receipt' => $gift->status === 'paid' ? Journal::find($gift->journal_id)?->number : null,
             'result' => $gift->status === 'failed' ? $gift->result : null,
         ] + ($gift->status === 'paid' ? app(GiftReceipt::class)->summary($gift) + ['receipt_url' => url('/api/give/receipt/'.rawurlencode($gift->reference))] : [])]);
@@ -113,7 +114,7 @@ class GiveController extends Controller
         if (! $place) {
             return $this->missing();
         }
-        $data = $request->validate(['code' => ['required', 'string', 'max:20'], 'purpose' => ['required', 'string', 'max:3'], 'name' => ['nullable', 'string', 'max:150'], 'phone' => ['nullable', 'string', 'max:20']],
+        $data = $request->validate(['code' => ['required', 'string', 'max:20'], 'purpose' => ['required', 'string', 'max:8'], 'name' => ['nullable', 'string', 'max:150'], 'phone' => ['nullable', 'string', 'max:20']],
             ['code.required' => 'Enter the M-Pesa code from your confirmation message.']);
         $claim = app(PaybillClaims::class)->claim($place, $data, $request->ip());
 
