@@ -247,6 +247,7 @@ final class Documents
     {
         return match ($account->cash_kind) {
             'mpesa' => 'mpesa',
+            'airtel' => 'airtel',
             'bank' => 'bank',
             default => 'cash',
         };

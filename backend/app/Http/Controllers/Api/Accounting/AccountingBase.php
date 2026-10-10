@@ -74,5 +74,5 @@ abstract class AccountingBase extends Controller
         ];
     }
 
-    protected const METHOD_RULE = ['nullable', 'in:cash,mpesa,bank,cheque'];
+    protected const METHOD_RULE = ['nullable', 'in:cash,mpesa,bank,cheque,airtel'];
 }
