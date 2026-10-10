@@ -298,6 +298,18 @@ return [
             'sentence' => 'How approvers hear about money waiting for them, and how long an advance may stay unaccounted for. Who approves what is under Accounting, Approval rules.',
         ],
 
+        // Procurement (docs/specs/accounting-spec.md, A5) - when a purchase needs quotations and an order.
+        'procurement' => [
+            'label' => 'Procurement',
+            'icon' => 'ri-shopping-cart-2-line',
+            'colour' => 'purple',
+            'group' => 'money',
+            'levels' => ['diocese'],
+            'kind' => 'form',
+            'grants' => ['update' => ['diocese' => ['Diocese Finance Officer', 'Diocese Treasurer']]],
+            'sentence' => 'When a purchase is big enough to need quotations and a purchase order, for every church, region and the diocese.',
+        ],
+
         // Existing settings pages, shown inside the hub (S3). 'permission' is
         // the page's own read permission ("{level}." is added); 'absorbs' is
         // the page's menu row, which SettingsHubSeeder moves under Settings.
@@ -436,6 +448,10 @@ return [
         'approvals.notify_sms' => ['section' => 'approvals', 'card' => 'Telling approvers', 'label' => 'Send an SMS when something waits for approval', 'type' => 'switch', 'default' => true, 'levels' => ['diocese'], 'used_by' => 'Approval notices'],
         'approvals.notify_email' => ['section' => 'approvals', 'card' => 'Telling approvers', 'label' => 'Send an email too', 'type' => 'switch', 'default' => true, 'levels' => ['diocese']],
         'approvals.advance_days' => ['section' => 'approvals', 'card' => 'Advances', 'label' => 'Days to account for an advance', 'type' => 'number', 'rules' => ['required', 'integer', 'between:1,90'], 'default' => 14, 'levels' => ['diocese'], 'help' => 'After this, the person can\'t get another advance until they account for it.', 'used_by' => 'Requisitions'],
+
+        // Procurement (A5) - read by App\Services\Accounting\Procurement.
+        'procurement.one_quote_limit' => ['section' => 'procurement', 'card' => 'Buying', 'label' => 'Above this, a purchase needs an order (KES)', 'type' => 'number', 'rules' => ['required', 'integer', 'between:0,100000000'], 'default' => 50000, 'levels' => ['diocese'], 'help' => 'Up to this, an approved purchase is paid straight away with its receipt.', 'used_by' => 'Requisitions and Procurement'],
+        'procurement.quotes_needed' => ['section' => 'procurement', 'card' => 'Buying', 'label' => 'Quotations needed above it', 'type' => 'number', 'rules' => ['required', 'integer', 'between:1,5'], 'default' => 3, 'levels' => ['diocese'], 'used_by' => 'Procurement'],
 
         // Security (S4b) - read by User::verifyPin, the password rules in AuthController and Sanctum.
         'security.pin_attempts' => ['section' => 'security', 'card' => 'Employee code + PIN', 'label' => 'Wrong PINs before it locks', 'type' => 'number', 'rules' => ['required', 'integer', 'between:1,10'], 'default' => 3, 'levels' => ['diocese'], 'used_by' => 'Sign-in with employee code and PIN'],

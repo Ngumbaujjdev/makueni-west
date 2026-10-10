@@ -32,6 +32,7 @@ final class AccountingAccess
         'confirm' => 'accounting.collections.confirm',
         'request' => 'accounting.requisitions.create',
         'rules' => 'accounting.approvalrules.manage',
+        'procure' => 'accounting.procurement.manage',
     ];
 
     /** Abilities that let someone open the books (they can see what they write). */
@@ -100,6 +101,12 @@ final class AccountingAccess
     public static function canSeeRequisitions(?User $user, Territory $place): bool
     {
         return self::canRead($user, $place) || self::can($user, $place, 'request');
+    }
+
+    /** Procurement: whoever reads the books sees it; whoever buys works in it. */
+    public static function canSeeProcurement(?User $user, Territory $place): bool
+    {
+        return self::canRead($user, $place) || self::can($user, $place, 'procure');
     }
 
     /** May the user change the approval rules? The diocese's finance officer (and global admins). */

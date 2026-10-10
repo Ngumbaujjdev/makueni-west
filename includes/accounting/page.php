@@ -5,7 +5,7 @@ $titles = [
     'index' => 'Accounting', 'accounts' => 'Cash & bank', 'cashbook' => 'Cashbook', 'receipts' => 'Receipts',
     'payments' => 'Payment vouchers', 'journals' => 'Journals', 'documents' => 'All documents', 'chart' => 'Chart of accounts',
     'reconciliation' => 'Reconciliation', 'reconcile' => 'Reconcile', 'close' => 'Month-end close', 'collections' => 'Collections',
-    'approvals' => 'Approvals', 'requisitions' => 'Requisitions', 'approval-rules' => 'Approval rules',
+    'approvals' => 'Approvals', 'requisitions' => 'Requisitions', 'approval-rules' => 'Approval rules', 'procurement' => 'Procurement',
 ];
 $pageTitle = $titles[$accCtx['page']];
 $pageIcon = 'ri-bank-line';

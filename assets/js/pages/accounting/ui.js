@@ -55,6 +55,7 @@ const AccountingUI = (function () {
     transfer: { label: "Transfer", color: "primary", icon: "ri-arrow-left-right-line" },
     journal: { label: "Journal", color: "purple", icon: "ri-book-2-line" },
     reversal: { label: "Reversal", color: "secondary", icon: "ri-arrow-go-back-line" },
+    bill: { label: "Supplier bill", color: "warning", icon: "ri-file-list-2-line" },
   };
   const doc = (t) => DOCS[t] || DOCS.journal;
   const docPill = (t) => `<span class="badge bg-${doc(t).color} ${textOn(doc(t).color)}"><i class="${doc(t).icon} me-1"></i>${doc(t).label}</span>`;

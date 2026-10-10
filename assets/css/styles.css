@@ -39600,3 +39600,11 @@ a.mi-prof-about-value:hover { color: var(--primary-color); }
   .pv-logo { width: 84px; height: 84px; margin-top: -42px; }
   .pv-hero-text { padding-top: .25rem; }
 }
+
+/* ACCOUNTING A5 (2026-10-09) - procurement: quotations, deliveries */
+.acc-quotes { display: flex; flex-direction: column; gap: .5rem; }
+.acc-quote { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem .85rem; padding: .65rem .8rem; border: 1px solid var(--default-border); border-radius: .7rem; }
+.acc-quote.is-chosen { border-color: rgb(var(--success-rgb)); background: rgba(var(--success-rgb), .06); }
+@media (max-width: 575.98px) {
+    .acc-quote > strong { margin-left: auto; }
+}

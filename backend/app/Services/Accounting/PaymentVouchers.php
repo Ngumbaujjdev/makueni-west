@@ -36,8 +36,9 @@ final class PaymentVouchers
                 'payee_phone' => $data['payee_phone'] ?? null,
                 'pay_from_account_id' => $from->id,
                 'narration' => trim($data['narration']),
-                'purpose' => in_array($data['purpose'] ?? 'payment', ['imprest_topup', 'advance'], true) ? $data['purpose'] : 'payment',
+                'purpose' => in_array($data['purpose'] ?? 'payment', ['imprest_topup', 'advance', 'bill'], true) ? $data['purpose'] : 'payment',
                 'requisition_id' => $data['requisition_id'] ?? null,
+                'supplier_invoice_id' => $data['supplier_invoice_id'] ?? null,
                 'amount' => $total,
                 'status' => ($data['status'] ?? 'prepared') === 'authorised' ? 'authorised' : 'prepared',
                 'authorised_by' => ($data['status'] ?? '') === 'authorised' ? ($data['authorised_by'] ?? null) : null,
@@ -172,6 +173,9 @@ final class PaymentVouchers
             if ($pv->requisition_id) {
                 app(Requisitions::class)->paid($pv->fresh(), $user);
             }
+            if ($pv->supplier_invoice_id) {
+                app(Procurement::class)->voucherPaid($pv->fresh());
+            }
 
             return $pv->fresh('lines');
         });
@@ -187,6 +191,9 @@ final class PaymentVouchers
             $this->ledger->reverse($journal, $user, $reason);
             $this->bridge->journalReversed($journal, $user);
             $pv->update(['status' => 'authorised', 'paid_by' => null, 'paid_at' => null, 'paid_on' => null, 'journal_id' => null]);
+            if ($pv->supplier_invoice_id) {
+                app(Procurement::class)->voucherUnpaid($pv);
+            }
 
             return $pv->fresh('lines');
         });
@@ -199,6 +206,9 @@ final class PaymentVouchers
             $this->engine->cancel($request, $user);
         }
         $pv->update(['status' => 'cancelled', 'cancelled_by' => $user->id, 'cancelled_at' => now()]);
+        if ($pv->supplier_invoice_id) {
+            app(Procurement::class)->voucherCancelled($pv);
+        }
 
         return $pv->fresh('lines');
     }
