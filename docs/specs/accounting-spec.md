@@ -442,6 +442,20 @@ Money between a church, its region and the diocese, on a cash basis in both sets
 ### Permissions
 `{level}.accounting.remittances.read` (with reading the books). Sending needs `payments.prepare` (the voucher, then approval and paying as usual); confirming, querying and undoing need `receipts.create` at the receiving place; the board and statements of places below need `below.read`.
 
+## A6b - Paying a share by M-Pesa (built 2026-10-10)
+
+The church's share to the diocese, paid with the M-Pesa prompt from the diocese paybill - sent and confirmed in both books in one step.
+
+- **When:** a share remittance to the diocese that is waiting to be paid, whose voucher is **authorised** (the approval rules still apply - the prompt is only another way to pay it). Whole shillings only - M-Pesa takes no cents; choosing the prompt in "Send share" rounds up.
+- **Who:** someone who pays vouchers at the church (`accounting.payments.pay`). The prompt goes to the phone they enter (the church's M-Pesa line, normally).
+- **The prompt:** always through the **diocese** paybill (never a church's own paybill - the money is the diocese's), account number `{code}DS` (e.g. `SHR027DS`), for the remittance's amount.
+- **Paid** (Safaricom's answer, once per M-Pesa code): the church's voucher is paid - Dr the share's account on its budget line / Cr where it is paid from, reference the M-Pesa code - and the diocese confirms it at once: Dr the diocese paybill / Cr 4100 church contributions. The remittance is **Confirmed**; Remittances shows the month's share sent. Both receipts carry the M-Pesa code, so the statement imports (A2) match them.
+- **Not paid** (cancelled, wrong PIN, timed out): nothing changes; it can be prompted again or paid as usual.
+- **The voucher changed meanwhile** (cancelled, already paid): the money is kept safe - **To sort** on the diocese paybill with a note - never lost.
+- **Typed by hand** to `{code}DS` (no prompt): matched to that church's one waiting share with an authorised voucher of the same amount; anything else waits To sort ("a share payment - match it under Remittances").
+
+API: `POST /api/accounting/remittances/{id}/mpesa {phone}` (followed with `GET paybill/requests/{id}`); remittance rows carry `can.pay_mpesa`.
+
 ## A7 - Payroll (built 2026-10-10)
 
 A simple register of the people a place pays, a monthly run, approval through the engine, and the standard postings. Every level.
