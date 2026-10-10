@@ -52,17 +52,21 @@ final class Staff
             throw ValidationException::withMessages(['position_id' => ['Pick a position used here.']]);
         }
         $position ??= ! empty($d['position_id']) ? $e?->positionRow : null;
-        $gradeId = array_key_exists('grade_id', $d) ? ($d['grade_id'] ?: null) : ($e ? $e->grade_id : $position?->grade_id);
+        // The position's package here (this place's version, else the nearest above): grade, usual pay, allowances.
+        $package = $position ? $this->lists->effective($place, 'position', $position)['values'] : null;
+        $gradeId = array_key_exists('grade_id', $d) ? ($d['grade_id'] ?: null) : ($e ? $e->grade_id : ($package['grade_id'] ?? null));
         $grade = $gradeId ? ($this->lists->findUsable($place, 'grade', (int) $gradeId) ?? ((int) $gradeId === (int) $e?->grade_id ? $e->grade : null)) : null;
         if ($gradeId && ! $grade) {
             throw ValidationException::withMessages(['grade_id' => ['Pick a grade used here.']]);
         }
+        $range = $grade ? (object) $this->lists->effective($place, 'grade', $grade)['values'] : null;
         $basic = array_key_exists('basic_pay', $d) && $d['basic_pay'] !== null && $d['basic_pay'] !== '' ? round(max((float) $d['basic_pay'], 0), 2)
-            : ($e ? (float) $e->basic_pay : (float) ($grade?->default_pay ?? 0));
-        if ($grade && (($grade->min_pay !== null && $basic < (float) $grade->min_pay) || ($grade->max_pay !== null && $basic > (float) $grade->max_pay))) {
-            throw ValidationException::withMessages(['basic_pay' => ["Grade {$grade->code} pays ".$this->range($grade).' a month.']]);
+            : ($e ? (float) $e->basic_pay : (float) ($package['default_pay'] ?? $range?->default_pay ?? 0));
+        if ($range && (($range->min_pay !== null && $basic < (float) $range->min_pay) || ($range->max_pay !== null && $basic > (float) $range->max_pay))) {
+            throw ValidationException::withMessages(['basic_pay' => ["Grade {$grade->code} pays ".$this->range($range).' a month.']]);
         }
-        $allowances = $this->allowances($place, $d['allowances'] ?? ($e?->allowances ?? []));
+        $given = $d['allowances'] ?? null;
+        $allowances = $this->allowances($place, $given ?? ($e ? ($e->allowances ?? []) : ($package['allowances'] ?? [])));
         if (! empty($d['start_date']) && ! empty($d['end_date']) && $d['end_date'] < $d['start_date']) {
             throw ValidationException::withMessages(['end_date' => ['They can\'t leave before they started.']]);
         }
@@ -247,6 +251,10 @@ final class Staff
             return $out;
         }
         $slips = Payslip::where('employee_id', $e->id)->join('payroll_runs', 'payroll_runs.id', '=', 'payslips.payroll_run_id')->whereIn('payroll_runs.status', ['posted', 'paid']);
+        $months = (clone $slips)->orderByDesc('payroll_runs.month')->limit(60)
+            ->get(['payslips.id', 'payroll_runs.id as run_id', 'payroll_runs.month', 'payroll_runs.status', 'payroll_runs.territory_id', 'payslips.gross', 'payslips.total_deductions', 'payslips.net', 'payslips.position']);
+        $places = Territory::whereIn('id', $months->pluck('territory_id')->unique())->pluck('name', 'id');
+        $year = now()->format('Y');
 
         return $out + [
             'postings' => $e->postings()->with('territory')->orderByDesc('from_date')->orderByDesc('id')->get()->map(fn (StaffPosting $p) => [
@@ -255,6 +263,16 @@ final class Staff
             ])->values(),
             'documents' => $e->getMedia('documents')->map(fn ($m) => ['id' => $m->id, 'name' => $m->name, 'file_name' => $m->file_name, 'mime' => $m->mime_type, 'size' => $m->size, 'added_at' => $m->created_at?->toIso8601String()])->values(),
             'paid' => ['slips' => (clone $slips)->count(), 'last_month' => (clone $slips)->max('payroll_runs.month')],
+            'payslips' => $months->map(fn ($m) => [
+                'id' => $m->id, 'run_id' => $m->run_id, 'month' => $m->month, 'label' => date('F Y', strtotime("{$m->month}-01")), 'status' => $m->status,
+                'place' => $places[$m->territory_id] ?? null, 'position' => $m->position,
+                'gross' => (float) $m->gross, 'deductions' => (float) $m->total_deductions, 'net' => (float) $m->net,
+            ])->values(),
+            'totals' => [
+                'this_year' => round((float) $months->filter(fn ($m) => str_starts_with($m->month, $year))->sum('net'), 2),
+                'all' => round((float) (clone $slips)->sum('payslips.net'), 2),
+                'months' => (clone $slips)->count(),
+            ],
             'can_delete' => ! Payslip::where('employee_id', $e->id)->exists(),
         ];
     }
@@ -306,7 +324,8 @@ final class Staff
                 throw ValidationException::withMessages(["allowances.{$i}.type_id" => ['Pick an allowance used here.']]);
             }
             $label = trim((string) ($a['name'] ?? '')) ?: (string) $type?->name;
-            $amount = isset($a['amount']) && $a['amount'] !== '' && $a['amount'] !== null ? round((float) $a['amount'], 2) : (float) ($type?->default_amount ?? 0);
+            $amount = isset($a['amount']) && $a['amount'] !== '' && $a['amount'] !== null ? round((float) $a['amount'], 2)
+                : (float) ($type ? ($this->lists->effective($place, 'allowance', $type)['values']['default_amount'] ?? 0) : 0);
             if ($label === '' && $amount <= 0) {
                 continue;
             }

@@ -96,8 +96,11 @@ class StaffController extends HrBase
             return $deny;
         }
         $can = HrAccess::abilities($request->user(), $place);
+        // Their member record, for whoever may open it (the church's own leaders).
+        $church = $e->person ? Territory::find($e->person->territory_id) : null;
+        $member = $church && \App\Support\PeopleAccess::canNamed($request->user(), $church, 'members') && \App\Support\PlaceAccess::isOwn($request->user(), $church);
 
-        return $this->ok($this->staff->present($e, true) + ['can' => [
+        return $this->ok($this->staff->present($e, true) + ['member_link' => $member ? $e->person_id : null, 'can' => [
             'edit' => $can['manage'], 'end' => $can['manage'] && ! $e->end_date, 'delete' => $can['manage'],
             'transfer' => HrAccess::canTransfer($request->user(), $place, $place) && PlaceAccess::acting($request->user())?->territory_type?->value !== 'church',
         ]]);
@@ -238,10 +241,14 @@ class StaffController extends HrBase
 
         return $this->ok([
             'place' => $this->placeInfo($place),
-            'positions' => $pick($this->lists->usable($place, 'position'), fn ($r) => ['grade_id' => $r->grade_id]),
-            'grades' => $pick($this->lists->usable($place, 'grade'), fn ($r) => ['code' => $r->code, 'min_pay' => $r->min_pay !== null ? (float) $r->min_pay : null,
-                'max_pay' => $r->max_pay !== null ? (float) $r->max_pay : null, 'default_pay' => $r->default_pay !== null ? (float) $r->default_pay : null]),
-            'allowances' => $pick($this->lists->usable($place, 'allowance'), fn ($r) => ['default_amount' => $r->default_amount !== null ? (float) $r->default_amount : null]),
+            // What applies here: this place's own version of each, else the nearest above.
+            'positions' => $pick($this->lists->usable($place, 'position'), function ($r) use ($place) {
+                $v = $this->lists->effective($place, 'position', $r)['values'];
+
+                return ['grade_id' => $v['grade_id'], 'default_pay' => $v['default_pay'], 'allowances' => $v['allowances']];
+            }),
+            'grades' => $pick($this->lists->usable($place, 'grade'), fn ($r) => ['code' => $r->code] + $this->lists->effective($place, 'grade', $r)['values']),
+            'allowances' => $pick($this->lists->usable($place, 'allowance'), fn ($r) => $this->lists->effective($place, 'allowance', $r)['values']),
             'types' => collect(Employee::TYPES)->map(fn ($label, $k) => ['key' => $k, 'label' => $label])->values(),
             'pay_methods' => collect(PayTo::METHODS)->map(fn ($label, $k) => ['key' => $k, 'label' => $label])->values(),
             'churches' => Territory::whereIn('id', $this->staff->churchIds($place))->orderBy('name')->get(['id', 'name'])->map(fn ($t) => ['id' => $t->id, 'name' => $t->name])->values(),

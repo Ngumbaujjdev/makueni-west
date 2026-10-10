@@ -673,6 +673,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('setup/{kind}', [$hrs, 'save'])->whereIn('kind', \App\Http\Controllers\Api\HR\SetupController::KINDS);
         Route::put('setup/{kind}/{id}', [$hrs, 'save'])->whereIn('kind', \App\Http\Controllers\Api\HR\SetupController::KINDS)->whereNumber('id');
         Route::delete('setup/{kind}/{id}', [$hrs, 'remove'])->whereIn('kind', \App\Http\Controllers\Api\HR\SetupController::KINDS)->whereNumber('id');
+        Route::get('setup/{kind}/{id}', [$hrs, 'show'])->whereIn('kind', \App\Http\Controllers\Api\HR\SetupController::KINDS)->whereNumber('id');
+        Route::put('setup/{kind}/{id}/ours', [$hrs, 'setOurs'])->whereIn('kind', \App\Http\Controllers\Api\HR\SetupController::KINDS)->whereNumber('id');
+        Route::delete('setup/{kind}/{id}/ours', [$hrs, 'clearOurs'])->whereIn('kind', \App\Http\Controllers\Api\HR\SetupController::KINDS)->whereNumber('id');
         Route::post('setup/{kind}/{id}/here', [$hrs, 'here'])->whereIn('kind', \App\Http\Controllers\Api\HR\SetupController::KINDS)->whereNumber('id');
     });
 

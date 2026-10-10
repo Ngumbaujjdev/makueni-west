@@ -41,6 +41,86 @@ class SetupController extends HrBase
         return $this->ok($out);
     }
 
+    /** GET /hr/setup/{kind}/{id} - one position, grade or allowance: as set, our version, the one from above, and who holds it. */
+    public function show(Request $request, string $kind, int $id): JsonResponse
+    {
+        $place = $this->place($request);
+        if ($place instanceof JsonResponse) {
+            return $place;
+        }
+        $row = (Lists::KINDS[$kind])::whereIn('territory_id', $this->lists->owners($place))->find($id);
+        if (! $row) {
+            return $this->notFound("That {$kind} isn't used here.");
+        }
+        $can = HrAccess::abilities($request->user(), $place);
+        $ids = [(int) $place->id, ...($can['below'] ? \App\Support\PlaceAccess::descendantIds($place) : [])];
+        $holders = \App\Models\Employee::whereIn('territory_id', $ids)->where(fn ($q) => $q->whereNull('end_date')->orWhere('end_date', '>=', today()))
+            ->when($kind === 'position', fn ($q) => $q->where('position_id', $row->id))
+            ->when($kind === 'grade', fn ($q) => $q->where('grade_id', $row->id))
+            ->when($kind === 'allowance', fn ($q) => $q->whereJsonContains('allowances', ['type_id' => (int) $row->id]))
+            ->orderBy('name')->limit(200)->get();
+        $places = \App\Models\Territory::whereIn('id', $holders->pluck('territory_id')->unique())->pluck('name', 'id');
+        $ours = $this->lists->ours($place, $kind, $row);
+        $shape = fn (?array $v) => $v === null ? null : ($kind === 'position' ? ['allowances' => $this->lists->namedAllowances($place, $v['allowances'] ?? [])] + $v : $v);
+
+        return $this->ok($this->lists->present($place, $kind, $row, $this->lists->hidden($place, $kind), $can['setup']) + [
+            'kind' => $kind,
+            'place' => $this->placeInfo($place),
+            'as_set' => $shape($this->lists->base($kind, $row)),
+            'from_above' => $shape($this->lists->effective($place, $kind, $row, true)['values']) + ['from' => $this->lists->effective($place, $kind, $row, true)['from']],
+            'our_version' => $shape($ours === null ? null : array_merge($this->lists->base($kind, $row), $ours)),
+            'holders' => $holders->map(fn ($e) => [
+                'id' => $e->id, 'name' => $e->name, 'position' => $e->position, 'place' => $places[$e->territory_id] ?? null, 'place_id' => $e->territory_id,
+                'gross' => round((float) $e->basic_pay + array_sum(array_column($e->allowances ?? [], 'amount')), 2),
+                'amount' => $kind === 'allowance' ? (float) (collect($e->allowances ?? [])->firstWhere('type_id', $row->id)['amount'] ?? 0) : null,
+            ])->values(),
+        ]);
+    }
+
+    /** PUT /hr/setup/{kind}/{id}/ours - our own version of one set above us. */
+    public function setOurs(Request $request, string $kind, int $id): JsonResponse
+    {
+        $place = $this->place($request, 'setup');
+        if ($place instanceof JsonResponse) {
+            return $place;
+        }
+        $row = (Lists::KINDS[$kind])::whereIn('territory_id', $this->lists->owners($place))->find($id);
+        if (! $row) {
+            return $this->notFound("That {$kind} isn't used here.");
+        }
+        $data = $request->validate([
+            'grade_id' => ['nullable', 'integer'],
+            'default_pay' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'allowances' => ['nullable', 'array', 'max:10'],
+            'allowances.*.type_id' => ['required', 'integer'],
+            'allowances.*.amount' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'duties' => ['nullable', 'string', 'max:1000'],
+            'notes' => ['nullable', 'string', 'max:500'],
+            'min_pay' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'max_pay' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'default_amount' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+        ]);
+        $this->lists->setOurs($place, $request->user(), $kind, $row, $data);
+
+        return $this->ok($this->lists->present($place, $kind, $row, $this->lists->hidden($place, $kind), true), "Saved - this is now {$row->name} at {$place->name}.");
+    }
+
+    /** DELETE /hr/setup/{kind}/{id}/ours - back to the version from above. */
+    public function clearOurs(Request $request, string $kind, int $id): JsonResponse
+    {
+        $place = $this->place($request, 'setup');
+        if ($place instanceof JsonResponse) {
+            return $place;
+        }
+        $row = (Lists::KINDS[$kind])::whereIn('territory_id', $this->lists->owners($place))->find($id);
+        if (! $row) {
+            return $this->notFound("That {$kind} isn't used here.");
+        }
+        $this->lists->clearOurs($place, $kind, $row);
+
+        return $this->ok($this->lists->present($place, $kind, $row, $this->lists->hidden($place, $kind), true), 'Back to the version from above.');
+    }
+
     /** POST /hr/setup/{kind} · PUT /hr/setup/{kind}/{id} */
     public function save(Request $request, string $kind, ?int $id = null): JsonResponse
     {
