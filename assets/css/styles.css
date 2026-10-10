@@ -40031,3 +40031,28 @@ a.acc-chain-item:hover, button.acc-chain-item:hover { border-color: rgba(var(--p
 .acc-rp-run small { font-size: .74rem; color: var(--default-text-color); }
 .rp-buildnow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; margin: .5rem 0; padding: .6rem .75rem; border-radius: .7rem; background: rgba(var(--warning-rgb), .14); font-size: .82rem; color: var(--v2-heading); }
 @media (max-width: 575.98px) { .acc-rp-runs { grid-template-columns: minmax(0, 1fr); } }
+
+/* Giving - the giver's receipt on the thanks page (2026-10-10) */
+.give-receipt { padding: 1.1rem 1.15rem; border: 1px solid var(--default-border); border-radius: .9rem; background: #fff; }
+.give-receipt-head { display: flex; align-items: center; gap: .7rem; padding-bottom: .85rem; border-bottom: 1px dashed var(--default-border); }
+.give-receipt-head strong { display: block; color: var(--v2-heading); }
+.give-receipt-head span { font-size: .76rem; color: var(--default-text-color); }
+.give-receipt-no { margin-left: auto; text-align: right; }
+.give-receipt-no span { display: block; font-size: .66rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: rgb(var(--primary-rgb)); }
+.give-receipt-no strong { font-size: .86rem; }
+.give-receipt-amount { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: .9rem 0; }
+.give-receipt-amount span { font-size: .78rem; color: var(--default-text-color); }
+.give-receipt-amount strong { font-size: 1.5rem; color: rgb(var(--success-rgb)); font-variant-numeric: tabular-nums; }
+.give-receipt-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem 1rem; padding-bottom: .9rem; }
+.give-receipt-facts span { display: block; font-size: .66rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--default-text-color); }
+.give-receipt-facts strong { font-size: .88rem; font-weight: 500; color: var(--v2-heading); overflow-wrap: anywhere; }
+.give-receipt-lines th, .give-receipt-lines td { padding: .45rem .2rem; font-size: .86rem; font-variant-numeric: tabular-nums; }
+.give-receipt-lines tfoot th { border-top: 2px solid var(--v2-heading); }
+.give-receipt-sub { font-size: .74rem; color: var(--default-text-color); }
+.give-receipt-note { margin: .8rem 0 0; font-size: .74rem; color: var(--default-text-color); }
+@media print {
+  .give-noprint, .verify-brand { display: none !important; }
+  .verify-card { border: 0 !important; box-shadow: none !important; }
+  body.verify-page { background: #fff !important; }
+}
+@media (max-width: 480px) { .give-receipt-facts { grid-template-columns: minmax(0, 1fr); } .give-receipt-head { flex-wrap: wrap; } .give-receipt-no { margin-left: 0; text-align: left; } }

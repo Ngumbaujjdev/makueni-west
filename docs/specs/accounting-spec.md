@@ -848,3 +848,12 @@ The user found the pages bare. The redesign ships in five parts:
   - reconciliations (statement).
 - **Reports page › "My recent PDFs"** lists what the person exported from Accounting, from `GET reports/runs`, ready to download again.
 - **`POST reports/runs/{uuid}/now`.** It builds a run that has waited at least 10 s (your own run, still queued) in the request, and the queued copy then does nothing. The export window offers "Build it now" after 15 s when no worker has picked the run up.
+
+**A10 - the giver's receipt (2026-10-10):**
+- The thanks page (`give-thanks.php`) shows the official receipt once the gift is paid. It contains:
+  - received from (first name), for, paid by (with the M-Pesa or card logo and the M-Pesa code), date and references;
+  - the lines and the total;
+  - Download (PDF), Print, and Give again.
+- `GET give/status/{reference}` adds, for a paid gift: `receipt_url`, `paid_at`, `mpesa_code` (the paybill code, or Paystack's `receipt_number` for M-Pesa through Paystack), `giver`, `phone` (masked) and `lines`.
+- `GET give/receipt/{reference}` (public, 30 a minute) returns the receipt as a diocese PDF (`GiftReceipt`), built straight away because the giver has no login. A gift that isn't paid gets 404.
+- The SMS ends with "Receipt: {frontend}/give-thanks?ref=…", and the email links to it too.

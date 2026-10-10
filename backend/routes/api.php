@@ -76,6 +76,7 @@ Route::prefix('give')->group(function () {
     $give = \App\Http\Controllers\Api\Payments\GiveController::class;
     Route::get('callback', [$give, 'callback'])->middleware('throttle:60,1');
     Route::get('status/{reference}', [$give, 'status'])->middleware('throttle:60,1');
+    Route::get('receipt/{reference}', [$give, 'receipt'])->middleware('throttle:30,1');
     Route::get('claim/{id}', [$give, 'claimStatus'])->whereNumber('id')->middleware('throttle:60,1');
     Route::post('{code}/claim', [$give, 'claim'])->middleware('throttle:5,1');
     Route::get('{code}', [$give, 'show'])->middleware('throttle:60,1');
