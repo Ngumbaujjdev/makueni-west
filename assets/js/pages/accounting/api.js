@@ -159,6 +159,7 @@ const AccountingAPI = (function () {
     checkTransaction: (source, id) => request("POST", `/accounting/transactions/${source}/${id}/check`),
     checkWaiting: (body) => request("POST", "/accounting/transactions/check-waiting", { body }),
     checkCode: (body) => request("POST", "/accounting/transactions/check-code", { body }),
+    holders: (permission) => request("GET", "/accounting/holders", { params: { permission } }),
     approvals: (tab) => request("GET", "/approvals", { params: { tab, territory_id: "" } }),
     approval: (id) => request("GET", `/approvals/requests/${id}`, { params: { territory_id: "" } }),
     decideApproval: (id, decision, comment) => request("POST", `/approvals/requests/${id}/${decision}`, { body: { comment } }),

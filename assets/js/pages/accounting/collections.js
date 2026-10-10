@@ -152,7 +152,7 @@
           <div class="modal-body"><div class="att-entry">
             <div class="att-entry-main">
               <section class="att-entry-section"><div class="att-entry-title"><span>1</span>Which service?</div>
-                <div class="row g-2"><div class="col-sm-4"><input type="date" class="form-control" id="cwDate" value="${date0}" max="${today}"></div><div class="col-sm-8"><select class="form-select" id="cwGathering"></select></div><div class="col-12"><input type="text" class="form-control" id="cwTitle" maxlength="150" placeholder="Name, e.g. Sunday main service" value="${esc(existing?.title || "Sunday service")}"></div></div></section>
+                <div class="row g-2"><div class="col-sm-7"><select class="form-select" id="cwService" aria-label="Which service"></select></div><div class="col-sm-5"><input type="date" class="form-control" id="cwDate" value="${date0}" max="${today}"></div><div class="col-12"><input type="text" class="form-control" id="cwTitle" maxlength="150" placeholder="Name, e.g. Sunday main service" value="${esc(existing?.title || "Sunday service")}"></div><div class="col-12"><select class="form-select" id="cwGathering"></select></div></div></section>
               <section class="att-entry-section"><div class="att-entry-title"><span>2</span>What was given<small class="acc-part-hint">Cash and M-Pesa for each kind</small></div>
                 <div class="acc-kinds" id="cwKinds">${presetRows.map((r) => kindRow(r, !!existing && !o.presets.some((p) => p.label === r.label && p.account_id === r.account_id && p.fund_id === r.fund_id))).join("")}</div>
                 <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="cwAdd"><i class="ri-add-line me-1"></i>Add another kind</button></section>
@@ -170,6 +170,14 @@
     })();
     el.addEventListener("hidden.bs.modal", () => el.remove());
 
+    // What the collection was for: Sunday service, one of the church's own gatherings, or something else typed in.
+    const services = () => {
+      const sel = el.querySelector("#cwService");
+      const list = o.services || [{ id: null, name: "Sunday service" }];
+      const current = existing?.gathering_type_id ? String(existing.gathering_type_id) : existing && existing.title !== "Sunday service" ? "other" : "";
+      sel.innerHTML = list.map((g) => `<option value="${g.id ?? ""}"${String(g.id ?? "") === current ? " selected" : ""} data-icon="${g.id ? "ri-group-line" : "ri-sun-line"}" data-color="${g.id ? "purple" : "primary"}">${esc(g.name)}</option>`).join("") + `<option value="other"${current === "other" ? " selected" : ""} data-icon="ri-edit-line" data-color="secondary">Other - type its name</option>`;
+      UI.enhanceSelect(sel, { search: list.length > 8 });
+    };
     const gatherings = () => {
       const sel = el.querySelector("#cwGathering");
       sel.innerHTML = `<option value="">${o.gatherings.length ? "Not linked to an attendance record" : "No attendance recorded that day"}</option>${o.gatherings.map((g) => `<option value="${g.id}"${String(existing?.attendance_record_id) === String(g.id) ? " selected" : ""} data-icon="ri-group-line" data-color="primary">${esc(g.name)}</option>`).join("")}`;
@@ -205,6 +213,18 @@
     el.querySelector("#cwKinds").addEventListener("input", upd);
     el.querySelectorAll("[data-den]").forEach((i) => i.addEventListener("input", upd));
     el.querySelector("#cwTitle").addEventListener("input", upd);
+    services();
+    el.querySelector("#cwService").addEventListener("change", () => {
+      const v = el.querySelector("#cwService").value;
+      const title = el.querySelector("#cwTitle");
+      if (v === "other") {
+        title.value = "";
+        title.focus();
+      } else {
+        title.value = ((o.services || []).find((g) => String(g.id ?? "") === v) || { name: "Sunday service" }).name;
+      }
+      upd();
+    });
     el.querySelector("#cwGathering").addEventListener("change", (e) => {
       const g = o.gatherings.find((x) => String(x.id) === e.target.value);
       if (g) el.querySelector("#cwTitle").value = g.name;
@@ -238,6 +258,7 @@
         date: el.querySelector("#cwDate").value,
         title: el.querySelector("#cwTitle").value.trim(),
         attendance_record_id: Number(el.querySelector("#cwGathering").value) || null,
+        gathering_type_id: Number(el.querySelector("#cwService").value) || null,
         denominations: Object.keys(denominations).length ? denominations : null,
         witnesses: [...el.querySelectorAll("[data-witness]")].map((w) => w.value.trim()).filter(Boolean),
         notes: el.querySelector("#cwNotes").value.trim() || null,

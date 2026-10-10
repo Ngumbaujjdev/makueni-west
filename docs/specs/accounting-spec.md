@@ -385,6 +385,12 @@ Under `/api/accounting`: `GET|POST requisitions` · `GET requisitions/options` �
 - **Sending** a voucher, requisition or payroll for approval says who it waits for: "sent for approval - waiting for Benson Manoo (Senior Pastor)", or that nobody holds the role yet.
 
 
+## Entry by permission (2026-10-10)
+- **Nothing about who records is hard-coded.** Every write action is a permission (e.g. "collections · record", "receipts · create", "accounts · manage", "payments · prepare") that the diocese admin gives to any role in Settings, Access control, Roles & permissions; it applies from the next page load.
+- **A page that can't offer its write button says why:** "To do this here you need the *Record collections* permission", who holds it at this place (`GET /api/accounting/holders?permission=`), or which roles come with it - and, for an admin, a link to Roles & permissions.
+- **The seeder gives each default once, ever** (`accounting_seeded_grants`): a default the admin took away is never put back by a later run.
+- **A collection says which service it was for:** Sunday service, one of the church's own gatherings (Tuesday Fellowship, Kesha...), or Other (typed). Saved as `gathering_type_id` and the title.
+
 ## A5 - Procurement (built 2026-10-09)
 
 Standard buying - quotations, a local purchase order (LPO), goods received (GRN), the supplier's invoice matched three ways, then payment - but only for bigger purchases. Small ones stay a requisition paid straight away. Every level.

@@ -787,6 +787,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('giving', [$gv, 'index']);
         // A10c - getting paid: payouts, a place asking for its own Paystack, the diocese's check.
         $po = \App\Http\Controllers\Api\Accounting\PayoutController::class;
+        // Who holds a permission here - for the pages' "you need X" line.
+        Route::get('holders', [\App\Http\Controllers\Api\Accounting\HoldersController::class, 'index']);
         // A10e - transactions: every attempt to pay, failed ones included.
         $tx = \App\Http\Controllers\Api\Accounting\TransactionController::class;
         Route::get('transactions', [$tx, 'index']);
