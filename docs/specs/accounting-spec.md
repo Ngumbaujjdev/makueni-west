@@ -745,3 +745,17 @@ The user found the pages bare. The redesign ships in five parts:
   - Posted/Reversed and papers pills.
   
   A row whose journal comes from a voucher, collection or payroll opens that record's page.
+
+**R2c: the navy band back; the account page as a statement:**
+- **Windows:** the user rejected R2's white header with a coloured top line ("we don't allow border tops"). Accounting windows keep the navy band like every other window. The calm body and coloured key data stay (see CLAUDE.md › Accounting windows).
+- **`account.php`:**
+  - **Hero:** M-Pesa and Airtel accounts show their logo.
+  - **"This year" cards:** they get a sparkline and a net / out-of-in bar, so all four cards end level.
+  - **Beside the chart:** the right column is Budget lines plus "This year at a glance" (net, monthly averages, biggest month, movements this year, the last one), filling the height.
+  - **"Money in and out" is a statement:**
+    - grouped by day with the day's in and out;
+    - each movement shows its direction, "Money in from … / Money out to …", the number, a type pill and the method logo, and what it was against;
+    - the signed amount, and the balance after it;
+    - All / in / out pills.
+  - **Rows open** the voucher, collection or payroll page, or the journal.
+- **`accounts/{id}` movements** add `direction`, `balance_after` (worked back from today's balance), `method`, `method_label`, `source`, `source_id`, `status`, `attachments`, `against` [{name, cash_kind}] and `year_count`.
