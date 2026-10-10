@@ -59,12 +59,7 @@
         : KIND === "grade"
           ? [["Least", money(d.min_pay) || "-"], ["Most", money(d.max_pay) || "-"], ["Usual", money(d.default_pay) || "-"], ["People", String(d.holders.length)]]
           : [["Usual amount", money(d.default_amount) || "Per person"], ["Set by", d.owner.name], ["This version", here?.name || "-"], ["People", String(d.holders.length)]];
-    const holders = d.holders.length
-      ? `<div class="table-responsive"><table class="table table-hover mb-0 acc-table"><thead><tr><th>Person</th>${CTX.can.below ? "<th>Place</th>" : ""}<th class="text-end">${KIND === "allowance" ? "Allowance" : "Pay a month"}</th></tr></thead><tbody>${d.holders
-          .map((h) => `<tr><td><div class="d-flex align-items-center gap-2">${A.avatar(h.name, "sm")}<div><a class="fw-semibold mb-link" href="${CTX.baseUrl}/person.php?id=${h.id}">${esc(h.name)}</a><div class="acc-sub">${esc(h.position || "")}</div></div></div></td>${CTX.can.below ? `<td>${esc(h.place || "")}</td>` : ""}<td class="text-end"><strong>${A.money(KIND === "allowance" ? h.amount : h.gross)}</strong></td></tr>`)
-          .join("")}</tbody></table></div>`
-      : A.empty(icon, "Nobody yet", KIND === "position" ? "When someone is given this position, they show here." : "Nobody on the staff has it yet.");
-
+    const holders = `<div class="table-responsive"><table class="table table-hover mb-0 acc-table" id="itHolders"><thead><tr><th>Person</th>${CTX.can.below ? "<th>Place</th>" : ""}<th class="text-end">${KIND === "allowance" ? "Allowance" : "Pay a month"}</th><th class="text-end"></th></tr></thead><tbody></tbody></table></div>`;
     $("itApp").innerHTML = `
       <div class="card custom-card acc-rec-hero"><div class="card-body">
         <div class="acc-rec-top">
@@ -77,7 +72,7 @@
       <div class="row">
         <div class="col-xl-8">
           ${card(`What applies at ${esc(d.place.name)}`, icon, color, values(d) + `<p class="acc-sub mb-0 mt-2"><i class="ri-information-line me-1"></i>${d.own ? "Ours - we set it up." : d.ours ? `Our own version of ${esc(d.owner.name)}'s.` : `${esc(here?.name || d.owner.name)}'s version - set our own to change it here.`}</p>`)}
-          ${card("Who holds it", "ri-team-line", "purple", holders, `<span class="soft-chip soft-primary">${d.holders.length}</span>`)}
+          ${card("Who holds it", "ri-team-line", "purple", holders, `<span class="badge bg-primary text-white">${d.holders.length}</span>`).replace('<div class="card-body">', '<div class="card-body p-0">')}
         </div>
         <div class="col-xl-4">
           ${d.own ? "" : card(`As ${esc(d.owner.name)} set it`, "ri-government-line", "primary", values(d.as_set))}
@@ -86,6 +81,22 @@
           ${d.own ? card("How it reaches the places below", "ri-git-branch-line", "info", `<p class="mb-0">${CTX.level === "church" ? "It's used only here." : "The places below use it as it is, unless they set their own version."}</p>`) : ""}
         </div>
       </div>`;
+    const places = [...new Map(d.holders.map((h) => [h.place_id, h.place])).entries()];
+    A.tableKit({
+      tableId: "itHolders",
+      prefix: "w_",
+      items: d.holders,
+      noun: "people",
+      search: "Search a name...",
+      pills: CTX.can.below && places.length > 1 ? places.map(([id, name], i) => ({ key: `p${id}`, label: name, icon: "ri-map-pin-line", color: ["primary", "purple", "success", "warning"][i % 4], test: (h) => h.place_id === id })) : [],
+      sorts: [
+        { key: "name", label: "Name A-Z", order: [[0, "asc"]] },
+        { key: "pay", label: "Highest pay", order: [[CTX.can.below ? 2 : 1, "desc"]] },
+      ],
+      nonSortable: [CTX.can.below ? 3 : 2],
+      empty: A.empty(icon, "Nobody yet", KIND === "position" ? "Whoever is given this position shows here." : "Nobody on the staff has it yet."),
+      rowHtml: (h) => `<tr data-pills="p${h.place_id}"><td data-order="${esc(h.name)}"><div class="d-flex align-items-center gap-2">${A.avatar(h.name, "sm")}<div><a class="fw-semibold mb-link" href="${CTX.baseUrl}/person.php?id=${h.id}">${esc(h.name)}</a><div class="acc-sub">${esc(h.position || "")}</div></div></div></td>${CTX.can.below ? `<td>${esc(h.place || "")}</td>` : ""}<td class="text-end" data-order="${KIND === "allowance" ? h.amount : h.gross}"><strong>${A.money(KIND === "allowance" ? h.amount : h.gross)}</strong></td><td class="text-end"><a href="${CTX.baseUrl}/person.php?id=${h.id}" class="btn btn-sm btn-primary-light">Open<i class="ri-arrow-right-line ms-1"></i></a></td></tr>`,
+    });
     document.title = `${d.name} - ${kindLabel} - Makueni West Diocese`;
     const crumb = document.querySelector(".breadcrumb-item.active");
     if (crumb) crumb.textContent = d.name;

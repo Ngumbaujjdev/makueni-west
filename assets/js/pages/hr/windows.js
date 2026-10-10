@@ -30,6 +30,17 @@ const HrWindows = (function () {
   let opts = null;
   let done = () => {};
 
+  /**
+   * A table ready to be filled again: its DataTable put away and the element
+   * swapped for a clean copy, so a list kit called again doesn't stack its
+   * listeners on the old one.
+   */
+  function fresh(tableId) {
+    if (window.jQuery?.fn?.DataTable?.isDataTable(`#${tableId}`)) window.jQuery(`#${tableId}`).DataTable().destroy();
+    const t = document.getElementById(tableId);
+    if (t) t.replaceWith(t.cloneNode(true));
+  }
+
   /** The lists for the windows (GET /hr/options), and what to do after a change. */
   function setup(options, onDone) {
     opts = options;
@@ -353,7 +364,7 @@ const HrWindows = (function () {
     range();
   }
 
-  return { setup, person: personWindow, move: moveWindow, end: endWindow, remove: removeWindow, item: itemWindow, ours: oursWindow, ITEM, LEVELS };
+  return { setup, fresh, person: personWindow, move: moveWindow, end: endWindow, remove: removeWindow, item: itemWindow, ours: oursWindow, ITEM, LEVELS };
 })();
 
 window.HrWindows = HrWindows;
