@@ -83,7 +83,7 @@ class TransactionsTest extends TestCase
         $this->assertSame(2, $d['total'], 'only its own two gifts');
         $this->assertSame([500.0, 1, 1, 50], [(float) $d['stats']['paid'], $d['stats']['paid_count'], $d['stats']['failed'], $d['stats']['success_rate']]);
         $row = collect($d['rows'])->firstWhere('reference', $failed);
-        $this->assertSame(['failed', 'DS timeout user cannot be reached.', 'mpesa'], [$row['status'], $row['reason'], $row['method']]);
+        $this->assertSame(['failed', "Your phone couldn't be reached - is it on?", 'mpesa'], [$row['status'], $row['reason'], $row['method']]);
         $this->assertSame('TXPAID0001', collect($d['rows'])->firstWhere('reference', $paid)['code']);
         $this->assertSame(1, $this->getJson('/api/accounting/transactions?status=failed')->json('data.total'));
         $this->assertSame(1, $this->getJson('/api/accounting/transactions?q=txpaid')->json('data.total'));
