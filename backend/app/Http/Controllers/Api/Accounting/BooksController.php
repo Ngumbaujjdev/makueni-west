@@ -53,6 +53,7 @@ class BooksController extends AccountingBase
             'last_month' => ['label' => $today->subMonthNoOverflow()->format('F Y')] + $this->books->inOut($place, $pFrom, $pTo),
             'year' => ['label' => (string) $today->year] + $this->books->inOut($place, $today->startOfYear()->toDateString(), $to),
             'monthly' => $this->books->monthly($place),
+            'channels' => $this->books->channels($place),
             'funds' => $this->books->byFund($place, $today->startOfYear()->toDateString(), $to),
             'top_income' => $this->books->byAccount($place, 'income', $today->startOfYear()->toDateString(), $to),
             'top_expense' => $this->books->byAccount($place, 'expense', $today->startOfYear()->toDateString(), $to),
@@ -172,7 +173,7 @@ class BooksController extends AccountingBase
         if ($place instanceof JsonResponse) {
             return $place;
         }
-        $data = $request->validate($this->accountRules() + ['cash_kind' => ['required', 'in:bank,mpesa']]);
+        $data = $request->validate($this->accountRules() + ['cash_kind' => ['required', 'in:bank,mpesa,airtel']]);
         $this->assertNameFree($place, $data['name']);
         $account = $this->chart->addPlaceAccount($place, $data['cash_kind'], $data, $request->user()->id);
 

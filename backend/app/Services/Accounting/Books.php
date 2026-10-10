@@ -170,6 +170,55 @@ final class Books
         ];
     }
 
+    /**
+     * Money received by channel (Redesign R2b): cash, M-Pesa, Airtel Money,
+     * bank or card - from receipts' lines that put money into a money account,
+     * so a Sunday collection splits into its cash and its M-Pesa. Card is the
+     * journal's method (Paystack lands in the clearing account first). Six
+     * months, this one last; reversed receipts left out.
+     */
+    public function channels(Territory $place, int $months = 6): array
+    {
+        $start = CarbonImmutable::today()->startOfMonth()->subMonths($months - 1);
+        $yearStart = CarbonImmutable::today()->startOfYear();
+        $from = $start->lt($yearStart) ? $start : $yearStart;
+        $rows = DB::table('journal_lines as l')->join('journals as j', 'j.id', '=', 'l.journal_id')->join('accounting_accounts as a', 'a.id', '=', 'l.account_id')
+            ->where('l.territory_id', $place->id)->where('j.doc_type', 'receipt')->where('j.status', '!=', 'reversed')
+            ->where('a.type', 'asset')->where('l.debit', '>', 0)->where('l.date', '>=', $from->toDateString())
+            ->where(fn ($q) => $q->whereNotNull('a.cash_kind')->orWhere('j.method', 'card'))
+            ->groupByRaw("DATE_FORMAT(l.date, '%Y-%m'), channel")
+            ->selectRaw("DATE_FORMAT(l.date, '%Y-%m') AS ym, CASE WHEN j.method = 'card' THEN 'card' WHEN a.cash_kind IN ('cash', 'petty_cash') THEN 'cash' ELSE a.cash_kind END AS channel, SUM(l.debit) AS total")
+            ->get();
+        $kinds = AccountingAccount::usableBy($place->id)->whereNotNull('cash_kind')->where('is_header', false)->where('is_active', true)->pluck('cash_kind')
+            ->map(fn ($k) => $k === 'petty_cash' ? 'cash' : $k)->unique()->all();
+        $labels = ['cash' => 'Cash', 'mpesa' => 'M-Pesa', 'airtel' => 'Airtel Money', 'bank' => 'Bank', 'card' => 'Card (online)'];
+        $monthKeys = [];
+        for ($m = $start; $m->lte(CarbonImmutable::today()); $m = $m->addMonth()) {
+            $monthKeys[] = $m->format('Y-m');
+        }
+        $thisMonth = end($monthKeys);
+        $lastMonth = CarbonImmutable::today()->subMonthNoOverflow()->format('Y-m');
+        $out = [];
+        foreach ($labels as $key => $label) {
+            $mine = $rows->where('channel', $key);
+            $year = round((float) $mine->filter(fn ($r) => $r->ym >= $yearStart->format('Y-m'))->sum('total'), 2);
+            if (! $year && ! in_array($key, $kinds, true)) {
+                continue;
+            }
+            $by = $mine->keyBy('ym');
+            $out[] = [
+                'key' => $key,
+                'label' => $label,
+                'this_month' => round((float) ($by[$thisMonth]->total ?? 0), 2),
+                'last_month' => round((float) ($by[$lastMonth]->total ?? 0), 2),
+                'year' => $year,
+                'series' => array_map(fn ($k) => round((float) ($by[$k]->total ?? 0), 2), $monthKeys),
+            ];
+        }
+
+        return ['labels' => array_map(fn ($k) => CarbonImmutable::parse("{$k}-01")->format('M Y'), $monthKeys), 'items' => $out];
+    }
+
     /** Money in and out for a period: income and expense accounts, transfers left out. */
     public function inOut(Territory $place, string $from, string $to): array
     {

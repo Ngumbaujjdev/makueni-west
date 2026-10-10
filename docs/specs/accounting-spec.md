@@ -726,3 +726,22 @@ The user found the pages bare. The redesign ships in five parts:
   - The status column on Payment vouchers, Requisitions, Payroll, Procurement, Remittances and Collections is now a compact journey (`AccountingUI.mini`).
   - Payroll months get a month tile.
   - The remittance record page offers "Pay by M-Pesa" when the share can be paid that way (A6b).
+
+**R2b: real payment logos, money in by channel, Airtel Money:**
+- **Logos.** M-Pesa, Airtel and Visa/Mastercard are the official marks from Wikimedia Commons, kept in `assets/images/payments/` and checked to contain no scripts or links. They are shown through `AccountingUI.methodLogo(method, size)` and the `methodChip` pill. M-Pesa and Airtel Money accounts show their logo as their tile.
+- **Airtel Money is a real method and account kind:**
+  - `airtel` in `Journal::METHODS`, `BudgetEntry::METHODS`, `METHOD_RULE` and `AccountingAccount::CASH_KINDS`;
+  - the standard header `1160 Airtel Money accounts`; a place adds its number like an M-Pesa account (1160-01, ...);
+  - the migration `2026_10_27_100000_add_airtel_money` widens the enum columns. **Run it before this code goes live:** `Chart::ensureStandard` writes the new header on the next Accounting request.
+- **Money in by channel** (`overview.channels`, `Books::channels`):
+  - Receipts' lines into money accounts, split by channel: cash (incl. petty cash), M-Pesa, Airtel Money, bank, and card (`journal.method = card`). A Sunday collection splits into its cash and M-Pesa parts.
+  - Each channel has this month, last month, this year, and six months for a sparkline. A channel shows when it has money this year or an account.
+- **Document rows** (the Overview's Latest documents, and Receipts, Journals and All documents through `doc-list.js`):
+  - a date tile and "n days ago";
+  - the number with a solid type pill;
+  - who, as initials;
+  - How, with the logo;
+  - the amount with its direction arrow;
+  - Posted/Reversed and papers pills.
+  
+  A row whose journal comes from a voucher, collection or payroll opens that record's page.

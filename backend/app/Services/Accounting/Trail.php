@@ -105,7 +105,7 @@ class Trail
 
     private function voucherEvents(PaymentVoucher $v): array
     {
-        $how = ['cash' => 'cash', 'mpesa' => 'M-Pesa', 'bank' => 'bank', 'cheque' => 'cheque'][$v->method] ?? $v->method;
+        $how = ['cash' => 'cash', 'mpesa' => 'M-Pesa', 'airtel' => 'Airtel Money', 'bank' => 'bank', 'cheque' => 'cheque'][$v->method] ?? $v->method;
         $engine = $this->approvalRequests($v)->isNotEmpty();
 
         return [

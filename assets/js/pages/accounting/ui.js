@@ -42,10 +42,27 @@ const AccountingUI = (function () {
     cash: { icon: "ri-money-dollar-box-line", color: "success", label: "Cash" },
     petty_cash: { icon: "ri-wallet-3-line", color: "warning", label: "Petty cash" },
     bank: { icon: "ri-bank-line", color: "primary", label: "Bank" },
-    mpesa: { icon: "ri-smartphone-line", color: "purple", label: "M-Pesa" },
+    mpesa: { icon: "ri-smartphone-line", color: "success", label: "M-Pesa" },
+    airtel: { icon: "ri-smartphone-line", color: "danger", label: "Airtel Money" },
   };
   const kind = (k) => KINDS[k] || { icon: "ri-coins-line", color: "secondary", label: "Account" };
+
+  /**
+   * The real marks (2026-10-10): M-Pesa, Airtel Money, and Visa + Mastercard
+   * for card - official logos from Wikimedia Commons in
+   * assets/images/payments; an icon for cash, bank and cheque.
+   */
+  const LOGOS = { mpesa: ["mpesa.svg", "M-Pesa"], airtel: ["airtel-money.svg", "Airtel Money"] };
+  const METHOD_ICONS = { cash: ["ri-money-dollar-circle-line", "success"], petty_cash: ["ri-wallet-3-line", "warning"], bank: ["ri-bank-line", "primary"], cheque: ["ri-file-paper-2-line", "warning"] };
+  const imgBase = () => `${CTX.siteUrl || ""}/assets/images/payments/`;
+  function methodLogo(m, size = "sm") {
+    if (m === "card") return `<span class="acc-logo acc-logo-${size} is-card" title="Card (Visa, Mastercard)"><img src="${imgBase()}visa.svg" alt="Visa"><img src="${imgBase()}mastercard.svg" alt="Mastercard"></span>`;
+    if (LOGOS[m]) return `<span class="acc-logo acc-logo-${size}" title="${LOGOS[m][1]}"><img src="${imgBase()}${LOGOS[m][0]}" alt="${LOGOS[m][1]}"></span>`;
+    const [icon, color] = METHOD_ICONS[m] || ["ri-coins-line", "secondary"];
+    return `<span class="acc-logo acc-logo-${size} is-icon bg-${color} ${textOn(color)}"><i class="${icon}"></i></span>`;
+  }
   const tile = (k, size = "md") => {
+    if (LOGOS[k]) return `<span class="avatar avatar-${size} avatar-rounded acc-logo-avatar flex-shrink-0"><img src="${imgBase()}${LOGOS[k][0]}" alt="${LOGOS[k][1]}"></span>`;
     const m = kind(k);
     return `<span class="avatar avatar-${size} avatar-rounded bg-${m.color} ${textOn(m.color)} flex-shrink-0"><i class="${m.icon}"></i></span>`;
   };
@@ -76,7 +93,32 @@ const AccountingUI = (function () {
     return `<span class="badge bg-${m.color} ${textOn(m.color)}"><i class="${m.icon} me-1"></i>${long ? m.label : m.short}</span>`;
   };
 
-  const methodChip = (m, label) => (m ? `<span class="soft-chip soft-${{ cash: "success", mpesa: "purple", bank: "primary", cheque: "warning" }[m] || "primary"}">${esc(label || { cash: "Cash", mpesa: "M-Pesa", bank: "Bank", cheque: "Cheque" }[m])}</span>` : "");
+  const METHOD_LABELS = { cash: "Cash", mpesa: "M-Pesa", airtel: "Airtel Money", bank: "Bank", cheque: "Cheque", card: "Card" };
+  const methodChip = (m, label) => (m ? `<span class="acc-method">${methodLogo(m, "xs")}<span>${esc(label || METHOD_LABELS[m] || m)}</span></span>` : "");
+
+  /** A date as a small calendar tile (today in solid colour). */
+  function dateTile(iso) {
+    if (!iso) return "";
+    const d = new Date(`${String(iso).slice(0, 10)}T12:00:00`);
+    const today = new Date().toISOString().slice(0, 10) === String(iso).slice(0, 10);
+    return `<span class="acc-date-tile${today ? " is-today" : ""}"><strong>${d.getDate()}</strong><small>${d.toLocaleDateString("en-GB", { month: "short" })}</small></span>`;
+  }
+  /** "Today", "Yesterday", "3 days ago", or the year when it is older. */
+  function since(iso) {
+    const days = Math.round((new Date(new Date().toISOString().slice(0, 10)) - new Date(String(iso).slice(0, 10))) / 86400000);
+    return days <= 0 ? "Today" : days === 1 ? "Yesterday" : days < 31 ? `${days} days ago` : day(iso, { month: "short", year: "numeric" });
+  }
+  /** Money in green with an arrow down, out red with an arrow up, a transfer neutral. */
+  function signedAmount(docType, amount) {
+    const dir = { receipt: "in", payment: "out", bill: "out", payroll: "out" }[docType];
+    const icon = dir === "in" ? "ri-arrow-left-down-line" : dir === "out" ? "ri-arrow-right-up-line" : "ri-arrow-left-right-line";
+    return `<span class="acc-signed is-${dir || "neutral"}"><i class="${icon}"></i>${money(amount)}</span>`;
+  }
+  /** Which record page a posted document belongs to, if any. */
+  function sourceRecord(j) {
+    const t = { payment_voucher: "voucher", collection: "collection", collection_banking: "collection", payroll_run: "payroll" }[j.source];
+    return t && j.source_id ? { type: t, id: j.source_id } : null;
+  }
   const reversedChip = () => '<span class="soft-chip soft-danger"><i class="ri-arrow-go-back-line"></i>Reversed</span>';
 
   /** Is the page looking at a place below (read-only)? */
@@ -267,7 +309,7 @@ const AccountingUI = (function () {
     return `<span class="acc-acct"><span class="acc-acct-tile bg-${m.color} ${textOn(m.color)}"><i class="${m.icon}"></i></span><span>${esc(acc.name)}</span></span>`;
   }
 
-  return { approvalTimeline, person, avatar, personColor, initials, dateChip, accountChip, journey, mini, approvalSteps, nextCard, esc, textOn, money, short, figure, amount, day, num, KINDS, kind, tile, DOCS, doc, docPill, docTile, VOUCHER, voucherPill, methodChip, reversedChip, viewingBelow, placeLine, placePicker, ownOnly, options, empty, errorBox, link };
+  return { approvalTimeline, methodLogo, dateTile, since, signedAmount, sourceRecord, person, avatar, personColor, initials, dateChip, accountChip, journey, mini, approvalSteps, nextCard, esc, textOn, money, short, figure, amount, day, num, KINDS, kind, tile, DOCS, doc, docPill, docTile, VOUCHER, voucherPill, methodChip, reversedChip, viewingBelow, placeLine, placePicker, ownOnly, options, empty, errorBox, link };
 })();
 
 window.AccountingUI = AccountingUI;

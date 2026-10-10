@@ -39922,3 +39922,45 @@ a.acc-chain-item:hover, button.acc-chain-item:hover { border-color: rgba(var(--p
 .acc-page .acc-table .acc-sub.text-truncate { max-width: 20rem; }
 .acc-page .acc-table td.text-end .acc-sub { max-width: 9.5rem; }
 .acc-page .acc-table .acc-sub.text-truncate { max-width: 16rem; }
+
+/* ===========================================================================
+   ACCOUNTING REDESIGN R2b (2026-10-10) - real payment logos, money in by
+   channel, documents tables like the template's transaction lists
+   =========================================================================== */
+.acc-logo { display: inline-grid; flex-shrink: 0; place-items: center; border: 1px solid var(--default-border); border-radius: .5rem; background: #fff; overflow: hidden; }
+.acc-logo img { display: block; max-width: 80%; max-height: 70%; }
+.acc-logo-xs { width: 1.45rem; height: 1.15rem; border-radius: .3rem; }
+.acc-logo-sm { width: 2.1rem; height: 1.6rem; }
+.acc-logo-lg { width: 3.4rem; height: 2.5rem; border-radius: .65rem; }
+.acc-logo.is-card { display: inline-flex; gap: 2px; padding: 0 2px; }
+.acc-logo.is-card img { max-width: 48%; }
+.acc-logo.is-icon { border: 0; color: #fff; }
+.acc-logo-xs.is-icon { font-size: .7rem; }
+.acc-logo-sm.is-icon { font-size: .95rem; }
+.acc-logo-lg.is-icon { font-size: 1.35rem; }
+.acc-logo-avatar { border: 1px solid var(--default-border); background: #fff; }
+.acc-logo-avatar img { max-width: 78%; max-height: 64%; }
+.acc-method { display: inline-flex; align-items: center; gap: .35rem; padding: .15rem .55rem .15rem .2rem; border: 1px solid var(--default-border); border-radius: 1rem; background: #fff; font-size: .74rem; font-weight: 600; color: var(--v2-heading); white-space: nowrap; }
+.acc-date-tile { display: inline-flex; flex: 0 0 2.6rem; flex-direction: column; align-items: center; justify-content: center; width: 2.6rem; height: 2.6rem; border: 1px solid var(--default-border); border-radius: .65rem; background: #fff; line-height: 1.05; }
+.acc-date-tile strong { font-size: .98rem; color: var(--v2-heading); }
+.acc-date-tile small { font-size: .62rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: rgb(var(--primary-rgb)); }
+.acc-date-tile.is-today { border-color: rgb(var(--primary-rgb)); background: rgb(var(--primary-rgb)); }
+.acc-date-tile.is-today strong, .acc-date-tile.is-today small { color: #fff; }
+.acc-signed { display: inline-flex; align-items: center; gap: .25rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.acc-signed i { display: inline-grid; place-items: center; width: 1.3rem; height: 1.3rem; border-radius: 50%; font-size: .8rem; }
+.acc-signed.is-in { color: rgb(var(--success-rgb)); }
+.acc-signed.is-in i { background: rgb(var(--success-rgb)); color: #fff; }
+.acc-signed.is-out { color: rgb(var(--danger-rgb)); }
+.acc-signed.is-out i { background: rgb(var(--danger-rgb)); color: #fff; }
+.acc-signed.is-neutral { color: var(--v2-heading); }
+.acc-signed.is-neutral i { background: rgb(var(--primary-rgb)); color: #fff; }
+.acc-page .acc-table td .badge { font-size: .66rem; }
+
+/* Money in by channel */
+.acc-channels { display: grid; grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr)); gap: .85rem; }
+.acc-channel { display: flex; flex-direction: column; gap: .55rem; padding: .95rem 1rem; border: 1px solid var(--default-border); border-radius: .9rem; background: #fff; }
+.acc-channel-figure { font-size: 1.35rem; font-weight: 700; color: var(--v2-heading); }
+.acc-channel .pp-stat-spark { flex: none; max-width: none; width: 100%; }
+.acc-logo-xs { width: 2.1rem; height: 1.35rem; }
+.acc-logo-xs img { max-width: 88%; max-height: 80%; }
+.acc-method { padding-left: .15rem; }

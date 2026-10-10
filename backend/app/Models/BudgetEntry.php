@@ -25,7 +25,7 @@ class BudgetEntry extends Model implements HasMedia
     /** At most this many receipts on one entry. */
     public const MAX_RECEIPTS = 3;
 
-    public const METHODS = ['cash' => 'Cash', 'mpesa' => 'M-Pesa', 'bank' => 'Bank', 'cheque' => 'Cheque'];
+    public const METHODS = ['cash' => 'Cash', 'mpesa' => 'M-Pesa', 'bank' => 'Bank', 'cheque' => 'Cheque', 'airtel' => 'Airtel Money'];
 
     protected $fillable = [
         'budget_id', 'budget_line_item_id', 'activity_id', 'direction', 'amount', 'entry_date',

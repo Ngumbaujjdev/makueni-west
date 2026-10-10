@@ -17,7 +17,7 @@ class AccountingAccount extends Model
 {
     public const TYPES = ['asset' => 'Assets', 'liability' => 'Liabilities', 'fund' => 'Funds', 'income' => 'Income', 'expense' => 'Expenses'];
 
-    public const CASH_KINDS = ['cash' => 'Cash', 'petty_cash' => 'Petty cash', 'bank' => 'Bank', 'mpesa' => 'M-Pesa'];
+    public const CASH_KINDS = ['cash' => 'Cash', 'petty_cash' => 'Petty cash', 'bank' => 'Bank', 'mpesa' => 'M-Pesa', 'airtel' => 'Airtel Money'];
 
     protected $fillable = [
         'territory_id', 'parent_id', 'code', 'name', 'description', 'type', 'system_key', 'cash_kind',

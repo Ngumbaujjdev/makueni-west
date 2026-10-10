@@ -430,19 +430,19 @@ const AccountingWindows = (function () {
   function account({ account: acc = null, kind = "bank", onDone } = {}) {
     const k = acc?.cash_kind || kind;
     open({
-      title: acc ? `Change ${acc.name}` : k === "mpesa" ? "Add an M-Pesa account" : "Add a bank account",
+      title: acc ? `Change ${acc.name}` : k === "mpesa" ? "Add an M-Pesa account" : k === "airtel" ? "Add an Airtel Money account" : "Add a bank account",
       subtitle: acc ? acc.code : "Only our books use it; it sits under the diocese's chart",
       icon: A.kind(k).icon,
       size: "modal-lg",
       parts: [
-        ...(acc ? [] : [{ title: "What kind?", body: `<div class="mw-days" role="radiogroup"><label><input type="radio" name="acKind" value="bank"${k === "bank" ? " checked" : ""}><span><i class="ri-bank-line me-1"></i>Bank</span></label><label><input type="radio" name="acKind" value="mpesa"${k === "mpesa" ? " checked" : ""}><span><i class="ri-smartphone-line me-1"></i>M-Pesa</span></label></div>` }]),
+        ...(acc ? [] : [{ title: "What kind?", body: `<div class="mw-days" role="radiogroup"><label><input type="radio" name="acKind" value="bank"${k === "bank" ? " checked" : ""}><span><i class="ri-bank-line me-1"></i>Bank</span></label><label><input type="radio" name="acKind" value="mpesa"${k === "mpesa" ? " checked" : ""}><span class="d-inline-flex align-items-center gap-1">${A.methodLogo("mpesa", "xs")}M-Pesa</span></label><label><input type="radio" name="acKind" value="airtel"${k === "airtel" ? " checked" : ""}><span class="d-inline-flex align-items-center gap-1">${A.methodLogo("airtel", "xs")}Airtel Money</span></label></div>` }]),
         {
           title: "Details",
           body: `<div class="row g-2"><div class="col-12"><input type="text" class="form-control" id="acName" data-field="name" maxlength="150" placeholder="Name, e.g. Equity - Main account" value="${esc(acc?.name || "")}"></div>
           <div class="col-sm-6" data-for="bank"><input type="text" class="form-control" id="acBank" maxlength="100" placeholder="Bank" value="${esc(acc?.bank_name || "")}"></div>
           <div class="col-sm-6" data-for="bank"><input type="text" class="form-control" id="acBranch" maxlength="100" placeholder="Branch" value="${esc(acc?.branch || "")}"></div>
           <div class="col-sm-6" data-for="bank"><input type="text" class="form-control" id="acNo" maxlength="50" placeholder="Account number" value="${esc(acc?.account_number || "")}"></div>
-          <div class="col-sm-6" data-for="mpesa"><input type="text" class="form-control" id="acMpesa" maxlength="30" placeholder="Till, paybill or phone number" value="${esc(acc?.mpesa_number || "")}"></div>
+          <div class="col-sm-6" data-for="mpesa airtel"><input type="text" class="form-control" id="acMpesa" maxlength="30" placeholder="Till, paybill or phone number" value="${esc(acc?.mpesa_number || "")}"></div>
           ${acc ? `<div class="col-12"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="acActive"${acc.is_active ? " checked" : ""}><label class="form-check-label" for="acActive">In use</label></div></div>` : ""}</div>`,
         },
       ],
@@ -450,7 +450,7 @@ const AccountingWindows = (function () {
       onReady: (el) => {
         const show = () => {
           const kk = el.querySelector('input[name="acKind"]:checked')?.value || k;
-          el.querySelectorAll("[data-for]").forEach((x) => (x.hidden = x.dataset.for !== kk));
+          el.querySelectorAll("[data-for]").forEach((x) => (x.hidden = !x.dataset.for.split(" ").includes(kk)));
         };
         el.querySelectorAll('input[name="acKind"]').forEach((r) => r.addEventListener("change", show));
         show();
@@ -546,7 +546,7 @@ const AccountingWindows = (function () {
       filesPart(j.files, { canAdd: own && (j.can.receipt || j.can.journal || j.can.pay || j.can.prepare), canRemove: own && (j.can.receipt || j.can.journal) });
     const foot = `${j.can.reverse ? '<button type="button" class="btn btn-outline-danger me-auto" data-reverse><i class="ri-arrow-go-back-line me-1"></i>Reverse</button>' : ""}${j.doc_type === "receipt" ? '<button type="button" class="btn btn-outline-primary" data-print><i class="ri-printer-line me-1"></i>Print receipt</button>' : ""}<button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>`;
     const dir = { receipt: "in", payment: "out", bill: "out", payroll: "out" }[j.doc_type] || "";
-    const hero = { amount: j.amount, dir, status: `${A.docPill(j.doc_type)}${j.status === "reversed" ? ` ${A.reversedChip()}` : ""}`, facts: [["Date", A.dateChip(j.date)], [j.doc_type === "payment" ? "Paid to" : j.doc_type === "receipt" ? "Received from" : "From", esc(j.party_name)], ["How", esc(j.method_label || "-")]] };
+    const hero = { amount: j.amount, dir, status: `${A.docPill(j.doc_type)}${j.status === "reversed" ? ` ${A.reversedChip()}` : ""}`, facts: [["Date", A.dateChip(j.date)], [j.doc_type === "payment" ? "Paid to" : j.doc_type === "receipt" ? "Received from" : "From", esc(j.party_name)], ["How", A.methodChip(j.method, j.method_label) || "-"]] };
     const el = viewFrame({ title: `${A.doc(j.doc_type).label} ${j.number}`, subtitle: j.place.name, icon: A.doc(j.doc_type).icon, body, foot, hero, tone: A.doc(j.doc_type).color });
     wireFilesView(el, { add: (f) => API.addJournalFile(j.id, f), remove: (m) => API.removeJournalFile(j.id, m), openUrl: (m) => API.journalFileUrl(j.id, m), reload: () => viewJournal(id, { onChange }) });
     el.querySelector("[data-print]")?.addEventListener("click", () => printReceipt(j));
@@ -598,7 +598,7 @@ const AccountingWindows = (function () {
     w.document.close();
   }
 
-  const HOW = { cash: "Cash", mpesa: "M-Pesa", bank: "Bank", cheque: "Cheque" };
+  const HOW = { cash: "Cash", mpesa: "M-Pesa", airtel: "Airtel Money", bank: "Bank", cheque: "Cheque", card: "Card" };
   const how = (m) => HOW[m] || m || "";
 
   /** A voucher's journey: prepared, each approval stage (or "Authorised"), paid, in the books. */
@@ -651,7 +651,7 @@ const AccountingWindows = (function () {
     const body =
       alert +
       part("ri-route-line", "Where it stands", A.journey(voucherSteps(v)) + voucherNext(v), v.approval?.workflow ? `<small>${esc(v.approval.workflow)}</small>` : "", "warning") +
-      part("ri-information-line", "Details", factGrid([v.payee_phone && ["Phone", esc(v.payee_phone)], ["For", esc(v.narration)], v.authorise_note && ["Authoriser's note", esc(v.authorise_note)], v.status === "paid" && ["Paid by", `${esc(how(v.method))} ${esc(v.reference || "")}`], v.journal_number && ["In the books", esc(v.journal_number)]]), "", "primary") +
+      part("ri-information-line", "Details", factGrid([v.payee_phone && ["Phone", esc(v.payee_phone)], ["For", esc(v.narration)], v.authorise_note && ["Authoriser's note", esc(v.authorise_note)], v.status === "paid" && ["Paid by", `${A.methodChip(v.method)} ${esc(v.reference || "")}`], v.journal_number && ["In the books", esc(v.journal_number)]]), "", "primary") +
       part("ri-list-check-2", "What it pays for", lines, "", "purple") +
       filesPart(v.files, { canAdd: c.own && (c.prepare || c.pay || c.journal), canRemove: c.own && v.status !== "paid" && (c.prepare || c.pay), label: "Invoice, quote and receipt" });
     const btn = (key, cls, icon, label) => `<button type="button" class="btn ${cls}" data-act="${key}"><i class="${icon} me-1"></i>${label}</button>`;
@@ -685,7 +685,7 @@ const AccountingWindows = (function () {
 
   function payWindow(v, onDone) {
     const today = new Date().toISOString().slice(0, 10);
-    const def = { cash: "cash", petty_cash: "cash", bank: "bank", mpesa: "mpesa" }[v.pay_from?.kind] || "cash";
+    const def = { cash: "cash", petty_cash: "cash", bank: "bank", mpesa: "mpesa", airtel: "airtel" }[v.pay_from?.kind] || "cash";
     const el = PeopleKit.confirmWindow({
       title: `Pay ${v.number}`,
       subtitle: `${A.money(v.amount)} to ${v.payee_name} from ${v.pay_from?.name || ""}`,
@@ -693,7 +693,7 @@ const AccountingWindows = (function () {
       go: '<i class="ri-check-line me-1"></i>Pay and post',
       body: PeopleKit.parts([
         { icon: "ri-calendar-line", title: "Paid on", body: `<input type="date" class="form-control" id="payOn" value="${today}" max="${today}">` },
-        { icon: "ri-bank-card-line", title: "How", body: `<div class="mw-days" role="radiogroup">${[["cash", "Cash"], ["mpesa", "M-Pesa"], ["bank", "Bank"], ["cheque", "Cheque"]].map(([k, l]) => `<label><input type="radio" name="payHow" value="${k}"${k === def ? " checked" : ""}><span>${l}</span></label>`).join("")}</div><input type="text" class="form-control mt-2" id="payRef" maxlength="100" placeholder="M-Pesa code / cheque no. / bank reference">` },
+        { icon: "ri-bank-card-line", title: "How", body: `<div class="mw-days" role="radiogroup">${[["cash", "Cash"], ["mpesa", "M-Pesa"], ["airtel", "Airtel Money"], ["bank", "Bank"], ["cheque", "Cheque"]].map(([k, l]) => `<label><input type="radio" name="payHow" value="${k}"${k === def ? " checked" : ""}><span>${l}</span></label>`).join("")}</div><input type="text" class="form-control mt-2" id="payRef" maxlength="100" placeholder="M-Pesa code / cheque no. / bank reference">` },
       ]),
       run: async () => {
         const res = await API.pay(v.id, { paid_on: document.getElementById("payOn").value, method: document.querySelector('input[name="payHow"]:checked').value, reference: document.getElementById("payRef").value.trim() || null });

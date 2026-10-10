@@ -29,6 +29,7 @@ final class Chart
         '1020' => ['Petty cash', 'asset', ['parent' => '1000', 'key' => 'petty_cash', 'cash' => 'petty_cash', 'about' => 'The small float for day-to-day spending']],
         '1100' => ['Bank accounts', 'asset', ['parent' => '1000', 'header' => true, 'key' => 'banks', 'cash' => 'bank', 'about' => 'Each place adds its own bank accounts here']],
         '1150' => ['M-Pesa accounts', 'asset', ['parent' => '1000', 'header' => true, 'key' => 'mpesa', 'cash' => 'mpesa', 'about' => 'Each place adds its till, paybill or phone here']],
+        '1160' => ['Airtel Money accounts', 'asset', ['parent' => '1000', 'header' => true, 'key' => 'airtel', 'cash' => 'airtel', 'about' => 'Each place adds its Airtel Money number here']],
         '1170' => ['Online payments clearing', 'asset', ['key' => 'online_clearing', 'about' => 'Paid online (Paystack) but not yet settled to the bank']],
         '1200' => ['Staff advances', 'asset', ['key' => 'staff_advances', 'about' => 'Money given out ahead, still to be accounted for']],
         '1300' => ['Due from places below', 'asset', ['key' => 'due_from_below', 'about' => 'What churches and regions owe us']],
@@ -107,6 +108,7 @@ final class Chart
     private const PLACE_KINDS = [
         'bank' => ['1100', 'Bank'],
         'mpesa' => ['1150', 'M-Pesa'],
+        'airtel' => ['1160', 'Airtel Money'],
     ];
 
     /** @var array<string, AccountingAccount> */

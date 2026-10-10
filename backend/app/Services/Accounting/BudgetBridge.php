@@ -152,6 +152,7 @@ final class BudgetBridge
     {
         return match ($method) {
             'mpesa' => 'mpesa',
+            'airtel' => 'airtel',
             'bank', 'cheque' => 'bank',
             default => 'cash',
         };

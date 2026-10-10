@@ -229,7 +229,7 @@ abstract class BudgetReport extends Report
     protected function entriesSection(array $entries, string $direction): ReportSection
     {
         $in = $direction === 'in';
-        $methods = ['cash' => 'Cash', 'mpesa' => 'M-Pesa', 'bank' => 'Bank', 'cheque' => 'Cheque'];
+        $methods = ['cash' => 'Cash', 'mpesa' => 'M-Pesa', 'bank' => 'Bank', 'cheque' => 'Cheque', 'airtel' => 'Airtel Money'];
 
         return new ReportSection($in ? 'Income' : 'Expenses', [
             ReportColumn::text('Date'),
