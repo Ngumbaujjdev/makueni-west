@@ -380,12 +380,42 @@ Under `/api/accounting`: `GET|POST requisitions` · `GET requisitions/options` �
 ### Permissions
 `accounting.approvals.read` and `accounting.requisitions.create` for every role at a level; `accounting.requisitions.read` with reading the books; `diocese.accounting.approvalrules.manage` (Diocese Finance Officer). Approving needs no permission - being assigned is what lets someone act. Paying needs `payments.pay`.
 
+## A5 - Procurement (built 2026-10-09)
+
+Standard buying - quotations, a local purchase order (LPO), goods received (GRN), the supplier's invoice matched three ways, then payment - but only for bigger purchases. Small ones stay a requisition paid straight away. Every level.
+
+### Thresholds (Settings > Procurement, diocese)
+- `procurement.one_quote_limit` (default 50,000): a purchase requisition up to this can be paid straight away (A4) or ordered; above it, it must go through an order.
+- `procurement.quotes_needed` (default 3): quotations needed before an order above the limit.
+
+### Data
+- `suppliers`: place, name (unique in the place), phone, email, KRA PIN, how to pay them, notes, active. Removed only if never used; otherwise switched off.
+- `quotations`: on a requisition - supplier, amount, notes, the quote file, `chosen` with `chosen_reason` (needed when it isn't the cheapest).
+- `purchase_orders`: place, number `LPO`, requisition (one order per requisition), supplier, date, deliver_by, notes, amount, status issued | part_received | received | closed | cancelled, issued_by, closed/cancelled by and reason.
+- `purchase_order_lines`: description, quantity, unit_price, amount, account (expense, or 1500 Fixed assets for an asset), fund, budget line, `is_asset`, `received_qty`, `billed_qty`.
+- `goods_received` (+ lines): number `GRN`, the order, date, received_by, notes, photo or delivery note; per line the quantity and, for an asset at a church, the Facilities equipment item it made.
+- `supplier_invoices` (+ lines): the bill - number `BILL` (its journal's), supplier, order, the supplier's own invoice number, date, due date, amount, status posted | paid | reversed, journal, payment voucher, the invoice file; per line the order line, quantity, unit price, amount.
+- `requisitions.status` gains `ordered`; `payment_vouchers.purpose` gains `bill` and `supplier_invoice_id`; `journals.doc_type` gains `bill`.
+
+### Rules
+- Quotations are added to a purchase requisition by the person asking or whoever buys (`procurement.manage`), until it is ordered; one is chosen, with a reason if it isn't the cheapest.
+- **Raise the order** (whoever buys): the requisition is an approved purchase; above the limit it has the quotations needed and a chosen one. The order goes to the chosen supplier (or one picked, at or below the limit). Its lines can't add up to more than was approved. The requisition becomes ordered. Nobody approves again - the requisition's approval carries over.
+- **Goods received:** the quantity received per line, never more than is still to come; the order becomes part-received or received. At a church, an asset line creates the equipment in Facilities (name, quantity, value, supplier, date). A delivery can be undone while nothing on it is billed (its equipment goes too).
+- **The bill (3-way match):** per line, the quantity billed can't exceed what was received and not yet billed, and the price can't be above the order's. Posting it gives Dr each line's account (expense or 1500) / Cr **2100 Suppliers payable**, with the supplier as the party; Budgets count it then, on the line's budget line. An unpaid bill can be reversed (its quantities free up again).
+- **Pay the bill** (whoever prepares payments): a payment voucher already authorised - Dr 2100 / Cr the bank, cash or M-Pesa - paid as any voucher. Paying it marks the bill paid; reversing that payment, or cancelling the voucher, opens it again.
+- An order is cancelled only while nothing is received (the requisition goes back to approved); a part-received order can be closed (nothing more is expected). When the order is received or closed and every bill on it is paid, the requisition is paid.
+
+### API (under `/api/accounting`)
+`GET procurement` · `GET procurement/options` · `GET|POST procurement/suppliers`, `PUT|DELETE procurement/suppliers/{id}` · `POST requisitions/{id}/quotes`, `DELETE requisitions/{id}/quotes/{quote}`, `POST requisitions/{id}/quotes/{quote}/choose`, `GET requisitions/{id}/quotes/{quote}/file` · `POST requisitions/{id}/order` · `GET procurement/orders/{id}` · `POST procurement/orders/{id}/receive|bill|close|cancel` · `POST procurement/deliveries/{id}/undo` · `POST procurement/bills/{id}/pay|reverse`, `GET procurement/bills/{id}/file`.
+
+### Permissions
+`{level}.accounting.procurement.manage` (Church Treasurer, Church Administrator; Regional Treasurer, Regional Secretary; Diocese Finance Officer, Diocese Treasurer, Diocese Administrator) and `{level}.accounting.procurement.read` (with reading the books). Paying a bill needs `payments.prepare` (to make the voucher) and `payments.pay`.
+
 ## Later phases (outline - specified when built)
 - **A2 Reconciliation:** built 2026-10-09, see "A2 - Reconciliation" above.
 - **A3 Sunday collections:** built 2026-10-09, see "A3 - Sunday collections" above.
 - **A4 Approvals engine + requisitions:** built 2026-10-09, see "A4 - Approvals and requisitions" above.
-- **A5 Procurement by threshold:** quotes, LPO, GRN, invoice, 3-way match,
-  suppliers, the fixed asset register.
+- **A5 Procurement by threshold:** built 2026-10-09, see "A5 - Procurement" above.
 - **A6 Between levels:** remittances accrued as Due to / Due from, paid, in
   transit and confirmed; statements and inter-level reconciliation.
 - **A7 Payroll:** employees, monthly runs, Kenyan deductions with their rates in

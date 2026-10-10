@@ -61,6 +61,20 @@ const AccountingAPI = (function () {
     return request("POST", path, { form });
   }
 
+  /** Fields (with lines: [{...}]) and files as one multipart form - lines[0][quantity]... */
+  function formOf(body, files = {}) {
+    const form = new FormData();
+    const add = (key, v) => {
+      if (v === undefined || v === null) return;
+      if (Array.isArray(v)) return v.forEach((x, i) => add(`${key}[${i}]`, x));
+      if (typeof v === "object") return Object.entries(v).forEach(([k, x]) => add(`${key}[${k}]`, x));
+      form.append(key, typeof v === "boolean" ? (v ? "1" : "0") : v);
+    };
+    Object.entries(body || {}).forEach(([k, v]) => add(k, v));
+    Object.entries(files).forEach(([k, list]) => [].concat(list || []).forEach((f) => form.append(k, f)));
+    return form;
+  }
+
   /** A private file through the API, as a blob URL for a new tab. */
   async function fileUrl(path) {
     const h = headers(false);
@@ -159,6 +173,26 @@ const AccountingAPI = (function () {
     addRequisitionFile: (id, file) => upload(`/accounting/requisitions/${id}/attachments`, file),
     requisitionFileUrl: (id, media) => fileUrl(`/accounting/requisitions/${id}/attachments/${media}`),
     retireAdvance: (id, body) => request("POST", `/accounting/advances/${id}/retire`, { body }),
+    // A5 - procurement
+    procurement: () => request("GET", "/accounting/procurement"),
+    procurementOptions: () => request("GET", "/accounting/procurement/options"),
+    saveSupplier: (id, body) => request(id ? "PUT" : "POST", id ? `/accounting/procurement/suppliers/${id}` : "/accounting/procurement/suppliers", { body }),
+    removeSupplier: (id) => request("DELETE", `/accounting/procurement/suppliers/${id}`),
+    addQuote: (rid, body, file) => request("POST", `/accounting/requisitions/${rid}/quotes`, { form: formOf(body, { file }) }),
+    removeQuote: (rid, qid) => request("DELETE", `/accounting/requisitions/${rid}/quotes/${qid}`),
+    chooseQuote: (rid, qid, reason) => request("POST", `/accounting/requisitions/${rid}/quotes/${qid}/choose`, { body: { reason } }),
+    quoteFileUrl: (rid, qid) => fileUrl(`/accounting/requisitions/${rid}/quotes/${qid}/file`),
+    raiseOrder: (rid, body) => request("POST", `/accounting/requisitions/${rid}/order`, { body }),
+    order: (id) => request("GET", `/accounting/procurement/orders/${id}`),
+    receiveGoods: (id, body, files) => request("POST", `/accounting/procurement/orders/${id}/receive`, { form: formOf(body, { "files[]": files }) }),
+    postBill: (id, body, file) => request("POST", `/accounting/procurement/orders/${id}/bill`, { form: formOf(body, { file }) }),
+    closeOrder: (id, reason) => request("POST", `/accounting/procurement/orders/${id}/close`, { body: { reason } }),
+    cancelOrder: (id, reason) => request("POST", `/accounting/procurement/orders/${id}/cancel`, { body: { reason } }),
+    undoDelivery: (id) => request("POST", `/accounting/procurement/deliveries/${id}/undo`),
+    deliveryFileUrl: (id, media) => fileUrl(`/accounting/procurement/deliveries/${id}/files/${media}`),
+    payBill: (id, payFrom) => request("POST", `/accounting/procurement/bills/${id}/pay`, { body: { pay_from_account_id: payFrom } }),
+    reverseBill: (id, reason) => request("POST", `/accounting/procurement/bills/${id}/reverse`, { body: { reason } }),
+    billFileUrl: (id) => fileUrl(`/accounting/procurement/bills/${id}/file`),
   };
 })();
 

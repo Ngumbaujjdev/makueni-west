@@ -31,6 +31,7 @@
     approved: ["primary", "ri-shield-check-line", "To pay"],
     returned: ["danger", "ri-arrow-go-back-line", "Sent back"],
     rejected: ["danger", "ri-close-circle-line", "Rejected"],
+    ordered: ["purple", "ri-shopping-cart-2-line", "Ordered"],
     paid: ["success", "ri-checkbox-circle-line", "Paid"],
     cancelled: ["secondary", "ri-close-line", "Cancelled"],
   };
@@ -58,7 +59,7 @@
     <td data-search="${esc(`${r.number} ${r.purpose} ${r.requested_by || ""} ${r.payee_name || ""}`)}" data-order="${esc(r.number)}"><div class="d-flex align-items-center gap-2"><span class="avatar avatar-sm avatar-rounded bg-${KIND[r.kind][1]} ${A.textOn(KIND[r.kind][1])}"><i class="${KIND[r.kind][0]}"></i></span><div class="min-w-0"><div class="fw-semibold">${esc(r.purpose)}</div><div class="acc-sub">${esc(r.number)} · ${esc(r.kind_label)}${r.files ? ` · <i class="ri-attachment-2"></i>${r.files}` : ""}</div></div></div></td>
     <td data-order="${r.requested_at}" class="text-nowrap">${A.day(r.requested_at)}</td>
     <td class="d-none d-md-table-cell">${esc(r.requested_by || "")}</td>
-    <td class="d-none d-lg-table-cell">${pill(r.status)}<div class="acc-sub mt-1">${esc(r.status === "submitted" ? (r.waiting_on.length ? `Waiting for ${r.waiting_on.join(", ")}` : "Waiting for someone who can approve") : r.status === "approved" ? (r.voucher ? `Voucher ${r.voucher.number}` : `Approved by ${r.decided_by || ""}`) : r.decision_note || "")}</div></td>
+    <td class="d-none d-lg-table-cell">${pill(r.status)}<div class="acc-sub mt-1">${esc(r.status === "submitted" ? (r.waiting_on.length ? `Waiting for ${r.waiting_on.join(", ")}` : "Waiting for someone who can approve") : r.status === "approved" ? (r.voucher ? `Voucher ${r.voucher.number}` : `Approved by ${r.decided_by || ""}`) : r.status === "ordered" ? "Waiting for the goods and the bill" : r.decision_note || "")}</div></td>
     <td class="text-end" data-order="${r.amount}"><strong>${A.money(r.amount)}</strong>${r.can.decide ? '<div><span class="badge bg-success mt-1">Your turn</span></div>' : ""}</td>
   </tr>`;
 
@@ -86,6 +87,7 @@
         { key: "submitted", label: "Waiting", icon: ST.submitted[1], color: "warning", test: (r) => r.status === "submitted" },
         { key: "approved", label: "To pay", icon: ST.approved[1], color: "primary", test: (r) => r.status === "approved" },
         { key: "returned", label: "Sent back", icon: ST.returned[1], color: "danger", test: (r) => r.status === "returned" },
+        { key: "ordered", label: "Ordered", icon: ST.ordered[1], color: "purple", test: (r) => r.status === "ordered" },
         { key: "paid", label: "Paid", icon: ST.paid[1], color: "success", test: (r) => r.status === "paid" },
         { key: "advance", label: "Advances", icon: KIND.advance[0], color: "purple", test: (r) => r.kind === "advance" },
         { key: "mine", label: "Mine", icon: "ri-user-line", color: "pink", test: (r) => r.requested_by_id === data.me },
@@ -226,7 +228,9 @@
       c.cancel ? btn("cancel", "btn-outline-danger me-auto", "ri-close-circle-line", "Cancel it") : "",
       c.edit ? btn("edit", "btn-outline-primary", "ri-edit-line", r.status === "returned" ? "Fix and send again" : "Change") : "",
       c.decide ? btn("reject", "btn-outline-danger", "ri-close-line", "Reject") + btn("return", "btn-outline-warning", "ri-arrow-go-back-line", "Send back") + btn("approve", "btn-success", "ri-check-line", "Approve") : "",
+      r.procurement?.can.order ? `<a class="btn ${c.pay ? "btn-outline-primary" : "btn-primary"}" href="${A.link("procurement.php", { order_for: r.id })}"><i class="ri-shopping-cart-2-line me-1"></i>Raise the order</a>` : "",
       c.pay ? btn("pay", "btn-primary", "ri-hand-coin-line", "Make the payment") : "",
+      r.procurement?.order ? `<a class="btn btn-outline-primary" href="${A.link("procurement.php", { order: r.procurement.order.id })}"><i class="ri-shopping-cart-2-line me-1"></i>Order ${esc(r.procurement.order.number)}</a>` : "",
       r.voucher ? `<a class="btn btn-outline-primary" href="${A.link("payments.php", { voucher: r.voucher.id })}"><i class="ri-file-list-3-line me-1"></i>Voucher ${esc(r.voucher.number)}</a>` : "",
       '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>',
     ].join("");
@@ -238,6 +242,7 @@
           ${r.status === "returned" ? `<div class="alert alert-warning mb-3"><strong>Sent back:</strong> ${esc(r.decision_note || "")}</div>` : r.status === "rejected" ? `<div class="alert alert-danger mb-3"><strong>Rejected:</strong> ${esc(r.decision_note || "")}</div>` : ""}
           <section class="app-modal-part"><div class="app-modal-part-head"><i class="ri-file-text-line"></i>What is asked</div><div class="acc-facts">${fact("What for", esc(r.purpose))}${fact("Amount", A.money(r.amount))}${fact("Asked by", esc(r.requested_by || ""))}${fact("On", A.day(r.requested_at))}${fact("Pay to", esc(r.payee_name || ""))}${fact("Needed by", r.needed_by ? A.day(r.needed_by) : "")}${fact("Charged to", r.account ? esc(`${r.account.code} ${r.account.name}`) : "")}${fact("Budget line", esc(r.budget_line || ""))}${fact("Fund", esc(r.fund?.name || ""))}</div></section>
           <section class="app-modal-part"><div class="app-modal-part-head"><i class="ri-attachment-2"></i>Papers</div>${files}</section>
+          ${r.procurement ? `<section class="app-modal-part" id="rkQuotes">${quotesHtml(r)}</section>` : ""}
           ${r.approval ? `<section class="app-modal-part"><div class="app-modal-part-head"><i class="ri-route-line"></i>Approval<small>${esc(r.approval.workflow || "")}</small></div>${A.approvalTimeline(r.approval)}</section>` : r.status === "submitted" ? '<section class="app-modal-part"><div class="app-modal-part-head"><i class="ri-route-line"></i>Approval</div><p class="mb-0">No rule covers it - anyone who authorises payments here (not the person asking) approves it.</p></section>' : ""}
           ${adv}
           ${c.decide ? '<section class="app-modal-part"><div class="app-modal-part-head"><i class="ri-chat-3-line"></i>Your decision<small>A comment is needed to send back or reject</small></div><textarea class="form-control" id="rkComment" rows="2" maxlength="500" placeholder="Comment"></textarea></section>' : ""}
@@ -248,6 +253,7 @@
     const el = document.getElementById("rkWindow");
     el.addEventListener("hidden.bs.modal", () => el.remove());
     bootstrap.Modal.getOrCreateInstance(el).show();
+    if (r.procurement) wireQuotes(r, el);
     el.addEventListener("click", async (e) => {
       const f = e.target.closest("[data-file]");
       if (!f) return;
@@ -277,6 +283,101 @@
       Toast.success(out.message);
       bootstrap.Modal.getInstance(el)?.hide();
       load();
+    });
+  }
+
+  // ------------------------------------------------------------ quotations (a purchase)
+
+  function quotesHtml(r) {
+    const p = r.procurement;
+    const cheapest = Math.min(...p.quotes.map((q) => q.amount));
+    const rule = p.must_order
+      ? `Above KES ${A.num(p.limit)}: ${p.needed} quotations, the one chosen, then an order.`
+      : `Up to KES ${A.num(p.limit)}: pay it straight away, or raise an order.`;
+    const rows = p.quotes.length
+      ? `<div class="acc-quotes">${p.quotes
+          .map(
+            (q) => `<div class="acc-quote${q.chosen ? " is-chosen" : ""}"><div class="min-w-0 flex-fill"><div class="fw-semibold">${esc(q.supplier || "")}${q.chosen ? ' <span class="badge bg-success ms-1">Chosen</span>' : ""}${q.amount === cheapest && p.quotes.length > 1 ? ' <span class="soft-chip soft-primary ms-1">Cheapest</span>' : ""}</div><div class="acc-sub">${esc(q.notes || "")}${q.chosen_reason ? `${q.notes ? " · " : ""}Why: ${esc(q.chosen_reason)}` : ""}</div></div>
+            <strong class="text-nowrap">${A.money(q.amount)}</strong>
+            <div class="d-flex gap-1">${q.file ? `<button type="button" class="btn btn-sm btn-icon btn-outline-primary" data-qfile="${q.id}" aria-label="Open the quote"><i class="ri-file-text-line"></i></button>` : ""}${p.can.choose && !q.chosen ? `<button type="button" class="btn btn-sm btn-outline-success" data-qchoose="${q.id}">Choose</button>` : ""}${p.can.quote ? `<button type="button" class="btn btn-sm btn-icon btn-outline-danger" data-qremove="${q.id}" aria-label="Remove"><i class="ri-delete-bin-line"></i></button>` : ""}</div></div>`,
+          )
+          .join("")}</div>`
+      : '<p class="acc-muted-line mb-2">No quotations yet.</p>';
+    const add = p.can.quote
+      ? `<div class="row g-2 mt-1" id="rkQAdd"><div class="col-sm-5"><select class="form-select" id="rkQSupplier"><option value="">Supplier</option></select></div><div class="col-sm-3"><div class="input-group"><span class="input-group-text">KES</span><input type="text" inputmode="decimal" class="form-control text-end" id="rkQAmount" placeholder="0"></div></div><div class="col-sm-4 d-flex gap-2"><label class="budget-receipt-pick mb-0 flex-fill"><i class="ri-attachment-2"></i><span id="rkQFileName">The quote</span><input type="file" id="rkQFile" accept="image/jpeg,image/png,image/webp,application/pdf" hidden></label><button type="button" class="btn btn-primary" id="rkQGo"><i class="ri-add-line"></i><span class="d-none d-md-inline ms-1">Add</span></button></div></div>`
+      : "";
+    const order = p.order ? `<div class="alert alert-primary mt-2 mb-0">Ordered from <strong>${esc(p.order.supplier || "")}</strong> on ${esc(p.order.number)} · ${esc(p.order.status_label)}</div>` : "";
+    return `<div class="app-modal-part-head"><i class="ri-scales-3-line"></i>Quotations<small>${p.quotes.length} of ${p.must_order ? p.needed : "any"}</small></div><p class="acc-sub mb-2">${rule}</p>${rows}${add}${order}`;
+  }
+
+  async function wireQuotes(r, el) {
+    const box = el.querySelector("#rkQuotes");
+    const refresh = async () => {
+      const res = await API.requisition(r.id);
+      if (!res.ok) return Toast.error(res.message);
+      Object.assign(r, res.data);
+      box.innerHTML = quotesHtml(r);
+      fill();
+    };
+    let suppliers = null;
+    const fill = async () => {
+      const sel = box.querySelector("#rkQSupplier");
+      if (!sel) return;
+      if (!suppliers) suppliers = (await API.requisitionOptions()).data?.suppliers || [];
+      const taken = new Set(r.procurement.quotes.map((q) => q.supplier_id));
+      if (suppliers.length && suppliers.every((x) => taken.has(x.id))) return box.querySelector("#rkQAdd")?.remove();
+      sel.insertAdjacentHTML("beforeend", suppliers.filter((x) => !taken.has(x.id)).map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join(""));
+      if (!suppliers.length) sel.closest(".col-sm-5").insertAdjacentHTML("beforeend", '<div class="acc-sub mt-1">No suppliers yet - the treasurer adds them under Procurement.</div>');
+      UI.enhanceSelect(sel, { search: true });
+      box.querySelector("#rkQFile").addEventListener("change", (e) => (box.querySelector("#rkQFileName").textContent = e.target.files[0]?.name || "The quote"));
+    };
+    fill();
+    box.addEventListener("click", async (e) => {
+      const go = e.target.closest("#rkQGo");
+      const ch = e.target.closest("[data-qchoose]");
+      const rm = e.target.closest("[data-qremove]");
+      const fl = e.target.closest("[data-qfile]");
+      if (fl) {
+        const w = window.open("", "_blank");
+        const u = await API.quoteFileUrl(r.id, Number(fl.dataset.qfile));
+        return u ? (w.location = u) : (w.close(), Toast.error("That file could not be opened."));
+      }
+      if (go) {
+        UI.setButtonLoading(go, "");
+        const out = await API.addQuote(r.id, { supplier_id: Number(box.querySelector("#rkQSupplier").value) || "", amount: n(box.querySelector("#rkQAmount").value) || "" }, box.querySelector("#rkQFile").files[0]);
+        UI.restoreButton(go);
+        if (!out.ok) return Toast.error(out.message);
+        Toast.success(out.message);
+        return refresh();
+      }
+      if (rm) {
+        if (!confirm("Remove this quotation?")) return;
+        const out = await API.removeQuote(r.id, Number(rm.dataset.qremove));
+        if (!out.ok) return Toast.error(out.message);
+        return refresh();
+      }
+      if (ch) {
+        const q = r.procurement.quotes.find((x) => x.id === Number(ch.dataset.qchoose));
+        const cheapest = Math.min(...r.procurement.quotes.map((x) => x.amount));
+        if (q.amount > cheapest) {
+          return K.confirmWindow({
+            title: `Buy from ${q.supplier}`,
+            subtitle: `${A.money(q.amount - cheapest)} more than the cheapest quotation`,
+            icon: "ri-scales-3-line",
+            go: '<i class="ri-check-line me-1"></i>Choose it',
+            body: K.parts([{ icon: "ri-question-line", title: "Why this one?", hint: "The approvers and auditors see it", body: '<textarea class="form-control" id="rkQWhy" rows="2" maxlength="255" placeholder="e.g. Delivers this week; better quality"></textarea>' }]),
+            run: async () => {
+              const out = await API.chooseQuote(r.id, q.id, document.getElementById("rkQWhy").value.trim());
+              if (out.ok) refresh();
+              return out;
+            },
+          });
+        }
+        const out = await API.chooseQuote(r.id, q.id, null);
+        if (!out.ok) return Toast.error(out.message);
+        Toast.success(out.message);
+        refresh();
+      }
     });
   }
 
