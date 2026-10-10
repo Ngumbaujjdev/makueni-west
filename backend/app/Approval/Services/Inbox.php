@@ -4,6 +4,7 @@ namespace App\Approval\Services;
 
 use App\Models\ApprovalAssignment;
 use App\Models\ApprovalDecision;
+use App\Models\ApprovalEvent;
 use App\Models\ApprovalRequest;
 use App\Models\Territory;
 use App\Models\User;
@@ -28,6 +29,53 @@ final class Inbox
         };
 
         return $q->orderByDesc('id')->limit(300)->get()->filter(fn ($r) => $r->subject !== null)->values();
+    }
+
+    /** Which record page shows each kind of request (record.php?type=). */
+    public const RECORD_TYPES = ['payment_voucher' => 'voucher', 'requisition' => 'requisition', 'payroll_run' => 'payroll'];
+
+    /**
+     * The board for one place (Redesign R2): every request still waiting there
+     * and who holds it, this month's numbers, and the latest happenings.
+     */
+    public function board(User $viewer, Territory $place): array
+    {
+        $open = ApprovalRequest::with(['subject', 'territory', 'requester', 'stages.assignments.approver'])
+            ->where('territory_id', $place->id)->where('status', 'pending')->orderBy('id')->get()
+            ->filter(fn ($r) => $r->subject !== null)->values();
+        $overdue = ApprovalAssignment::whereIn('request_id', $open->pluck('id'))->where('status', 'pending')->whereNull('superseded_at')
+            ->whereNotNull('due_at')->where('due_at', '<', now())->pluck('request_id')->unique()->flip();
+        $items = $open->map(fn ($r) => $this->present($r, $viewer) + ['overdue' => isset($overdue[$r->id])])->values();
+
+        $closed = ApprovalRequest::where('territory_id', $place->id)->whereIn('status', ['approved', 'rejected', 'returned'])
+            ->where('completed_at', '>=', now()->startOfMonth())->get(['status', 'created_at', 'completed_at']);
+        $hours = $closed->map(fn ($r) => $r->created_at->diffInMinutes($r->completed_at) / 60);
+
+        $trail = app(\App\Services\Accounting\Trail::class);
+        $requests = ApprovalRequest::where('territory_id', $place->id)->get(['id', 'subject_type', 'subject_id'])->keyBy('id');
+        $activity = ApprovalEvent::whereIn('request_id', $requests->keys())
+            ->whereIn('type', ['submitted', 'decided', 'stage_blocked', 'escalated', 'stage_escalated_empty', 'returned_to_stage', 'cancelled'])
+            ->orderByDesc('id')->limit(20)->get()
+            ->map(function ($e) use ($trail, $requests) {
+                $line = $trail->approvalSentence($e);
+                $r = $requests[$e->request_id];
+                $subject = $r->subject;
+
+                return $line ? array_diff_key($line, ['order' => 1]) + ['record' => ['type' => self::RECORD_TYPES[$r->subject_type] ?? null, 'id' => $r->subject_id, 'number' => $subject?->number ?? ($subject?->month ? 'Payroll '.\Carbon\Carbon::parse("{$subject->month}-01")->format('F Y') : null)]] : null;
+            })->filter()->values();
+
+        return [
+            'open' => $items,
+            'stats' => [
+                'waiting' => $items->count(),
+                'mine' => $items->filter(fn ($i) => $i['my_assignment'])->count(),
+                'overdue' => $items->where('overdue', true)->count(),
+                'approved' => $closed->where('status', 'approved')->count(),
+                'stopped' => $closed->whereIn('status', ['rejected', 'returned'])->count(),
+                'avg_hours' => $hours->count() ? round($hours->avg(), 1) : null,
+            ],
+            'activity' => $activity,
+        ];
     }
 
     public function counts(User $user): array
@@ -75,6 +123,7 @@ final class Inbox
             'status' => $r->status,
             'status_label' => ApprovalRequest::STATUSES[$r->status],
             'subject' => $s + ['id' => $r->subject_id],
+            'record' => ['type' => self::RECORD_TYPES[$r->subject_type] ?? null, 'id' => $r->subject_id],
             'place' => ['id' => $r->territory?->id, 'name' => $r->territory?->name, 'level' => $r->territory?->territory_type?->value],
             'requested_by' => $r->requester?->full_name,
             'requested_at' => $r->created_at?->toIso8601String(),

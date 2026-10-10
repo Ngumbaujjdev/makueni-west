@@ -150,6 +150,21 @@ class BooksController extends AccountingBase
         ]);
     }
 
+    /** GET /accounting/accounts/{id} - one account's page: balance, in and out, movements, budget lines. */
+    public function account(Request $request, int $id): JsonResponse
+    {
+        $place = $this->place($request);
+        if ($place instanceof JsonResponse) {
+            return $place;
+        }
+        $account = AccountingAccount::usableBy($place->id)->where('is_header', false)->find($id);
+        if (! $account) {
+            return $this->notFound('That account isn\'t in these books.');
+        }
+
+        return $this->ok($this->books->accountPage($place, $account) + ['place' => $this->placeInfo($place), 'can' => AccountingAccess::abilities($request->user(), $place)]);
+    }
+
     /** POST /accounting/accounts - one of our own bank or M-Pesa accounts. */
     public function storeAccount(Request $request): JsonResponse
     {

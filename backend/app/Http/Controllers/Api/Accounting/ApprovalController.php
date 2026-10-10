@@ -43,6 +43,17 @@ class ApprovalController extends AccountingBase
         ]);
     }
 
+    /** GET /approvals/board?territory_id= - every request waiting at the place, this month's numbers, the latest happenings. */
+    public function board(Request $request): JsonResponse
+    {
+        $place = $this->place($request);
+        if ($place instanceof JsonResponse) {
+            return $place;
+        }
+
+        return $this->ok($this->inbox->board($request->user(), $place) + ['place' => $this->placeInfo($place)]);
+    }
+
     /** GET /approvals/requests/{id} */
     public function show(Request $request, int $id): JsonResponse
     {

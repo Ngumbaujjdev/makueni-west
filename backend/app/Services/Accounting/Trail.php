@@ -210,23 +210,30 @@ class Trail
         $out = [];
         $events = ApprovalEvent::whereIn('request_id', $requests->pluck('id'))->orderBy('id')->get();
         foreach ($events as $e) {
-            $p = $e->payload ?? [];
-            $who = $this->name($e->actor_id);
-            $out[] = match ($e->type) {
-                'submitted' => $this->event($e->created_at, $who, 'Sent it for approval'.(! empty($p['workflow']) ? " ({$p['workflow']})" : ''), 'ri-send-plane-line', 'primary', null, 10),
-                'stage_opened' => $this->event($e->created_at, null, "Waiting on {$this->names($p['approvers'] ?? [])} - {$p['stage']}", 'ri-time-line', 'warning', null, 11),
-                'decided' => $this->event($e->created_at, $who, ['approve' => 'Approved', 'approved' => 'Approved', 'reject' => 'Rejected', 'rejected' => 'Rejected', 'return' => 'Sent back', 'returned' => 'Sent back'][$p['decision'] ?? ''] ?? 'Decided', ($p['decision'] ?? '') === 'approve' || ($p['decision'] ?? '') === 'approved' ? 'ri-check-line' : 'ri-arrow-go-back-line', in_array($p['decision'] ?? '', ['approve', 'approved'], true) ? 'success' : 'danger', $p['comment'] ?? null, 12),
-                'stage_blocked' => $this->event($e->created_at, null, "Stuck at {$p['stage']}: ".($p['reason'] ?? 'nobody holds the role'), 'ri-error-warning-line', 'danger', null, 13),
-                'stage_skipped' => $this->event($e->created_at, null, "{$p['stage']} was not needed", 'ri-subtract-line', 'secondary', null, 13),
-                'returned_to_stage' => $this->event($e->created_at, $who, "Sent back to {$p['stage']}", 'ri-arrow-go-back-line', 'danger', null, 13),
-                'reminded' => $this->event($e->created_at, null, 'A reminder was sent', 'ri-notification-3-line', 'secondary', null, 14),
-                'escalated', 'stage_escalated_empty' => $this->event($e->created_at, null, 'Passed up to the next person', 'ri-arrow-up-line', 'purple', null, 14),
-                'cancelled' => $this->event($e->created_at, $who, 'Withdrew the request', 'ri-close-circle-line', 'secondary', null, 15),
-                default => null, // approved / rejected / returned: the decision above says it
-            };
+            $out[] = $this->approvalSentence($e);
         }
 
         return $out;
+    }
+
+    /** One approval event as a plain sentence (also for the Approvals board's activity). */
+    public function approvalSentence(ApprovalEvent $e): ?array
+    {
+        $p = $e->payload ?? [];
+        $who = $this->name($e->actor_id);
+
+        return match ($e->type) {
+            'submitted' => $this->event($e->created_at, $who, 'Sent it for approval'.(! empty($p['workflow']) ? " ({$p['workflow']})" : ''), 'ri-send-plane-line', 'primary', null, 10),
+            'stage_opened' => $this->event($e->created_at, null, "Waiting on {$this->names($p['approvers'] ?? [])} - {$p['stage']}", 'ri-time-line', 'warning', null, 11),
+            'decided' => $this->event($e->created_at, $who, ['approve' => 'Approved', 'approved' => 'Approved', 'reject' => 'Rejected', 'rejected' => 'Rejected', 'return' => 'Sent back', 'returned' => 'Sent back'][$p['decision'] ?? ''] ?? 'Decided', ($p['decision'] ?? '') === 'approve' || ($p['decision'] ?? '') === 'approved' ? 'ri-check-line' : 'ri-arrow-go-back-line', in_array($p['decision'] ?? '', ['approve', 'approved'], true) ? 'success' : 'danger', $p['comment'] ?? null, 12),
+            'stage_blocked' => $this->event($e->created_at, null, "Stuck at {$p['stage']}: ".($p['reason'] ?? 'nobody holds the role'), 'ri-error-warning-line', 'danger', null, 13),
+            'stage_skipped' => $this->event($e->created_at, null, "{$p['stage']} was not needed", 'ri-subtract-line', 'secondary', null, 13),
+            'returned_to_stage' => $this->event($e->created_at, $who, "Sent back to {$p['stage']}", 'ri-arrow-go-back-line', 'danger', null, 13),
+            'reminded' => $this->event($e->created_at, null, 'A reminder was sent', 'ri-notification-3-line', 'secondary', null, 14),
+            'escalated', 'stage_escalated_empty' => $this->event($e->created_at, null, 'Passed up to the next person', 'ri-arrow-up-line', 'purple', null, 14),
+            'cancelled' => $this->event($e->created_at, $who, 'Withdrew the request', 'ri-close-circle-line', 'secondary', null, 15),
+            default => null, // approved / rejected / returned: the decision above says it
+        };
     }
 
     private function names(array $ids): string

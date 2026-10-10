@@ -651,6 +651,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('options', [$books, 'options']);
         Route::get('trail/{type}/{id}', [\App\Http\Controllers\Api\Accounting\TrailController::class, 'show'])->whereIn('type', ['voucher', 'requisition', 'payroll', 'order', 'remittance', 'collection'])->whereNumber('id');
         Route::get('accounts', [$books, 'accounts']);
+        Route::get('accounts/{id}', [$books, 'account'])->whereNumber('id');
         Route::post('accounts', [$books, 'storeAccount']);
         Route::put('accounts/{id}', [$books, 'updateAccount'])->whereNumber('id');
         Route::post('chart', [$books, 'storeChart']);
@@ -813,6 +814,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('approvals')->group(function () {
         $ap = \App\Http\Controllers\Api\Accounting\ApprovalController::class;
         Route::get('/', [$ap, 'index']);
+        Route::get('board', [$ap, 'board']);
         Route::get('requests/{id}', [$ap, 'show'])->whereNumber('id');
         Route::post('requests/{id}/cancel', [$ap, 'cancel'])->whereNumber('id');
         Route::post('requests/{id}/retry', [$ap, 'retry'])->whereNumber('id');
