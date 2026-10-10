@@ -105,6 +105,7 @@ Each report names itself in the line above its title (`subject()`), e.g. "CHURCH
   - **One orientation per report, chosen automatically:** portrait when every table fits, landscape when any table doesn't. Every page of a report shares it; mixing portrait and landscape pages in one report was tried and rejected.
   - Insights ("What we noticed") and Recommendations come last, and only when there are any.
   - Footer: authenticity QR · "Generated … by …" · the verification code · page n / N.
+  - **Type (2026-10-10):** every PDF is set in Times (Times New Roman), for easier reading. It is the PDF's own Times, so nothing is embedded. Times reads smaller than Helvetica, so text under 10pt is set 10% larger (never past 10pt, keeping the headings above the body), nothing goes below 7.5pt, titles keep their size, and the small-caps labels' letterspacing is three quarters of before. One constant (`DioceseReportPdf::FONT`) and one helper (`font()`) set it everywhere.
 - **Excel** (`App\Exports\ReportWorkbook`):
   - a Summary sheet (tiles and details, with the verification code in the header)
   - one sheet per section, with teal headers, frozen header row, auto widths and numbers kept as numbers; totals only where declared, as `SUM()` formulas or the latest value
