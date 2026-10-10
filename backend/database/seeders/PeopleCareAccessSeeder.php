@@ -89,10 +89,10 @@ class PeopleCareAccessSeeder extends Seeder
                 'bookings.php' => ['Bookings', 'Book a room, and see who has it when.', ['bookings', 'book']],
                 'equipment.php' => ['Equipment', 'Our things, where they are kept, and who has borrowed them.', ['equipment']],
                 'assets.php' => ['What we own', 'What our things are worth and cost, with the receipts - the asset register.', ['assets']],
-                'reports.php' => ['Reports', 'The asset register, room by room, what we bought, repairs and what is borrowed - as PDF or Excel.', ['export']],
                 'repairs.php' => ['Repairs', 'What needs fixing, who is on it, and what it cost.', ['repairs']],
                 'teams.php' => ['Teams', 'Who serves on each duty - ushers, welcome, sound...', ['teams']],
                 'rota.php' => ['Duty rota', 'Who is on duty at each service.', ['rota']],
+                'reports.php' => ['Reports', 'The asset register, room by room, what we bought, repairs and what is borrowed - as PDF or Excel.', ['export']],
             ],
         ],
     ];
@@ -155,12 +155,14 @@ class PeopleCareAccessSeeder extends Seeder
             $live = self::LIVE[$key];
             $module = $this->module($group, $spec, $live);
             $keep = [];
+            $position = 0;
             foreach ($spec['pages'] as $file => [$title, $description, $abilities]) {
                 $path = "/church/{$spec['path']}/{$file}";
                 $keep[] = $path;
+                // The menu shows a module's pages in the order they are listed here.
                 $page = Submodule::updateOrCreate(
                     ['module_id' => $module->id, 'path' => $path],
-                    ['title' => $title, 'description' => $description, 'is_active' => $live],
+                    ['title' => $title, 'description' => $description, 'is_active' => $live, 'order' => ++$position],
                 );
                 foreach ($abilities as $ability) {
                     $permissions["church.{$key}.{$ability}"] = $this->permission('church', $key, $ability, $module, $page);
@@ -186,10 +188,11 @@ class PeopleCareAccessSeeder extends Seeder
                 'description' => "Our churches' members, visitors, pastoral care and ministries - totals only, never names.",
                 'is_active' => $anyLive,
             ])->save();
+            $position = 0;
             foreach (self::TOTALS as $key => [$file, $title, $description]) {
                 $page = Submodule::updateOrCreate(
                     ['module_id' => $module->id, 'path' => "/{$level}/people/{$file}"],
-                    ['title' => $title, 'description' => $description, 'is_active' => self::LIVE[$key]],
+                    ['title' => $title, 'description' => $description, 'is_active' => self::LIVE[$key], 'order' => ++$position],
                 );
                 $permissions["{$level}.{$key}.below"] = $this->permission($level, $key, 'below', $module, $page);
             }
