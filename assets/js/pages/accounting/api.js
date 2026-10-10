@@ -92,6 +92,7 @@ const AccountingAPI = (function () {
     places: () => request("GET", "/accounting/places", { params: { territory_id: "" } }),
     options: () => request("GET", "/accounting/options"),
     accounts: () => request("GET", "/accounting/accounts"),
+    account: (id) => request("GET", `/accounting/accounts/${id}`),
     saveAccount: (id, body) => request(id ? "PUT" : "POST", id ? `/accounting/accounts/${id}` : "/accounting/accounts", { body }),
     saveChart: (id, body) => request(id ? "PUT" : "POST", id ? `/accounting/chart/${id}` : "/accounting/chart", { body }),
     cashbook: (params) => request("GET", "/accounting/cashbook", { params }),
@@ -150,6 +151,7 @@ const AccountingAPI = (function () {
     bankCollection: (id, body) => request("POST", `/accounting/collections/${id}/bank`, { body }),
     reverseCollection: (id, reason) => request("POST", `/accounting/collections/${id}/reverse`, { body: { reason } }),
     // A4 - approvals, requisitions, advances
+    approvalBoard: () => request("GET", "/approvals/board"),
     approvals: (tab) => request("GET", "/approvals", { params: { tab, territory_id: "" } }),
     approval: (id) => request("GET", `/approvals/requests/${id}`, { params: { territory_id: "" } }),
     decideApproval: (id, decision, comment) => request("POST", `/approvals/requests/${id}/${decision}`, { body: { comment } }),

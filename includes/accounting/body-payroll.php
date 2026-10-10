@@ -20,7 +20,7 @@ include __DIR__ . '/toolbar.php';
 
 <div id="pyRunsPane">
     <div class="card custom-card">
-        <div class="card-header"><div><div class="card-title">Monthly runs</div><span class="card-subtitle-text">Drafted, approved (which posts it), then net pay and each authority paid - open one for its payslips</span></div></div>
+        <div class="card-header"><div><div class="card-title">Monthly runs</div><span class="card-subtitle-text">Each month: started, checked and submitted, approved, then paid - open one for its payslips and journey</span></div></div>
         <div class="card-body p-0" id="pyRunsWrap"><div class="table-responsive"><table class="table table-hover mb-0 acc-table"><thead><tr><th>Month</th><th class="text-end d-none d-md-table-cell">Gross</th><th class="text-end d-none d-lg-table-cell">Deductions</th><th class="text-end">Net pay</th><th>Where it stands</th></tr></thead><tbody id="pyRunRows"></tbody></table></div></div>
     </div>
 </div>

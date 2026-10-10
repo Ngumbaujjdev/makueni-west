@@ -34,6 +34,8 @@
   const go = (page, params, cls, icon, label) => `<a class="btn ${cls}" href="${A.link(`${page}.php`, params)}"><i class="${icon} me-1"></i>${esc(label)}</a>`;
   const when = (iso) => (!iso ? "-" : iso.length > 10 ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : A.day(iso));
   const monthName = (ym) => (/^\d{4}-\d{2}$/.test(ym || "") ? new Date(`${ym}-01T12:00:00`).toLocaleDateString("en-GB", { month: "long", year: "numeric" }) : ym);
+  /** Approve / Send back / Reject on a "Your turn" card. */
+  const decisionButtons = () => `${btn('data-decide="approve"', "btn-light", "ri-check-line", "Approve")}${btn('data-decide="return"', "btn-outline-dark", "ri-arrow-go-back-line", "Send back")}${btn('data-decide="reject"', "btn-outline-dark", "ri-close-line", "Reject")}`;
   /** The button on a "Your turn" card is white on gold; elsewhere outlined. */
   const actCls = (mine) => (mine ? "btn-light" : "btn-outline-primary");
 
@@ -46,7 +48,8 @@
     if (!res.ok) return res;
     const v = res.data;
     const c = v.can;
-    const acts = c.authorise_this || c.reject_this ? "Approve or send back" : c.pay_this ? "Pay it" : c.edit ? "Change it" : "";
+    const engineTurn = v.approval?.can?.decide;
+    const acts = engineTurn ? "" : c.authorise_this || c.reject_this ? "Approve or send back" : c.pay_this ? "Pay it" : c.edit ? "Change it" : "";
     const mine = !!(c.authorise_this || c.pay_this);
     const lines = `<div class="table-responsive"><table class="table acc-lines-table mb-0"><thead><tr><th>Charged to</th><th class="d-none d-sm-table-cell">Fund</th><th class="text-end">KES</th></tr></thead><tbody>${v.lines
       .map((l) => `<tr><td><span class="fw-semibold">${esc(l.account.name)}</span><div class="acc-sub">${esc(l.account.code)}${l.budget_line ? ` · Budget: ${esc(l.budget_line)}` : ""}${l.description ? ` · ${esc(l.description)}` : ""}</div></td><td class="d-none d-sm-table-cell">${l.fund ? `<span class="soft-chip soft-${l.fund.code === "GEN" ? "success" : "warning"}">${esc(l.fund.name)}</span>` : ""}</td><td class="text-end">${A.amount(l.amount)}</td></tr>`)
@@ -61,9 +64,11 @@
       title: v.narration,
       amount: v.amount,
       status: A.voucherPill(v.status, true),
-      facts: [["Pay to", esc(v.payee_name)], ["Date", A.day(v.date)], ["Pay from", esc(v.pay_from?.name)], ["Prepared by", esc(v.prepared_by)]],
+      dir: "out",
+      facts: [["Pay to", esc(v.payee_name)], ["Date", A.dateChip(v.date)], ["Pay from", A.accountChip(v.pay_from)], ["Prepared by", A.person(v.prepared_by)]],
       steps: W.voucherSteps(v),
-      next: W.voucherNext(v, acts ? btn("data-open", actCls(mine), "ri-arrow-right-circle-line", acts) : ""),
+      next: W.voucherNext(v, engineTurn ? decisionButtons() : acts ? btn("data-open", actCls(mine), "ri-arrow-right-circle-line", acts) : ""),
+      decide: engineTurn ? (d, comment) => API.decideApproval(v.approval.id, d, comment) : null,
       open: () => W.viewVoucher(v.id, { onChange: load }),
       sections: [{ icon: "ri-list-check-2", title: "What it pays for", html: lines }],
       files: v.files,
@@ -104,7 +109,7 @@
     const open = go("requisitions", { requisition: r.id }, "btn-outline-primary", "ri-external-link-line", "Open in Requisitions");
     if (s === "submitted")
       next = r.can.decide
-        ? A.nextCard({ tone: "mine", title: "Decide on it", text: "Read what is asked and why, look at the papers, then approve it, send it back for changes, or reject it.", actions: `${btn('data-decide="approve"', "btn-light", "ri-check-line", "Approve")}${btn('data-decide="return"', "btn-outline-dark", "ri-arrow-go-back-line", "Send back")}${btn('data-decide="reject"', "btn-outline-dark", "ri-close-line", "Reject")}` })
+        ? A.nextCard({ tone: "mine", title: "Decide on it", text: "Read what is asked and why, look at the papers, then approve it, send it back for changes, or reject it.", actions: decisionButtons() })
         : A.nextCard({ tone: "wait", title: `Waiting for ${(r.waiting_on || []).join(", ") || "the approver"}`, text: r.approval?.stage ? `Stage: ${r.approval.stage.name}.` : "" });
     else if (s === "returned") next = A.nextCard({ tone: "stopped", title: "Sent back for changes", text: `${r.decision_note || ""} ${r.requested_by} can change it and send it again.`.trim(), actions: r.can.edit ? open : "" });
     else if (s === "rejected") next = A.nextCard({ tone: "stopped", title: `Rejected${r.decided_by ? ` by ${r.decided_by}` : ""}`, text: r.decision_note || "" });
@@ -132,7 +137,8 @@
       title: r.purpose,
       amount: r.amount,
       status: pill(REQ[s]?.[0] || "primary", REQ[s]?.[1] || "ri-time-line", r.status_label),
-      facts: [["Asked by", esc(r.requested_by)], ["On", A.day(r.requested_at)], ["Pay to", esc(r.payee_name || "-")], ["Needed by", r.needed_by ? A.day(r.needed_by) : "-"]],
+      dir: "out",
+      facts: [["Asked by", A.person(r.requested_by)], ["On", A.dateChip(r.requested_at)], ["Pay to", esc(r.payee_name || "-")], ["Needed by", r.needed_by ? A.dateChip(r.needed_by) : "-"]],
       steps,
       next,
       sections: [
@@ -161,7 +167,7 @@
     const open = (mine, label) => go("payroll", { run: p.id }, actCls(mine), "ri-external-link-line", label);
     const next =
       s === "draft" ? A.nextCard({ tone: c.submit ? "mine" : "wait", title: "Check the payslips and submit", text: "Once submitted it goes for approval, then it can be paid.", actions: open(c.submit, "Open the payroll") })
-      : s === "submitted" ? (c.decide ? A.nextCard({ tone: "mine", title: "Approve the payroll", text: `${p.people} people, net pay ${A.money(p.net)}.`, actions: open(true, "Approve or send back") }) : A.nextCard({ tone: "wait", title: `Waiting for ${(p.approval?.waiting_on || []).join(", ") || "approval"}`, text: p.approval?.stage ? `Stage: ${p.approval.stage.name}.` : "" }))
+      : s === "submitted" ? (c.decide ? A.nextCard({ tone: "mine", title: "Approve the payroll", text: `${p.people} people, net pay ${A.money(p.net)}. Check the payslips below.`, actions: p.approval?.can?.decide ? decisionButtons() : open(true, "Approve or send back") }) : A.nextCard({ tone: "wait", title: `Waiting for ${(p.approval?.waiting_on || []).join(", ") || "approval"}`, text: p.approval?.stage ? `Stage: ${p.approval.stage.name}.` : "" }))
       : s === "posted" ? A.nextCard({ tone: c.pay ? "mine" : "wait", title: c.pay ? "Approved - pay it" : "Approved - waiting to be paid", text: `Net pay ${A.money(p.net)} to ${p.people} people.`, actions: c.pay ? open(true, "Pay it") : "" })
       : s === "returned" ? A.nextCard({ tone: "stopped", title: "Sent back", text: p.decision_note || "", actions: open(false, "Open the payroll") })
       : s === "paid" ? A.nextCard({ tone: "done", title: "Paid", text: p.payment ? `Paid on voucher ${p.payment.number}.` : "Done." })
@@ -178,10 +184,12 @@
       amount: p.net,
       amountLabel: "Net pay",
       status: pill(RUN[s]?.[0] || "primary", RUN[s]?.[1] || "ri-time-line", p.status_label),
-      facts: [["Gross", A.money(p.gross)], ["Other deductions", A.money(p.deductions)], ["People", A.num(p.people)], ["Prepared by", esc(p.prepared_by || "-")]],
+      dir: "out",
+      facts: [["Gross", A.money(p.gross)], ["Other deductions", A.money(p.deductions)], ["People", A.num(p.people)], ["Prepared by", A.person(p.prepared_by)]],
       steps,
       next,
       sections: [{ icon: "ri-file-user-line", title: "Payslips", html: slips }],
+      decide: p.approval?.can?.decide ? (d, comment) => API.decideApproval(p.approval.id, d, comment) : null,
       files: [],
       list: ["payroll", "Payroll"],
     };
@@ -224,7 +232,8 @@
       title: o.supplier,
       amount: o.amount,
       status: pill(ORD[s]?.[0] || "primary", ORD[s]?.[1] || "ri-time-line", o.status_label),
-      facts: [["Supplier", esc(o.supplier)], ["Ordered on", A.day(o.date)], ["Deliver by", o.deliver_by ? A.day(o.deliver_by) : "-"], ["Ordered by", esc(o.issued_by || "-")]],
+      dir: "out",
+      facts: [["Supplier", esc(o.supplier)], ["Ordered on", A.dateChip(o.date)], ["Deliver by", o.deliver_by ? A.dateChip(o.deliver_by) : "-"], ["Ordered by", A.person(o.issued_by)]],
       steps,
       next,
       sections: [{ icon: "ri-list-check-2", title: "What was ordered", html: lines }, deliveries && { icon: "ri-truck-line", title: "Deliveries", html: deliveries }],
@@ -252,6 +261,7 @@
       s === "confirmed" ? A.nextCard({ tone: "done", title: `Received by ${m.to?.name}`, text: m.received_on ? `Confirmed on ${A.day(m.received_on)}.` : "" })
       : s === "queried" ? A.nextCard({ tone: c.answer ? "mine" : "stopped", title: "Queried", text: m.query_reason || "", actions: c.answer ? open(true, "Answer the query") : "" })
       : s === "sent" ? (c.confirm ? A.nextCard({ tone: "mine", title: "Confirm you received it", text: `Check ${A.money(m.amount)} reached your account, then confirm.`, actions: open(true, "Confirm or query") }) : A.nextCard({ tone: "wait", title: `Sent - waiting for ${m.to?.name || "them"} to confirm`, text: m.reference ? `Reference ${m.reference}.` : "" }))
+      : s === "waiting" && c.pay_mpesa ? A.nextCard({ tone: "mine", title: "Pay the share by M-Pesa", text: `The voucher is authorised - send ${A.money(m.amount)} from a phone; it is confirmed the moment it arrives.`, actions: go("remittances", { remittance: m.id }, "btn-light", "ri-smartphone-line", "Pay by M-Pesa") })
       : s === "waiting" ? A.nextCard({ tone: "wait", title: "Waiting to be paid", text: m.voucher ? `Voucher ${m.voucher.number} is ${m.voucher.status}.` : "", actions: m.voucher ? go("record", { type: "voucher", id: m.voucher.id }, "btn-outline-primary", "ri-file-list-3-line", "Open the voucher") : "" })
       : A.nextCard({ tone: "stopped", title: "Cancelled", text: "" });
     const lines = (m.lines || []).length ? `<div class="table-responsive"><table class="table acc-lines-table mb-0"><thead><tr><th>Month</th><th class="text-end">Due</th><th class="text-end">Sent</th></tr></thead><tbody>${m.lines.map((l) => `<tr><td class="fw-semibold">${esc(monthName(l.month))}</td><td class="text-end">${A.amount(l.due)}</td><td class="text-end">${A.amount(l.amount)}</td></tr>`).join("")}</tbody><tfoot><tr><th>Total</th><th></th><th class="text-end">${A.amount(m.amount)}</th></tr></tfoot></table></div>` : "";
@@ -265,7 +275,8 @@
       title: m.purpose,
       amount: m.amount,
       status: pill(REM[s]?.[0] || "primary", REM[s]?.[1] || "ri-time-line", m.status_label),
-      facts: [["From", esc(m.from?.name)], ["To", esc(m.to?.name)], ["Sent on", m.sent_on ? A.day(m.sent_on) : "-"], ["Reference", esc(m.reference || "-")]],
+      dir: m.from?.id === CTX.place.id ? "out" : "in",
+      facts: [["From", esc(m.from?.name)], ["To", esc(m.to?.name)], ["Sent on", m.sent_on ? A.dateChip(m.sent_on) : "-"], ["Reference", esc(m.reference || "-")]],
       steps,
       next,
       sections: [lines && { icon: "ri-calendar-2-line", title: "Months", html: lines }],
@@ -306,7 +317,8 @@
       title: A.day(c.date, { weekday: "long", day: "numeric", month: "long", year: "numeric" }),
       amount: c.total,
       status: pill(COL[s]?.[0] || "primary", COL[s]?.[1] || "ri-time-line", c.status_label),
-      facts: [["Counted by", esc(c.counted_by || "-")], ["Cash", A.money(c.cash_total)], ["M-Pesa", A.money(c.mpesa_total)], ["Witnesses", esc((c.witnesses || []).join(", ") || "-")]],
+      dir: "in",
+      facts: [["Counted by", A.person(c.counted_by)], ["Cash", A.money(c.cash_total)], ["M-Pesa", A.money(c.mpesa_total)], ["Witnesses", (c.witnesses || []).length ? c.witnesses.map((w) => A.person(w)).join(" ") : "-"]],
       steps,
       next,
       sections: [{ icon: "ri-list-check-2", title: "What was given", html: lines }, c.notes && { icon: "ri-sticky-note-line", title: "Notes", html: `<p class="mb-0">${esc(c.notes)}</p>` }],
@@ -360,7 +372,7 @@
     return `<div class="acc-files">${rec.files.map((f) => `<div class="acc-file"><i class="${f.mime === "application/pdf" ? "ri-file-pdf-line text-danger" : "ri-image-line text-primary"}"></i><button type="button" class="btn btn-link p-0 text-start flex-fill" data-file="${f.id}">${esc(f.name)}</button></div>`).join("")}</div>`;
   }
 
-  const card = (icon, title, body, extra = "") => `<div class="card custom-card acc-rec-card"><div class="card-header"><div class="card-title d-flex align-items-center gap-2"><span class="acc-rec-icon"><i class="${icon}"></i></span>${esc(title)}</div>${extra}</div><div class="card-body">${body}</div></div>`;
+  const card = (icon, title, body, extra = "", color = "primary") => `<div class="card custom-card acc-rec-card"><div class="card-header"><div class="card-title d-flex align-items-center gap-2"><span class="acc-rec-icon bg-${color}"><i class="${icon}"></i></span>${esc(title)}</div>${extra}</div><div class="card-body">${body}</div></div>`;
 
   // ------------------------------------------------------------ the page
 
@@ -378,27 +390,37 @@
       <div class="acc-rec-top">
         <span class="avatar avatar-lg avatar-rounded bg-${rec.color || "primary"} ${A.textOn(rec.color || "primary")} flex-shrink-0"><i class="${rec.icon} fs-22"></i></span>
         <div class="min-w-0 flex-fill"><span class="acc-rec-kind">${esc(rec.kind)}</span><h4 class="acc-rec-number">${esc(rec.number)}</h4><p class="acc-rec-title">${esc(rec.title || "")}</p><div>${rec.status}</div></div>
-        <div class="acc-rec-amount"><span>${esc(rec.amountLabel || "Amount")}</span>${A.figure(rec.amount)}</div>
+        <div class="acc-rec-amount${rec.dir ? ` is-${rec.dir}` : ""}"><span>${esc(rec.amountLabel || "Amount")}</span>${A.figure(rec.amount)}</div>
       </div>
       <div class="acc-rec-facts">${rec.facts.map(([k, v]) => `<div><span>${esc(k)}</span><strong>${v || "-"}</strong></div>`).join("")}</div>
     </div></div>`;
-    const where = card("ri-route-line", "Where it stands", A.journey(rec.steps) + rec.next);
-    const sections = rec.sections.filter(Boolean).map((s) => card(s.icon, s.title, s.html)).join("");
+    const where = card("ri-route-line", "Where it stands", A.journey(rec.steps) + rec.next, "", "warning");
+    const sections = rec.sections.filter(Boolean).map((s, i) => card(s.icon, s.title, s.html, "", s.color || ["purple", "primary", "success", "info"][i % 4])).join("");
     $("recApp").innerHTML = `<div class="row">
       <div class="col-xl-8">${hero}${where}${sections}</div>
       <div class="col-xl-4">
-        ${card("ri-links-line", "Linked documents", chain(trail.links))}
-        ${card("ri-attachment-2", "Papers", files(rec))}
-        ${card("ri-history-line", "What happened", activity(trail.events), `<span class="soft-chip soft-primary">${trail.events.length}</span>`)}
+        ${card("ri-links-line", "Linked documents", chain(trail.links), "", "success")}
+        ${card("ri-attachment-2", "Papers", files(rec), "", "pink")}
+        ${card("ri-history-line", "What happened", activity(trail.events), `<span class="soft-chip soft-primary">${trail.events.length}</span>`, "purple")}
       </div>
     </div>`;
   }
 
   async function decide(rec, decision) {
     if (decision === "approve") {
-      if (!confirm("Approve it?")) return;
-      const r = await rec.decide("approve", null);
-      return r.ok ? (Toast.success(r.message), load()) : Toast.error(r.message);
+      const el = PeopleKit.confirmWindow({
+        title: `Approve ${rec.number}`,
+        subtitle: `${A.money(rec.amount)} - ${rec.title || rec.kind}`,
+        icon: "ri-check-line",
+        go: '<i class="ri-check-line me-1"></i>Approve',
+        body: PeopleKit.parts([{ icon: "ri-chat-3-line", title: "A note (optional)", body: '<textarea class="form-control" id="recNote" rows="2" maxlength="500" placeholder="e.g. Pay by Friday"></textarea>' }]),
+        run: async () => {
+          const r = await rec.decide("approve", document.getElementById("recNote").value.trim() || null);
+          if (r.ok) setTimeout(load, 300);
+          return r;
+        },
+      });
+      return el;
     }
     W.reasonWindow({
       title: decision === "reject" ? "Reject it" : "Send it back",

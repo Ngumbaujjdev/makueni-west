@@ -54,10 +54,26 @@
     if ($("startLabel")) $("startLabel").textContent = `Start ${monthLabel(data.next_month)}`;
   }
 
+  /** Started → Submitted → Approved → Paid, as far as each month has got. */
+  const RUN_AT = { draft: 1, submitted: 2, returned: 1, posted: 3, paid: 4, cancelled: 1 };
+  const runSteps = (r) => A.mini(["Started", "Submitted", "Approved", "Paid"], RUN_AT[r.status] ?? 0, { stop: r.status === "returned" ? "Sent back" : r.status === "cancelled" ? "Cancelled" : null });
+  const monthTile = (ym) => {
+    const d = new Date(`${ym}-01T12:00:00`);
+    return `<span class="acc-month-tile"><small>${d.toLocaleDateString("en-GB", { month: "short" })}</small><strong>${String(d.getFullYear()).slice(2)}</strong></span>`;
+  };
+
   function runs() {
     $("pyRunRows").innerHTML = data.runs.length
       ? data.runs
-          .map((r) => `<tr class="acc-row" data-id="${r.id}"><td><div class="fw-semibold">${esc(r.label)}</div><div class="acc-sub">${r.people} ${r.people === 1 ? "person" : "people"}</div></td><td class="text-end d-none d-md-table-cell">${A.money(r.gross)}</td><td class="text-end d-none d-lg-table-cell">${A.money(r.deductions)}</td><td class="text-end"><strong>${A.money(r.net)}</strong></td><td>${pill(r.status)}${r.can.decide ? ' <span class="badge bg-success">Your turn</span>' : ""}</td></tr>`)
+          .map(
+            (r) => `<tr class="acc-row" data-id="${r.id}">
+              <td><div class="d-flex align-items-center gap-3">${monthTile(r.month)}<div class="min-w-0"><div class="fw-semibold">${esc(r.label)}</div><div class="acc-sub"><i class="ri-group-line me-1"></i>${r.people} ${r.people === 1 ? "person" : "people"}</div></div></div></td>
+              <td class="text-end d-none d-md-table-cell">${A.money(r.gross)}</td>
+              <td class="text-end d-none d-lg-table-cell">${r.deductions ? A.money(r.deductions) : '<span class="acc-sub">None</span>'}</td>
+              <td class="text-end"><strong>${A.money(r.net)}</strong></td>
+              <td class="acc-steps-cell">${runSteps(r)}${r.can.decide ? '<span class="badge bg-warning text-dark mt-1"><i class="ri-flashlight-line me-1"></i>Your turn</span>' : ""}</td>
+            </tr>`,
+          )
           .join("")
       : `<tr><td colspan="5">${A.empty("ri-calendar-check-line", "No payroll yet", data.employees.length ? "Start the month - everyone's pay and deductions are worked out for you to check." : "Add the people this place pays first, then start the month.")}</td></tr>`;
   }

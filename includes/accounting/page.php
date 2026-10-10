@@ -5,7 +5,7 @@ $titles = [
     'index' => 'Accounting', 'accounts' => 'Cash & bank', 'cashbook' => 'Cashbook', 'receipts' => 'Receipts',
     'payments' => 'Payment vouchers', 'journals' => 'Journals', 'documents' => 'All documents', 'chart' => 'Chart of accounts',
     'reconciliation' => 'Reconciliation', 'reconcile' => 'Reconcile', 'close' => 'Month-end close', 'collections' => 'Collections',
-    'approvals' => 'Approvals', 'requisitions' => 'Requisitions', 'approval-rules' => 'Approval rules', 'procurement' => 'Procurement', 'remittances' => 'Remittances', 'payroll' => 'Payroll', 'paybill' => 'Paybill', 'giving' => 'Online giving', 'gateways' => 'Gateways', 'record' => 'Record',
+    'approvals' => 'Approvals', 'requisitions' => 'Requisitions', 'approval-rules' => 'Approval rules', 'procurement' => 'Procurement', 'remittances' => 'Remittances', 'payroll' => 'Payroll', 'paybill' => 'Paybill', 'giving' => 'Online giving', 'gateways' => 'Gateways', 'record' => 'Record', 'account' => 'Account',
 ];
 // A record's page sits under the list it belongs to.
 $recordLists = ['voucher' => ['payments', 'Payment vouchers'], 'requisition' => ['requisitions', 'Requisitions'], 'payroll' => ['payroll', 'Payroll'], 'order' => ['procurement', 'Procurement'], 'remittance' => ['remittances', 'Remittances'], 'collection' => ['collections', 'Collections']];
@@ -15,6 +15,7 @@ $pageIcon = 'ri-bank-line';
 $breadcrumbs = match ($accCtx['page']) {
     'index' => ['Home' => $accCtx['homeUrl'], 'Accounting' => null],
     'reconcile' => ['Home' => $accCtx['homeUrl'], 'Accounting' => $accCtx['baseUrl'] . '/', 'Reconciliation' => $accCtx['baseUrl'] . '/reconciliation.php', $pageTitle => null],
+    'account' => ['Home' => $accCtx['homeUrl'], 'Accounting' => $accCtx['baseUrl'] . '/', 'Cash & bank' => $accCtx['baseUrl'] . '/accounts.php', $pageTitle => null],
     'record' => ['Home' => $accCtx['homeUrl'], 'Accounting' => $accCtx['baseUrl'] . '/', $recordList[1] => $accCtx['baseUrl'] . "/{$recordList[0]}.php", $pageTitle => null],
     default => ['Home' => $accCtx['homeUrl'], 'Accounting' => $accCtx['baseUrl'] . '/', $pageTitle => null],
 };
@@ -38,7 +39,7 @@ $breadcrumbs = match ($accCtx['page']) {
     <link href="<?= SITE_URL ?>/assets/libs/simplebar/simplebar.min.css" rel="stylesheet" />
 </head>
 
-<body>
+<body class="acc-body">
     <script src="<?= SITE_URL ?>/assets/js/config/app.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/config/constants.js"></script>
     <script>

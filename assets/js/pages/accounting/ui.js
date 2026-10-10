@@ -202,6 +202,17 @@ const AccountingUI = (function () {
     return `<ol class="acc-journey${compact ? " is-compact" : ""}">${items}</ol>`;
   }
 
+  /**
+   * A compact journey for a table row: the step names, how far it has got
+   * (`at` = the step happening now; at >= length means all done) and,
+   * when it stopped (sent back, cancelled), the label of the stop.
+   */
+  function mini(labels, at, { stop = null } = {}) {
+    const steps = labels.map((title, i) => ({ title, state: i < at ? "done" : i === at ? (stop ? "stopped" : "now") : "next" }));
+    if (stop && steps[at]) steps[at].title = stop;
+    return journey(steps, { compact: true });
+  }
+
   /** An approval request's stages as journey steps (the engine's stages, in order). */
   function approvalSteps(ap) {
     if (!ap || !ap.stages) return [];
@@ -231,7 +242,32 @@ const AccountingUI = (function () {
     return `<div class="acc-next is-${tone}"><span class="acc-next-icon"><i class="${T[0]}"></i></span><div class="acc-next-text"><span class="acc-next-tag">${T[1]}</span><strong>${esc(title)}</strong>${text ? `<p>${esc(text)}</p>` : ""}</div>${actions ? `<div class="acc-next-actions">${actions}</div>` : ""}</div>`;
   }
 
-  return { approvalTimeline, journey, approvalSteps, nextCard, esc, textOn, money, short, figure, amount, day, num, KINDS, kind, tile, DOCS, doc, docPill, docTile, VOUCHER, voucherPill, methodChip, reversedChip, viewingBelow, placeLine, placePicker, ownOnly, options, empty, errorBox, link };
+  /**
+   * Key data in colour (2026-10-10, "too much black"): a person as an
+   * initials circle and their name, a date with its calendar icon, an
+   * account with its kind tile. Each name keeps the same colour everywhere.
+   */
+  const PERSON_COLORS = ["primary", "success", "purple", "pink", "warning", "info", "danger"];
+  const initials = (name) => String(name || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+  const personColor = (name) => PERSON_COLORS[[...String(name || "")].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % PERSON_COLORS.length];
+  function person(name, { size = "xs" } = {}) {
+    if (!name) return "-";
+    const c = personColor(name);
+    return `<span class="acc-person"><span class="avatar avatar-${size} avatar-rounded bg-${c} ${textOn(c)}">${esc(initials(name))}</span><span>${esc(name)}</span></span>`;
+  }
+  /** Just the initials circle. */
+  const avatar = (name, size = "md") => {
+    const c = personColor(name);
+    return `<span class="avatar avatar-${size} avatar-rounded bg-${c} ${textOn(c)} flex-shrink-0 acc-initials">${esc(initials(name))}</span>`;
+  };
+  const dateChip = (iso, opts) => (iso ? `<span class="acc-date"><i class="ri-calendar-line"></i>${day(iso, opts)}</span>` : "-");
+  function accountChip(acc) {
+    if (!acc) return "-";
+    const m = kind(acc.kind);
+    return `<span class="acc-acct"><span class="acc-acct-tile bg-${m.color} ${textOn(m.color)}"><i class="${m.icon}"></i></span><span>${esc(acc.name)}</span></span>`;
+  }
+
+  return { approvalTimeline, person, avatar, personColor, initials, dateChip, accountChip, journey, mini, approvalSteps, nextCard, esc, textOn, money, short, figure, amount, day, num, KINDS, kind, tile, DOCS, doc, docPill, docTile, VOUCHER, voucherPill, methodChip, reversedChip, viewingBelow, placeLine, placePicker, ownOnly, options, empty, errorBox, link };
 })();
 
 window.AccountingUI = AccountingUI;

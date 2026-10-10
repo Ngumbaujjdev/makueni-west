@@ -92,6 +92,84 @@ final class Books
         ];
     }
 
+    /**
+     * One account's page (Redesign R2): its balance, what went in and out
+     * this month, last month and this year, twelve months of in and out, the
+     * latest movements, its last reconciliation and the budget lines that
+     * post to it (planned and actual from the budget in use - read only).
+     * "In" is whatever makes the account bigger on its normal side.
+     */
+    public function accountPage(Territory $place, AccountingAccount $a): array
+    {
+        $debitNormal = $a->isDebitNormal();
+        $today = CarbonImmutable::today();
+        $start = $today->startOfMonth()->subMonths(11);
+        $rows = DB::table('journal_lines')->where('territory_id', $place->id)->where('account_id', $a->id)->where('date', '>=', $start->toDateString())
+            ->groupByRaw("DATE_FORMAT(date, '%Y-%m')")
+            ->selectRaw("DATE_FORMAT(date, '%Y-%m') AS ym, COALESCE(SUM(debit), 0) AS d, COALESCE(SUM(credit), 0) AS c")
+            ->get()->keyBy('ym');
+        $series = ['labels' => [], 'months' => [], 'in' => [], 'out' => []];
+        for ($m = $start; $m->lte($today); $m = $m->addMonth()) {
+            $k = $m->format('Y-m');
+            $d = (float) ($rows[$k]->d ?? 0);
+            $c = (float) ($rows[$k]->c ?? 0);
+            $series['labels'][] = $m->format('M Y');
+            $series['months'][] = $k;
+            $series['in'][] = round($debitNormal ? $d : $c, 2);
+            $series['out'][] = round($debitNormal ? $c : $d, 2);
+        }
+        $sum = fn (callable $keep) => ['in' => round(array_sum(array_filter($series['in'], $keep, ARRAY_FILTER_USE_KEY)), 2), 'out' => round(array_sum(array_filter($series['out'], $keep, ARRAY_FILTER_USE_KEY)), 2)];
+        $idx = array_flip($series['months']);
+        $thisMonth = $idx[$today->format('Y-m')];
+        $lastMonth = $idx[$today->subMonth()->format('Y-m')] ?? -1;
+        $yearFrom = $idx[$today->format('Y').'-01'] ?? 0;
+
+        $lines = JournalLine::with('journal')->where('territory_id', $place->id)->where('account_id', $a->id)
+            ->orderByDesc('date')->orderByDesc('journal_id')->orderByDesc('line_no')->limit(15)->get();
+        $others = JournalLine::with('account:id,code,name')->whereIn('journal_id', $lines->pluck('journal_id')->unique())
+            ->where('account_id', '!=', $a->id)->get()->groupBy('journal_id');
+        $movements = $lines->map(fn ($l) => [
+            'journal_id' => $l->journal_id,
+            'date' => $l->date->toDateString(),
+            'number' => $l->journal->number,
+            'doc_type' => $l->journal->doc_type,
+            'party' => $l->journal->party_name,
+            'details' => $l->journal->narration,
+            'against' => ($others[$l->journal_id] ?? collect())->map(fn ($o) => $o->account?->name)->unique()->values()->all(),
+            'in' => round($debitNormal ? (float) $l->debit : (float) $l->credit, 2),
+            'out' => round($debitNormal ? (float) $l->credit : (float) $l->debit, 2),
+            'reversed' => $l->journal->status === 'reversed',
+        ])->values()->all();
+
+        $rec = $a->cash_kind ? \App\Models\BankReconciliation::where('territory_id', $place->id)->where('account_id', $a->id)->orderByDesc('statement_date')->orderByDesc('id')->first() : null;
+        $budget = app(\App\Services\Budgets\BudgetBook::class)->budgetInUseOn($place->territory_type->value, $place->id, $today->toDateString());
+        // The budget lines that post to it, and - when a budget is in use today - what each planned and spent.
+        $items = $budget ? $budget->budgetLineItems()->get()->keyBy('budget_line_id') : collect();
+        $budgetLines = \App\Models\BudgetLine::where('account_id', $a->id)->where(fn ($q) => $q->whereNull('territory_id')->orWhere('territory_id', $place->id))
+            ->orderBy('name')->get()
+            ->map(fn ($l) => ['line_id' => $l->id, 'name' => $l->name, 'planned' => isset($items[$l->id]) ? (float) $items[$l->id]->budgeted_amount : null, 'actual' => isset($items[$l->id]) ? (float) $items[$l->id]->actual_amount : null])->values()->all();
+        $labels = match ($a->type) {
+            'expense' => ['Spent', 'Taken back'],
+            'income' => ['Received', 'Given back'],
+            'liability', 'fund' => ['Added', 'Used'],
+            default => ['Money in', 'Money out'],
+        };
+
+        return [
+            'account' => $this->presentAccount($a) + ['type' => $a->type, 'own' => (int) $a->territory_id === (int) $place->id],
+            'balance' => $this->ledger->balance($place, $a),
+            'labels' => ['in' => $labels[0], 'out' => $labels[1]],
+            'this_month' => $sum(fn ($k) => $k === $thisMonth),
+            'last_month' => $sum(fn ($k) => $k === $lastMonth),
+            'this_year' => $sum(fn ($k) => $k >= $yearFrom),
+            'series' => $series,
+            'movements' => $movements,
+            'reconciled' => $rec ? ['id' => $rec->id, 'date' => $rec->statement_date?->toDateString(), 'status' => $rec->status] : null,
+            'budget' => $budget ? ['id' => $budget->id, 'name' => $budget->name] : null,
+            'budget_lines' => $budgetLines,
+        ];
+    }
+
     /** Money in and out for a period: income and expense accounts, transfers left out. */
     public function inOut(Territory $place, string $from, string $to): array
     {

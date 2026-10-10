@@ -78,7 +78,7 @@
     <td data-search="${esc(`${o.number} ${o.supplier || ""} ${o.requisition?.purpose || ""} ${o.requisition?.number || ""}`)}" data-order="${esc(o.number)}"><div class="d-flex align-items-center gap-2"><span class="avatar avatar-sm avatar-rounded bg-${ST[o.status][0]} ${A.textOn(ST[o.status][0])}"><i class="${ST[o.status][1]}"></i></span><div class="min-w-0"><div class="fw-semibold">${esc(o.requisition?.purpose || o.number)}</div><div class="acc-sub">${esc(o.number)} · ${o.items} ${o.items === 1 ? "item" : "items"}</div></div></div></td>
     <td data-order="${o.date}" class="text-nowrap">${A.day(o.date)}</td>
     <td class="d-none d-md-table-cell">${esc(o.supplier || "")}</td>
-    <td class="d-none d-lg-table-cell">${pill(ST, o.status)}${o.late ? ' <span class="badge bg-danger">Late</span>' : ""}<div class="acc-sub mt-1">${o.to_receive ? (o.deliver_by ? `Due by ${A.day(o.deliver_by)}` : "Goods to come") : o.to_bill ? "Bill to enter" : o.status === "cancelled" ? "" : "Billed"}</div></td>
+    <td class="d-none d-lg-table-cell acc-steps-cell">${A.mini(["Ordered", "Received", "Billed"], o.status === "cancelled" ? 1 : o.to_receive ? 1 : o.to_bill ? 2 : 3, { stop: o.status === "cancelled" ? "Cancelled" : null })}${o.late ? ' <span class="badge bg-danger">Late</span>' : ""}<div class="acc-sub mt-1">${o.to_receive ? (o.deliver_by ? `Due by ${A.day(o.deliver_by)}` : "Goods to come") : o.to_bill ? "Bill to enter" : o.status === "cancelled" ? "" : "Billed"}</div></td>
     <td class="text-end" data-order="${o.amount}"><strong>${A.money(o.amount)}</strong></td>
   </tr>`;
 

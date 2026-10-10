@@ -20,23 +20,129 @@
   const esc = A.esc;
   let tab = new URLSearchParams(window.location.search).get("tab") || "waiting";
 
-  const ICON = { requisition: "ri-hand-coin-line", payment_voucher: "ri-file-list-3-line" };
+  const ICON = { requisition: "ri-hand-heart-line", payment_voucher: "ri-file-list-3-line", payroll_run: "ri-money-dollar-box-line" };
+  const KIND = { requisition: ["success", "Requisition"], payment_voucher: ["primary", "Payment voucher"], payroll_run: ["purple", "Payroll"] };
   const STATUS = { pending: ["warning", "Waiting"], approved: ["success", "Approved"], rejected: ["danger", "Rejected"], returned: ["danger", "Sent back"], cancelled: ["secondary", "Withdrawn"] };
   const pill = (s) => `<span class="badge bg-${STATUS[s][0]} ${A.textOn(STATUS[s][0])}">${STATUS[s][1]}</span>`;
+  const recordUrl = (r) => (r.record?.type ? A.link("record.php", { type: r.record.type, id: r.record.id }) : null);
+  let board = null;
 
-  function row(r) {
+  /** "3 hours ago", "2 days ago". */
+  function ago(iso) {
+    if (!iso) return "";
+    const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins} min ago`;
+    const h = Math.round(mins / 60);
+    if (h < 24) return `${h} ${h === 1 ? "hour" : "hours"} ago`;
+    const d = Math.round(h / 24);
+    return d < 30 ? `${d} ${d === 1 ? "day" : "days"} ago` : A.day(iso);
+  }
+  const hours = (h) => (h === null || h === undefined ? "-" : h < 1 ? `${Math.max(1, Math.round(h * 60))} min` : h < 48 ? `${Math.round(h * 10) / 10} h` : `${Math.round(h / 24)} days`);
+
+  // ------------------------------------------------------------ the feed (each tab)
+
+  /** One request, read like a line of recent activity: who asks how much for what, where it stands, and the buttons. */
+  function feedItem(r, first) {
     const s = r.subject;
+    const [color, kindLabel] = KIND[s.type] || ["primary", s.label];
+    const mine = !!r.my_assignment;
     const blocked = r.stage?.status === "blocked";
-    const where = r.status === "pending" ? (blocked ? `<span class="text-danger fw-semibold">Stuck at ${esc(r.stage.name)}</span>` : `${esc(r.stage?.name || "")}${r.waiting_on.length ? ` · ${esc(r.waiting_on.join(", "))}` : ""}`) : `${esc(r.workflow || "")}`;
-    return `<div class="acc-ap-row" data-request="${r.id}" role="button" tabindex="0">
-      <span class="avatar avatar-md avatar-rounded bg-${r.status === "pending" ? (blocked ? "danger" : "warning") : STATUS[r.status][0]} ${A.textOn(r.status === "pending" ? "warning" : STATUS[r.status][0])}"><i class="${ICON[s.type] || "ri-shield-check-line"}"></i></span>
-      <div class="flex-fill min-w-0">
-        <div class="d-flex flex-wrap gap-2 align-items-center"><strong>${esc(s.label)} ${esc(s.number)}</strong>${pill(r.status)}${r.due_at ? `<span class="soft-chip soft-${new Date(r.due_at) < new Date() ? "danger" : "warning"}"><i class="ri-time-line"></i>Due ${A.day(r.due_at, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>` : ""}</div>
-        <div class="text-truncate">${esc(s.title || "")}</div>
-        <div class="acc-sub">${esc(r.place.name)} · asked by ${esc(r.requested_by || "")} · ${where}</div>
+    const url = recordUrl(r);
+    const where =
+      r.status === "pending"
+        ? blocked
+          ? `<span class="acc-feed-chip is-danger"><i class="ri-error-warning-line"></i>Stuck at ${esc(r.stage.name)}</span>`
+          : `<span class="acc-feed-chip"><i class="ri-route-line"></i>${esc(r.stage?.name || "")}${r.waiting_on.length ? ` · ${esc(r.waiting_on.join(", "))}` : ""}</span>`
+        : pill(r.status);
+    const due = r.due_at ? `<span class="acc-feed-chip ${new Date(r.due_at) < new Date() ? "is-danger" : "is-warning"}"><i class="ri-alarm-line"></i>Due ${A.day(r.due_at, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>` : "";
+    const acts = mine
+      ? `<button type="button" class="btn btn-sm ${first ? "btn-light" : "btn-success"}" data-decide="approve" data-req="${r.id}"><i class="ri-check-line me-1"></i>Approve</button><button type="button" class="btn btn-sm ${first ? "btn-outline-dark" : "btn-outline-danger"}" data-decide="return" data-req="${r.id}"><i class="ri-arrow-go-back-line me-1"></i>Send back</button>`
+      : "";
+    return `<div class="acc-feed-item${first && mine ? " is-first" : ""}" data-request="${r.id}"${url ? ` data-href="${url}"` : ""} role="button" tabindex="0">
+      ${A.avatar(r.requested_by || "?", "md")}
+      <div class="acc-feed-body">
+        <div class="acc-feed-top"><span class="acc-feed-tag bg-${first && mine ? "dark" : color} text-white"><i class="${ICON[s.type] || "ri-shield-check-line"}"></i>${first && mine ? "Do first" : esc(kindLabel)}</span><span class="acc-feed-num">${esc(s.number)}</span><span class="acc-feed-ago">${esc(ago(r.requested_at))}</span></div>
+        <div class="acc-feed-line"><strong>${esc(r.requested_by || "Someone")}</strong> asks <strong class="acc-feed-amt">${A.money(s.amount)}</strong> for ${esc(s.title || kindLabel.toLowerCase())}</div>
+        <div class="acc-feed-meta">${where}${due}<span class="acc-feed-chip"><i class="ri-map-pin-line"></i>${esc(r.place.name)}</span></div>
       </div>
-      <div class="text-end"><strong class="fs-15">${A.money(s.amount)}</strong>${r.my_assignment ? '<div><span class="badge bg-success mt-1">Your turn</span></div>' : ""}</div>
+      <div class="acc-feed-actions">${acts}<a class="btn btn-sm ${first && mine ? "btn-outline-dark" : "btn-outline-primary"}" href="${url || "#"}" data-open-view="${url ? "" : r.id}"><i class="ri-arrow-right-up-line me-1"></i>Open</a></div>
     </div>`;
+  }
+
+  // ------------------------------------------------------------ the board
+
+  /** Who holds what: a lane per person waited on, each request a block from the day it was asked to today. */
+  function lanes(open) {
+    const DAYS = 7;
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    const days = [...Array(DAYS)].map((_, i) => new Date(today.getTime() - (DAYS - 1 - i) * 86400000));
+    const groups = {};
+    open.forEach((r) => {
+      const who = r.stage?.status === "blocked" || !r.waiting_on.length ? "Nobody - stuck" : r.waiting_on.join(", ");
+      (groups[who] = groups[who] || []).push(r);
+    });
+    const people = Object.keys(groups).sort((a, b) => (a.startsWith("Nobody") ? 1 : b.startsWith("Nobody") ? -1 : groups[b].length - groups[a].length));
+    if (!people.length) return A.empty("ri-checkbox-circle-line", "Nothing waits for approval here", "Requisitions, payments and payroll that need a decision show here, on the person they wait on.");
+    const head = `<div class="acc-lanes-head"><div class="acc-lane-who">Waiting on</div><div class="acc-lane-days">${days.map((d, i) => `<span class="${i === DAYS - 1 ? "is-today" : ""}"><small>${d.toLocaleDateString("en-GB", { weekday: "short" })}</small><strong>${d.getDate()}</strong></span>`).join("")}</div></div>`;
+    const rows = people
+      .map((who) => {
+        const list = groups[who];
+        const stuck = who.startsWith("Nobody");
+        const blocks = list
+          .map((r, i) => {
+            const asked = new Date(r.requested_at);
+            asked.setHours(12, 0, 0, 0);
+            const back = Math.round((today - asked) / 86400000);
+            const start = Math.max(0, Math.min(DAYS - 2, DAYS - 1 - back)); // at least two days wide, so it reads
+            const [color] = KIND[r.subject.type] || ["primary"];
+            const state = stuck ? ["is-stuck", "Stuck"] : r.overdue ? ["is-overdue", "Overdue"] : r.my_assignment ? ["is-mine", "Your turn"] : ["", "Waiting"];
+            return `<a class="acc-lane-block bg-${color} ${state[0]}" href="${recordUrl(r) || "#"}" style="left:calc(${(start / DAYS) * 100}% + 4px);width:calc(${((DAYS - start) / DAYS) * 100}% - 8px);top:${0.5 + i * 3.4}rem" title="${esc(`${r.subject.label} ${r.subject.number} - ${r.subject.title || ""}`)}"><span class="acc-lane-ico"><i class="${ICON[r.subject.type] || "ri-shield-check-line"}"></i></span><span class="acc-lane-text"><strong>${esc(r.subject.number)}</strong><small>${A.money(r.subject.amount)}${back > DAYS - 1 ? ` · since ${A.day(r.requested_at, { day: "numeric", month: "short" })}` : ""}</small></span><span class="acc-lane-pill"><i></i>${state[1]}</span></a>`;
+          })
+          .join("");
+        const avatar = stuck ? '<span class="avatar avatar-sm avatar-rounded bg-danger text-white"><i class="ri-error-warning-line"></i></span>' : A.avatar(who, "sm");
+        return `<div class="acc-lane"><div class="acc-lane-who">${avatar}<div class="min-w-0"><strong class="d-block text-truncate">${esc(who)}</strong><small>${list.length} waiting${list.some((r) => r.my_assignment) ? " · you" : ""}</small></div></div><div class="acc-lane-track" style="height:${list.length * 3.4 + 0.6}rem"><div class="acc-lane-cols">${days.map((_, i) => `<span class="${i === DAYS - 1 ? "is-today" : ""}"></span>`).join("")}</div><span class="acc-lane-now"></span>${blocks}</div></div>`;
+      })
+      .join("");
+    // On a phone: the same, as a list per person.
+    const small = people
+      .map((who) => `<div class="acc-lanes-group"><div class="acc-lanes-group-head">${who.startsWith("Nobody") ? '<i class="ri-error-warning-line text-danger"></i>' : ""}<strong>${esc(who)}</strong><span class="soft-chip soft-warning">${groups[who].length}</span></div>${groups[who].map((r) => `<a class="acc-lanes-item" href="${recordUrl(r) || "#"}"><span class="avatar avatar-xs avatar-rounded bg-${(KIND[r.subject.type] || ["primary"])[0]} text-white"><i class="${ICON[r.subject.type] || "ri-shield-check-line"}"></i></span><span class="flex-fill min-w-0 text-truncate">${esc(r.subject.number)}</span><strong>${A.money(r.subject.amount)}</strong></a>`).join("")}</div>`)
+      .join("");
+    return `<div class="acc-lanes">${head}${rows}</div><div class="acc-lanes-list">${small}</div>`;
+  }
+
+  function statTiles(st) {
+    const tile = (icon, color, value, label) => `<div class="acc-stat-tile"><span class="avatar avatar-md avatar-rounded bg-${color} ${A.textOn(color)}"><i class="${icon}"></i></span><div><strong>${value}</strong><small>${esc(label)}</small></div></div>`;
+    return `<div class="acc-stat-grid">${tile("ri-time-line", "warning", A.num(st.waiting), st.overdue ? `Waiting · ${st.overdue} overdue` : "Waiting now")}${tile("ri-checkbox-circle-line", "success", A.num(st.approved), "Approved this month")}${tile("ri-arrow-go-back-line", "danger", A.num(st.stopped), "Sent back or rejected")}${tile("ri-timer-line", "primary", hours(st.avg_hours), "Average time to decide")}</div>`;
+  }
+
+  function activityList(list) {
+    if (!list.length) return '<p class="acc-muted-line mb-0">Nothing has happened yet.</p>';
+    return `<ul class="acc-activity">${list
+      .slice(0, 8)
+      .map((e) => {
+        const link = e.record?.number ? (e.record.type ? `<a href="${A.link("record.php", { type: e.record.type, id: e.record.id })}">${esc(e.record.number)}</a>` : esc(e.record.number)) : "";
+        const plain = e.text.replace(/\s*\([^)]*\)$/, ""); // the rule's name stays on the record page
+        const lower = plain.charAt(0).toLowerCase() + plain.slice(1);
+        const text = e.who ? `<strong>${esc(e.who)}</strong> ${/\bit\b/.test(lower) ? esc(lower).replace(/\bit\b/, link) : `${esc(lower)} ${link}`}` : `${link} - ${esc(lower)}`;
+        return `<li><span class="avatar avatar-xs avatar-rounded bg-${e.tone} ${A.textOn(e.tone)}"><i class="${e.icon}"></i></span><div class="min-w-0"><div class="acc-act-text">${text}</div>${e.note ? `<div class="acc-act-note">"${esc(e.note)}"</div>` : ""}<small>${esc(ago(e.at))}</small></div></li>`;
+      })
+      .join("")}</ul>`;
+  }
+
+  async function loadBoard() {
+    const res = await API.approvalBoard();
+    if (!res.ok) {
+      $("apBoard").innerHTML = A.errorBox(res.message);
+      return;
+    }
+    board = res.data;
+    const st = board.stats;
+    $("apBoardChips").innerHTML = `<span class="soft-chip soft-warning"><i class="ri-time-line"></i>${st.waiting} waiting</span>${st.mine ? `<span class="badge bg-warning text-dark"><i class="ri-flashlight-line me-1"></i>${st.mine} on you</span>` : ""}${st.overdue ? `<span class="badge bg-danger"><i class="ri-alarm-warning-line me-1"></i>${st.overdue} overdue</span>` : ""}`;
+    $("apBoard").innerHTML = lanes(board.open);
+    $("apStats").innerHTML = statTiles(st);
+    $("apActivity").innerHTML = activityList(board.activity);
   }
 
   async function load() {
@@ -44,22 +150,48 @@
       b.classList.toggle("active", b.dataset.tab === tab);
       b.setAttribute("aria-selected", b.dataset.tab === tab);
     });
-    $("apList").innerHTML = `<div class="p-4">${UI.renderTableLoading ? '<div class="placeholder-glow"><span class="placeholder col-12 mb-2"></span><span class="placeholder col-10 mb-2"></span><span class="placeholder col-8"></span></div>' : ""}</div>`;
+    const T = { waiting: ["Next steps", "What waits for you, oldest first"], mine: ["What I asked for", "Where each request stands"], decided: ["What I decided", "Approved, sent back or rejected by you"], delegations: ["Handed over", "Who approves for you while you're away"] }[tab];
+    $("apListTitle").textContent = T[0];
+    $("apListSub").textContent = T[1];
+    $("apList").innerHTML = '<div class="placeholder-glow"><span class="placeholder col-12 mb-2" style="height:4rem"></span><span class="placeholder col-12" style="height:4rem"></span></div>';
+    $("apList").onclick = null;
     if (tab === "delegations") return delegations();
     const res = await API.approvals(tab);
     if (!res.ok) {
-      $("apList").innerHTML = `<div class="p-3">${A.errorBox(res.message)}</div>`;
+      $("apList").innerHTML = A.errorBox(res.message);
       return;
     }
     $("apWaitingFigure").textContent = res.data.counts.waiting ? `${res.data.counts.waiting} for you` : "Nothing waiting";
     $("apMineFigure").textContent = res.data.counts.mine ? `${res.data.counts.mine} waiting` : "None waiting";
-    const items = res.data.items;
+    let items = res.data.items;
+    if (tab === "waiting") items = [...items].sort((a, b) => String(a.requested_at).localeCompare(String(b.requested_at)));
     const empty = {
-      waiting: ["ri-checkbox-circle-line", "Nothing waits for you", "Requisitions and payments that need your approval show here - you also get an SMS."],
+      waiting: ["ri-checkbox-circle-line", "All clear - nothing waits for you", "Requisitions, payments and payroll that need your approval show here - you also get an SMS."],
       mine: ["ri-hand-coin-line", "You haven't asked for anything", "Ask for money on the Requisitions page; you'll see here where it stands."],
       decided: ["ri-shield-check-line", "Nothing decided yet", "What you approve, send back or reject shows here."],
     }[tab];
-    $("apList").innerHTML = items.length ? `<div class="acc-ap-list">${items.map(row).join("")}</div>` : A.empty(...empty);
+    $("apList").innerHTML = items.length ? `<div class="acc-feed">${items.map((r, i) => feedItem(r, tab === "waiting" && i === 0)).join("")}</div>` : A.empty(...empty);
+  }
+
+  /** Approve (with an optional note) or send back, straight from the list. */
+  function quickDecide(id, decision) {
+    const go = async (comment) => {
+      const out = await API.decideApproval(id, decision, comment);
+      if (out.ok) setTimeout(() => (load(), loadBoard()), 300);
+      return out;
+    };
+    if (decision === "approve") {
+      const el = K.confirmWindow({
+        title: "Approve it",
+        subtitle: "It moves to the next step - or can be paid if this was the last",
+        icon: "ri-check-line",
+        go: '<i class="ri-check-line me-1"></i>Approve',
+        body: K.parts([{ icon: "ri-chat-3-line", title: "A note (optional)", body: '<textarea class="form-control" id="qdNote" rows="2" maxlength="500" placeholder="e.g. Pay by Friday"></textarea>' }]),
+        run: () => go(document.getElementById("qdNote").value.trim() || null),
+      });
+      return el;
+    }
+    AccountingWindows.reasonWindow({ title: "Send it back", subtitle: "Say what needs changing - whoever asked can fix it and send it again", go: "Send back", placeholder: "e.g. Attach the invoice", run: (c) => go(c) });
   }
 
   // ------------------------------------------------------------ one request
@@ -186,14 +318,22 @@
       load();
     });
     $("apList").addEventListener("click", (e) => {
+      const d = e.target.closest("[data-decide]");
+      if (d) return quickDecide(Number(d.dataset.req), d.dataset.decide);
+      const v = e.target.closest("[data-open-view]");
+      if (v && v.dataset.openView) {
+        e.preventDefault();
+        return view(Number(v.dataset.openView));
+      }
+      if (e.target.closest("a, button")) return;
       const r = e.target.closest("[data-request]");
-      if (r) view(Number(r.dataset.request));
+      if (r) r.dataset.href ? (window.location.href = r.dataset.href) : view(Number(r.dataset.request));
     });
     $("apList").addEventListener("keydown", (e) => {
       const r = e.target.closest("[data-request]");
-      if (r && (e.key === "Enter" || e.key === " ")) {
+      if (r && e.target === r && (e.key === "Enter" || e.key === " ")) {
         e.preventDefault();
-        view(Number(r.dataset.request));
+        r.dataset.href ? (window.location.href = r.dataset.href) : view(Number(r.dataset.request));
       }
     });
     $("delegateBtn").addEventListener("click", async () => {
@@ -203,9 +343,15 @@
       delegateWindow(res.data.people);
     });
     A.placeLine($("accPlaceLine"), null);
+    // ?request=ID (the bell and the SMS): straight to the record's own page.
     const open = new URLSearchParams(window.location.search).get("request");
-    if (open) view(Number(open));
+    if (open)
+      API.approval(Number(open)).then((res) => {
+        if (res.ok && res.data.record?.type) window.location.replace(recordUrl(res.data));
+        else view(Number(open));
+      });
     load();
+    loadBoard();
   }
 
   document.addEventListener("DOMContentLoaded", init);
