@@ -1,8 +1,12 @@
 <?php
-$accButtons = '<button type="button" class="btn btn-outline-primary" id="delegateBtn"><i class="ri-user-shared-line me-1"></i>Away? Hand over</button>'
-    . ($accCtx['can']['rules'] ? '<a class="btn btn-outline-primary" href="' . $accCtx['baseUrl'] . '/approval-rules.php"><i class="ri-settings-3-line me-1"></i>Approval rules</a>' : '');
+$accButtons = '<button type="button" class="btn btn-outline-primary" id="delegateBtn"><i class="ri-user-shared-line me-1"></i>Away? Hand over</button>';
 include __DIR__ . '/toolbar.php';
 ?>
+<div class="ap-canvas is-bar">
+    <?php $apPage = 'board';
+    $apActive = ['waiting' => 'waiting', 'delegations' => 'delegations'][$_GET['tab'] ?? ''] ?? 'board';
+    include __DIR__ . '/approvals-frame.php'; ?>
+</div>
 <div class="card custom-card acc-lanes-card" id="apBoardCard">
     <div class="card-header justify-content-between flex-wrap gap-2">
         <div><div class="card-title">Who holds what</div><span class="card-subtitle-text">Everything waiting for approval here, on the person it waits on - from the day it was asked to today</span></div>

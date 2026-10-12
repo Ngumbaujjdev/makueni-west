@@ -339,11 +339,27 @@
     if (window.DateField) ["#dgFrom", "#dgTo"].forEach((s) => DateField.enhance(el.querySelector(s), { quick: [] }));
   }
 
+  // The approvals tab frame (shared with Approval rules): Live map, Waiting and Handed over switch here.
+  const frameOn = (key) =>
+    document.querySelectorAll(".ap-nav [data-ap-tab]").forEach((b) => {
+      b.classList.toggle("is-on", b.dataset.apTab === key);
+      b.setAttribute("aria-pressed", b.dataset.apTab === key);
+    });
+
   function init() {
+    document.querySelector(".ap-nav")?.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-ap-tab]");
+      if (!b) return;
+      const key = b.dataset.apTab;
+      if (key !== "board" && tab !== key) $("apTabs").querySelector(`[data-tab="${key}"]`)?.click();
+      frameOn(key);
+      (key === "board" ? $("apBoardCard") : $("apTabs")).scrollIntoView({ behavior: "smooth", block: "start" });
+    });
     $("apTabs").addEventListener("click", (e) => {
       const b = e.target.closest("[data-tab]");
       if (!b) return;
       tab = b.dataset.tab;
+      frameOn(["waiting", "delegations"].includes(tab) ? tab : "board");
       const p = new URLSearchParams(window.location.search);
       tab === "waiting" ? p.delete("tab") : p.set("tab", tab);
       p.delete("request");
