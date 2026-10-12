@@ -153,6 +153,135 @@ final class RuleMap
         return ['amount' => $amount, 'rule' => ['id' => $w->id, 'name' => $w->name, 'owner' => $this->ownerLabel($w, $place)], 'stages' => $stages, 'note' => null];
     }
 
+    // ------------------------------------------------------------ live: approvers over time
+
+    /**
+     * The approvers here over the last day, week, fortnight or month - like
+     * agents over time: each assignment a block from its stage opening to the
+     * decision (or to now while it waits), hand-overs as "away", and today's
+     * holders of the place's steps even when they had nothing to do.
+     */
+    public function live(Territory $place, int $days, ?string $subject, ?User $viewer): array
+    {
+        $days = in_array($days, [1, 7, 14, 30], true) ? $days : 14;
+        $tz = 'Africa/Nairobi';
+        $now = now($tz);
+        $from = $days === 1 ? $now->copy()->subHours(23)->startOfHour() : $now->copy()->subDays($days - 1)->startOfDay();
+        // A little of what's ahead, so "now" sits inside the grid, not on its edge.
+        $until = $days === 1 ? $now->copy()->addHours(3)->endOfHour() : $now->copy()->addDays($days >= 14 ? 3 : 2)->endOfDay();
+        $ticks = [];
+        for ($t = $from->copy(); $t <= $until; $days === 1 ? $t->addHour() : $t->addDay()) {
+            $end = $days === 1 ? $t->copy()->addHour() : $t->copy()->addDay();
+            $ticks[] = [
+                'at' => $t->toIso8601String(),
+                'top' => $days === 1 ? $t->format('H') : $t->format('M'),
+                'bottom' => $days === 1 ? '00' : $t->format('j'),
+                'quiet' => $days === 1 ? ((int) $t->format('G') < 6 || (int) $t->format('G') >= 20) : $t->isWeekend(),
+                'now' => $now >= $t && $now < $end,
+            ];
+        }
+        $subject = in_array($subject, self::SUBJECT_KEYS, true) ? $subject : null;
+        $assignments = \App\Models\ApprovalAssignment::with(['approver', 'request', 'stage'])
+            ->whereHas('request', fn ($q) => $q->where('territory_id', $place->id)->when($subject, fn ($q) => $q->where('subject_type', $subject)))
+            ->where('created_at', '<=', $now->copy()->utc())
+            ->where(fn ($q) => $q->where('status', 'pending')->orWhere('updated_at', '>=', $from->copy()->utc()))
+            ->whereNotIn('status', ['superseded', 'skipped'])->orderBy('created_at')->get();
+        $decided = \App\Models\ApprovalDecision::whereIn('assignment_id', $assignments->pluck('id'))->pluck('created_at', 'assignment_id');
+
+        // The rows: whoever approved here in the window, then today's holders of the place's steps.
+        $rows = [];
+        $add = function (User $u, string $role) use (&$rows) {
+            $rows[$u->id] ??= ['id' => $u->id, 'name' => $u->full_name, 'role' => $role, 'approvals' => 0, 'icon' => $this->roleIcon($role)];
+        };
+        foreach ($assignments as $a) {
+            if ($a->approver) {
+                $add($a->approver, $a->stage?->name ?? 'Approver');
+            }
+        }
+        $fake = $this->fakeRequest($place, $subject ?? 'payment_voucher', $viewer);
+        foreach ([10000, 100000, 300000] as $probe) {
+            foreach ($this->engine->findWorkflow($subject ?? 'payment_voucher', $place, ['amount' => $probe, 'level' => $place->territory_type->value])?->stages ?? [] as $stage) {
+                foreach ($this->people($stage->steps->map(fn ($s) => ['resolver_type' => $s->resolver_type, 'resolver_config' => $s->resolver_config ?? []])->all(), $fake) as $u) {
+                    $add($u, $stage->name);
+                }
+            }
+        }
+        $order = array_flip(array_keys($rows));
+
+        // The blocks, stacked into at most two lanes per row.
+        $blocks = [];
+        $laneEnds = [];
+        $more = [];
+        foreach ($assignments as $a) {
+            if (! isset($order[$a->approver_id]) || ! $a->request) {
+                continue;
+            }
+            $start = $a->created_at->copy()->setTimezone($tz);
+            $end = $a->status === 'pending' ? $now->copy() : (isset($decided[$a->id]) ? \Carbon\Carbon::parse($decided[$a->id])->setTimezone($tz) : $a->updated_at->copy()->setTimezone($tz));
+            if ($end < $from) {
+                continue;
+            }
+            $start = $start < $from ? $from->copy() : $start;
+            $status = match ($a->status) {
+                'approved' => 'approved',
+                'rejected' => 'refused',
+                'returned' => 'returned',
+                default => $a->due_at && $a->due_at->isPast() ? 'late' : 'waiting',
+            };
+            if (in_array($status, ['approved', 'refused', 'returned'], true)) {
+                $rows[$a->approver_id]['approvals']++;
+            }
+            [$label, $type] = $this->docLabel($a->request);
+            $row = $order[$a->approver_id];
+            $lane = null;
+            foreach ([0, 1] as $l) {
+                if (($laneEnds[$row][$l] ?? null) === null || $laneEnds[$row][$l] <= $start) {
+                    $lane = $l;
+                    break;
+                }
+            }
+            if ($lane === null) {
+                $more[$row] = ($more[$row] ?? 0) + 1;
+
+                continue;
+            }
+            $laneEnds[$row][$lane] = $end;
+            $verb = ['approved' => 'Approved', 'refused' => 'Refused', 'returned' => 'Sent back', 'late' => 'Approving', 'waiting' => 'Approving'][$status];
+            $blocks[] = ['row' => $row, 'lane' => $lane, 'from' => $start->toIso8601String(), 'to' => $end->toIso8601String(), 'label' => "{$verb} {$label}", 'status' => $status,
+                'amount' => (float) ($a->request->context['amount'] ?? 0), 'stage' => $a->stage?->name, 'type' => $type, 'id' => $a->request->subject_id];
+        }
+
+        // Away: hand-overs in the window.
+        $away = \App\Models\ApprovalDelegation::with('delegate')->whereIn('delegator_id', array_keys($rows))->where('is_active', true)
+            ->where('starts_at', '<=', $now->copy()->utc())->where('ends_at', '>=', $from->copy()->utc())->get()
+            ->map(fn ($d) => ['row' => $order[$d->delegator_id], 'from' => max($d->starts_at->copy()->setTimezone($tz), $from)->toIso8601String(),
+                'to' => min($d->ends_at->copy()->setTimezone($tz), $now)->toIso8601String(), 'to_name' => $d->delegate?->full_name])->values();
+
+        return [
+            'window' => ['days' => $days, 'from' => $from->toIso8601String(), 'to' => ($days === 1 ? $from->copy()->addHours(count($ticks)) : $from->copy()->addDays(count($ticks)))->toIso8601String(), 'now' => $now->toIso8601String()],
+            'ticks' => $ticks,
+            'rows' => array_values($rows),
+            'blocks' => $blocks,
+            'away' => $away,
+            'more' => (object) $more,
+            'steps' => count($assignments),
+            'active_now' => collect($blocks)->whereIn('status', ['waiting', 'late'])->pluck('row')->unique()->count(),
+        ];
+    }
+
+    private function roleIcon(string $role): string
+    {
+        $r = strtolower($role);
+
+        return match (true) {
+            str_contains($r, 'pastor') || str_contains($r, 'bishop') => 'ri-user-heart-line',
+            str_contains($r, 'committee') || str_contains($r, 'council') => 'ri-team-line',
+            str_contains($r, 'region') || str_contains($r, 'overseer') || str_contains($r, 'diocese') => 'ri-arrow-up-circle-line',
+            str_contains($r, 'treasurer') || str_contains($r, 'finance') => 'ri-wallet-3-line',
+            default => 'ri-user-follow-line',
+        };
+    }
+
     // ------------------------------------------------------------ pieces
 
     /** Every active rule that could apply here for this document. */
@@ -223,13 +352,25 @@ final class RuleMap
             ->whereIn('request_id', ApprovalRequest::where('territory_id', $place->id)->select('id'))->count();
     }
 
-    /** "Why is PV-73 still waiting?" for the oldest waiting requests, with a link to the record. */
-    private function question(ApprovalRequest $r, Collection $blocked): array
+    /** A request's document as people name it (PV-73, Payroll October 2026), and its record page type. @return array{0: string, 1: ?string} */
+    private function docLabel(ApprovalRequest $r): array
     {
         $type = ['payment_voucher' => 'voucher', 'requisition' => 'requisition', 'payroll_run' => 'payroll'][$r->subject_type] ?? null;
         $doc = $r->subject_type && class_exists($cls = \Illuminate\Database\Eloquent\Relations\Relation::getMorphedModel($r->subject_type) ?? '') ? $cls::find($r->subject_id) : null;
         // A voucher or requisition has a number; a payroll run names its month.
         $label = $doc?->getAttribute('number') ?: ($doc && method_exists($doc, 'label') ? 'Payroll '.$doc->label() : '#'.$r->subject_id);
+        // SHR-001/PV/2026/000073 reads as PV-73.
+        if (preg_match('~/([A-Z]+)/\d{4}/0*(\d+)$~', (string) $label, $m)) {
+            $label = "{$m[1]}-{$m[2]}";
+        }
+
+        return [$label, $type];
+    }
+
+    /** "Why is PV-73 still waiting?" for the oldest waiting requests, with a link to the record. */
+    private function question(ApprovalRequest $r, Collection $blocked): array
+    {
+        [$label, $type] = $this->docLabel($r);
         $isBlocked = $blocked->contains('request_id', $r->id);
 
         return ['text' => $isBlocked ? "Why is {$label} stuck?" : "Why is {$label} still waiting?", 'blocked' => $isBlocked, 'type' => $type, 'id' => $r->subject_id, 'since' => $r->created_at?->toIso8601String()];
