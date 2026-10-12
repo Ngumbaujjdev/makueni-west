@@ -419,6 +419,15 @@ final class Books
     }
 
     /** The chart for a place: standard accounts and its own, with balances, grouped by type. */
+    /** Have this place's opening balances been posted (a journal onto a fund account, not a year-end close)? */
+    public function openingPosted(Territory $place): bool
+    {
+        return JournalLine::where('journal_lines.territory_id', $place->id)
+            ->join('journals', 'journals.id', '=', 'journal_lines.journal_id')->where('journals.doc_type', 'journal')
+            ->where(fn ($q) => $q->whereNull('journals.source_type')->orWhere('journals.source_type', '!=', 'accounting_year'))
+            ->whereIn('journal_lines.account_id', AccountingAccount::where('type', 'fund')->select('id'))->exists();
+    }
+
     public function chartFor(Territory $place): Collection
     {
         $this->chart->ensureStandard();

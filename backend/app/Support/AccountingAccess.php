@@ -37,10 +37,13 @@ final class AccountingAccess
         'payrollread' => 'accounting.payroll.read',
         'paybill' => 'accounting.paybill.manage',
         'gateways' => 'accounting.gateways.manage',
+        // Setting the books up (2026-10-12): the place's own accounts, the float and the opening
+        // balances once - so a pastor can start the books without the treasurer's journals.
+        'setup' => 'accounting.setup.manage',
     ];
 
     /** Abilities that let someone open the books (they can see what they write). */
-    private const READS = ['read', 'receipt', 'prepare', 'authorise', 'pay', 'journal', 'accounts', 'chart', 'reconcile', 'petty', 'close', 'reopen'];
+    private const READS = ['read', 'receipt', 'prepare', 'authorise', 'pay', 'journal', 'accounts', 'chart', 'reconcile', 'petty', 'close', 'reopen', 'setup'];
 
     /**
      * The place a request is for: the acting place, or one below it that the

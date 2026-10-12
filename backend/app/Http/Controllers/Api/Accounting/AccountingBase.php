@@ -16,7 +16,7 @@ use Illuminate\Http\Request;
  */
 abstract class AccountingBase extends Controller
 {
-    /** The place, when the user may read its books; writing needs $ability there too. */
+    /** The place, when the user may read its books; writing needs $ability there too ("a|b": either one). */
     protected function place(Request $request, ?string $ability = null): Territory|JsonResponse
     {
         $id = $request->input('territory_id', $request->query('territory_id'));
@@ -24,8 +24,9 @@ abstract class AccountingBase extends Controller
         if (! $place) {
             return $this->forbidden('These books aren\'t yours to see.');
         }
-        if ($ability && ! AccountingAccess::can($request->user(), $place, $ability)) {
-            return $this->forbidden(match ($ability) {
+        $any = $ability ? explode('|', $ability) : [];
+        if ($any && ! collect($any)->contains(fn ($a) => AccountingAccess::can($request->user(), $place, $a))) {
+            return $this->forbidden(match ($any[0]) {
                 'receipt' => 'Your role can\'t write receipts here.',
                 'prepare' => 'Your role can\'t prepare payment vouchers here.',
                 'authorise' => 'Your role can\'t authorise payments here.',

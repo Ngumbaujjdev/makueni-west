@@ -704,6 +704,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('receipts', [$books, 'receipt']);
         Route::post('transfers', [$books, 'transfer']);
         Route::post('journal-vouchers', [$books, 'journalVoucher']);
+        Route::post('opening-balances', [$books, 'openingBalances']);
         Route::get('payment-vouchers', [$pvs, 'index']);
         Route::post('payment-vouchers', [$pvs, 'store']);
         Route::get('payment-vouchers/{id}', [$pvs, 'show'])->whereNumber('id');
