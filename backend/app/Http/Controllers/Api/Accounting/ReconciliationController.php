@@ -298,7 +298,7 @@ class ReconciliationController extends AccountingBase
     /** PUT /accounting/petty-cash {imprest_float, custodian_id} */
     public function setFloat(Request $request): JsonResponse
     {
-        $place = $this->place($request, 'accounts');
+        $place = $this->place($request, 'accounts|setup');
         if ($place instanceof JsonResponse) {
             return $place;
         }

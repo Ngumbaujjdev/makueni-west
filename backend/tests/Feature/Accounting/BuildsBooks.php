@@ -67,6 +67,7 @@ trait BuildsBooks
             'payrollread' => ['accounting.payroll.read'],
             'paybill' => ['accounting.paybill.manage', 'accounting.paybill.read'],
             'gateways' => ['accounting.gateways.manage'],
+            'setup' => ['accounting.setup.manage'],
         ];
 
         return collect($abilities)->flatMap(fn ($a) => array_map(fn ($p) => "{$level}.{$p}", $map[$a]))->all();

@@ -104,6 +104,7 @@ const AccountingAPI = (function () {
     receipt: (body) => request("POST", "/accounting/receipts", { body }),
     transfer: (body) => request("POST", "/accounting/transfers", { body }),
     journalVoucher: (body) => request("POST", "/accounting/journal-vouchers", { body }),
+    openingBalances: (body) => request("POST", "/accounting/opening-balances", { body }),
     addJournalFile: (id, file) => upload(`/accounting/journals/${id}/attachments`, file),
     removeJournalFile: (id, media) => request("DELETE", `/accounting/journals/${id}/attachments/${media}`),
     journalFileUrl: (id, media) => fileUrl(`/accounting/journals/${id}/attachments/${media}`),

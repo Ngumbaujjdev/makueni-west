@@ -18,6 +18,8 @@ function accountingPageContext(string $level, string $page): array
 {
     // A record's page: anyone who reads the books, asks for money or approves (the API checks the record itself).
     $recordReader = $page === 'record' && (hasGlobalAccess() || hasPermission("{$level}.accounting.books.read") || hasPermission("{$level}.accounting.requisitions.create") || hasPermission("{$level}.accounting.approvals.read"));
+    // Start here: whoever adds accounts, or whoever sets the books up (a pastor, before there is a treasurer).
+    $recordReader = $recordReader || ($page === 'start' && hasPermission("{$level}.accounting.setup.manage"));
     $recordReader || requirePermission("{$level}.accounting." . ([
         'accounts', 'account' => 'accounts.read',
         'cashbook' => 'cashbook.read',
@@ -82,6 +84,7 @@ function accountingPageContext(string $level, string $page): array
             'pay' => $can('payments.pay'),
             'journal' => $can('journals.post'),
             'accounts' => $can('accounts.manage'),
+            'setup' => $can('setup.manage'),
             'chart' => $level === 'diocese' && $can('chart.manage'),
             'below' => $level !== 'church' && $can('below.read'),
             'reconcile' => $can('reconcile.do'),

@@ -7,7 +7,6 @@ use App\Models\AccountingFund;
 use App\Models\AccountingPeriod;
 use App\Models\AccountingPlaceAccount;
 use App\Models\Employee;
-use App\Models\JournalLine;
 use App\Models\Supplier;
 use App\Support\AccountingAccess;
 use App\Support\PlaceRoles;
@@ -45,10 +44,7 @@ class SetupController extends AccountingBase
         $level = $place->territory_type->value;
         $own = AccountingAccount::where('territory_id', $place->id);
         $cash = (clone $own)->whereNotNull('cash_kind')->where('is_active', true)->count();
-        $opening = JournalLine::where('journal_lines.territory_id', $place->id)
-            ->join('journals', 'journals.id', '=', 'journal_lines.journal_id')->where('journals.doc_type', 'journal')
-            ->where(fn ($q) => $q->whereNull('journals.source_type')->orWhere('journals.source_type', '!=', 'accounting_year'))
-            ->whereIn('journal_lines.account_id', AccountingAccount::where('type', 'fund')->select('id'))->exists();
+        $opening = app(\App\Services\Accounting\Books::class)->openingPosted($place);
         $petty = AccountingPlaceAccount::where('territory_id', $place->id)->whereNotNull('imprest_float')->exists();
         $funds = AccountingFund::where('territory_id', $place->id)->count();
         $subs = (clone $own)->whereNull('cash_kind')->whereIn('type', ['income', 'expense'])->count();
@@ -87,6 +83,9 @@ class SetupController extends AccountingBase
             'done' => count(array_filter($needed, fn ($s) => $s['done'])),
             'of' => count($needed),
             'unheld' => count(array_filter($jobs, fn ($j) => ! $j['held'])),
+            // Who can set the books up here - named on the start banner for everyone else.
+            'setters' => PlaceRoles::withPermission($place, AccountingAccess::ABILITIES['setup'])
+                ->merge(PlaceRoles::withPermission($place, AccountingAccess::ABILITIES['accounts']))->unique('id')->map(fn ($u) => $u->full_name)->values(),
             'started' => $recorded || $cash > 0 || $funds > 0 || $subs > 0 || $petty,
             'recorded' => $recorded,
         ]);
