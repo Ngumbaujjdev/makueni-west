@@ -481,6 +481,7 @@ return [
         // Approvals (A4) - read by App\Jobs\SendApprovalNotice and App\Services\Accounting\Requisitions.
         'approvals.notify_sms' => ['section' => 'approvals', 'card' => 'Telling approvers', 'label' => 'Send an SMS when something waits for approval', 'type' => 'switch', 'default' => true, 'levels' => ['diocese'], 'used_by' => 'Approval notices'],
         'approvals.notify_email' => ['section' => 'approvals', 'card' => 'Telling approvers', 'label' => 'Send an email too', 'type' => 'switch', 'default' => true, 'levels' => ['diocese']],
+        'approvals.own_rules_up_to' => ['section' => 'approvals', 'card' => 'Rules of their own', 'label' => 'Churches and regions set their own rules up to', 'type' => 'number', 'rules' => ['required', 'integer', 'between:0,100000000'], 'default' => 200000, 'levels' => ['diocese'], 'help' => 'KES. Above this the diocese\'s rules always apply. 0 = churches and regions can\'t set their own.', 'used_by' => 'Approval rules'],
         'approvals.advance_days' => ['section' => 'approvals', 'card' => 'Advances', 'label' => 'Days to account for an advance', 'type' => 'number', 'rules' => ['required', 'integer', 'between:1,90'], 'default' => 14, 'levels' => ['diocese'], 'help' => 'After this, the person can\'t get another advance until they account for it.', 'used_by' => 'Requisitions'],
 
         // Procurement (A5) - read by App\Services\Accounting\Procurement.

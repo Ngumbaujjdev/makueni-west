@@ -20,6 +20,8 @@ final class PermissionHere implements ApproverResolver
 
     public function describe(array $config): string
     {
-        return 'Anyone who can authorise payments at the place asking';
+        $what = \App\Approval\Services\WorkflowBuilder::PERMISSIONS[$config['permission'] ?? ''] ?? 'authorise payments';
+
+        return "Anyone who can {$what} at the place asking";
     }
 }
