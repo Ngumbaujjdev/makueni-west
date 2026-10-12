@@ -33,7 +33,7 @@
   const TYPE_COLOR = { full_time: "primary", part_time: "success", contract: "warning", casual: "purple" };
   const PAID = { mpesa: "M-Pesa", airtel: "Airtel Money", paybill: "Paybill", till: "Till", bank: "Bank", cash: "Cash" };
   const pill = (s) => `<span class="badge bg-${ST[s][0]} ${A.textOn(ST[s][0])}"><i class="${ST[s][1]} me-1"></i>${ST[s][2]}</span>`;
-  const typeChip = (e) => `<span class="soft-chip soft-${TYPE_COLOR[e.employment_type] || "secondary"}"><i class="ri-time-line"></i>${esc(e.employment_type_label)}</span>`;
+  const typeChip = (e) => `<span class="badge bg-${TYPE_COLOR[e.employment_type] || "secondary"} ${A.textOn(TYPE_COLOR[e.employment_type] || "secondary")}"><i class="ri-time-line me-1"></i>${esc(e.employment_type_label)}</span>`;
   const slug = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "none";
 
   /** A person's own page, keeping the place being viewed. */

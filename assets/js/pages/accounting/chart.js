@@ -198,6 +198,13 @@
     data = res.data;
     A.placeLine($("accPlaceLine"), data.place);
     render();
+    // From "Add an account" on the overview (or ?add=1&kind=fund): open the window straight away, once.
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("add")) {
+      p.delete("add");
+      history.replaceState(null, "", `${window.location.pathname}${p.toString() ? `?${p}` : ""}`);
+      edit();
+    }
   }
 
   document.addEventListener("DOMContentLoaded", () => {
