@@ -6,6 +6,7 @@ use App\Approval\Resolvers\Registry;
 use App\Approval\Services\ApprovalService;
 use App\Approval\Services\Handover;
 use App\Approval\Services\Inbox;
+use App\Approval\Services\RuleMap;
 use App\Approval\Services\WorkflowBuilder;
 use App\Models\ApprovalDelegation;
 use App\Models\ApprovalRequest;
@@ -28,7 +29,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class ApprovalController extends AccountingBase
 {
-    public function __construct(private ApprovalService $engine, private Inbox $inbox, private WorkflowBuilder $builder) {}
+    public function __construct(private ApprovalService $engine, private Inbox $inbox, private WorkflowBuilder $builder, private RuleMap $map) {}
 
     /** GET /approvals?tab=waiting|mine|decided */
     public function index(Request $request): JsonResponse
@@ -100,7 +101,7 @@ class ApprovalController extends AccountingBase
     public function retry(Request $request, int $id): JsonResponse
     {
         $r = ApprovalRequest::find($id);
-        if (! $r || ! AccountingAccess::canManageRules($request->user())) {
+        if (! $r || ! Inbox::canRetry($request->user(), $r)) {
             return $this->forbidden('Only whoever looks after the approval rules can retry a stuck stage.');
         }
         $stage = ApprovalRequestStage::where('request_id', $r->id)->where('status', 'blocked')->first();
@@ -189,26 +190,92 @@ class ApprovalController extends AccountingBase
 
     // ------------------------------------------------------------ the rules
 
-    /** GET /approvals/workflows - every rule, and what the editor picks from. */
-    public function workflows(Request $request): JsonResponse
+    /** The place whose rules are being looked at (?territory_id=, else the acting one) - if the user may see them. */
+    private function rulesPlace(Request $request): \App\Models\Territory|JsonResponse
     {
-        if (! AccountingAccess::canManageRules($request->user())) {
-            return $this->forbidden('Only the diocese finance officer changes the approval rules.');
+        $id = $request->input('territory_id', $request->query('territory_id'));
+        $place = PlaceAccess::place($request->user(), $id !== null && ctype_digit((string) $id) ? (int) $id : null);
+        if (! $place || ! AccountingAccess::canSeeRules($request->user(), $place)) {
+            return $this->forbidden('These approval rules aren\'t yours to see.');
         }
 
+        return $place;
+    }
+
+    /** May the user change this rule from this place? Its owner's managers; the standard ones from the diocese. */
+    private function canEdit(Request $request, \App\Models\Territory $place, ?ApprovalWorkflow $w): bool
+    {
+        if (! AccountingAccess::canManageRules($request->user(), $place)) {
+            return false;
+        }
+        $diocese = $place->territory_type->value === 'diocese';
+
+        return ! $w || ($w->territory_id === null ? $diocese : (int) $w->territory_id === (int) $place->id);
+    }
+
+    /**
+     * GET /approvals/workflows?territory_id= - the rules that touch a place: the
+     * diocese's standard ones, the place's own, those set up above it for the
+     * places below, and (for a region or the diocese) its places' own - each
+     * saying whether this user may change it here; and what the editor picks from.
+     */
+    public function workflows(Request $request): JsonResponse
+    {
+        $place = $this->rulesPlace($request);
+        if ($place instanceof JsonResponse) {
+            return $place;
+        }
+        $above = array_map(fn ($t) => (int) $t->id, PlaceAccess::ancestors($place));
+        $below = PlaceAccess::descendantIds($place);
+        $items = ApprovalWorkflow::with(['stages.steps', 'owner'])
+            ->where(fn ($q) => $q->whereNull('territory_id')->orWhere('territory_id', $place->id)
+                ->orWhere(fn ($q) => $q->whereIn('territory_id', $above ?: [0])->where('reach', 'below'))
+                ->orWhereIn('territory_id', $below ?: [0]))
+            ->orderByRaw("FIELD(level, 'church', 'region', 'diocese')")->orderBy('subject_type')->orderBy('match_priority')->get();
+
         return $this->ok([
-            'items' => ApprovalWorkflow::with('stages.steps')->orderByRaw("FIELD(level, 'church', 'region', 'diocese')")->orderBy('subject_type')->orderBy('match_priority')->get()->map(fn ($w) => $this->builder->present($w))->values(),
+            'place' => $this->placeInfo($place),
+            'can' => ['manage' => AccountingAccess::canManageRules($request->user(), $place)],
+            'ceiling' => ApprovalService::ownRulesUpTo(),
+            'items' => $items->map(fn ($w) => $this->builder->present($w) + [
+                'group' => $w->territory_id === null ? 'standard' : ((int) $w->territory_id === (int) $place->id ? 'own' : (in_array((int) $w->territory_id, $above, true) ? 'above' : 'below')),
+                'editable' => $this->canEdit($request, $place, $w),
+            ])->values(),
             'subjects' => collect(WorkflowBuilder::SUBJECTS)->map(fn ($l, $k) => ['key' => $k, 'label' => $l])->values(),
             'roles' => Role::whereIn('territory_level', ['church', 'region', 'diocese'])->orderBy('territory_level')->orderBy('name')->get(['name', 'territory_level'])->map(fn ($r) => ['name' => $r->name, 'level' => $r->territory_level])->values(),
+            'permissions' => collect(WorkflowBuilder::PERMISSIONS)->map(fn ($l, $k) => ['key' => $k, 'label' => 'Anyone who can '.$l])->values(),
             'resolvers' => array_keys(Registry::TYPES),
         ]);
+    }
+
+    /** GET /approvals/map?territory_id=&subject= - who signs what here: the lane map, next steps, what we found. */
+    public function map(Request $request): JsonResponse
+    {
+        $place = $this->rulesPlace($request);
+        if ($place instanceof JsonResponse) {
+            return $place;
+        }
+
+        return $this->ok($this->map->map($place, (string) $request->query('subject', 'payment_voucher'), $request->user()));
+    }
+
+    /** GET /approvals/try?territory_id=&subject=&amount= - who would sign this amount today (nothing is created). */
+    public function try(Request $request): JsonResponse
+    {
+        $place = $this->rulesPlace($request);
+        if ($place instanceof JsonResponse) {
+            return $place;
+        }
+        $amount = (float) $request->validate(['amount' => ['required', 'numeric', 'min:1', 'max:1000000000']], ['amount.required' => 'Type an amount, e.g. 75,000.'])['amount'];
+
+        return $this->ok($this->map->try($place, (string) $request->query('subject', 'payment_voucher'), $amount, $request->user()));
     }
 
     /** GET /approvals/people?q= - people by name, for a "named person" step. */
     public function people(Request $request): JsonResponse
     {
         if (! AccountingAccess::canManageRules($request->user())) {
-            return $this->forbidden('Only the diocese finance officer changes the approval rules.');
+            return $this->forbidden('Your role can\'t change approval rules here.');
         }
         $q = trim((string) $request->query('q', ''));
 
@@ -219,12 +286,16 @@ class ApprovalController extends AccountingBase
     /** POST /approvals/workflows · PUT /approvals/workflows/{id} */
     public function saveWorkflow(Request $request, ?int $id = null): JsonResponse
     {
-        if (! AccountingAccess::canManageRules($request->user())) {
-            return $this->forbidden('Only the diocese finance officer changes the approval rules.');
+        $place = $this->rulesPlace($request);
+        if ($place instanceof JsonResponse) {
+            return $place;
         }
         $w = $id ? ApprovalWorkflow::find($id) : null;
         if ($id && ! $w) {
             return $this->notFound('That rule doesn\'t exist.');
+        }
+        if (! $this->canEdit($request, $place, $w)) {
+            return $this->forbidden($w && $w->territory_id === null ? 'The diocese\'s standard rules are changed by the diocese.' : 'Your role can\'t change approval rules here.');
         }
         $data = $request->validate([
             'name' => ['required', 'string', 'max:150'],
@@ -233,6 +304,7 @@ class ApprovalController extends AccountingBase
             'amount_min' => ['nullable', 'numeric', 'min:0'],
             'amount_max' => ['nullable', 'numeric', 'min:0'],
             'match_priority' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'reach' => ['nullable', 'in:self,below'],
             'is_active' => ['nullable', 'boolean'],
             'stages' => ['required', 'array', 'min:1', 'max:8'],
             'stages.*.name' => ['required', 'string', 'max:120'],
@@ -247,7 +319,9 @@ class ApprovalController extends AccountingBase
             'stages.*.steps.*.resolver_type' => ['required', 'string'],
             'stages.*.steps.*.resolver_config' => ['nullable', 'array'],
         ], ['stages.required' => 'Add at least one stage.']);
-        $w = $this->builder->save($data, $w, $request->user());
+        // A church's or region's rule is its own; the diocese writes the standard ones.
+        $owner = $place->territory_type->value === 'diocese' ? null : $place;
+        $w = $this->builder->save($data, $w, $request->user(), $owner);
 
         return $this->ok($this->builder->present($w), 'Saved - new requests follow it; ones already waiting keep their rule.', $id ? 200 : 201);
     }
@@ -255,12 +329,16 @@ class ApprovalController extends AccountingBase
     /** DELETE /approvals/workflows/{id} */
     public function deleteWorkflow(Request $request, int $id): JsonResponse
     {
-        if (! AccountingAccess::canManageRules($request->user())) {
-            return $this->forbidden('Only the diocese finance officer changes the approval rules.');
+        $place = $this->rulesPlace($request);
+        if ($place instanceof JsonResponse) {
+            return $place;
         }
         $w = ApprovalWorkflow::find($id);
         if (! $w) {
             return $this->notFound('That rule doesn\'t exist.');
+        }
+        if (! $this->canEdit($request, $place, $w)) {
+            return $this->forbidden('Your role can\'t change this rule here.');
         }
         $w->delete();
 

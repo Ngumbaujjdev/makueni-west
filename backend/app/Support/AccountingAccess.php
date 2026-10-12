@@ -127,8 +127,12 @@ final class AccountingAccess
         return self::canRead($user, $place) || self::can($user, $place, 'procure');
     }
 
-    /** May the user change the approval rules? The diocese's finance officer (and global admins). */
-    public static function canManageRules(?User $user): bool
+    /**
+     * May the user change the approval rules of a place (A4b)? Whoever holds
+     * "rules" there - a church's or region's for its own rules, the diocese's
+     * for the standard ones - and global admins. No place = the acting one.
+     */
+    public static function canManageRules(?User $user, ?Territory $place = null): bool
     {
         if (! $user) {
             return false;
@@ -136,9 +140,19 @@ final class AccountingAccess
         if ($user->hasGlobalAccess()) {
             return true;
         }
-        $acting = PlaceAccess::acting($user);
+        $place ??= PlaceAccess::acting($user);
 
-        return $acting && $acting->territory_type->value === 'diocese' && self::canAt($user, $acting, 'rules');
+        return $place && PlaceAccess::isOwn($user, $place) && self::canAt($user, $place, 'rules');
+    }
+
+    /** May the user see a place's approval rules (read-only)? Book readers, rule managers, and anyone who approves there. */
+    public static function canSeeRules(?User $user, Territory $place): bool
+    {
+        if (self::canRead($user, $place) || self::canManageRules($user, $place)) {
+            return true;
+        }
+
+        return $user && PlaceAccess::isOwn($user, $place) && PlaceAccess::has($user, PlaceAccess::level($place).'.accounting.approvals.read');
     }
 
     /**

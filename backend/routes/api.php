@@ -878,6 +878,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('delegations', [$ap, 'delegate']);
         Route::delete('delegations/{id}', [$ap, 'undelegate'])->whereNumber('id');
         Route::get('workflows', [$ap, 'workflows']);
+        Route::get('map', [$ap, 'map']);
+        Route::get('try', [$ap, 'try']);
         Route::get('people', [$ap, 'people']);
         Route::post('workflows', [$ap, 'saveWorkflow']);
         Route::put('workflows/{id}', [$ap, 'saveWorkflow'])->whereNumber('id');

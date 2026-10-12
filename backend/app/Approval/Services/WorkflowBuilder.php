@@ -6,6 +6,7 @@ use App\Approval\Resolvers\Registry;
 use App\Models\ApprovalStage;
 use App\Models\ApprovalWorkflow;
 use App\Models\Role;
+use App\Models\Territory;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -22,15 +23,26 @@ final class WorkflowBuilder
 
     public function __construct(private Registry $resolvers) {}
 
-    public function save(array $data, ?ApprovalWorkflow $w, User $by): ApprovalWorkflow
+    /**
+     * Save a rule. With an owner (a church or region, A4b) it is that place's
+     * own: for itself, or - a region - for its churches too; its band stays at
+     * or under the diocese's ceiling. Without one it is a diocese standard rule.
+     */
+    public function save(array $data, ?ApprovalWorkflow $w, User $by, ?Territory $owner = null): ApprovalWorkflow
     {
-        $this->check($data);
+        if ($owner) {
+            // A church's rule is for the church; a region's for itself, or (reach below) its churches.
+            $data['level'] = $owner->territory_type->value === 'region' && ($data['reach'] ?? 'self') === 'below' ? ($data['level'] ?? null) : $owner->territory_type->value;
+        }
+        $this->check($data, $w, $owner);
 
-        return DB::transaction(function () use ($data, $w, $by) {
+        return DB::transaction(function () use ($data, $w, $by, $owner) {
             $fields = [
                 'name' => trim($data['name']),
                 'subject_type' => $data['subject_type'],
                 'level' => $data['level'] ?: null,
+                'territory_id' => $owner?->id,
+                'reach' => $owner && $owner->territory_type->value === 'region' && ($data['reach'] ?? 'self') === 'below' ? 'below' : 'self',
                 'applies_when' => $this->conditions($data),
                 'match_priority' => (int) ($data['match_priority'] ?? 0),
                 'is_active' => (bool) ($data['is_active'] ?? true),
@@ -81,7 +93,16 @@ final class WorkflowBuilder
         return $and ? ['and' => $and] : null;
     }
 
-    private function check(array $data): void
+    /** Who can approve by a permission - the ones a rule may name. */
+    public const PERMISSIONS = [
+        'accounting.payments.authorise' => 'authorise payments',
+        'accounting.payments.pay' => 'pay vouchers',
+        'accounting.payments.prepare' => 'prepare payments',
+        'accounting.payroll.manage' => 'run the payroll',
+        'accounting.procurement.manage' => 'buy through procurement',
+    ];
+
+    private function check(array $data, ?ApprovalWorkflow $w = null, ?Territory $owner = null): void
     {
         $fail = fn ($k, $m) => throw ValidationException::withMessages([$k => [$m]]);
         if (trim((string) ($data['name'] ?? '')) === '') {
@@ -95,6 +116,36 @@ final class WorkflowBuilder
         }
         if (isset($data['amount_min'], $data['amount_max']) && $data['amount_min'] !== '' && $data['amount_max'] !== '' && (float) $data['amount_min'] >= (float) $data['amount_max']) {
             $fail('amount_max', 'The top of the band must be above the bottom.');
+        }
+        $min = isset($data['amount_min']) && $data['amount_min'] !== '' ? (float) $data['amount_min'] : 0.0;
+        $max = isset($data['amount_max']) && $data['amount_max'] !== '' && $data['amount_max'] !== null ? (float) $data['amount_max'] : INF;
+        if ($owner) {
+            // A place's own rules stop at the diocese's ceiling; above it the standard rules apply.
+            $ceiling = ApprovalService::ownRulesUpTo();
+            if ($ceiling <= 0) {
+                $fail('amount_max', 'The diocese hasn\'t opened rules of their own to churches and regions.');
+            }
+            if ($max > $ceiling) {
+                $fail('amount_max', 'Above KES '.number_format($ceiling).' the diocese\'s rules apply - set the top of the band at KES '.number_format($ceiling).' or less.');
+            }
+        }
+        // No two active rules of the same owner, document and level may cover the same amount.
+        $others = ApprovalWorkflow::where('is_active', true)->where('territory_id', $owner?->id)
+            ->whereIn('subject_type', [$data['subject_type'] ?? '*'])->where('level', ($data['level'] ?? null) ?: null)
+            ->when($w, fn ($q) => $q->where('id', '!=', $w->id))->get();
+        if (($data['is_active'] ?? true)) {
+            foreach ($others as $o) {
+                $and = $o->applies_when['and'] ?? [];
+                $omin = (float) (collect($and)->firstWhere('operator', '>')['value'] ?? 0);
+                $omaxV = collect($and)->firstWhere('operator', '<=')['value'] ?? null;
+                $omax = $omaxV === null ? INF : (float) $omaxV;
+                if ($o->applies_when && ! $and) {
+                    continue; // custom conditions - can't tell, so don't block
+                }
+                if ($max > $omin && $omax > $min) {
+                    $fail('amount_min', "It overlaps \"{$o->name}\" (KES ".number_format($omin).' to '.($omax === INF ? 'any amount' : 'KES '.number_format($omax)).') - change one band so each amount has one rule.');
+                }
+            }
         }
         $stages = $data['stages'] ?? [];
         if (! $stages) {
@@ -123,6 +174,9 @@ final class WorkflowBuilder
                         }
                     }
                 }
+                if ($step['resolver_type'] === 'permission_here' && ! isset(self::PERMISSIONS[$cfg['permission'] ?? ''])) {
+                    $fail("stages.{$i}.steps", 'Pick what they must be able to do.');
+                }
                 if ($step['resolver_type'] === 'user' && ! User::whereIn('id', (array) ($cfg['user_ids'] ?? []))->exists()) {
                     $fail("stages.{$i}.steps", 'Pick the people by name.');
                 }
@@ -141,12 +195,14 @@ final class WorkflowBuilder
         return [
             'id' => $w->id, 'key' => $w->key, 'name' => $w->name, 'subject_type' => $w->subject_type, 'subject_label' => self::SUBJECTS[$w->subject_type] ?? $w->subject_type,
             'level' => $w->level, 'amount_min' => $min, 'amount_max' => $max, 'custom_conditions' => $w->applies_when && ! ($min !== null || $max !== null),
+            'owner' => $w->owner ? ['id' => $w->owner->id, 'name' => $w->owner->name, 'level' => $w->owner->territory_type->value] : null, 'reach' => $w->reach,
             'match_priority' => $w->match_priority, 'version' => $w->version, 'is_active' => $w->is_active,
             'stages' => $w->stages->map(fn ($s) => [
                 'id' => $s->id, 'name' => $s->name, 'type' => $s->type, 'quorum' => $s->quorum, 'on_reject' => $s->on_reject, 'on_empty' => $s->on_empty,
                 'sla_hours' => $s->sla_hours, 'escalate_after_hours' => $s->escalate_after_hours, 'escalate_to' => $s->escalate_to,
                 'escalate_label' => $s->escalate_to ? $describe($s->escalate_to) : null,
-                'steps' => $s->steps->map(fn ($st) => ['resolver_type' => $st->resolver_type, 'resolver_config' => $st->resolver_config ?? [], 'label' => $describe(['resolver_type' => $st->resolver_type, 'resolver_config' => $st->resolver_config ?? []])])->values(),
+                'steps' => $s->steps->map(fn ($st) => ['resolver_type' => $st->resolver_type, 'resolver_config' => $st->resolver_config ?? [], 'label' => $describe(['resolver_type' => $st->resolver_type, 'resolver_config' => $st->resolver_config ?? []]),
+                    'people' => $st->resolver_type === 'user' ? User::whereIn('id', (array) ($st->resolver_config['user_ids'] ?? []))->get()->map(fn ($u) => ['id' => $u->id, 'name' => $u->full_name])->values() : null])->values(),
             ])->values(),
         ];
     }
