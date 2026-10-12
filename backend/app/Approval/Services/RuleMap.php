@@ -76,8 +76,9 @@ final class RuleMap
             $run = null;
             foreach ($segments as $si => $seg) {
                 $cell = $row['segments'][$si] ?? null;
-                if ($run && $cell && $cell['rule'] === $run['rule'] && $cell['position'] === $run['position'] && $run['to'] === $si - 1) {
+                if ($run && $cell && $cell['position'] === $run['position'] && $cell['owner'] === $run['owner'] && $run['to'] === $si - 1) {
                     $run['to'] = $si;
+                    $run['rule'] = $run['rule'] === $cell['rule'] ? $run['rule'] : $run['rule'].' · '.$cell['rule'];
 
                     continue;
                 }
@@ -167,8 +168,9 @@ final class RuleMap
 
     private function fakeRequest(Territory $place, string $subject, ?User $viewer): ApprovalRequest
     {
-        // Never saved: the resolvers only read the place, the kind of document and who asked.
-        return new ApprovalRequest(['territory_id' => $place->id, 'subject_type' => $subject, 'requested_by' => $viewer?->id]);
+        // Never saved: the resolvers only read the place and the kind of document. Nobody has asked yet,
+        // so nobody is left out - the person who asks is, when it is real.
+        return new ApprovalRequest(['territory_id' => $place->id, 'subject_type' => $subject, 'requested_by' => null]);
     }
 
     /** Who a set of steps names today, after hand-overs, never the person asking. */
@@ -226,7 +228,8 @@ final class RuleMap
     {
         $type = ['payment_voucher' => 'voucher', 'requisition' => 'requisition', 'payroll_run' => 'payroll'][$r->subject_type] ?? null;
         $doc = $r->subject_type && class_exists($cls = \Illuminate\Database\Eloquent\Relations\Relation::getMorphedModel($r->subject_type) ?? '') ? $cls::find($r->subject_id) : null;
-        $label = $doc?->number ?? $doc?->label ?? ('#'.$r->subject_id);
+        // A voucher or requisition has a number; a payroll run names its month.
+        $label = $doc?->getAttribute('number') ?: ($doc && method_exists($doc, 'label') ? 'Payroll '.$doc->label() : '#'.$r->subject_id);
         $isBlocked = $blocked->contains('request_id', $r->id);
 
         return ['text' => $isBlocked ? "Why is {$label} stuck?" : "Why is {$label} still waiting?", 'blocked' => $isBlocked, 'type' => $type, 'id' => $r->subject_id, 'since' => $r->created_at?->toIso8601String()];

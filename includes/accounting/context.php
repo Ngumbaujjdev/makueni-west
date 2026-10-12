@@ -32,7 +32,8 @@ function accountingPageContext(string $level, string $page): array
         'collections' => 'collections.read',
         'approvals' => 'approvals.read',
         'requisitions' => 'requisitions.create',
-        'approval-rules' => 'approvalrules.manage',
+        // Approvers see the rules read-only; whoever holds "rules" changes them (A4b).
+        'approval-rules' => 'approvals.read',
         'procurement' => 'procurement.read',
         'remittances' => 'remittances.read',
         'payroll' => 'payroll.read',
@@ -90,7 +91,7 @@ function accountingPageContext(string $level, string $page): array
             'confirm' => $level === 'church' && $can('collections.confirm'),
             'books' => $can('books.read'),
             'request' => $can('requisitions.create'),
-            'rules' => $level === 'diocese' && $can('approvalrules.manage'),
+            'rules' => $can('approvalrules.manage'),
             'procure' => $can('procurement.manage'),
             'payroll' => $can('payroll.manage'),
             'paybill' => $level === 'diocese' && $can('paybill.manage'),
