@@ -135,6 +135,20 @@ class ApprovalRulesEveryLevelTest extends TestCase
         $this->assertTrue($m['can']['manage']);
     }
 
+    public function test_the_map_for_all_documents_counts_every_document_rule(): void
+    {
+        $this->saveRule($this->churchRules, ['name' => 'Our vouchers', 'subject_type' => 'payment_voucher', 'amount_max' => 20000, 'stages' => [$this->stage('Treasurer', 'Church Treasurer')]])->assertCreated();
+        $this->saveRule($this->churchRules, ['name' => 'Our requisitions', 'subject_type' => 'requisition', 'amount_max' => 20000, 'stages' => [$this->stage('Treasurer', 'Church Treasurer')]])->assertCreated();
+        Sanctum::actingAs($this->churchRules);
+        $one = $this->getJson('/api/approvals/map?subject=payment_voucher')->assertOk()->json('data');
+        $all = $this->getJson('/api/approvals/map?subject=all')->assertOk()->json('data');
+        $this->assertSame(2, $one['detected']['rules'], 'the voucher rule and the standard');
+        $this->assertSame('all', $all['subject']);
+        $this->assertSame(3, $all['detected']['rules'], 'the requisition rule counts too');
+        $this->assertSame(2, $all['detected']['own_rules']);
+        $this->assertSame(collect($one['rows'])->pluck('key')->all(), collect($all['rows'])->pluck('key')->all(), 'the lanes stay the vouchers\'');
+    }
+
     private function assignment(\App\Models\Territory $place, User $approver, string $status, \DateTimeInterface $opened, ?\DateTimeInterface $due = null): \App\Models\ApprovalAssignment
     {
         $run = \App\Models\PayrollRun::create(['territory_id' => $place->id, 'month' => '2026-0'.random_int(1, 9), 'status' => 'submitted']);
