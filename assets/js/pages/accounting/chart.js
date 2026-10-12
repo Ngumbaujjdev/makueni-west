@@ -31,7 +31,7 @@
   const std = () => data.chart.filter((a) => !a.own);
   // A church or region: the standard chart is read here, and the place adds its own.
   const PLACE = !window.ACC_CTX?.can?.chart;
-  const canAdd = () => (PLACE ? !!data?.can?.accounts && !A.viewingBelow() : true);
+  const canAdd = () => (PLACE ? !!(data?.can?.accounts || data?.can?.setup) && !A.viewingBelow() : true);
   const shown = () => (PLACE ? data.chart : std());
   const CASH = [["bank", "A bank account", "ri-bank-line"], ["mpesa", "An M-Pesa till, paybill or phone", "ri-smartphone-line"], ["airtel", "An Airtel Money number", "ri-smartphone-line"]];
 

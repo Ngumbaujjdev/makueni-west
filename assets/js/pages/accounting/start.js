@@ -188,13 +188,12 @@
   /** Posts the opening balances (if any were typed). Returns false to stay on the step. */
   async function saveOpening(btn) {
     if (done("opening") || !document.querySelector("[data-ob]")) return true;
-    const lines = [...document.querySelectorAll("[data-ob]")].map((x) => ({ account_id: Number(x.dataset.ob), debit: n(x.value), credit: 0, fund_id: null })).filter((l) => l.debit > 0);
-    if (!lines.length) return true; // nothing held - we start at zero
-    const general = (o.other || []).find((a) => String(a.code) === "3000");
-    if (!general) return Toast.error("The General fund account is missing - ask the diocese finance officer."), false;
-    const total = lines.reduce((t, l) => t + l.debit, 0);
+    const amounts = [...document.querySelectorAll("[data-ob]")].map((x) => ({ account_id: Number(x.dataset.ob), amount: n(x.value) })).filter((l) => l.amount > 0);
+    if (!amounts.length) return true; // nothing held - we start at zero
+    const total = amounts.reduce((t, l) => t + l.amount, 0);
     DemographicsUI.setButtonLoading?.(btn, "Saving...");
-    const res = await API.journalVoucher({ date: $("obDate").value, narration: "Opening balances", lines: [...lines, { account_id: general.id, debit: 0, credit: Math.round(total * 100) / 100, fund_id: null }] });
+    // The opening balances endpoint: the treasurer, or a pastor setting the books up.
+    const res = await API.openingBalances({ date: $("obDate").value, amounts });
     DemographicsUI.restoreButton?.(btn);
     if (!res.ok) return Toast.error(res.message), false;
     Toast.success(`Opening balances in - ${A.money(total, { cents: false })}`);

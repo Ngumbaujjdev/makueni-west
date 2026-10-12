@@ -5,7 +5,7 @@ $accButtons = ($c['journal'] || $c['receipt'] ? '<button type="button" class="bt
     . ($c['receipt'] ? '<button type="button" class="btn btn-primary" id="receiptBtn" data-own-only><i class="ri-bill-line me-1"></i>Write a receipt</button>' : '')
     // Adding an account: the diocese's chart (every place's accounts, funds included), else this place's own line.
     . ($c['chart'] ? '<a class="btn btn-outline-primary" href="' . $accCtx['baseUrl'] . '/chart.php?add=1" data-own-only><i class="ri-add-circle-line me-1"></i>Add an account</a>'
-        : ($c['accounts'] ? '<a class="btn btn-outline-primary" href="' . $accCtx['baseUrl'] . '/chart.php?add=1" data-own-only><i class="ri-add-circle-line me-1"></i>Add an account</a>' : ''));
+        : ($c['accounts'] || $c['setup'] ? '<a class="btn btn-outline-primary" href="' . $accCtx['baseUrl'] . '/chart.php?add=1" data-own-only><i class="ri-add-circle-line me-1"></i>Add an account</a>' : ''));
 include __DIR__ . '/toolbar.php';
 ?>
 

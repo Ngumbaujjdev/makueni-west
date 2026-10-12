@@ -207,7 +207,10 @@
    * set-up steps and one big button into start.php, and - instead of a page of
    * zeros - what the books will be used for.
    */
-  function startHero(s) {
+  let live = null; // the start banner's re-check timer
+  let liveDone = null; // which steps were done at the last look
+
+  function startHero(s, fresh = []) {
     const el = $("startCard");
     const steps = [
       ["Money places", "Cash, bank, M-Pesa", s.steps.find((x) => x.key === "accounts")?.done],
@@ -218,7 +221,7 @@
     ];
     const current = Math.max(0, steps.findIndex((x) => !x[2]));
     const doneCount = steps.filter((x) => x[2]).length;
-    const can = s.can?.accounts;
+    const can = s.can?.accounts || s.can?.setup;
     const href = (i) => A.link("start.php", { step: i + 1 });
     el.classList.remove("is-folded");
     el.classList.add("acc-start-hero");
@@ -228,12 +231,15 @@
         <div class="flex-fill min-w-0">
           <span class="badge bg-primary text-white"><i class="ri-flag-line me-1"></i>Start here</span>
           <div class="acc-start-hero-title">${s.started ? "Let's finish setting up" : "Let's set up"} ${esc(s.place.name)}'s books</div>
-          <div class="fw-medium">${can ? "5 short steps, about 5 minutes - each one saves as you go." : "Your treasurer sets them up here - these are the steps."}</div>
+          <div class="fw-medium">${can ? "5 short steps, about 5 minutes - each one saves as you go." : s.setters?.length ? `${esc(s.setters.join(", "))} can set them up - this line moves as they do.` : "Nobody here can set them up yet - the diocese admin gives someone the \"Set up the books\" permission."}</div>
         </div>
-        ${can ? `<a class="btn btn-primary btn-lg" href="${href(current)}">${s.started ? `Continue - step ${current + 1} of 5` : "Start now"}<i class="ri-arrow-right-line ms-1"></i></a>` : ""}
+        <div class="d-flex flex-column align-items-end gap-2">
+          ${can ? `<a class="btn btn-primary btn-lg" href="${href(current)}">${s.started ? `Continue - step ${current + 1} of 5` : "Start now"}<i class="ri-arrow-right-line ms-1"></i></a>` : CTX.canAdmin && !s.setters?.length ? `<a class="btn btn-primary" href="${CTX.siteUrl}/diocese/settings/admin/role-management.php"><i class="ri-key-2-line me-1"></i>Roles & permissions</a>` : ""}
+          <span class="soft-chip soft-success acc-start-live"><i class="ri-radio-button-line"></i>Live - updated just now</span>
+        </div>
       </div>
       <div class="acc-start-line" style="--n: 5"><i style="width: ${Math.min(80, (doneCount / 4) * 80)}%"></i>
-        ${steps.map(([t, sub, ok], i) => `<${can ? `a href="${href(i)}"` : "div"} class="acc-start-dot${ok ? " is-done" : i === current ? " is-on" : ""}"><span>${ok ? '<i class="ri-check-line"></i>' : i + 1}</span><strong>${t}</strong><small>${sub}</small></${can ? "a" : "div"}>`).join("")}
+        ${steps.map(([t, sub, ok], i) => `<${can ? `a href="${href(i)}"` : "div"} class="acc-start-dot${ok ? " is-done" : i === current ? " is-on" : ""}${fresh.includes(i) ? " is-new" : ""}"><span>${ok ? '<i class="ri-check-line"></i>' : i + 1}</span><strong>${t}</strong><small>${sub}</small></${can ? "a" : "div"}>`).join("")}
       </div>
     </div>`;
     el.hidden = false;
@@ -247,6 +253,35 @@
     ].join("");
     $("accFirst").hidden = false;
     $("accDash").hidden = true;
+    liveDone = steps.map((x) => !!x[2]);
+    startLive();
+  }
+
+  /**
+   * While the start banner shows, look again every 10 seconds (when the tab is
+   * in view): a step someone just finished turns green with a pulse, and once
+   * money is recorded the page becomes the normal dashboard.
+   */
+  function startLive() {
+    if (live) return;
+    live = setInterval(async () => {
+      if (document.visibilityState !== "visible") return;
+      const res = await AccountingAPI.setup();
+      if (!res.ok) return;
+      if (res.data.recorded) {
+        stopLive();
+        return load();
+      }
+      const was = liveDone || [];
+      const st = res.data.steps;
+      const now = [st.find((x) => x.key === "accounts")?.done, st.find((x) => x.key === "opening")?.done, !res.data.unheld, st.some((x) => ["funds", "lines"].includes(x.key) && x.done), false].map(Boolean);
+      startHero(res.data, now.map((d, i) => (d && !was[i] ? i : -1)).filter((i) => i >= 0));
+    }, 10000);
+  }
+
+  function stopLive() {
+    clearInterval(live);
+    live = null;
   }
 
   function setup(s) {
@@ -254,6 +289,7 @@
     $("accFirst").hidden = true;
     $("accDash").hidden = false;
     el.classList.remove("acc-start-hero");
+    stopLive();
     if (!s || A.viewingBelow()) {
       el.hidden = true;
       return;
