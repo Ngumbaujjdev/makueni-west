@@ -26,7 +26,7 @@ function accountingPageContext(string $level, string $page): array
         'journals' => 'journals.post',
         'documents' => 'documents.read',
         'reports' => 'reports.read',
-        'chart' => 'chart.manage',
+        'chart' => $level === 'diocese' ? 'chart.manage' : 'chart.read',
         'reconciliation', 'reconcile' => 'reconciliation.read',
         'close' => 'periods.read',
         'collections' => 'collections.read',
@@ -50,6 +50,7 @@ function accountingPageContext(string $level, string $page): array
     $main = [
         'collections' => ['collections.record', 'Record collections', $level === 'church'],
         'accounts' => ['accounts.manage', 'Add and change accounts', true],
+        'chart' => ['accounts.manage', 'Add and change accounts', $level !== 'diocese'],
         'payments' => ['payments.prepare', 'Prepare payments', true],
         'procurement' => ['procurement.manage', 'Buy through procurement', true],
         'payroll' => ['payroll.manage', 'Run the payroll', true],

@@ -1,6 +1,7 @@
 <?php
 $c = $accCtx['can'];
-$accButtons = ($c['journal'] ? '<button type="button" class="btn btn-outline-primary" id="openingBtn" data-own-only><i class="ri-scales-3-line me-1"></i>Opening balances</button>' : '')
+$accButtons = '<a class="btn btn-outline-primary" href="' . $accCtx['baseUrl'] . '/chart.php" data-keep-place><i class="ri-book-3-line me-1"></i>Chart of accounts</a>'
+    . ($c['journal'] ? '<button type="button" class="btn btn-outline-primary" id="openingBtn" data-own-only><i class="ri-scales-3-line me-1"></i>Opening balances</button>' : '')
     . ($c['receipt'] || $c['journal'] ? '<button type="button" class="btn btn-outline-primary" id="transferBtn" data-own-only><i class="ri-arrow-left-right-line me-1"></i>Move money</button>' : '')
     . ($c['accounts'] ? '<button type="button" class="btn btn-outline-primary" id="lineBtn" data-own-only><i class="ri-git-branch-line me-1"></i>Add our own line</button>' : '')
     . ($c['accounts'] ? '<button type="button" class="btn btn-primary" id="addBtn" data-own-only><i class="ri-add-line me-1"></i>Add an account</button>' : '');

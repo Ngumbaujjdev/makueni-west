@@ -313,6 +313,7 @@ final class Books
             'is_header' => $a->is_header,
             'is_active' => $a->is_active,
             'system_key' => $a->system_key,
+            'can_parent' => Chart::canParent($a),
             'bank_name' => $a->bank_name,
             'branch' => $a->branch,
             'number_masked' => $a->maskedNumber(),

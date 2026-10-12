@@ -10,6 +10,7 @@ use App\Models\Territory;
 use App\Services\Accounting\Books;
 use App\Services\Accounting\Chart;
 use App\Services\Accounting\Documents;
+use App\Services\Accounting\Funds;
 use App\Services\Accounting\Ledger;
 use App\Support\AccountingAccess;
 use Carbon\CarbonImmutable;
@@ -29,7 +30,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class BooksController extends AccountingBase
 {
-    public function __construct(private Books $books, private Chart $chart, private Ledger $ledger, private Documents $docs) {}
+    public function __construct(private Books $books, private Chart $chart, private Ledger $ledger, private Documents $docs, private Funds $funds) {}
 
     /** GET /accounting/overview - cash position, this month, by fund, the latest documents, vouchers waiting. */
     public function overview(Request $request): JsonResponse
@@ -172,13 +173,20 @@ class BooksController extends AccountingBase
         if ($place instanceof JsonResponse) {
             return $place;
         }
+        if ($request->input('kind') === 'fund') {
+            // A fund of our own (money kept for one purpose) - the same as Settings › Giving options & funds.
+            $f = $request->validate(['name' => ['required', 'string', 'min:2', 'max:100'], 'is_restricted' => ['sometimes', 'boolean'], 'reach' => ['nullable', 'in:self,below']]);
+            $fund = $this->funds->add($place, trim($f['name']), (bool) ($f['is_restricted'] ?? true), $f['reach'] ?? 'self', $request->user());
+
+            return $this->ok(['fund' => ['id' => $fund->id, 'code' => $fund->code, 'name' => $fund->name, 'is_restricted' => $fund->is_restricted]], "{$fund->name} added - kept under Other funds.", 201);
+        }
         $data = $request->validate($this->accountRules() + ['cash_kind' => ['required_without:parent_id', 'nullable', 'in:bank,mpesa,airtel'], 'parent_id' => ['nullable', 'integer']],
             ['cash_kind.required_without' => 'Add a bank or an M-Pesa account - or pick the standard account to put it under.']);
         if (! empty($data['parent_id']) && empty($data['cash_kind'])) {
             // Our own finer line under a standard income or expense account.
             $parent = AccountingAccount::whereNull('territory_id')->find((int) $data['parent_id']);
             if (! $parent) {
-                throw ValidationException::withMessages(['parent_id' => ['Pick a standard income or expense account to put it under.']]);
+                throw ValidationException::withMessages(['parent_id' => ['Pick the standard account to put it under.']]);
             }
             $account = $this->chart->addSubAccount($place, $parent, $data, $request->user()->id);
 

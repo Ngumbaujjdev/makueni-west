@@ -51,7 +51,7 @@ class AccountingAccessSeeder extends Seeder
         'documents' => ['documents.php', 'All documents', 'Every receipt, payment, transfer and journal, newest first', null],
         'reports' => ['reports.php', 'Reports', 'The books as PDFs on the diocese letterhead - the cashbook with its cover, the trial balance and the registers', null],
         'gateways' => ['gateways.php', 'Gateways', 'Each church\'s Paystack for online giving, and the payouts recorded', ['diocese']],
-        'chart' => ['chart.php', 'Chart of accounts', 'The standard accounts every church, region and diocese posts to', ['diocese']],
+        'chart' => ['chart.php', 'Chart of accounts', 'Every account this place posts to - the standard ones, and its own lines, assets, debts and funds', null],
         'rules' => ['approval-rules.php', 'Approval rules', 'Who signs what here, by amount - our own rules, those from above, and who it goes to when late', null],
     ];
 
@@ -82,6 +82,7 @@ class AccountingAccessSeeder extends Seeder
         'journal' => ['accounting.journals.post' => 'journals'],
         'accounts' => ['accounting.accounts.manage' => 'accounts'],
         'chart' => ['accounting.chart.manage' => 'chart'],
+        'chartread' => ['accounting.chart.read' => 'chart'],
         'below' => ['accounting.below.read' => 'overview'],
         'reconcile' => ['accounting.reconcile.do' => 'reconciliation'],
         'petty' => ['accounting.pettycash.spend' => 'accounts'],
@@ -176,7 +177,8 @@ class AccountingAccessSeeder extends Seeder
             $permissions = [];
             foreach (self::PERMISSIONS as $ability => $names) {
                 foreach ($names as $suffix => $pageKey) {
-                    if (! isset($pages[$pageKey]) || ($ability === 'below' && $level === 'church')) {
+                    // The diocese changes the standard chart; a church or region reads it and adds its own.
+                    if (! isset($pages[$pageKey]) || ($ability === 'below' && $level === 'church') || ($ability === 'chart' && $level !== 'diocese') || ($ability === 'chartread' && $level === 'diocese')) {
                         continue;
                     }
                     $name = "{$level}.{$suffix}";
@@ -196,6 +198,11 @@ class AccountingAccessSeeder extends Seeder
             }
             foreach (Role::where('territory_level', $level)->get() as $role) {
                 $granted += $this->grantOnce($role, collect(self::EVERYONE)->flatMap(fn ($a) => $permissions[$a] ?? []));
+            }
+            // Whoever reads this place's accounts also sees its chart (once - the admin's later choice stands).
+            $accountsRead = Permission::where('name', "{$level}.accounting.accounts.read")->first();
+            foreach ($accountsRead && isset($permissions['chartread']) ? $accountsRead->roles()->get() : [] as $role) {
+                $granted += $this->grantOnce($role, collect($permissions['chartread']));
             }
             $this->command?->info("   ✅ {$level}: Finance > Accounting (".count($pages)." pages), {$granted} new grant(s)");
         }

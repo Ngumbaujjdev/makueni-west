@@ -122,4 +122,21 @@ final class Funds
 
         return $this->forPlace($owner, false)->where('territory_id', $owner->id)->values();
     }
+
+    /** One more fund for a place, its code made from the name (Choir trip fund → CHOIRTRIPF, then CHOIR2...). */
+    public function add(Territory $owner, string $name, bool $restricted, string $reach, ?User $by): AccountingFund
+    {
+        $mine = AccountingFund::where('territory_id', $owner->id)->orderBy('display_order')->get();
+        $taken = AccountingFund::whereNull('territory_id')->pluck('code')->merge($mine->pluck('code'))->all();
+        $base = mb_substr(strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $name)), 0, 10) ?: 'FUND';
+        $code = str_pad($base, 2, 'F');
+        for ($n = 2; in_array($code, $taken, true); $n++) {
+            $code = mb_substr($base, 0, 10 - strlen((string) $n)).$n;
+        }
+        $rows = $mine->map(fn (AccountingFund $f) => ['id' => $f->id, 'code' => $f->code, 'name' => $f->name, 'is_restricted' => $f->is_restricted, 'reach' => $f->reach, 'is_active' => $f->is_active])->all();
+        $rows[] = ['code' => $code, 'name' => $name, 'is_restricted' => $restricted, 'reach' => $reach, 'is_active' => true];
+        $this->save($owner, $rows, $by);
+
+        return AccountingFund::where('territory_id', $owner->id)->where('code', $code)->firstOrFail();
+    }
 }
