@@ -288,10 +288,25 @@ final class Chart
      * money in finer lines, while budgets and the places above still count it
      * on the standard account.
      */
+    /**
+     * The standard asset and liability accounts a place may put its own lines
+     * under (a church van under Fixed assets, a SACCO loan under Money held
+     * for others). Cash, what places owe each other and payroll stay closed -
+     * the system posts to those.
+     */
+    public const OWN_PARENTS = ['fixed_assets', 'receivables', 'staff_advances', 'suppliers_payable', 'held_for_others'];
+
+    /** May a place put its own line under this standard account? */
+    public static function canParent(AccountingAccount $a): bool
+    {
+        return $a->territory_id === null && ! $a->is_header && $a->is_active && ! $a->cash_kind
+            && (in_array($a->type, ['income', 'expense'], true) || in_array($a->system_key, self::OWN_PARENTS, true));
+    }
+
     public function addSubAccount(Territory $place, AccountingAccount $parent, array $data, ?int $by = null): AccountingAccount
     {
-        if ($parent->territory_id !== null || ! in_array($parent->type, ['income', 'expense'], true) || $parent->is_header || ! $parent->is_active) {
-            throw ValidationException::withMessages(['parent_id' => ['Pick a standard income or expense account to put it under.']]);
+        if (! self::canParent($parent)) {
+            throw ValidationException::withMessages(['parent_id' => ['Pick a standard account to put it under: money in, money out, fixed assets, receivables, staff advances, suppliers payable or money held for others.']]);
         }
         $name = trim((string) ($data['name'] ?? ''));
         if (AccountingAccount::where('territory_id', $place->id)->where('parent_id', $parent->id)->where('name', $name)->exists()) {

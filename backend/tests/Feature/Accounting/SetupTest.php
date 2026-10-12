@@ -47,6 +47,30 @@ class SetupTest extends TestCase
         $this->postJson('/api/accounting/receipts', ['date' => $this->day(), 'account_id' => $this->cash()->id, 'party_name' => 'X', 'lines' => [['account_id' => $sub, 'amount' => 5]]])->assertUnprocessable();
     }
 
+    public function test_a_church_adds_what_it_owns_owes_and_a_fund_of_its_own(): void
+    {
+        Sanctum::actingAs($this->treasurer);
+        $chart = collect($this->getJson('/api/accounting/accounts')->assertOk()->json('data.chart'));
+        $this->assertTrue($chart->firstWhere('code', '1500')['can_parent'], 'Fixed assets takes our own lines');
+        $this->assertFalse($chart->firstWhere('code', '2200')['can_parent'], 'what we owe the diocese is the system\'s');
+
+        $van = $this->postJson('/api/accounting/accounts', ['name' => 'Church van', 'parent_id' => $this->acc('1500')->id])->assertCreated()->assertJsonPath('data.code', '1500-01')->json('data.id');
+        $this->assertSame(['asset', $this->myChurch->id], [AccountingAccount::find($van)->type, AccountingAccount::find($van)->territory_id]);
+        $this->postJson('/api/accounting/accounts', ['name' => 'SACCO loan', 'parent_id' => $this->acc('2400')->id])->assertCreated()->assertJsonPath('data.code', '2400-01');
+        foreach (['1300', '2200', '2300'] as $closed) {
+            $this->postJson('/api/accounting/accounts', ['name' => "Odd {$closed}", 'parent_id' => $this->acc($closed)->id])->assertUnprocessable()->assertJsonValidationErrors('parent_id');
+        }
+        $fund = $this->postJson('/api/accounting/accounts', ['kind' => 'fund', 'name' => 'Choir trip fund'])->assertCreated()->json('data.fund');
+        $this->assertSame('CHOIRTRIPF', $fund['code']);
+        $this->assertSame($this->myChurch->id, \App\Models\AccountingFund::find($fund['id'])->territory_id);
+        $this->postJson('/api/accounting/accounts', ['kind' => 'fund', 'name' => 'Choir trip fund'])->assertCreated()->assertJsonPath('data.fund.code', 'CHOIRTRIP2');
+
+        // Ours only: the church next door doesn't see them; nobody here changes the standard chart.
+        Sanctum::actingAs($this->otherTreasurer);
+        $this->assertNull(collect($this->getJson('/api/accounting/accounts')->json('data.chart'))->firstWhere('id', $van));
+        $this->postJson('/api/accounting/chart', ['code' => '5250', 'name' => 'Odd', 'type' => 'expense'])->assertForbidden();
+    }
+
     public function test_the_diocese_puts_a_new_account_under_a_heading_of_its_kind(): void
     {
         Sanctum::actingAs($this->userWithRole('dfo', 'Diocese Finance Officer', 'diocese', $this->diocese->id, $this->perms('diocese', ['read', 'chart'])));

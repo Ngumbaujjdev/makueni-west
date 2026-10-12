@@ -105,12 +105,16 @@ class AccountingAccessTest extends TestCase
         $this->seed(AccountingAccessSeeder::class);
         $this->seed(AccountingAccessSeeder::class);
         $this->assertSame(1, \App\Models\Module::where('name', 'Accounting')->whereHas('moduleGroup', fn ($q) => $q->where('slug', 'church-finance'))->count());
-        $this->assertSame(20, \App\Models\Submodule::where('path', 'like', '/church/accounting/%')->where('is_active', true)->count(), 'Approvals, Requisitions, Procurement, Remittances and Payroll at every level');
-        $this->assertSame(22, \App\Models\Submodule::where('path', 'like', '/diocese/accounting/%')->where('is_active', true)->count(), 'the chart and Approval rules pages are the diocese\'s; Collections the churches\'');
+        $this->assertSame(21, \App\Models\Submodule::where('path', 'like', '/church/accounting/%')->where('is_active', true)->count(), 'Approvals, Requisitions, Procurement, Remittances, Payroll and the Chart of accounts at every level');
+        $this->assertSame(22, \App\Models\Submodule::where('path', 'like', '/diocese/accounting/%')->where('is_active', true)->count(), 'Approval rules and Gateways are the diocese\'s; Collections the churches\'');
         $treasurer = \App\Models\Role::where('name', 'Church Treasurer')->first();
         $this->assertTrue($treasurer->hasPermissionTo('church.accounting.payments.pay'));
         $this->assertFalse(\App\Models\Role::where('name', 'Senior Pastor')->first()->hasPermissionTo('church.accounting.payments.pay'));
         $this->assertTrue(\App\Models\Role::where('name', 'Senior Pastor')->first()->hasPermissionTo('church.accounting.payments.authorise'));
         $this->assertSame(1, \App\Models\Permission::where('name', 'church.accounting.books.read')->count());
+        // A church reads its chart (and adds its own); only the diocese changes the standard one.
+        $this->assertTrue($treasurer->hasPermissionTo('church.accounting.chart.read'));
+        $this->assertSame(0, \App\Models\Permission::where('name', 'church.accounting.chart.manage')->count());
+        $this->assertSame(0, \App\Models\Permission::where('name', 'diocese.accounting.chart.read')->count());
     }
 }
