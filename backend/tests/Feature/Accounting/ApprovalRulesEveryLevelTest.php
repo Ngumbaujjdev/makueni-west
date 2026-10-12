@@ -135,6 +135,42 @@ class ApprovalRulesEveryLevelTest extends TestCase
         $this->assertTrue($m['can']['manage']);
     }
 
+    private function assignment(\App\Models\Territory $place, User $approver, string $status, \DateTimeInterface $opened, ?\DateTimeInterface $due = null): \App\Models\ApprovalAssignment
+    {
+        $run = \App\Models\PayrollRun::create(['territory_id' => $place->id, 'month' => '2026-0'.random_int(1, 9), 'status' => 'submitted']);
+        $req = ApprovalRequest::create(['subject_type' => 'payroll_run', 'subject_id' => $run->id, 'territory_id' => $place->id, 'requested_by' => $this->treasurer->id,
+            'workflow_name' => 'Church - any amount', 'status' => $status === 'approved' ? 'approved' : 'pending', 'context' => ['amount' => 5000]]);
+        $stage = \App\Models\ApprovalRequestStage::create(['request_id' => $req->id, 'sequence' => 1, 'name' => 'Pastor', 'type' => 'single', 'on_reject' => 'terminate', 'status' => $status === 'approved' ? 'approved' : 'active']);
+        $a = \App\Models\ApprovalAssignment::create(['request_id' => $req->id, 'request_stage_id' => $stage->id, 'approver_id' => $approver->id, 'status' => $status, 'due_at' => $due]);
+        \App\Models\ApprovalAssignment::whereKey($a->id)->update(['created_at' => $opened]);
+        if ($status === 'approved') {
+            $d = \App\Models\ApprovalDecision::create(['assignment_id' => $a->id, 'actor_id' => $approver->id, 'decision' => 'approve']);
+            \App\Models\ApprovalDecision::whereKey($d->id)->update(['created_at' => \Carbon\Carbon::instance($opened)->addHour()]);
+        }
+
+        return $a;
+    }
+
+    public function test_live_shows_each_approver_over_time(): void
+    {
+        $this->assignment($this->myChurch, $this->authoriser, 'approved', now()->subDays(3));
+        $this->assignment($this->myChurch, $this->authoriser, 'pending', now()->subDays(2), now()->subDay());
+        $this->assignment($this->myChurch, $this->authoriser, 'pending', now()->subHours(2), now()->addDay());
+        $this->assignment($this->otherChurch, $this->authoriser, 'pending', now()->subDay());
+        \App\Models\ApprovalDelegation::create(['delegator_id' => $this->authoriser->id, 'delegate_id' => $this->treasurer->id, 'starts_at' => now()->subDays(5), 'ends_at' => now()->subDays(4), 'is_active' => true]);
+
+        Sanctum::actingAs($this->churchRules);
+        $l = $this->getJson('/api/approvals/live?days=7')->assertOk()->json('data');
+        $this->assertCount(9, $l['ticks'], 'seven days and two ahead');
+        $this->assertSame(6, collect($l['ticks'])->search(fn ($t) => $t['now']));
+        $row = collect($l['rows'])->firstWhere('name', $this->authoriser->full_name);
+        $this->assertSame(['Pastor', 1], [$row['role'], $row['approvals']]);
+        $this->assertSame(['approved', 'late', 'waiting'], collect($l['blocks'])->pluck('status')->all(), 'another church\'s step never shows');
+        $this->assertSame(1, $l['active_now']);
+        $this->assertSame($this->treasurer->full_name, $l['away'][0]['to_name']);
+        $this->assertCount(27, $this->getJson('/api/approvals/live?days=1')->json('data.ticks'), 'a day of hours and three ahead');
+    }
+
     public function test_the_map_asks_about_what_is_waiting_including_a_payroll_run(): void
     {
         $run = \App\Models\PayrollRun::create(['territory_id' => $this->myChurch->id, 'month' => '2026-10', 'status' => 'submitted']);

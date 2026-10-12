@@ -259,6 +259,17 @@ class ApprovalController extends AccountingBase
         return $this->ok($this->map->map($place, (string) $request->query('subject', 'payment_voucher'), $request->user()));
     }
 
+    /** GET /approvals/live?territory_id=&days=1|7|14|30&subject= - the approvers here over time: what each handled, and when. */
+    public function live(Request $request): JsonResponse
+    {
+        $place = $this->rulesPlace($request);
+        if ($place instanceof JsonResponse) {
+            return $place;
+        }
+
+        return $this->ok($this->map->live($place, (int) $request->query('days', 14), $request->query('subject'), $request->user()));
+    }
+
     /** GET /approvals/try?territory_id=&subject=&amount= - who would sign this amount today (nothing is created). */
     public function try(Request $request): JsonResponse
     {
