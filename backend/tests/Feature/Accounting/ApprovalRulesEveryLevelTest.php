@@ -134,4 +134,17 @@ class ApprovalRulesEveryLevelTest extends TestCase
         $this->assertTrue(collect($m['segments'])->contains(fn ($s) => $s['standard_only']), 'amounts above the ceiling are the diocese\'s');
         $this->assertTrue($m['can']['manage']);
     }
+
+    public function test_the_map_asks_about_what_is_waiting_including_a_payroll_run(): void
+    {
+        $run = \App\Models\PayrollRun::create(['territory_id' => $this->myChurch->id, 'month' => '2026-10', 'status' => 'submitted']);
+        $req = ApprovalRequest::create(['subject_type' => 'payroll_run', 'subject_id' => $run->id, 'territory_id' => $this->myChurch->id, 'requested_by' => $this->treasurer->id, 'workflow_name' => 'Church - any amount', 'status' => 'pending']);
+        \App\Models\ApprovalRequestStage::create(['request_id' => $req->id, 'sequence' => 1, 'name' => 'Pastor', 'type' => 'single', 'on_reject' => 'terminate', 'status' => 'blocked', 'blocked_reason' => 'Nobody holds the role for this stage.']);
+        Sanctum::actingAs($this->churchRules);
+        $m = $this->getJson('/api/approvals/map?subject=payroll_run')->assertOk()->json('data');
+        $this->assertSame('Why is Payroll October 2026 stuck?', $m['questions'][0]['text']);
+        $this->assertSame(['payroll', $run->id], [$m['questions'][0]['type'], $m['questions'][0]['id']]);
+        $this->assertSame([1, 1], [$m['detected']['waiting'], $m['detected']['blocked']]);
+        $this->assertSame('blocked', collect($m['checks'])->first()['action'] ?? null, 'a stuck approval is the first thing to fix');
+    }
 }
