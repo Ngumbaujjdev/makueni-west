@@ -40261,3 +40261,63 @@ a.acc-chain-item:hover, button.acc-chain-item:hover { border-color: rgba(var(--p
   .ap-frame { gap: .5rem; }
   .ap-nav { order: 3; width: 100%; }
 }
+
+/* ------------------------------------------------------------------
+   Start here (2026-10-12) - setting a place's books up for the first
+   time: the wizard's template cards and the overview's start banner
+   with its progress line (assets/js/pages/accounting/start.js, index.js).
+   ------------------------------------------------------------------ */
+.acc-start-label { margin-bottom: .5rem; font-size: .74rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--v2-heading); }
+.acc-start-haves, .acc-start-obs, .acc-start-jobs { display: grid; gap: .5rem; }
+.acc-start-jobs { grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
+.acc-start-have, .acc-start-ob, .acc-start-job { display: flex; align-items: center; gap: .75rem; margin: 0; padding: .7rem .85rem; border: 1px solid var(--default-border); border-radius: .75rem; background: var(--custom-white); }
+.acc-start-have, .acc-start-ob, .acc-start-job, .acc-start-tpl, .acc-start-pick { min-width: 0; }
+.acc-start-job { align-items: flex-start; }
+.acc-start-job.is-empty { border-color: rgba(var(--danger-rgb), .45); background: rgba(var(--danger-rgb), .05); }
+.acc-start-tpls, .acc-start-picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: .6rem; }
+.acc-start-tpl { border: 1px dashed rgba(var(--primary-rgb), .55); border-radius: .85rem; background: var(--custom-white); }
+.acc-start-tpl.is-open { grid-column: 1 / -1; border-style: solid; border-color: rgb(var(--primary-rgb)); box-shadow: 0 0 0 1px rgb(var(--primary-rgb)); }
+.acc-start-tpl-head, .acc-start-pick { display: flex; align-items: center; gap: .75rem; width: 100%; padding: .8rem .9rem; border: 0; background: transparent; color: var(--v2-heading); text-align: left; text-decoration: none; }
+.acc-start-tpl-head strong, .acc-start-pick strong { display: block; font-size: .92rem; }
+.acc-start-tpl-head small, .acc-start-pick small { display: block; font-size: .78rem; color: var(--default-text-color); }
+.acc-start-tpl-form { padding: 0 .9rem .9rem; }
+.acc-start-pick { border: 1px solid var(--default-border); border-radius: .85rem; background: var(--custom-white); }
+.acc-start-pick:hover:not(:disabled), .acc-start-tpl-head:hover { background: rgba(var(--primary-rgb), .05); }
+.acc-start-pick.is-on { border-color: rgba(var(--success-rgb), .6); background: rgba(var(--success-rgb), .08); }
+.acc-start-chip { margin: 0; cursor: pointer; }
+.acc-start-chip input { position: absolute; opacity: 0; pointer-events: none; }
+.acc-start-chip span { display: inline-flex; padding: .4rem .8rem; border: 1px solid var(--default-border); border-radius: 999px; font-size: .84rem; font-weight: 600; color: var(--v2-heading); }
+.acc-start-chip input:checked + span { border-color: rgb(var(--primary-rgb)); background: rgb(var(--primary-rgb)); color: #fff; }
+.acc-start-chip input:focus-visible + span { box-shadow: 0 0 0 .2rem rgba(var(--primary-rgb), .3); }
+.acc-start-total { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .75rem; padding: .85rem 1rem; border-radius: .75rem; background: rgba(var(--success-rgb), .1); color: var(--v2-heading); }
+.acc-start-ok { display: flex; flex-wrap: wrap; align-items: center; gap: .9rem; padding: 1rem; border-radius: .85rem; background: rgba(var(--success-rgb), .1); color: var(--v2-heading); }
+.acc-start-review { padding: .85rem 0; border-bottom: 1px solid var(--default-border); }
+.acc-start-review:first-child { padding-top: 0; }
+.acc-start-sofar-note { margin-top: .5rem; padding-top: .85rem; border-top: 1px dashed var(--default-border); font-size: .82rem; font-weight: 500; color: var(--v2-heading); }
+.acc-start-nexts { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: .8rem; max-width: 46rem; margin: 0 auto; }
+.acc-start-next { display: flex; flex-direction: column; align-items: center; gap: .4rem; padding: 1.2rem .9rem; border: 1px solid var(--default-border); border-radius: 1rem; background: var(--custom-white); color: var(--v2-heading); }
+.acc-start-next:hover { border-color: rgb(var(--primary-rgb)); box-shadow: 0 0 0 1px rgb(var(--primary-rgb)); }
+.acc-start-next small { font-size: .8rem; color: var(--default-text-color); }
+
+/* The overview's start banner and its progress line. */
+.acc-start-hero .card-body { padding: 1.5rem; }
+.acc-start-hero-title { margin: .35rem 0 .2rem; font-size: 1.4rem; font-weight: 700; color: var(--v2-heading); }
+.acc-start-line { position: relative; display: grid; grid-template-columns: repeat(var(--n, 5), 1fr); margin-top: 1.5rem; }
+.acc-start-line::before { content: ""; position: absolute; top: 1.05rem; left: 10%; right: 10%; height: 3px; border-radius: 3px; background: var(--default-border); }
+.acc-start-line > i { position: absolute; top: 1.05rem; left: 10%; height: 3px; border-radius: 3px; background: rgb(var(--success-rgb)); }
+.acc-start-dot { position: relative; display: flex; flex-direction: column; align-items: center; gap: .4rem; padding: 0 .25rem; color: var(--v2-heading); text-align: center; text-decoration: none; }
+.acc-start-dot > span { display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border: 2px solid var(--default-border); border-radius: 50%; background: var(--custom-white); font-weight: 700; }
+.acc-start-dot.is-done > span { border-color: rgb(var(--success-rgb)); background: rgb(var(--success-rgb)); color: #fff; }
+.acc-start-dot.is-on > span { border-color: rgb(var(--primary-rgb)); background: rgb(var(--primary-rgb)); color: #fff; box-shadow: 0 0 0 .3rem rgba(var(--primary-rgb), .2); }
+.acc-start-dot strong { font-size: .82rem; }
+.acc-start-dot small { font-size: .72rem; color: var(--default-text-color); }
+.acc-first { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: .8rem; }
+.acc-first-card { display: flex; align-items: center; gap: .8rem; padding: 1rem; border: 1px solid var(--default-border); border-radius: .9rem; background: var(--custom-white); color: var(--v2-heading); }
+.acc-first-card small { display: block; font-size: .78rem; color: var(--default-text-color); }
+@media (max-width: 575.98px) {
+  .acc-start-have, .acc-start-ob { flex-wrap: wrap; }
+  .acc-start-ob .input-group { max-width: none !important; }
+  .acc-start-dot small { display: none; }
+  .acc-start-dot strong { font-size: .7rem; }
+  .acc-start-hero .card-body { padding: 1rem; }
+}

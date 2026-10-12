@@ -13,6 +13,10 @@ include __DIR__ . '/toolbar.php';
 
 <div class="card custom-card acc-lastsun" id="lastSunday" hidden></div>
 
+<!-- Before anything is recorded: what the books are for, instead of a page of zeros (index.js). -->
+<div class="acc-first mb-4" id="accFirst" hidden></div>
+
+<div id="accDash">
 <div class="row" id="statCardsRow"></div>
 
 <div id="channelRow" hidden></div>
@@ -72,4 +76,5 @@ include __DIR__ . '/toolbar.php';
             </table>
         </div>
     </div>
+</div>
 </div>

@@ -88,17 +88,20 @@ class SetupTest extends TestCase
         $steps = collect($d['steps'])->keyBy('key');
         $this->assertFalse($steps['accounts']['done']);
         $this->assertSame([0, 3], [$d['done'], $d['of']]);
+        $this->assertSame([false, false], [$d['started'], $d['recorded']], 'a new church starts at "Start here"');
         $jobs = collect($d['jobs'])->keyBy('ability');
         $this->assertContains('Test Treasurer', $jobs['receipt']['holders']);
         $this->assertContains('Test Senior', $jobs['authorise']['holders']);
         $this->assertArrayHasKey('collect', $jobs->all(), 'a church records collections');
 
         $this->postJson('/api/accounting/accounts', ['name' => 'KCB', 'cash_kind' => 'bank', 'bank_name' => 'KCB'])->assertCreated();
+        $this->assertSame([true, false], [$this->getJson('/api/accounting/setup')->json('data.started'), $this->getJson('/api/accounting/setup')->json('data.recorded')], 'begun, nothing recorded yet');
         $this->postJson('/api/accounting/journal-vouchers', ['date' => $this->day(1, 2), 'narration' => 'Opening balances', 'lines' => [
             ['account_id' => $this->cash()->id, 'debit' => 5000], ['account_id' => $this->acc('3000')->id, 'credit' => 5000],
         ]])->assertCreated();
         $d = $this->getJson('/api/accounting/setup')->json('data');
         $this->assertSame(2, $d['done']);
+        $this->assertTrue($d['recorded'], 'money recorded - the overview shows the books');
         Sanctum::actingAs($this->regionReader);
         $this->assertArrayNotHasKey('collect', collect($this->getJson('/api/accounting/setup')->assertOk()->json('data.jobs'))->keyBy('ability')->all(), 'a region has no Sunday collections');
     }

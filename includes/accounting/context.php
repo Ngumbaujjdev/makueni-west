@@ -27,6 +27,7 @@ function accountingPageContext(string $level, string $page): array
         'documents' => 'documents.read',
         'reports' => 'reports.read',
         'chart' => $level === 'diocese' ? 'chart.manage' : 'chart.read',
+        'start' => 'accounts.manage',
         'reconciliation', 'reconcile' => 'reconciliation.read',
         'close' => 'periods.read',
         'collections' => 'collections.read',

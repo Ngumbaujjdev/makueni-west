@@ -3,7 +3,7 @@
 // $accCtx (includes/accounting/context.php); the body is includes/accounting/body-{page}.php.
 $titles = [
     'index' => 'Accounting', 'accounts' => 'Cash & bank', 'cashbook' => 'Cashbook', 'receipts' => 'Receipts',
-    'payments' => 'Payment vouchers', 'journals' => 'Journals', 'documents' => 'All documents', 'chart' => 'Chart of accounts',
+    'payments' => 'Payment vouchers', 'journals' => 'Journals', 'documents' => 'All documents', 'chart' => 'Chart of accounts', 'start' => 'Start here',
     'reconciliation' => 'Reconciliation', 'reconcile' => 'Reconcile', 'close' => 'Month-end close', 'collections' => 'Collections',
     'approvals' => 'Approvals', 'requisitions' => 'Requisitions', 'approval-rules' => 'Approval rules', 'procurement' => 'Procurement', 'remittances' => 'Remittances', 'payroll' => 'Payroll', 'paybill' => 'Paybill', 'giving' => 'Online giving', 'transactions' => 'Transactions', 'gateways' => 'Gateways', 'record' => 'Record', 'account' => 'Account', 'reports' => 'Reports',
 ];

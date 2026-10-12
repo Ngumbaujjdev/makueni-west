@@ -176,6 +176,7 @@
   /** Where each step is done (GET accounting/setup gives the page key). */
   function stepAction(s, can) {
     const go = (href, label) => `<a class="btn btn-sm btn-outline-primary" href="${esc(href)}">${label}<i class="ri-arrow-right-line ms-1"></i></a>`;
+    if (can.accounts && s.key === "accounts") return go(A.link("start.php", { step: 1 }), "Start here");
     switch (s.page) {
       case "accounts":
         return go(A.link("accounts.php"), s.key === "petty" ? "Petty cash" : "Cash & bank");
@@ -201,12 +202,63 @@
    * rest when needed), and who here can do each job - a job nobody holds says
    * which permission it needs. Folds to one line once the needed steps are done.
    */
+  /**
+   * Nothing recorded yet: a "Start here" banner with the progress line of the
+   * set-up steps and one big button into start.php, and - instead of a page of
+   * zeros - what the books will be used for.
+   */
+  function startHero(s) {
+    const el = $("startCard");
+    const steps = [
+      ["Money places", "Cash, bank, M-Pesa", s.steps.find((x) => x.key === "accounts")?.done],
+      ["Opening balances", "What each held", s.steps.find((x) => x.key === "opening")?.done],
+      ["Who does what", "A person per job", !s.unheld],
+      ["Extras", "Optional", s.steps.some((x) => ["funds", "lines"].includes(x.key) && x.done)],
+      ["Start recording", "Your first receipt", false],
+    ];
+    const current = Math.max(0, steps.findIndex((x) => !x[2]));
+    const doneCount = steps.filter((x) => x[2]).length;
+    const can = s.can?.accounts;
+    const href = (i) => A.link("start.php", { step: i + 1 });
+    el.classList.remove("is-folded");
+    el.classList.add("acc-start-hero");
+    el.innerHTML = `<div class="card-body">
+      <div class="d-flex flex-wrap align-items-center gap-3">
+        <span class="avatar avatar-xl avatar-rounded bg-primary text-white flex-shrink-0"><i class="ri-rocket-line fs-24"></i></span>
+        <div class="flex-fill min-w-0">
+          <span class="badge bg-primary text-white"><i class="ri-flag-line me-1"></i>Start here</span>
+          <div class="acc-start-hero-title">${s.started ? "Let's finish setting up" : "Let's set up"} ${esc(s.place.name)}'s books</div>
+          <div class="fw-medium">${can ? "5 short steps, about 5 minutes - each one saves as you go." : "Your treasurer sets them up here - these are the steps."}</div>
+        </div>
+        ${can ? `<a class="btn btn-primary btn-lg" href="${href(current)}">${s.started ? `Continue - step ${current + 1} of 5` : "Start now"}<i class="ri-arrow-right-line ms-1"></i></a>` : ""}
+      </div>
+      <div class="acc-start-line" style="--n: 5"><i style="width: ${Math.min(80, (doneCount / 4) * 80)}%"></i>
+        ${steps.map(([t, sub, ok], i) => `<${can ? `a href="${href(i)}"` : "div"} class="acc-start-dot${ok ? " is-done" : i === current ? " is-on" : ""}"><span>${ok ? '<i class="ri-check-line"></i>' : i + 1}</span><strong>${t}</strong><small>${sub}</small></${can ? "a" : "div"}>`).join("")}
+      </div>
+    </div>`;
+    el.hidden = false;
+    // What the books are for, once set up - instead of a page of zeros.
+    const card = (icon, color, title, text) => `<div class="acc-first-card"><span class="avatar avatar-md avatar-rounded bg-${color} ${A.textOn(color)}"><i class="${icon} fs-18"></i></span><div><strong>${title}</strong><small>${text}</small></div><span class="soft-chip soft-secondary ms-auto">After setup</span></div>`;
+    $("accFirst").innerHTML = [
+      card("ri-bill-line", "primary", "Write receipts", "Every shilling that comes in"),
+      CTX.level === "church" ? card("ri-hand-heart-line", "success", "Record Sunday collections", "Tithes and offerings by kind") : "",
+      card("ri-file-list-3-line", "warning", "Prepare payments", "Approved, then paid"),
+      card("ri-bar-chart-2-line", "purple", "See it all here", "Balances, money in and out, funds"),
+    ].join("");
+    $("accFirst").hidden = false;
+    $("accDash").hidden = true;
+  }
+
   function setup(s) {
     const el = $("startCard");
+    $("accFirst").hidden = true;
+    $("accDash").hidden = false;
+    el.classList.remove("acc-start-hero");
     if (!s || A.viewingBelow()) {
       el.hidden = true;
       return;
     }
+    if (!s.recorded) return startHero(s);
     const pct = s.of ? Math.round((s.done / s.of) * 100) : 100;
     const finished = s.done >= s.of;
     const row = (st) => `<li class="acc-setup-step${st.done ? " is-done" : ""}">
