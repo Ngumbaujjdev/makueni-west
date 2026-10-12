@@ -30,23 +30,32 @@
   const money = (v) => (v === null || v === undefined ? null : A.money(v, { cents: false }));
   const itemUrl = (r) => `${CTX.baseUrl}/item.php?kind=${tab}&id=${r.id}`;
   const usedHere = (r) => r.is_active && !r.hidden;
+  const CYCLE = ["primary", "success", "purple", "warning", "pink", "info", "danger"];
+  const tileColor = (r) => CYCLE[(data[KIND[tab].key].indexOf(r) + { position: 0, grade: 1, allowance: 3 }[tab]) % CYCLE.length];
 
   /** One short line under the name: what it pays or where it is used. */
   function subline(r) {
-    if (tab === "position") return [r.levels.length ? r.levels.map((l) => LEVELS[l]).join(", ") : "Any level", r.grade, money(r.default_pay) && `usually ${money(r.default_pay)}`, r.allowances?.length && `+ ${r.allowances.map((a) => a.name).join(", ")}`].filter(Boolean).map(esc).join(" · ");
-    if (tab === "grade") return r.min_pay !== null || r.max_pay !== null ? `${money(r.min_pay) || "-"} to ${money(r.max_pay) || "-"}${r.default_pay ? ` · usually ${money(r.default_pay)}` : ""}` : r.default_pay ? `Usually ${money(r.default_pay)}` : "No range set";
-    return r.default_amount ? `Usually ${money(r.default_amount)} a month` : "Amount set per person";
+    if (tab === "position") return [r.levels.length ? r.levels.map((l) => LEVELS[l]).join(", ") : "Any level", r.grade, r.allowances?.length && `+ ${r.allowances.map((a) => a.name).join(", ")}`].filter(Boolean).map(esc).join(" · ");
+    if (tab === "grade") return esc(r.name);
+    return r.description ? esc(r.description) : "A monthly allowance";
   }
+
+  /** What it usually pays: a position's basic pay, a grade's range, an allowance's amount. */
+  function usual(r) {
+    const v = tab === "grade" ? (r.min_pay !== null || r.max_pay !== null ? `${money(r.min_pay) || "-"} - ${money(r.max_pay) || "-"}` : money(r.default_pay)) : money(tab === "position" ? r.default_pay : r.default_amount);
+    return v ? `<span class="fw-semibold text-success text-nowrap">${v}</span>` : '<span class="soft-chip soft-secondary">Not set</span>';
+  }
+  const usualOrder = (r) => (tab === "grade" ? r.max_pay ?? r.default_pay ?? 0 : (tab === "position" ? r.default_pay : r.default_amount) ?? 0);
 
   const setBy = (r) =>
     r.own
       ? '<span class="soft-chip soft-success"><i class="ri-home-4-line"></i>Ours</span>'
-      : `<span class="soft-chip soft-${r.owner.level === "diocese" ? "primary" : "purple"}"><i class="${r.owner.level === "diocese" ? "ri-government-line" : "ri-map-pin-line"}"></i>${esc(r.owner.name)}</span>${r.ours ? '<div class="mt-1"><span class="soft-chip soft-success"><i class="ri-edit-2-line"></i>Our version</span></div>' : ""}`;
-  const here = (r) => (!r.is_active ? '<span class="badge bg-secondary text-dark">Switched off</span>' : r.hidden ? '<span class="badge bg-secondary text-dark">Not used here</span>' : '<span class="badge bg-success text-white"><i class="ri-check-line me-1"></i>In use</span>');
+      : `<span class="d-inline-flex align-items-center gap-2"><span class="avatar avatar-xs avatar-rounded bg-${r.owner.level === "diocese" ? "primary" : "purple"} text-white"><i class="${r.owner.level === "diocese" ? "ri-government-line" : "ri-map-pin-line"}"></i></span><span class="fw-medium">${esc(r.owner.name)}</span></span>${r.ours ? '<div class="mt-1"><span class="soft-chip soft-success"><i class="ri-edit-2-line"></i>Our version</span></div>' : ""}`;
+  const here = (r) => (!r.is_active ? '<span class="badge bg-danger text-white"><i class="ri-close-line me-1"></i>Switched off</span>' : r.hidden ? '<span class="badge bg-secondary text-dark"><i class="ri-eye-off-line me-1"></i>Not used here</span>' : '<span class="badge bg-success text-white"><i class="ri-check-line me-1"></i>In use</span>');
 
   function actions(r) {
-    const open = `<a href="${itemUrl(r)}" class="btn btn-sm btn-primary-light">Open<i class="ri-arrow-right-line ms-1"></i></a>`;
-    if (r.can.edit) return `<div class="d-inline-flex gap-1 align-items-center"><button type="button" class="btn btn-sm btn-icon btn-outline-primary" data-edit="${r.id}" title="Change" aria-label="Change ${esc(r.name)}"><i class="ri-edit-line"></i></button>${r.in_use ? "" : `<button type="button" class="btn btn-sm btn-icon btn-outline-danger" data-remove="${r.id}" title="Remove" aria-label="Remove ${esc(r.name)}"><i class="ri-delete-bin-line"></i></button>`}${open}</div>`;
+    const open = `<a href="${itemUrl(r)}" class="btn btn-sm btn-icon btn-primary" title="Open" aria-label="Open ${esc(r.name)}"><i class="ri-eye-line"></i></a>`;
+    if (r.can.edit) return `<div class="d-inline-flex gap-1 align-items-center">${open}<button type="button" class="btn btn-sm btn-icon btn-warning" data-edit="${r.id}" title="Change" aria-label="Change ${esc(r.name)}"><i class="ri-edit-line"></i></button>${r.in_use ? "" : `<button type="button" class="btn btn-sm btn-icon btn-danger" data-remove="${r.id}" title="Remove" aria-label="Remove ${esc(r.name)}"><i class="ri-delete-bin-line"></i></button>`}</div>`;
     if (r.can.toggle_here && r.is_active) return `<div class="d-inline-flex gap-2 align-items-center"><label class="form-check form-switch mb-0" title="Use it here"><input class="form-check-input" type="checkbox" data-here="${r.id}"${r.hidden ? "" : " checked"} aria-label="Use ${esc(r.name)} here"></label>${open}</div>`;
     return open;
   }
@@ -56,11 +65,12 @@
     return `<tr class="mb-row${usedHere(r) ? "" : " opacity-75"}" data-id="${r.id}" data-href="${itemUrl(r)}" data-pills="${[r.own ? "ours" : "above", r.ours ? "ourversion" : "", usedHere(r) ? "" : "off"].join(" ")}" data-f-owner="${r.owner.id}" data-f-level="${tab === "position" ? (r.levels.length ? r.levels.join(" ") : "any") : "any"}">
       ${K.checkCell(r.id, r.name)}
       <td data-search="${esc(`${r.code || ""} ${r.name} ${r.description || ""}`)}" data-order="${esc((r.code || r.name).toLowerCase())}">
-        <div class="d-flex align-items-center gap-2"><span class="avatar avatar-sm avatar-rounded bg-${k.color} ${A.textOn(k.color)} flex-shrink-0"><i class="${k.icon}"></i></span><div class="min-w-0"><a class="fw-semibold mb-link" href="${itemUrl(r)}">${tab === "grade" ? `${esc(r.code)} · ` : ""}${esc(r.name)}</a><div class="mb-sub">${subline(r)}</div></div></div>
+        <div class="d-flex align-items-center gap-2"><span class="avatar avatar-md avatar-rounded bg-${tileColor(r)} ${A.textOn(tileColor(r))} flex-shrink-0"><i class="${k.icon} fs-16"></i></span><div class="min-w-0"><a class="fw-semibold mb-link d-block" href="${itemUrl(r)}">${tab === "grade" ? esc(r.code) : esc(r.name)}</a><span class="d-block fs-12 fw-medium">${subline(r)}</span></div></div>
       </td>
+      <td class="text-end" data-order="${usualOrder(r)}">${usual(r)}</td>
       <td class="d-none d-md-table-cell" data-order="${r.own ? "0" : esc(r.owner.name)}">${setBy(r)}</td>
       <td data-order="${usedHere(r) ? 0 : 1}">${here(r)}</td>
-      <td class="text-end d-none d-sm-table-cell" data-order="${r.in_use}">${r.in_use ? `<strong>${r.in_use}</strong>` : '<span class="mb-sub">-</span>'}</td>
+      <td class="text-end d-none d-sm-table-cell" data-order="${r.in_use}">${r.in_use ? `<span class="badge bg-primary text-white"><i class="ri-team-line me-1"></i>${r.in_use}</span>` : '<span class="soft-chip soft-primary">None yet</span>'}</td>
       <td class="text-end">${actions(r)}</td>
     </tr>`;
   }
@@ -90,7 +100,7 @@
     if (!rows.length) {
       $("setPills").innerHTML = "";
       $("setFilters").innerHTML = "";
-      $("setRows").innerHTML = `<tr><td colspan="6">${A.empty(k.icon, `No ${k.noun} yet`, CTX.can.setup ? `Add the ${k.noun} this place uses.` : "None set up yet.")}</td></tr>`;
+      $("setRows").innerHTML = `<tr><td colspan="7">${A.empty(k.icon, `No ${k.noun} yet`, CTX.can.setup ? `Add the ${k.noun} this place uses.` : "None set up yet.")}</td></tr>`;
       return;
     }
     const owners = [...new Map(rows.map((r) => [r.owner.id, r.own ? `${r.owner.name} (ours)` : r.owner.name])).entries()];
@@ -115,10 +125,11 @@
       ],
       sorts: [
         { key: "name", label: "Name A-Z", order: [[1, "asc"]] },
-        { key: "people", label: "Most people", order: [[4, "desc"]] },
-        { key: "setby", label: "Set by", order: [[2, "asc"], [1, "asc"]] },
+        { key: "pay", label: "Highest pay", order: [[2, "desc"]] },
+        { key: "people", label: "Most people", order: [[5, "desc"]] },
+        { key: "setby", label: "Set by", order: [[3, "asc"], [1, "asc"]] },
       ],
-      nonSortable: [5],
+      nonSortable: [6],
       actions: CTX.can.setup
         ? [
             { key: "on", label: "Use here", icon: "ri-eye-line", primary: true, run: (ids) => toggleMany(ids, true) },
@@ -129,7 +140,7 @@
   }
 
   async function load() {
-    $("setRows").innerHTML = UI.renderTableLoading(6);
+    $("setRows").innerHTML = UI.renderTableLoading(7);
     const res = await API.setup();
     if (!res.ok) {
       $("setWrap").innerHTML = A.errorBox(res.message);

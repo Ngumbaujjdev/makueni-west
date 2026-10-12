@@ -113,13 +113,26 @@ Every field in the Staff windows has a placeholder.
 | `{level}.hr.staff.manage` | add, change, end, delete, documents; transfer between places below | Church: Senior Pastor, Church Administrator. Region: Regional Overseer, Regional Treasurer, Regional Secretary. Diocese: Bishop, Diocese Finance Officer, Diocese Administrator. |
 | `{level}.hr.setup.manage` | this place's positions, grades, allowance types; switch defaults off | the same as manage |
 | `{level}.hr.below.read` (region, diocese) | see staff of the places below | the same as manage |
+| `{level}.hr.dashboard.read` | open the Staff dashboard (its figures need `staff.read` too) | everyone above, and any role that already reads staff |
 
 - Writing is in your own place only. The exception is a transfer, which the level above makes.
 - Grants are made once, ever (the `accounting_seeded_grants` record), so a grant the admin removes stays removed.
 
 **Menu:** a **Staff** group after Finance at each level, holding:
+- **Dashboard** (`/{level}/hr/dashboard.php`);
 - **Staff** (`/{level}/hr/`);
 - **Positions & pay** (`/{level}/hr/positions.php`).
+
+## Dashboard (2026-10-12)
+
+`GET hr/dashboard?year&place_id` - the template's HRM dashboard (`index-8.html`) for this place, or a region or diocese with the places below (`place_id` narrows it to one of them; any other place is refused).
+
+- **Figures:** staff now (against a year ago), pay a month (basic and allowances, against the last approved run), paid this year (net of approved or paid runs, against the same months last year - up to this year's latest paid month), average pay, contracts ending in 60 days.
+- **Pay by month:** gross per month, this year against last (6 months or the year).
+- **Staff by type**, **pay by position** (top 8), **coming up** in the next 60 days (starts, leaves, contracts ending, years of service), the **six latest payroll runs**, and for a region or the diocese **each place below** (staff, pay a month, paid this year).
+- Drafts and returned runs are never counted as paid.
+
+**Actions where you are:** a position's page adds someone on it (its package fills the pay), a grade's page adds someone on that grade, an allowance's page gives it to someone (their window opens with it added). Each Staff row opens, changes, shows payslips, moves or ends.
 
 ## Payroll reads Staff
 

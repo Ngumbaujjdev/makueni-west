@@ -70,6 +70,7 @@ const HrAPI = (function () {
 
   return {
     overview: () => request("GET", "/hr/overview"),
+    dashboard: (params) => request("GET", "/hr/dashboard", { params }),
     options: () => request("GET", "/hr/options"),
     people: (q, churchId) => request("GET", "/hr/people", { params: { q, church_id: churchId } }),
     logins: (q) => request("GET", "/hr/logins", { params: { q } }),

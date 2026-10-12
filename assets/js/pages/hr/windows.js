@@ -49,7 +49,12 @@ const HrWindows = (function () {
 
   // ------------------------------------------------------------ add or change
 
-  function personWindow(e = null) {
+  /**
+   * Add or change someone. preset (from a position's, grade's or allowance's
+   * page) starts a new person on that position or grade - its package fills
+   * the pay - or adds that allowance to someone's pay.
+   */
+  function personWindow(e = null, preset = {}) {
     if (!opts) return Toast.error("The lists couldn't load - refresh the page.");
     const f = (id, label, v, type = "text", col = "col-sm-6", extra = "", ph = "") => `<div class="${col}"><label class="form-label" for="${id}">${label}</label><input type="${type}" class="form-control" id="${id}" value="${esc(v ?? "")}" placeholder="${esc(ph)}"${extra}></div>`;
     const secret = (id, label, masked) => `<div class="col-sm-6"><label class="form-label" for="${id}">${label}</label><input type="text" class="form-control" id="${id}" maxlength="20" autocomplete="off" placeholder="${masked ? `Saved: ${esc(masked)} - type to replace` : "Not given"}"></div>`;
@@ -210,6 +215,62 @@ const HrWindows = (function () {
     el.querySelector("#hrAllow").addEventListener("click", (ev) => ev.target.closest("[data-unallow]")?.closest("[data-allow]").remove());
     ["#hrPos", "#hrGrade", "#hrType", "#hrChurch"].forEach((s) => el.querySelector(s) && UI.enhanceSelect(el.querySelector(s), { search: s === "#hrChurch" || s === "#hrPos" }));
     if (window.DateField) ["#hrStart", "#hrContract"].forEach((s) => DateField.enhance(el.querySelector(s), { quick: ["today"] }));
+
+    // Started from a position, grade or allowance's page.
+    const set = (sel, v) => {
+      const x = el.querySelector(sel);
+      if (!x || ![...x.options].some((o) => o.value === String(v))) return false;
+      x.value = String(v);
+      UI.syncSelect(x);
+      x.dispatchEvent(new Event("change"));
+      return true;
+    };
+    if (!e && preset.position_id) set("#hrPos", preset.position_id);
+    if (!e && preset.grade_id) set("#hrGrade", preset.grade_id);
+    if (preset.allowance_type_id) {
+      const has = [...el.querySelectorAll("[data-at]")].some((x) => x.value === String(preset.allowance_type_id));
+      if (!has) addAllow({ type_id: preset.allowance_type_id });
+      el.querySelector("#hrAllow").scrollIntoView({ block: "center" });
+    }
+  }
+
+  /**
+   * Pick someone on the staff (searchable), then do something with them -
+   * "give this allowance to someone" opens their window with it added.
+   */
+  async function pickStaff({ title, subtitle = "", icon = "ri-user-search-line", skip = () => false, then }) {
+    const res = await API.staff({ status: "active", per: 200 });
+    if (!res.ok) return Toast.error(res.message);
+    const people = res.data.rows;
+    const listHtml = (q) => {
+      const t = q.trim().toLowerCase();
+      const rows = people.filter((p) => !t || `${p.name} ${p.position || ""} ${p.phone || ""}`.toLowerCase().includes(t));
+      return rows.length
+        ? rows.map((p) => `<button type="button" class="list-group-item list-group-item-action d-flex align-items-center gap-2" data-pick="${p.id}"${skip(p) ? " disabled" : ""}>${A.avatar(p.name, "sm")}<span class="flex-fill min-w-0"><span class="d-block fw-semibold">${esc(p.name)}</span><span class="d-block fs-12">${esc([p.position, A.money(p.gross, { cents: false })].filter(Boolean).join(" · "))}</span></span>${skip(p) ? '<span class="soft-chip soft-success">Has it</span>' : '<i class="ri-arrow-right-s-line fs-18 text-primary"></i>'}</button>`).join("")
+        : '<div class="list-group-item">Nobody found</div>';
+    };
+    const el = K.confirmWindow({
+      title,
+      subtitle,
+      icon,
+      go: '<i class="ri-close-line me-1"></i>Close',
+      body: people.length
+        ? `<div class="list-search mb-2"><i class="ri-search-line"></i><input type="search" class="form-control" id="pickFind" placeholder="Search a name, job or phone" autocomplete="off"></div><div class="list-group" id="pickList" style="max-height: 22rem; overflow-y: auto">${listHtml("")}</div>`
+        : A.empty("ri-team-line", "Nobody on the staff yet", "Add people first."),
+      run: async () => {
+        bootstrap.Modal.getInstance(el)?.hide();
+        return null;
+      },
+    });
+    el.querySelector("#pickFind")?.addEventListener("input", (ev) => (el.querySelector("#pickList").innerHTML = listHtml(ev.target.value)));
+    el.querySelector("#pickList")?.addEventListener("click", (ev) => {
+      const b = ev.target.closest("[data-pick]");
+      if (!b) return;
+      const p = people.find((x) => String(x.id) === b.dataset.pick);
+      // The next window takes this one's place once it has gone.
+      el.addEventListener("hidden.bs.modal", () => then(p), { once: true });
+      bootstrap.Modal.getInstance(el)?.hide();
+    });
   }
 
   // ------------------------------------------------------------ moving, leaving, removing
@@ -364,7 +425,7 @@ const HrWindows = (function () {
     range();
   }
 
-  return { setup, fresh, person: personWindow, move: moveWindow, end: endWindow, remove: removeWindow, item: itemWindow, ours: oursWindow, ITEM, LEVELS };
+  return { setup, fresh, person: personWindow, pickStaff, move: moveWindow, end: endWindow, remove: removeWindow, item: itemWindow, ours: oursWindow, ITEM, LEVELS };
 })();
 
 window.HrWindows = HrWindows;

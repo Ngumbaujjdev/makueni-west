@@ -31,15 +31,20 @@
     return id ? (g ? `${g.code} · ${g.name}` : "A grade not used here") : null;
   };
   const card = (title, icon, color, body, extra = "") => `<div class="card custom-card acc-rec-card"><div class="card-header"><div class="card-title d-flex align-items-center gap-2"><span class="acc-rec-icon bg-${color} text-white"><i class="${icon}"></i></span>${title}</div>${extra}</div><div class="card-body">${body}</div></div>`;
-  const line = (label, value) => `<div class="d-flex justify-content-between gap-3 py-2 border-bottom"><span>${label}</span><span class="text-end fw-semibold">${value ?? '<span class="acc-sub fw-normal">Not set</span>'}</span></div>`;
+  const TILE = { "Usual grade": ["ri-bar-chart-box-line", "success"], "Usual basic pay": ["ri-money-dollar-box-line", "primary"], Allowances: ["ri-hand-coin-line", "warning"], "Least a month": ["ri-arrow-down-line", "info"], "Most a month": ["ri-arrow-up-line", "purple"], "Usual amount a month": ["ri-hand-coin-line", "warning"] };
+  const line = (label, value) => {
+    const [i, c] = TILE[label] || ["ri-checkbox-blank-circle-line", "primary"];
+    return `<div class="d-flex align-items-center justify-content-between gap-3 py-2 border-bottom"><span class="d-flex align-items-center gap-2 fw-medium"><span class="avatar avatar-xs avatar-rounded bg-${c} ${A.textOn(c)}"><i class="${i}"></i></span>${label}</span><span class="text-end fw-semibold">${value ?? '<span class="soft-chip soft-secondary">Not set</span>'}</span></div>`;
+  };
+  const green = (v) => (v ? `<span class="text-success">${v}</span>` : null);
 
   /** The values of a version, as lines. */
   function values(v) {
     if (!v) return "";
-    if (KIND === "grade") return line("Least a month", money(v.min_pay)) + line("Most a month", money(v.max_pay)) + line("Usual basic pay", money(v.default_pay));
-    if (KIND === "allowance") return line("Usual amount a month", money(v.default_amount));
-    const allow = (v.allowances || []).length ? v.allowances.map((a) => `${esc(a.name)} ${a.amount ? A.money(a.amount, { cents: false }) : ""}${a.follows ? ' <span class="acc-sub fw-normal">(usual)</span>' : ""}`).join("<br>") : null;
-    return line("Usual grade", gradeName(v.grade_id) ? esc(gradeName(v.grade_id)) : null) + line("Usual basic pay", money(v.default_pay)) + line("Allowances", allow) + (v.duties ? `<div class="mt-2"><span class="acc-sub">Duties</span><p class="mb-0" style="white-space:pre-line">${esc(v.duties)}</p></div>` : "") + (v.notes ? `<div class="mt-2"><span class="acc-sub">Notes</span><p class="mb-0">${esc(v.notes)}</p></div>` : "");
+    if (KIND === "grade") return line("Least a month", green(money(v.min_pay))) + line("Most a month", green(money(v.max_pay))) + line("Usual basic pay", green(money(v.default_pay)));
+    if (KIND === "allowance") return line("Usual amount a month", green(money(v.default_amount)));
+    const allow = (v.allowances || []).length ? `<span class="d-inline-flex flex-wrap justify-content-end gap-1">${v.allowances.map((a) => `<span class="soft-chip soft-warning">${esc(a.name)}${a.amount ? ` <b>${A.money(a.amount, { cents: false })}</b>` : ""}${a.follows ? " · usual" : ""}</span>`).join("")}</span>` : null;
+    return line("Usual grade", gradeName(v.grade_id) ? `<span class="soft-chip soft-success">${esc(gradeName(v.grade_id))}</span>` : null) + line("Usual basic pay", green(money(v.default_pay))) + line("Allowances", allow) + (v.duties ? `<div class="mt-2"><span class="acc-sub">Duties</span><p class="mb-0" style="white-space:pre-line">${esc(v.duties)}</p></div>` : "") + (v.notes ? `<div class="mt-2"><span class="acc-sub">Notes</span><p class="mb-0">${esc(v.notes)}</p></div>` : "");
   }
 
   function render() {
@@ -47,7 +52,10 @@
     const here = d.version_from;
     const fromChip = d.own ? '<span class="soft-chip soft-success"><i class="ri-home-4-line"></i>Ours</span>' : `<span class="soft-chip soft-${d.owner.level === "diocese" ? "primary" : "purple"}"><i class="ri-government-line"></i>Set by ${esc(d.owner.name)}</span>`;
     const state = !d.is_active ? '<span class="badge bg-secondary text-dark">Switched off</span>' : d.hidden ? '<span class="badge bg-secondary text-dark">Not used here</span>' : '<span class="badge bg-success text-white"><i class="ri-check-line me-1"></i>In use here</span>';
+    const giveLabel = { position: `Add someone as ${esc(d.name)}`, grade: "Add someone on this grade", allowance: "Give it to someone" }[KIND];
+    const canGive = CTX.can.manage && d.is_active && !d.hidden;
     const actions = [
+      canGive ? `<button type="button" class="btn btn-success" data-act="give"><i class="${KIND === "allowance" ? "ri-hand-coin-line" : "ri-user-add-line"} me-1"></i>${giveLabel}</button>` : "",
       d.can.edit ? '<button type="button" class="btn btn-primary" data-act="edit"><i class="ri-edit-line me-1"></i>Change</button>' : "",
       d.can.ours ? `<button type="button" class="btn btn-primary" data-act="ours"><i class="ri-edit-2-line me-1"></i>${d.ours ? "Change our version" : "Set our version"}</button>` : "",
       d.can.ours && d.ours ? `<button type="button" class="btn btn-outline-danger" data-act="clear"><i class="ri-arrow-go-back-line me-1"></i>Back to ${esc(d.from_above.from?.name || "the one from above")}'s</button>` : "",
@@ -94,8 +102,8 @@
         { key: "pay", label: "Highest pay", order: [[CTX.can.below ? 2 : 1, "desc"]] },
       ],
       nonSortable: [CTX.can.below ? 3 : 2],
-      empty: A.empty(icon, "Nobody yet", KIND === "position" ? "Whoever is given this position shows here." : "Nobody on the staff has it yet."),
-      rowHtml: (h) => `<tr data-pills="p${h.place_id}"><td data-order="${esc(h.name)}"><div class="d-flex align-items-center gap-2">${A.avatar(h.name, "sm")}<div><a class="fw-semibold mb-link" href="${CTX.baseUrl}/person.php?id=${h.id}">${esc(h.name)}</a><div class="acc-sub">${esc(h.position || "")}</div></div></div></td>${CTX.can.below ? `<td>${esc(h.place || "")}</td>` : ""}<td class="text-end" data-order="${KIND === "allowance" ? h.amount : h.gross}"><strong>${A.money(KIND === "allowance" ? h.amount : h.gross)}</strong></td><td class="text-end"><a href="${CTX.baseUrl}/person.php?id=${h.id}" class="btn btn-sm btn-primary-light">Open<i class="ri-arrow-right-line ms-1"></i></a></td></tr>`,
+      empty: A.empty(icon, "Nobody yet", KIND === "position" ? "Whoever is given this position shows here." : "Nobody on the staff has it yet.", canGive ? `<button type="button" class="btn btn-success" data-act="give"><i class="ri-user-add-line me-1"></i>${giveLabel}</button>` : ""),
+      rowHtml: (h) => `<tr data-pills="p${h.place_id}"><td data-order="${esc(h.name)}"><div class="d-flex align-items-center gap-2">${A.avatar(h.name, "sm")}<div><a class="fw-semibold mb-link" href="${CTX.baseUrl}/person.php?id=${h.id}">${esc(h.name)}</a><div class="fs-12 fw-medium"><i class="ri-briefcase-4-line me-1 text-primary"></i>${esc(h.position || "No position")}</div></div></div></td>${CTX.can.below ? `<td><span class="d-inline-flex align-items-center gap-2"><span class="avatar avatar-xs avatar-rounded bg-purple text-white"><i class="ri-map-pin-line"></i></span>${esc(h.place || "")}</span></td>` : ""}<td class="text-end fw-semibold text-success" data-order="${KIND === "allowance" ? h.amount : h.gross}">${A.money(KIND === "allowance" ? h.amount : h.gross)}</td><td class="text-end"><a href="${CTX.baseUrl}/person.php?id=${h.id}" class="btn btn-sm btn-icon btn-primary" title="Open" aria-label="Open ${esc(h.name)}"><i class="ri-arrow-right-line"></i></a></td></tr>`,
     });
     document.title = `${d.name} - ${kindLabel} - Makueni West Diocese`;
     const crumb = document.querySelector(".breadcrumb-item.active");
@@ -127,6 +135,17 @@
       const b = e.target.closest("[data-act]");
       if (!b || !d) return;
       if (b.dataset.act === "ours") return HrWindows.ours(KIND, d, load);
+      if (b.dataset.act === "give") {
+        if (KIND === "position") return HrWindows.person(null, { position_id: d.id });
+        if (KIND === "grade") return HrWindows.person(null, { grade_id: d.id });
+        return HrWindows.pickStaff({
+          title: `Give ${d.name} to someone`,
+          subtitle: "Pick who gets it - their pay opens with it added",
+          icon: "ri-hand-coin-line",
+          skip: (p) => p.allowances.some((a) => a.type_id === d.id),
+          then: (p) => HrWindows.person(p, { allowance_type_id: d.id }),
+        });
+      }
       if (b.dataset.act === "edit") {
         const setup = await API.setup();
         return HrWindows.item(KIND, d, setup.ok ? setup.data.grades : [], load);

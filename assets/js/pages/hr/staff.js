@@ -30,10 +30,10 @@
     off: ["secondary", "ri-pause-circle-line", "Off payroll"],
     left: ["secondary", "ri-user-unfollow-line", "Left"],
   };
-  const TYPE_COLOR = { full_time: "primary", part_time: "info", contract: "warning", casual: "purple" };
+  const TYPE_COLOR = { full_time: "primary", part_time: "success", contract: "warning", casual: "purple" };
   const PAID = { mpesa: "M-Pesa", airtel: "Airtel Money", paybill: "Paybill", till: "Till", bank: "Bank", cash: "Cash" };
   const pill = (s) => `<span class="badge bg-${ST[s][0]} ${A.textOn(ST[s][0])}"><i class="${ST[s][1]} me-1"></i>${ST[s][2]}</span>`;
-  const typeChip = (e) => `<span class="soft-chip soft-${TYPE_COLOR[e.employment_type] || "secondary"}">${esc(e.employment_type_label)}</span>`;
+  const typeChip = (e) => `<span class="soft-chip soft-${TYPE_COLOR[e.employment_type] || "secondary"}"><i class="ri-time-line"></i>${esc(e.employment_type_label)}</span>`;
   const slug = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "none";
 
   /** A person's own page, keeping the place being viewed. */
@@ -56,19 +56,35 @@
     ]);
   }
 
+  /** Change, payslips, move, they leave - for whoever manages staff at the person's own place. */
+  function rowActions(e, href) {
+    const mine = CTX.can.manage && e.place.id === CTX.place.id;
+    const menu = [
+      `<li><a class="dropdown-item" href="${href}&tab=payslips"><i class="ri-file-list-3-line me-2 text-success"></i>Payslips</a></li>`,
+      mine && CTX.level !== "church" && e.status !== "left" ? `<li><button class="dropdown-item" type="button" data-row-act="move" data-id="${e.id}"><i class="ri-arrow-left-right-line me-2 text-purple"></i>Move to another place</button></li>` : "",
+      mine && e.status !== "left" ? `<li><button class="dropdown-item" type="button" data-row-act="end" data-id="${e.id}"><i class="ri-logout-box-r-line me-2 text-warning"></i>They leave</button></li>` : "",
+    ].join("");
+    return `<div class="btn-list d-inline-flex align-items-center gap-1">
+      <a href="${href}" class="btn btn-sm btn-icon btn-primary" title="Open" aria-label="Open ${esc(e.name)}"><i class="ri-eye-line"></i></a>
+      ${mine ? `<button type="button" class="btn btn-sm btn-icon btn-warning" data-row-act="edit" data-id="${e.id}" title="Change" aria-label="Change ${esc(e.name)}"><i class="ri-edit-line"></i></button>` : ""}
+      <div class="dropdown"><button type="button" class="btn btn-sm btn-icon btn-outline-primary" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More for ${esc(e.name)}"><i class="ri-more-2-fill"></i></button><ul class="dropdown-menu dropdown-menu-end">${menu}</ul></div>
+    </div>`;
+  }
+
   function rowHtml(e) {
     const href = personUrl(e.id);
+    const typeC = TYPE_COLOR[e.employment_type] || "secondary";
     return `<tr class="mb-row" data-id="${e.id}" data-href="${href}" data-pills="${e.status === "left" ? "left" : `working ${e.employment_type}`}" data-f-position="${slug(e.position)}" data-f-place="${e.place.id}" data-f-paid="${e.pay_method}">
       ${K.checkCell(e.id, e.name)}
       <td data-search="${esc(`${e.name} ${e.phone || ""} ${e.position || ""} ${e.place.name}`)}" data-order="${esc(e.name.toLowerCase())}">
-        <div class="d-flex align-items-center gap-2">${A.avatar(e.name, "sm")}<div class="min-w-0"><a class="fw-semibold mb-link" href="${href}">${esc(e.name)}</a><div class="mb-sub">${e.person ? '<i class="ri-contacts-book-2-line me-1"></i>Member' : e.user ? '<i class="ri-user-settings-line me-1"></i>Has a login' : esc(e.email || "")}</div></div></div>
+        <div class="d-flex align-items-center gap-2">${A.avatar(e.name, "md")}<div class="min-w-0"><a class="fw-semibold mb-link d-block" href="${href}">${esc(e.name)}</a><span class="d-block fs-12 fw-medium">${e.person ? '<i class="ri-contacts-book-2-line me-1 text-success"></i>Member' : e.user ? '<i class="ri-user-settings-line me-1 text-purple"></i>Has a login' : e.start_date ? `<i class="ri-calendar-line me-1 text-warning"></i>Since ${A.day(e.start_date, { month: "short", year: "numeric" })}` : ""}</span></div></div>
       </td>
-      <td data-order="${esc((e.position || "~").toLowerCase())}"><div class="fw-semibold">${esc(e.position || "No position")}</div><div class="d-flex flex-wrap gap-1 mt-1">${typeChip(e)}${e.grade ? `<span class="soft-chip soft-secondary">${esc(e.grade.code)}</span>` : ""}</div></td>
-      ${CTX.can.below ? `<td data-order="${esc(e.place.name)}">${e.place.id === CTX.place.id ? '<span class="soft-chip soft-success"><i class="ri-home-4-line"></i>Ours</span>' : esc(e.place.name)}</td>` : ""}
-      <td class="d-none d-lg-table-cell">${e.phone ? `<i class="ri-phone-line me-1 text-primary"></i>${esc(e.phone)}` : '<span class="mb-sub">-</span>'}</td>
-      <td class="text-end" data-order="${e.gross}"><strong>${A.money(e.gross)}</strong><div class="mb-sub">${A.methodChip({ paybill: "mpesa", till: "mpesa" }[e.pay_method] || e.pay_method, PAID[e.pay_method])}</div></td>
+      <td data-order="${esc((e.position || "~").toLowerCase())}"><div class="fw-semibold"><i class="ri-briefcase-4-line me-1 text-primary"></i>${esc(e.position || "No position")}</div><div class="d-flex flex-wrap gap-1 mt-1">${typeChip(e)}${e.grade ? `<span class="soft-chip soft-success">${esc(e.grade.code)}</span>` : ""}</div></td>
+      ${CTX.can.below ? `<td data-order="${esc(e.place.name)}">${e.place.id === CTX.place.id ? '<span class="soft-chip soft-success"><i class="ri-home-4-line"></i>Ours</span>' : `<span class="d-inline-flex align-items-center gap-2"><span class="avatar avatar-xs avatar-rounded bg-purple text-white"><i class="ri-map-pin-line"></i></span>${esc(e.place.name)}</span>`}</td>` : ""}
+      <td class="d-none d-lg-table-cell">${e.phone ? `<a class="fw-medium text-nowrap" href="tel:${esc(e.phone)}"><i class="ri-phone-fill me-1 text-success"></i>${esc(e.phone)}</a>` : '<span class="soft-chip soft-secondary">No phone</span>'}</td>
+      <td class="text-end" data-order="${e.gross}"><span class="d-block fw-bold text-success text-nowrap">${A.money(e.gross, { cents: false })}</span><span class="d-inline-block mt-1">${A.methodChip({ paybill: "mpesa", till: "mpesa" }[e.pay_method] || e.pay_method, PAID[e.pay_method])}</span></td>
       <td data-order="${e.start_date || ""}">${pill(e.status)}</td>
-      <td class="text-end"><a href="${href}" class="btn btn-sm btn-primary-light">Open<i class="ri-arrow-right-line ms-1"></i></a></td>
+      <td class="text-end">${rowActions(e, href)}</td>
     </tr>`;
   }
 
@@ -83,9 +99,10 @@
             (e) => `<div class="col-xxl-3 col-xl-4 col-sm-6"><div class="card custom-card border h-100 mb-0"><div class="card-body text-center">
               <a href="${personUrl(e.id)}" class="d-inline-block mb-2">${A.avatar(e.name, "xl")}</a>
               <div><a class="fw-semibold fs-15 mb-link" href="${personUrl(e.id)}">${esc(e.name)}</a></div>
-              <div class="mb-sub mb-2">${esc(e.position || "No position")}${CTX.can.below && e.place.id !== CTX.place.id ? ` · ${esc(e.place.name)}` : ""}</div>
+              <div class="fw-medium mb-2"><i class="ri-briefcase-4-line me-1 text-primary"></i>${esc(e.position || "No position")}${CTX.can.below && e.place.id !== CTX.place.id ? ` · ${esc(e.place.name)}` : ""}</div>
               <div class="d-flex justify-content-center flex-wrap gap-1 mb-3">${pill(e.status)}${typeChip(e)}</div>
-              <div class="d-flex justify-content-between border-top pt-2"><span class="mb-sub">A month</span><strong>${A.money(e.gross)}</strong></div>
+              <div class="d-flex justify-content-between align-items-center border-top pt-2 mb-3"><span class="fw-medium">A month</span><span class="fw-bold text-success">${A.money(e.gross, { cents: false })}</span></div>
+              <div class="btn-list d-flex justify-content-center gap-1"><a href="${personUrl(e.id)}" class="btn btn-sm btn-primary"><i class="ri-eye-line me-1"></i>Open</a>${e.phone ? `<a href="tel:${esc(e.phone)}" class="btn btn-sm btn-icon btn-success" aria-label="Call ${esc(e.name)}"><i class="ri-phone-fill"></i></a>` : ""}${CTX.can.manage && e.place.id === CTX.place.id ? `<button type="button" class="btn btn-sm btn-icon btn-warning" data-row-act="edit" data-id="${e.id}" aria-label="Change ${esc(e.name)}"><i class="ri-edit-line"></i></button>` : ""}</div>
             </div></div></div>`,
           )
           .join("")
@@ -198,8 +215,15 @@
     document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => setView(b.dataset.view)));
     document.addEventListener("click", (ev) => {
       if (ev.target.closest("[data-first]")) return HrWindows.person();
+      const act = ev.target.closest("[data-row-act]");
+      if (act) {
+        const e = byId.get(Number(act.dataset.id));
+        if (act.dataset.rowAct === "edit") return HrWindows.person(e);
+        if (act.dataset.rowAct === "move") return HrWindows.move(e);
+        if (act.dataset.rowAct === "end") return HrWindows.end(e);
+      }
       const row = ev.target.closest("#hrTable tr[data-href]");
-      if (row && !ev.target.closest("a, button, input, label")) window.location.href = row.dataset.href;
+      if (row && !ev.target.closest("a, button, input, label, .dropdown-menu")) window.location.href = row.dataset.href;
     });
     load();
   });

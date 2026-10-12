@@ -36,6 +36,7 @@
                     <tr>
                         <th class="pp-check"><input type="checkbox" class="form-check-input pp-pick-page" aria-label="Pick everything on this page"></th>
                         <th>Name</th>
+                        <th class="text-end">Usual pay</th>
                         <th class="d-none d-md-table-cell">Set by</th>
                         <th>Here</th>
                         <th class="text-end d-none d-sm-table-cell">People</th>
