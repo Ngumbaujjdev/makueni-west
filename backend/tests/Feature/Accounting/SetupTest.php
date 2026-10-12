@@ -71,6 +71,41 @@ class SetupTest extends TestCase
         $this->postJson('/api/accounting/chart', ['code' => '5250', 'name' => 'Odd', 'type' => 'expense'])->assertForbidden();
     }
 
+    public function test_a_pastor_sets_the_books_up_but_does_not_record(): void
+    {
+        $pastor = $this->userWithRole('setuppastor', 'Setup Pastor', 'church', $this->myChurch->id, $this->perms('church', ['read', 'setup']));
+        Sanctum::actingAs($pastor);
+        $this->assertTrue($this->getJson('/api/accounting/setup')->json('data.can.setup'));
+        $bank = $this->postJson('/api/accounting/accounts', ['name' => 'Equity Bank', 'cash_kind' => 'bank', 'bank_name' => 'Equity Bank'])->assertCreated()->json('data.id');
+        $this->putJson('/api/accounting/petty-cash', ['imprest_float' => 3000])->assertOk();
+        $this->postJson('/api/accounting/accounts', ['kind' => 'fund', 'name' => 'Harambee fund'])->assertCreated();
+
+        $this->postJson('/api/accounting/opening-balances', ['date' => $this->day(1, 2), 'amounts' => [['account_id' => $this->cash()->id, 'amount' => 2000], ['account_id' => $bank, 'amount' => 50000]]])
+            ->assertCreated()->assertJsonPath('data.amount', fn ($v) => (float) $v === 52000.0);
+        $this->assertTrue($this->getJson('/api/accounting/setup')->json('data.recorded'));
+        $this->postJson('/api/accounting/opening-balances', ['date' => $this->day(1, 2), 'amounts' => [['account_id' => $this->cash()->id, 'amount' => 1]]])
+            ->assertUnprocessable()->assertJsonValidationErrors('amounts');
+
+        // Setting up is not recording: no journals, no receipts.
+        $this->postJson('/api/accounting/journal-vouchers', ['date' => $this->day(), 'narration' => 'X', 'lines' => [['account_id' => $this->cash()->id, 'debit' => 5], ['account_id' => $this->acc('3000')->id, 'credit' => 5]]])->assertForbidden();
+        $this->postJson('/api/accounting/receipts', ['date' => $this->day(), 'account_id' => $this->cash()->id, 'party_name' => 'X', 'lines' => [['account_id' => $this->acc('4010')->id, 'amount' => 5]]])->assertForbidden();
+
+        // Only this place's own cash accounts, and only in its own books.
+        Sanctum::actingAs($this->otherTreasurer);
+        $this->postJson('/api/accounting/opening-balances', ['date' => $this->day(1, 2), 'amounts' => [['account_id' => $bank, 'amount' => 10]]])->assertUnprocessable();
+    }
+
+    public function test_the_seeder_lets_the_leader_at_each_level_set_the_books_up(): void
+    {
+        foreach (['church', 'region', 'diocese'] as $level) {
+            \App\Models\ModuleGroup::firstOrCreate(['slug' => "{$level}-finance"], ['name' => 'Finance', 'territory_scope' => $level, 'order' => 3, 'icon' => 'ri-money-dollar-circle-line', 'is_active' => true]);
+        }
+        $pastor = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Senior Pastor', 'guard_name' => 'web'], ['territory_level' => 'church']);
+        $this->seed(\Database\Seeders\AccountingAccessSeeder::class);
+        $this->assertTrue($pastor->fresh()->hasPermissionTo('church.accounting.setup.manage'));
+        $this->assertFalse($pastor->fresh()->hasPermissionTo('church.accounting.journals.post'), 'setting up, not journals');
+    }
+
     public function test_the_diocese_puts_a_new_account_under_a_heading_of_its_kind(): void
     {
         Sanctum::actingAs($this->userWithRole('dfo', 'Diocese Finance Officer', 'diocese', $this->diocese->id, $this->perms('diocese', ['read', 'chart'])));

@@ -169,7 +169,7 @@ class BooksController extends AccountingBase
     /** POST /accounting/accounts - one of our own bank or M-Pesa accounts. */
     public function storeAccount(Request $request): JsonResponse
     {
-        $place = $this->place($request, 'accounts');
+        $place = $this->place($request, 'accounts|setup');
         if ($place instanceof JsonResponse) {
             return $place;
         }
@@ -201,7 +201,7 @@ class BooksController extends AccountingBase
     /** PUT /accounting/accounts/{id} - rename, bank details, switch on or off (our own only). */
     public function updateAccount(Request $request, int $id): JsonResponse
     {
-        $place = $this->place($request, 'accounts');
+        $place = $this->place($request, 'accounts|setup');
         if ($place instanceof JsonResponse) {
             return $place;
         }
@@ -411,6 +411,49 @@ class BooksController extends AccountingBase
         $journal = $this->docs->journalVoucher($place, $request->user(), $data);
 
         return $this->ok($this->books->presentJournal($journal->fresh(), true), "Journal {$journal->number} posted.", 201);
+    }
+
+    /**
+     * POST /accounting/opening-balances {date, amounts: [{account_id, amount}]}
+     * - what each cash account held on the day the books start, once. Each is
+     * debited and the General fund credited with the total. Whoever posts
+     * journals, or whoever sets the books up (a pastor, with no treasurer yet).
+     */
+    public function openingBalances(Request $request): JsonResponse
+    {
+        $place = $this->place($request, 'journal|setup');
+        if ($place instanceof JsonResponse) {
+            return $place;
+        }
+        $data = $request->validate([
+            'date' => ['required', 'date'],
+            'amounts' => ['required', 'array', 'min:1', 'max:40'],
+            'amounts.*.account_id' => ['required', 'integer'],
+            'amounts.*.amount' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
+        ]);
+        if ($this->books->openingPosted($place)) {
+            throw ValidationException::withMessages(['amounts' => ['The opening balances are already in - correct them with a journal.']]);
+        }
+        $cash = $this->chart->cashAccounts($place)->keyBy('id');
+        $lines = [];
+        foreach ($data['amounts'] as $i => $row) {
+            $amount = round((float) ($row['amount'] ?? 0), 2);
+            if ($amount <= 0) {
+                continue;
+            }
+            if (! $cash->has((int) $row['account_id'])) {
+                throw ValidationException::withMessages(["amounts.{$i}.account_id" => ['Only this place\'s cash, bank and M-Pesa accounts have opening balances here.']]);
+            }
+            $lines[] = ['account_id' => (int) $row['account_id'], 'debit' => $amount, 'credit' => 0];
+        }
+        if (! $lines) {
+            throw ValidationException::withMessages(['amounts' => ['Enter what at least one account held.']]);
+        }
+        $total = round(array_sum(array_column($lines, 'debit')), 2);
+        $lines[] = ['account_id' => $this->chart->account('general_fund')->id, 'debit' => 0, 'credit' => $total];
+        $journal = $this->docs->journalVoucher($place, $request->user(), ['date' => $data['date'], 'narration' => 'Opening balances', 'lines' => $lines]);
+
+        return $this->ok($this->books->presentJournal($journal->fresh(), true), 'Opening balances in - KES '.number_format($total, 2).' in the General fund.', 201);
     }
 
     /** POST /accounting/journals/{id}/reverse {reason, date?} */
