@@ -55,6 +55,8 @@ class SetupController extends AccountingBase
         $suppliers = Supplier::where('territory_id', $place->id)->where('is_active', true)->count();
         $staff = Employee::where('territory_id', $place->id)->where(fn ($q) => $q->whereNull('end_date')->orWhere('end_date', '>=', today()))->count();
         $closed = AccountingPeriod::where('territory_id', $place->id)->where('status', 'closed')->orderByDesc('year')->orderByDesc('month')->first();
+        // Nothing recorded yet: the overview leads with "Start here" instead of a page of zeros.
+        $recorded = \App\Models\Journal::where('territory_id', $place->id)->exists();
 
         $steps = [
             $this->step('accounts', 'Add your bank and M-Pesa accounts', $cash > 0, $cash ? "{$cash} ".($cash === 1 ? 'account' : 'accounts') : 'Only cash at hand so far', 'accounts', false),
@@ -85,6 +87,8 @@ class SetupController extends AccountingBase
             'done' => count(array_filter($needed, fn ($s) => $s['done'])),
             'of' => count($needed),
             'unheld' => count(array_filter($jobs, fn ($j) => ! $j['held'])),
+            'started' => $recorded || $cash > 0 || $funds > 0 || $subs > 0 || $petty,
+            'recorded' => $recorded,
         ]);
     }
 
