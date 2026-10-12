@@ -142,6 +142,28 @@ class GivingOptionsTest extends TestCase
         $this->assertNull(collect($this->getJson('/api/give/SHR028')->json('data.purposes'))->firstWhere('key', $choir->key), 'not on the church next door');
     }
 
+    public function test_an_ending_is_made_from_the_name_and_kept_once_saved(): void
+    {
+        $this->regionSetsUpTheConference();
+        $row = fn (string $label, array $extra = []) => ['label' => $label, 'suffix' => '', 'account_id' => $this->acc('4020')->id] + $extra;
+        // Choir trip → CT; Thanksgiving's T and TH are taken, so Thank offering gets the next free one.
+        $this->save($this->churchSettings, ['purposes' => [$row('Choir trip'), $row('Thank offering'), $row('Region conference')]])->assertOk();
+        $made = GivingPurpose::where('territory_id', $this->myChurch->id)->pluck('suffix', 'label');
+        $this->assertSame('CT', $made['Choir trip']);
+        $this->assertMatchesRegularExpression('/^[A-Z]{1,6}$/', $made['Thank offering']);
+        $this->assertNotContains($made['Thank offering'], ['T', 'TH', 'OFF'], 'never one another option answers to');
+        $this->assertNotSame('CONF', $made['Region conference'], 'the region already uses CONF');
+        $this->assertCount(3, array_unique($made->all()));
+        $this->assertFalse(collect($made)->contains(fn ($e) => str_ends_with($e, 'DS')));
+
+        // Renamed, it keeps the ending printed on its posters.
+        $trip = GivingPurpose::where('suffix', 'CT')->firstOrFail();
+        $this->save($this->churchSettings, ['purposes' => [$row('Youth camp', ['id' => $trip->id]), ...GivingPurpose::where('territory_id', $this->myChurch->id)->whereKeyNot($trip->id)->get()->map(fn ($p) => ['id' => $p->id, 'label' => $p->label, 'suffix' => '', 'account_id' => $p->account_id])->all()]])->assertOk();
+        $this->assertSame(['Youth camp', 'CT'], [$trip->fresh()->label, $trip->fresh()->suffix]);
+        $this->assertEquals(collect($made)->except('Choir trip')->sortKeys()->all(), GivingPurpose::where('territory_id', $this->myChurch->id)->whereKeyNot($trip->id)->pluck('suffix', 'label')->sortKeys()->all(), 'the others keep theirs');
+        $this->assertSame('posted', $this->pay('SHR027CT', 'SJKOPT0009')->status, 'givers pay with the made ending');
+    }
+
     public function test_a_used_option_is_switched_off_and_a_changed_ending_still_works(): void
     {
         $conf = $this->regionSetsUpTheConference();
