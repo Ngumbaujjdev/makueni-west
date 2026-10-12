@@ -127,7 +127,12 @@
     const fundNow = o.fund_id ? `id:${o.fund_id}` : o.fund_code ? `code:${o.fund_code}` : "";
     const apart = !!fundNow;
     const body = [
-      part("ri-edit-line", "What is it called?", `<input type="text" class="form-control" id="goLabel" maxlength="40" placeholder="e.g. Choir trip, Missions, Region conference" value="${esc(o.label)}">`),
+      part(
+        "ri-edit-line",
+        "What is it called?",
+        `<input type="text" class="form-control" id="goLabel" maxlength="40" placeholder="e.g. Choir trip, Missions, Region conference" value="${esc(o.label)}">
+        <div class="d-flex flex-wrap align-items-center gap-2 mt-2"><span class="soft-chip soft-primary"><i class="ri-smartphone-line"></i>Givers type <b id="goNumber">${esc(data.place.code)}${esc(o.suffix || suggestEnding(o.label, o) || "…")}</b></span><span class="fs-12 fw-medium" id="goNumberNote">${isNew ? "Made from the name when you save" : "It stays the same, even if you rename it"}</span></div>`,
+      ),
       part("ri-price-tag-3-line", "What kind of money is it?", `<div class="go-kinds">${kinds}</div>`, "It decides where it shows in the books"),
       part(
         "ri-safe-2-line",
@@ -138,9 +143,8 @@
           <div id="goFundWrap" class="ps-1"${apart ? "" : " hidden"}><select class="form-select" id="goFund" aria-label="Which fund">${fundOptions.map(([v, t]) => `<option value="${esc(v)}"${v === fundNow ? " selected" : ""}>${esc(t)}</option>`).join("")}<option value="new">A new fund…</option></select><input type="text" class="form-control mt-2" id="goNewFund" maxlength="100" placeholder="Name the new fund, e.g. Choir trip fund" hidden></div>
         </div>`,
       ),
-      `<details class="go-more"${isNew ? "" : ""}><summary><i class="ri-settings-3-line me-1"></i>More - account number, other words, look</summary><div class="row g-2 mt-1">
-        <div class="col-sm-5"><label class="form-label" for="goSuffix">Pay Bill ending</label><input type="text" class="form-control text-uppercase" id="goSuffix" maxlength="6" placeholder="e.g. CONF" value="${esc(o.suffix)}"><div class="form-text" id="goExample">Account number ${esc(data.place.code)}${esc(o.suffix || "…")}</div></div>
-        <div class="col-sm-7"><label class="form-label" for="goWords">Other words givers may type</label><input type="text" class="form-control text-uppercase" id="goWords" placeholder="e.g. CONFERENCE, CONF2026 (optional)" value="${esc((o.words || []).join(", "))}"></div>
+      `<details class="go-more"><summary><i class="ri-settings-3-line me-1"></i>More - other words, look</summary><div class="row g-2 mt-1">
+        <div class="col-12"><label class="form-label" for="goWords">Other words givers may type</label><input type="text" class="form-control text-uppercase" id="goWords" placeholder="e.g. CONFERENCE, CONF2026 (optional)" value="${esc((o.words || []).join(", "))}"></div>
         ${list !== "std" && !isChurch() ? `<div class="col-12"><label class="form-label" for="goReach">Who can give for it</label><select class="form-select" id="goReach"><option value="self"${o.reach === "self" ? " selected" : ""}>Only ${esc(data.place.name)}</option><option value="below"${o.reach === "below" ? " selected" : ""}>Every ${isDiocese() ? "region and church" : "church"} under ${esc(data.place.name)}</option></select></div>` : ""}
         <div class="col-sm-5"><label class="form-label" for="goIcon">Icon</label><select class="form-select" id="goIcon">${data.icons.map((ic) => `<option value="${ic}" data-icon="${ic}" data-color="${o.colour}"${ic === o.icon ? " selected" : ""}>${esc(ICON_NAMES[ic] || ic)}</option>`).join("")}</select></div>
         <div class="col-sm-7"><label class="form-label d-block">Colour</label><div class="mn-swatches fs-swatches" role="radiogroup" aria-label="Colour">${data.colours.map((c) => `<label title="${esc(c)}"><input type="radio" name="goColour" value="${c}"${c === o.colour ? " checked" : ""}><span class="bg-${c}"></span></label>`).join("")}</div></div>
@@ -156,7 +160,8 @@
         const v = (id) => w.querySelector(`#${id}`)?.value.trim() ?? "";
         o.label = v("goLabel");
         o.account_id = Number(w.querySelector('input[name="goKind"]:checked')?.value || o.account_id);
-        o.suffix = (v("goSuffix") || suggestEnding(o.label, rows[i])).replace(/[^A-Za-z]/g, "").toUpperCase();
+        // The ending is the server's to make (from the name) - a saved one never changes.
+        if (isNew) o.suffix = "";
         o.words = v("goWords").split(/[,\s]+/).map((x) => x.trim().toUpperCase()).filter(Boolean);
         if (w.querySelector("#goReach")) o.reach = v("goReach");
         o.icon = v("goIcon") || o.icon;
@@ -196,15 +201,8 @@
       body$("#goFund").value = "new";
       body$("#goNewFund").hidden = false;
     }
-    const example = () => (body$("#goExample").textContent = `Account number ${data.place.code}${body$("#goSuffix").value.toUpperCase() || "…"}`);
-    body$("#goSuffix").addEventListener("input", example);
-    body$("#goLabel").addEventListener("input", () => {
-      if (isNew && !body$("#goSuffix").dataset.touched) {
-        body$("#goSuffix").value = suggestEnding(body$("#goLabel").value, null);
-        example();
-      }
-    });
-    body$("#goSuffix").addEventListener("keydown", () => (body$("#goSuffix").dataset.touched = "1"));
+    // A new option shows the number it will most likely get; the server makes the real one.
+    if (isNew) body$("#goLabel").addEventListener("input", () => (body$("#goNumber").textContent = `${data.place.code}${suggestEnding(body$("#goLabel").value, null) || "…"}`));
     ["#goIcon", "#goFund", "#goReach"].forEach((s) => body$(s) && UI.enhanceSelect(body$(s), { search: false }));
   }
 
@@ -251,7 +249,7 @@
       <div class="flex-fill min-w-0">
         <div class="d-flex flex-wrap align-items-center gap-2"><b class="fs-15">${esc(o.label || "Unnamed")}</b>${o.is_active ? "" : '<span class="badge bg-secondary text-dark">Off</span>'}${std && o.key === defaultKey ? '<span class="badge bg-primary text-white">When no ending is typed</span>' : ""}</div>
         <div class="d-flex flex-wrap gap-1 mt-1">
-          <span class="soft-chip soft-primary"><i class="ri-smartphone-line"></i>${esc(data.place.code)}<b>${esc(o.suffix || "…")}</b></span>
+          <button type="button" class="soft-chip soft-primary" data-copy="${esc(data.place.code)}${esc(o.suffix || "")}" title="Copy the account number"><i class="ri-smartphone-line"></i>Givers type <b>${esc(data.place.code)}${esc(o.suffix || "")}</b><i class="ri-file-copy-line"></i></button>
           <span class="soft-chip soft-secondary"><i class="ri-price-tag-3-line"></i>${acc ? esc(acc.name) : "Pick what it counts as"}</span>
           <span class="soft-chip soft-${fund ? "warning" : "success"}"><i class="ri-safe-2-line"></i>${fund ? `Kept for ${esc(fund.name)}` : "Free to use"}</span>
           ${!std && !isChurch() && o.reach === "below" ? `<span class="soft-chip soft-purple"><i class="ri-community-line"></i>Places below too</span>` : ""}
@@ -289,7 +287,7 @@
           .map(
             (o) => `<div class="fs-row align-items-center${hidden.has(o.id) ? " is-off" : ""}">
               <span class="fs-row-tile bg-${o.colour}"><i class="${o.icon}"></i></span>
-              <div class="flex-fill min-w-0"><b class="fs-15">${esc(o.label)}</b><div class="d-flex flex-wrap gap-1 mt-1"><span class="soft-chip soft-primary"><i class="ri-smartphone-line"></i>${esc(o.example)}</span><span class="soft-chip soft-secondary">${o.owner ? `Goes to ${esc(o.owner.name)}` : "Ours to keep"}</span></div></div>
+              <div class="flex-fill min-w-0"><b class="fs-15">${esc(o.label)}</b><div class="d-flex flex-wrap gap-1 mt-1"><button type="button" class="soft-chip soft-primary" data-copy="${esc(o.example)}" title="Copy the account number"><i class="ri-smartphone-line"></i>Givers type <b>${esc(o.example)}</b><i class="ri-file-copy-line"></i></button><span class="soft-chip soft-secondary">${o.owner ? `Goes to ${esc(o.owner.name)}` : "Ours to keep"}</span></div></div>
               <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" role="switch" data-show="${o.id}" id="gs${o.id}"${hidden.has(o.id) ? "" : " checked"}${can && !o.is_default ? "" : " disabled"}><label class="form-check-label fs-12" for="gs${o.id}">${o.is_default ? "Always shown" : "On our page"}</label></div>
             </div>`,
           )
@@ -345,6 +343,10 @@
   function onClick(e) {
     const b = e.target.closest("button");
     if (!b || b.disabled) return;
+    if (b.dataset.copy !== undefined) {
+      navigator.clipboard?.writeText(b.dataset.copy).then(() => Toast.success(`Copied ${b.dataset.copy}`), () => Toast.error("Couldn't copy - select it instead."));
+      return;
+    }
     if (b.dataset.fedit !== undefined) return fundWindow(Number(b.dataset.fedit));
     if (b.dataset.fremove !== undefined) {
       funds.splice(Number(b.dataset.fremove), 1);

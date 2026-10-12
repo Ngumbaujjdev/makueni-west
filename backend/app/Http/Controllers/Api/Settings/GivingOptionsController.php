@@ -59,7 +59,7 @@ class GivingOptionsController extends SettingsController
             'purposes' => ['present', 'array', 'max:'.GivingPurposes::LIMIT],
             'purposes.*.id' => ['nullable', 'integer'],
             'purposes.*.label' => ['required', 'string', 'max:40'],
-            'purposes.*.suffix' => ['required', 'string', 'max:6'],
+            'purposes.*.suffix' => ['nullable', 'string', 'max:6'],
             'purposes.*.words' => ['nullable', 'array', 'max:8'],
             'purposes.*.words.*' => ['string', 'max:12'],
             'purposes.*.reach' => ['nullable', 'in:self,below'],
@@ -80,7 +80,7 @@ class GivingOptionsController extends SettingsController
             'hidden.*' => ['integer'],
             'standard' => ['nullable', 'array', 'max:'.GivingPurposes::LIMIT],
             'default' => ['nullable', 'string', 'max:8'],
-        ], ['purposes.*.label.required' => 'Give each option a name.', 'purposes.*.suffix.required' => 'Give each option a Pay Bill ending.',
+        ], ['purposes.*.label.required' => 'Give each option a name.',
             'purposes.*.account_id.required' => 'Pick the income account each option is booked to.', 'funds.*.name.required' => 'Give each fund a name.', 'funds.*.code.required' => 'Give each fund a short code.']);
         $isDiocese = SettingsAccess::level($place) === 'diocese';
         $before = $this->summary($place);

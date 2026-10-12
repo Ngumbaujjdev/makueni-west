@@ -254,6 +254,12 @@ final class GivingPurposes
                 if (! empty($r['id']) && ! $row) {
                     throw ValidationException::withMessages(["purposes.{$i}" => ['That option isn\'t one of this place\'s.']]);
                 }
+                if ($suffix === '') {
+                    // Nobody types an ending: a saved option keeps its own (printed numbers use it),
+                    // a new one gets one made from its name that passes every check below.
+                    $suffix = $row ? (string) $row->suffix : (mb_strlen($label) < 2 ? '' : $this->ending($label, fn (string $w) => ! str_ends_with($w, 'DS') && ! isset($taken[$w]) && ! isset($words[$w]) && ! in_array($w, $list, true)
+                        && ! collect($letterCodes)->contains(fn ($c) => isset($codes[$c.$w]))));
+                }
                 if ($row && $row->suffix !== $suffix && ! in_array($row->suffix, $list, true)) {
                     // A changed ending keeps the old one, so numbers already printed still work.
                     $list[] = $row->suffix;
@@ -323,6 +329,41 @@ final class GivingPurposes
     }
 
     /** Hide inherited options from a place's own giving page. @param int[] $ids */
+    /**
+     * A Pay Bill ending made from an option's name: its initials (Choir trip
+     * → CT), then the first letters of the name (CH, CHO...), then the
+     * initials with a letter added (CTA, CTB...) - the first that is free.
+     */
+    private function ending(string $label, callable $free): string
+    {
+        $words = array_values(array_filter(preg_split('/[^A-Z]+/', strtoupper($label))));
+        $letters = implode('', $words);
+        $initials = mb_substr(implode('', array_map(fn ($w) => $w[0], $words)), 0, 6);
+        $tries = [];
+        if (count($words) > 1) {
+            $tries[] = $initials;
+        }
+        foreach (range(2, 6) as $n) {
+            $tries[] = mb_substr($words[0] ?? '', 0, $n);
+            $tries[] = mb_substr($letters, 0, $n);
+            if (count($words) > 1) {
+                $tries[] = mb_substr($initials.mb_substr(end($words), 1), 0, $n);
+            }
+        }
+        $base = mb_substr($initials ?: ($letters ?: 'G'), 0, 4);
+        foreach (range('A', 'Z') as $a) {
+            foreach (['', ...range('A', 'Z')] as $b) {
+                $tries[] = $base.$a.$b;
+            }
+        }
+        foreach (array_unique(array_filter($tries)) as $w) {
+            if (preg_match('/^[A-Z]{1,6}$/', $w) && $free($w)) {
+                return $w;
+            }
+        }
+        throw ValidationException::withMessages(['purposes' => ["No free Pay Bill ending could be made from {$label} - try another name."]]);
+    }
+
     public function hide(Territory $place, array $ids): void
     {
         $ids = collect($ids)->map(fn ($id) => (int) $id)->filter(fn ($id) => ($p = $this->all()->firstWhere('id', $id)) && (int) $p->territory_id !== (int) $place->id && ! $p->is_default)->values()->all();
