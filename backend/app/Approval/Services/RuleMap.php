@@ -30,7 +30,31 @@ final class RuleMap
 
     public function __construct(private ApprovalService $engine, private Registry $resolvers, private DelegationResolver $delegations, private WorkflowBuilder $builder) {}
 
+    /**
+     * The map for one document, or for 'all': then the lanes are the payment vouchers' (the
+     * Rules tab draws one document at a time) and the counts and next steps cover every document.
+     */
     public function map(Territory $place, string $subject, ?User $viewer): array
+    {
+        if ($subject !== 'all') {
+            return $this->mapFor($place, $subject, $viewer)[0];
+        }
+        $each = collect(self::SUBJECT_KEYS)->mapWithKeys(fn ($s) => [$s => $this->mapFor($place, $s, $viewer)]);
+        $out = $each['payment_voucher'][0];
+        $rules = $each->flatMap(fn ($m) => $m[1])->unique('id');
+        $rows = $each->flatMap(fn ($m) => $m[0]['rows'])->unique('key');
+        $out['subject'] = 'all';
+        $out['detected']['rules'] = $rules->count();
+        $out['detected']['own_rules'] = $rules->whereNotNull('territory_id')->count();
+        $out['detected']['stages'] = $rows->count();
+        $out['detected']['nobody'] = $rows->where('has_someone', false)->count();
+        $out['checks'] = $each->flatMap(fn ($m) => $m[0]['checks'])->unique('title')->sortByDesc('first')->values()->all();
+
+        return $out;
+    }
+
+    /** @return array{0: array, 1: Collection} the map, and the rules it found */
+    private function mapFor(Territory $place, string $subject, ?User $viewer): array
     {
         $subject = in_array($subject, self::SUBJECT_KEYS, true) ? $subject : 'payment_voucher';
         $level = $place->territory_type->value;
@@ -100,7 +124,7 @@ final class RuleMap
         $waiting = ApprovalRequest::where('territory_id', $place->id)->where('status', 'pending')->orderBy('created_at')->get();
         $blockedStages = ApprovalRequestStage::where('status', 'blocked')->whereIn('request_id', $waiting->pluck('id'))->get();
 
-        return [
+        return [[
             'place' => ['id' => $place->id, 'name' => $place->name, 'level' => $level],
             'subject' => $subject,
             'subjects' => collect(WorkflowBuilder::SUBJECTS)->only(self::SUBJECT_KEYS)->map(fn ($l, $k) => ['key' => $k, 'label' => $l])->values(),
@@ -119,7 +143,7 @@ final class RuleMap
             ],
             'questions' => $waiting->take(3)->map(fn ($r) => $this->question($r, $blockedStages))->values(),
             'can' => ['manage' => AccountingAccess::canManageRules($viewer, $place)],
-        ];
+        ], $rules];
     }
 
     /** "Try an amount": the rule and, stage by stage, who would sign it today. Nothing is created. */
