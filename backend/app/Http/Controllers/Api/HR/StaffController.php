@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api\HR;
 
 use App\Models\Employee;
+use App\Models\PayrollRun;
 use App\Models\Person;
 use App\Models\Territory;
+use App\Services\HR\Dashboard;
 use App\Services\HR\Lists;
 use App\Services\HR\Staff;
+use App\Support\AccountingAccess;
 use App\Support\HrAccess;
 use App\Support\PayTo;
 use App\Support\PlaceAccess;
@@ -51,6 +54,34 @@ class StaffController extends HrBase
         }
 
         return $this->ok(['place' => $this->placeInfo($place), 'can' => $can, 'here' => $sum(Employee::where('territory_id', $place->id)->get()), 'below' => $below]);
+    }
+
+    /** GET /hr/dashboard?year&place_id - the Staff dashboard; place_id narrows a region or the diocese to one place below. */
+    public function dashboard(Request $request, Dashboard $dashboard): JsonResponse
+    {
+        $place = $this->place($request);
+        if ($place instanceof JsonResponse) {
+            return $place;
+        }
+        $can = HrAccess::abilities($request->user(), $place);
+        $f = $request->validate(['year' => ['nullable', 'integer', 'between:2000,2100'], 'place_id' => ['nullable', 'integer']]);
+        $year = (int) ($f['year'] ?? now()->year);
+        $all = $can['below'] ? [(int) $place->id, ...PlaceAccess::descendantIds($place)] : [(int) $place->id];
+        $ids = $all;
+        if (! empty($f['place_id'])) {
+            if (! in_array((int) $f['place_id'], $all, true)) {
+                return $this->forbidden('That place isn\'t yours to see.');
+            }
+            $ids = [(int) $f['place_id']];
+        }
+        $first = PayrollRun::whereIn('territory_id', $all)->min('month');
+        $years = range(now()->year, max((int) substr((string) ($first ?? now()->year), 0, 4), now()->year - 4));
+
+        return $this->ok([
+            'place' => $this->placeInfo($place), 'can' => $can + ['payroll' => AccountingAccess::canSeePayroll($request->user(), $place)],
+            'years' => $years, 'place_id' => $ids === $all ? null : $ids[0],
+            'places' => $can['below'] && $ids === $all ? $dashboard->places($all, $year) : [],
+        ] + $dashboard->build($ids, $year));
     }
 
     /** GET /hr/staff?q&position_id&type&status&below&place_id&page&per */

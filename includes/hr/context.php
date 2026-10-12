@@ -12,11 +12,11 @@ require_once __DIR__ . '/../permission-check.php';
 
 /**
  * @param string $level church | region | diocese
- * @param string $page  staff | positions | person | item
+ * @param string $page  dashboard | staff | positions | person | item
  */
 function hrPageContext(string $level, string $page): array
 {
-    $any = ["{$level}.hr.staff.read", "{$level}.hr.staff.manage", "{$level}.hr.setup.manage"];
+    $any = ["{$level}.hr.staff.read", "{$level}.hr.staff.manage", "{$level}.hr.setup.manage", "{$level}.hr.dashboard.read"];
     if (! hasGlobalAccess() && ! hasAnyPermission($any)) {
         requirePermission("{$level}.hr.staff.read");
     }

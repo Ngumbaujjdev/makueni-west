@@ -1,9 +1,10 @@
 <?php
 // Staff - the same pages for every level (docs/specs/hr-spec.md). The wrapper sets $hrCtx
 // (includes/hr/context.php); the body is includes/hr/body-{page}.php.
-$pageTitle = ['positions' => 'Positions & pay', 'person' => 'Staff member', 'item' => 'Position'][$hrCtx['page']] ?? 'Staff';
+$pageTitle = ['dashboard' => 'Staff dashboard', 'positions' => 'Positions & pay', 'person' => 'Staff member', 'item' => 'Position'][$hrCtx['page']] ?? 'Staff';
 $pageIcon = 'ri-team-line';
 $breadcrumbs = match ($hrCtx['page']) {
+    'dashboard' => ['Home' => $hrCtx['homeUrl'], 'Staff' => $hrCtx['baseUrl'] . '/', 'Dashboard' => null],
     'positions' => ['Home' => $hrCtx['homeUrl'], 'Staff' => $hrCtx['baseUrl'] . '/', $pageTitle => null],
     'person' => ['Home' => $hrCtx['homeUrl'], 'Staff' => $hrCtx['baseUrl'] . '/', $pageTitle => null],
     'item' => ['Home' => $hrCtx['homeUrl'], 'Staff' => $hrCtx['baseUrl'] . '/', 'Positions & pay' => $hrCtx['baseUrl'] . '/positions.php', $pageTitle => null],
