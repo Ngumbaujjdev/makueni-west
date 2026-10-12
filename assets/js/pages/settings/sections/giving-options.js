@@ -39,6 +39,8 @@
   const $ = (sel) => root.querySelector(sel);
   const isChurch = () => data.place.level === "church";
   const isDiocese = () => data.place.level === "diocese";
+  /** Where funds show in the books: the diocese's chart (its Funds tab), else this place's accounts. */
+  const booksUrl = () => `${window.location.pathname.replace(/\/settings\/.*$/, "")}/accounting/${isDiocese() ? "chart.php?kind=fund" : "accounts.php"}`;
   const state = () => JSON.stringify({ own, standard, funds, hidden: [...hidden].sort(), defaultKey });
   const move = (list, i, d) => {
     const j = i + d;
@@ -131,7 +133,7 @@
         "ri-edit-line",
         "What is it called?",
         `<input type="text" class="form-control" id="goLabel" maxlength="40" placeholder="e.g. Choir trip, Missions, Region conference" value="${esc(o.label)}">
-        <div class="d-flex flex-wrap align-items-center gap-2 mt-2"><span class="soft-chip soft-primary"><i class="ri-smartphone-line"></i>Givers type <b id="goNumber">${esc(data.place.code)}${esc(o.suffix || suggestEnding(o.label, o) || "…")}</b></span><span class="fs-12 fw-medium" id="goNumberNote">${isNew ? "Made from the name when you save" : "It stays the same, even if you rename it"}</span></div>`,
+        <div class="d-flex flex-wrap align-items-center gap-2 mt-2"><span class="badge bg-primary text-white"><i class="ri-smartphone-line me-1"></i>Givers type <span id="goNumber">${esc(data.place.code)}${esc(o.suffix || suggestEnding(o.label, o) || "…")}</span></span><span class="fs-12 fw-medium" id="goNumberNote">${isNew ? "Made from the name when you save" : "It stays the same, even if you rename it"}</span></div>`,
       ),
       part("ri-price-tag-3-line", "What kind of money is it?", `<div class="go-kinds">${kinds}</div>`, "It decides where it shows in the books"),
       part(
@@ -217,7 +219,7 @@
       title: isNew ? "Add a fund" : `Change ${f.name}`,
       sub: "Money kept for one purpose",
       body: [
-        part("ri-edit-line", "What is it for?", `<input type="text" class="form-control" id="gfName" maxlength="100" placeholder="e.g. Choir fund, Church van" value="${esc(f.name)}">`),
+        part("ri-edit-line", "What is it for?", `<input type="text" class="form-control" id="gfName" maxlength="100" placeholder="e.g. Choir fund, Church van" value="${esc(f.name)}"><div class="d-flex align-items-center gap-2 mt-2"><span class="badge bg-purple text-white"><i class="ri-book-3-line me-1"></i>In the books</span><span class="fs-12 fw-medium">It becomes an account under Other funds</span></div>`),
         part("ri-safe-2-line", "Kept apart", `<label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="gfApart"${f.is_restricted ? " checked" : ""}><span class="form-check-label">Only for this purpose - not mixed with the general money</span></label>`),
         !isChurch() ? part("ri-community-line", "Who can use it", `<select class="form-select" id="gfReach"><option value="self"${f.reach === "self" ? " selected" : ""}>Only ${esc(data.place.name)}</option><option value="below"${f.reach === "below" ? " selected" : ""}>Every place under us</option></select>`) : "",
         `<details class="go-more"><summary><i class="ri-settings-3-line me-1"></i>More - short code</summary><div class="mt-2"><input type="text" class="form-control text-uppercase" id="gfCode" maxlength="10" placeholder="Made from the name, e.g. CHOIR" value="${esc(f.code)}"></div></details>`,
@@ -249,9 +251,9 @@
       <div class="flex-fill min-w-0">
         <div class="d-flex flex-wrap align-items-center gap-2"><b class="fs-15">${esc(o.label || "Unnamed")}</b>${o.is_active ? "" : '<span class="badge bg-secondary text-dark">Off</span>'}${std && o.key === defaultKey ? '<span class="badge bg-primary text-white">When no ending is typed</span>' : ""}</div>
         <div class="d-flex flex-wrap gap-1 mt-1">
-          <button type="button" class="soft-chip soft-primary" data-copy="${esc(data.place.code)}${esc(o.suffix || "")}" title="Copy the account number"><i class="ri-smartphone-line"></i>Givers type <b>${esc(data.place.code)}${esc(o.suffix || "")}</b><i class="ri-file-copy-line"></i></button>
+          <button type="button" class="badge bg-primary text-white border-0 go-copy" data-copy="${esc(data.place.code)}${esc(o.suffix || "")}" title="Copy the account number"><i class="ri-smartphone-line me-1"></i>Givers type ${esc(data.place.code)}${esc(o.suffix || "")}<i class="ri-file-copy-line ms-1"></i></button>
           <span class="soft-chip soft-secondary"><i class="ri-price-tag-3-line"></i>${acc ? esc(acc.name) : "Pick what it counts as"}</span>
-          <span class="soft-chip soft-${fund ? "warning" : "success"}"><i class="ri-safe-2-line"></i>${fund ? `Kept for ${esc(fund.name)}` : "Free to use"}</span>
+          ${fund ? `<span class="badge bg-warning text-dark"><i class="ri-safe-2-line me-1"></i>Kept for ${esc(fund.name)}</span>` : '<span class="soft-chip soft-success"><i class="ri-safe-2-line"></i>Free to use</span>'}
           ${!std && !isChurch() && o.reach === "below" ? `<span class="soft-chip soft-purple"><i class="ri-community-line"></i>Places below too</span>` : ""}
           ${o.in_use ? `<span class="mb-sub">Given ${o.in_use} ${o.in_use === 1 ? "time" : "times"}</span>` : ""}
         </div>
@@ -287,7 +289,7 @@
           .map(
             (o) => `<div class="fs-row align-items-center${hidden.has(o.id) ? " is-off" : ""}">
               <span class="fs-row-tile bg-${o.colour}"><i class="${o.icon}"></i></span>
-              <div class="flex-fill min-w-0"><b class="fs-15">${esc(o.label)}</b><div class="d-flex flex-wrap gap-1 mt-1"><button type="button" class="soft-chip soft-primary" data-copy="${esc(o.example)}" title="Copy the account number"><i class="ri-smartphone-line"></i>Givers type <b>${esc(o.example)}</b><i class="ri-file-copy-line"></i></button><span class="soft-chip soft-secondary">${o.owner ? `Goes to ${esc(o.owner.name)}` : "Ours to keep"}</span></div></div>
+              <div class="flex-fill min-w-0"><b class="fs-15">${esc(o.label)}</b><div class="d-flex flex-wrap gap-1 mt-1"><button type="button" class="badge bg-primary text-white border-0 go-copy" data-copy="${esc(o.example)}" title="Copy the account number"><i class="ri-smartphone-line me-1"></i>Givers type ${esc(o.example)}<i class="ri-file-copy-line ms-1"></i></button><span class="soft-chip soft-secondary">${o.owner ? `Goes to ${esc(o.owner.name)}` : "Ours to keep"}</span></div></div>
               <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" role="switch" data-show="${o.id}" id="gs${o.id}"${hidden.has(o.id) ? "" : " checked"}${can && !o.is_default ? "" : " disabled"}><label class="form-check-label fs-12" for="gs${o.id}">${o.is_default ? "Always shown" : "On our page"}</label></div>
             </div>`,
           )
@@ -392,7 +394,7 @@
             body: `<div id="goStandard" class="fs-rows"></div><div class="d-flex flex-wrap align-items-center gap-2 mt-3"><span class="mb-sub">When a giver types no ending, count it as</span><select class="form-select form-select-sm w-auto" id="goDefault"${can ? "" : " disabled"}>${standard.filter((o) => o.key).map((o) => `<option value="${esc(o.key)}"${o.key === defaultKey ? " selected" : ""}>${esc(o.label)}</option>`).join("")}</select></div><div class="invalid-feedback d-block" data-error-for="default"></div>` })
         : F.card({ id: "card-go-above", title: data.place.level === "region" ? "From the diocese" : "From the diocese and region", icon: "ri-git-merge-line", colour: "info", sub: "Switch one off to leave it off our giving page.", body: '<div id="goInherited" class="fs-rows"></div>' })}
       ${F.card({ id: "card-go-funds", title: "Our funds", icon: "ri-safe-2-line", colour: "warning", sub: "Money kept for one purpose, shown on its own in the statements.",
-        actions: can ? '<button type="button" class="btn btn-primary btn-sm" id="goAddFund"><i class="ri-add-line me-1"></i>Add a fund</button>' : "", body: '<div id="goFunds" class="fs-rows"></div>' })}
+        actions: `<a class="btn btn-outline-primary btn-sm" href="${booksUrl()}"><i class="ri-book-3-line me-1"></i>See it in the books</a>${can ? '<button type="button" class="btn btn-primary btn-sm" id="goAddFund"><i class="ri-add-line me-1"></i>Add a fund</button>' : ""}`, body: '<div id="goFunds" class="fs-rows"></div>' })}
     </div>`;
     drawOptions("own");
     drawOptions("std");

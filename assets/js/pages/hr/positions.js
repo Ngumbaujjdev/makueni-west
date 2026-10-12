@@ -50,7 +50,7 @@
   const setBy = (r) =>
     r.own
       ? '<span class="soft-chip soft-success"><i class="ri-home-4-line"></i>Ours</span>'
-      : `<span class="d-inline-flex align-items-center gap-2"><span class="avatar avatar-xs avatar-rounded bg-${r.owner.level === "diocese" ? "primary" : "purple"} text-white"><i class="${r.owner.level === "diocese" ? "ri-government-line" : "ri-map-pin-line"}"></i></span><span class="fw-medium">${esc(r.owner.name)}</span></span>${r.ours ? '<div class="mt-1"><span class="soft-chip soft-success"><i class="ri-edit-2-line"></i>Our version</span></div>' : ""}`;
+      : `<span class="d-inline-flex align-items-center gap-2"><span class="avatar avatar-xs avatar-rounded bg-${r.owner.level === "diocese" ? "primary" : "purple"} text-white"><i class="${r.owner.level === "diocese" ? "ri-government-line" : "ri-map-pin-line"}"></i></span><span class="fw-medium">${esc(r.owner.name)}</span></span>${r.ours ? '<div class="mt-1"><span class="badge bg-purple text-white"><i class="ri-edit-2-line me-1"></i>Our version</span></div>' : ""}`;
   const here = (r) => (!r.is_active ? '<span class="badge bg-danger text-white"><i class="ri-close-line me-1"></i>Switched off</span>' : r.hidden ? '<span class="badge bg-secondary text-dark"><i class="ri-eye-off-line me-1"></i>Not used here</span>' : '<span class="badge bg-success text-white"><i class="ri-check-line me-1"></i>In use</span>');
 
   function actions(r) {

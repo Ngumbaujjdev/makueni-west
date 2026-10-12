@@ -20,7 +20,7 @@ include __DIR__ . '/toolbar.php';
     </div>
     <div class="col-xl-4">
         <div class="card custom-card">
-            <div class="card-header"><div><div class="card-title">Funds</div><span class="card-subtitle-text">Set up in Settings › Giving options &amp; funds</span></div></div>
+            <div class="card-header"><div><div class="card-title">Funds</div><span class="card-subtitle-text">A place's own funds are added in <a href="<?= $accCtx['siteUrl'] ?>/diocese/settings/?section=givingoptions">Settings › Giving options &amp; funds</a></span></div></div>
             <div class="card-body" id="fundRows"></div>
         </div>
     </div>

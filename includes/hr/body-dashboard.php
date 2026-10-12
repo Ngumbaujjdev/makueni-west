@@ -59,13 +59,13 @@
     </div>
     <div class="col-xxl-4 col-xl-6">
         <div class="card custom-card">
-            <div class="card-header justify-content-between"><div class="card-title">Pay by position</div><a class="soft-chip soft-purple" href="<?= $hrCtx['baseUrl'] ?>/positions.php">Positions<i class="ri-arrow-right-line"></i></a></div>
+            <div class="card-header justify-content-between"><div class="card-title">Pay by position</div><a class="btn btn-sm btn-purple" href="<?= $hrCtx['baseUrl'] ?>/positions.php">Positions<i class="ri-arrow-right-line ms-1"></i></a></div>
             <div class="card-body" id="byPosition"></div>
         </div>
     </div>
     <div class="col-xxl-4 col-xl-12">
         <div class="card custom-card">
-            <div class="card-header justify-content-between"><div class="card-title">Recent payroll</div><a class="soft-chip soft-warning" href="<?= $hrCtx['payrollUrl'] ?>" id="runsLink" hidden>Payroll<i class="ri-arrow-right-line"></i></a></div>
+            <div class="card-header justify-content-between"><div class="card-title">Recent payroll</div><a class="btn btn-sm btn-warning text-dark" href="<?= $hrCtx['payrollUrl'] ?>" id="runsLink" hidden>Payroll<i class="ri-arrow-right-line ms-1"></i></a></div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table mb-0">
