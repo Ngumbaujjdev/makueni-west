@@ -7,11 +7,11 @@ include __DIR__ . '/toolbar.php';
 <div class="row">
     <div class="col-xl-8">
         <div class="card custom-card">
-            <div class="card-header"><div><div class="card-title" id="typeTitle">Money in</div><span class="card-subtitle-text">One chart for every place - click an account to rename it or switch it off</span></div></div>
+            <div class="card-header"><div><div class="card-title" id="typeTitle">Money in</div><span class="card-subtitle-text" id="chartSub">One chart for every place - click an account to rename it or switch it off</span></div></div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0 acc-table" id="stdChartTable">
-                        <thead><tr><th>Account</th><th class="d-none d-md-table-cell">What it's for</th><th>In use</th><th class="text-end"></th></tr></thead>
+                        <thead><tr><th>Account</th><th class="d-none d-md-table-cell">What it's for</th><th id="chartBalHead">In use</th><th class="text-end"></th></tr></thead>
                         <tbody id="chartRows"></tbody>
                     </table>
                 </div>
@@ -20,7 +20,7 @@ include __DIR__ . '/toolbar.php';
     </div>
     <div class="col-xl-4">
         <div class="card custom-card">
-            <div class="card-header"><div><div class="card-title">Funds</div><span class="card-subtitle-text">A place's own funds are added in <a href="<?= $accCtx['siteUrl'] ?>/diocese/settings/?section=givingoptions">Settings › Giving options &amp; funds</a></span></div></div>
+            <div class="card-header"><div><div class="card-title">Funds</div><span class="card-subtitle-text">A place's own funds are added in <a href="<?= $accCtx['siteUrl'] ?>/<?= $accCtx['level'] ?>/settings/?section=givingoptions">Settings › Giving options &amp; funds</a></span></div></div>
             <div class="card-body" id="fundRows"></div>
         </div>
     </div>
