@@ -656,6 +656,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         $hr = \App\Http\Controllers\Api\HR\StaffController::class;
         $hrs = \App\Http\Controllers\Api\HR\SetupController::class;
         Route::get('overview', [$hr, 'overview']);
+        Route::get('dashboard', [$hr, 'dashboard']);
         Route::get('options', [$hr, 'options']);
         Route::get('people', [$hr, 'people']);
         Route::get('logins', [$hr, 'logins']);

@@ -207,7 +207,7 @@ class StaffTest extends TestCase
 
         $staff = \App\Models\ModuleGroup::where('slug', 'church-staff')->firstOrFail();
         $this->assertSame([4, 5], [$staff->order, \App\Models\ModuleGroup::where('slug', 'church-programs')->value('order')], 'right after Finance; Programs moves down one');
-        $this->assertSame(['Staff', 'Positions & pay'], \App\Models\Submodule::where('path', 'like', '/church/hr/%')->orderBy('order')->pluck('title')->all());
+        $this->assertSame(['Dashboard', 'Staff', 'Positions & pay'], \App\Models\Submodule::where('path', 'like', '/church/hr/%')->orderBy('order')->pluck('title')->all());
         $this->assertSame(1, \App\Models\ModuleGroup::where('slug', 'church-staff')->count());
         $this->assertTrue(\App\Models\HrPosition::where('territory_id', $this->diocese->id)->where('name', 'Caretaker')->exists());
         $this->assertSame(['House', 'Transport', 'Responsibility', 'Airtime'], HrAllowanceType::where('territory_id', $this->diocese->id)->orderBy('display_order')->pluck('name')->all());

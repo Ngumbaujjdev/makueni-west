@@ -21,6 +21,7 @@ final class HrAccess
         'manage' => 'hr.staff.manage',
         'setup' => 'hr.setup.manage',
         'below' => 'hr.below.read',
+        'dashboard' => 'hr.dashboard.read',
     ];
 
     /** The place a request is for, when the user may see its staff. */
@@ -40,7 +41,7 @@ final class HrAccess
             return true;
         }
         if (PlaceAccess::isOwn($user, $place)) {
-            return self::can($user, $place, 'read') || self::can($user, $place, 'manage') || self::can($user, $place, 'setup');
+            return self::can($user, $place, 'read') || self::can($user, $place, 'manage') || self::can($user, $place, 'setup') || self::can($user, $place, 'dashboard');
         }
 
         return self::canReadBelow($user) && PlaceAccess::isBelow($user, $place);

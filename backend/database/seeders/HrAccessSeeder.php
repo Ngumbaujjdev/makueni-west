@@ -30,28 +30,29 @@ class HrAccessSeeder extends Seeder
 {
     /** key => [file, title, description] */
     private const PAGES = [
+        'dashboard' => ['dashboard.php', 'Dashboard', 'How many people we employ, what they cost a month, what was paid this year and what is coming up'],
         'staff' => ['', 'Staff', 'The people we employ - their job, grade and pay, where they have served, their papers'],
         'setup' => ['positions.php', 'Positions & pay', 'Our positions, grades and allowances, and those set by the places above'],
     ];
 
     /** ability => the page it opens */
-    private const PERMISSIONS = ['read' => 'staff', 'manage' => 'staff', 'setup' => 'setup', 'below' => 'staff'];
+    private const PERMISSIONS = ['dashboard' => 'dashboard', 'read' => 'staff', 'manage' => 'staff', 'setup' => 'setup', 'below' => 'staff'];
 
     private const GRANTS = [
         'church' => [
-            'Senior Pastor' => ['read', 'manage', 'setup'],
-            'Church Administrator' => ['read', 'manage', 'setup'],
-            'Church Treasurer' => ['read'],
+            'Senior Pastor' => ['dashboard', 'read', 'manage', 'setup'],
+            'Church Administrator' => ['dashboard', 'read', 'manage', 'setup'],
+            'Church Treasurer' => ['dashboard', 'read'],
         ],
         'region' => [
-            'Regional Overseer' => ['read', 'manage', 'setup', 'below'],
-            'Regional Treasurer' => ['read', 'manage', 'setup', 'below'],
-            'Regional Secretary' => ['read', 'manage', 'setup', 'below'],
+            'Regional Overseer' => ['dashboard', 'read', 'manage', 'setup', 'below'],
+            'Regional Treasurer' => ['dashboard', 'read', 'manage', 'setup', 'below'],
+            'Regional Secretary' => ['dashboard', 'read', 'manage', 'setup', 'below'],
         ],
         'diocese' => [
-            'Bishop' => ['read', 'manage', 'setup', 'below'],
-            'Diocese Finance Officer' => ['read', 'manage', 'setup', 'below'],
-            'Diocese Administrator' => ['read', 'manage', 'setup', 'below'],
+            'Bishop' => ['dashboard', 'read', 'manage', 'setup', 'below'],
+            'Diocese Finance Officer' => ['dashboard', 'read', 'manage', 'setup', 'below'],
+            'Diocese Administrator' => ['dashboard', 'read', 'manage', 'setup', 'below'],
         ],
     ];
 
@@ -97,6 +98,10 @@ class HrAccessSeeder extends Seeder
                 if ($role) {
                     $granted += $this->grantOnce($role, collect($abilities)->map(fn ($a) => $permissions[$a] ?? null)->filter());
                 }
+            }
+            // Whoever reads the staff here also sees its dashboard - roles the admin gave Staff to as well.
+            foreach (isset($permissions['read'], $permissions['dashboard']) ? $permissions['read']->roles()->get() : [] as $role) {
+                $granted += $this->grantOnce($role, collect([$permissions['dashboard']]));
             }
             $this->command?->info("   ✅ {$level}: Staff (".count($pages)." pages), {$granted} new grant(s)");
         }
