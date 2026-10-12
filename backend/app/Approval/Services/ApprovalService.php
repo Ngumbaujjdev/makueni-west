@@ -12,6 +12,7 @@ use App\Models\ApprovalRequestStage;
 use App\Models\ApprovalWorkflow;
 use App\Models\Territory;
 use App\Models\User;
+use App\Support\PlaceAccess;
 use App\Support\PlaceRoles;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -53,15 +54,30 @@ final class ApprovalService
         return $workflow ? $this->submit($subject, $workflow, $context, $requester, $place) : null;
     }
 
+    /**
+     * The rule for a document (A4, A4b): the nearest owner first - the place's
+     * own rule, then one set up above it for the places below, then the
+     * diocese's standard - then the most specific kind of document, level and
+     * priority. A place's own rules only reach up to the diocese's ceiling
+     * (approvals.own_rules_up_to); above it the standard rules always apply.
+     */
     public function findWorkflow(string $subjectType, Territory $place, array $context): ?ApprovalWorkflow
     {
         $level = $place->territory_type->value;
+        $above = array_map(fn ($t) => (int) $t->id, PlaceAccess::ancestors($place));
+        $rank = array_flip([(int) $place->id, ...$above]);
+        $ceiling = self::ownRulesUpTo();
+        $amount = (float) ($context['amount'] ?? 0);
+        $owner = fn (ApprovalWorkflow $w) => $w->territory_id === null ? 99 : ($rank[(int) $w->territory_id] ?? 98);
         $candidates = ApprovalWorkflow::with('stages.steps')->where('is_active', true)
             ->whereIn('subject_type', [$subjectType, self::ANY])
             ->where(fn ($q) => $q->whereNull('level')->orWhere('level', $level))
+            ->where(fn ($q) => $q->whereNull('territory_id')->orWhere('territory_id', $place->id)
+                ->orWhere(fn ($q) => $q->whereIn('territory_id', $above ?: [0])->where('reach', 'below')))
             ->get()
-            ->sort(fn ($a, $b) => [($a->subject_type === self::ANY), ($a->level === null), -$a->match_priority, -$a->id]
-                <=> [($b->subject_type === self::ANY), ($b->level === null), -$b->match_priority, -$b->id]);
+            ->reject(fn (ApprovalWorkflow $w) => $w->territory_id !== null && ($ceiling <= 0 || $amount > $ceiling))
+            ->sort(fn ($a, $b) => [$owner($a), ($a->subject_type === self::ANY), ($a->level === null), -$a->match_priority, -$a->id]
+                <=> [$owner($b), ($b->subject_type === self::ANY), ($b->level === null), -$b->match_priority, -$b->id]);
         foreach ($candidates as $w) {
             if ($this->conditions->passes($w->applies_when, $context)) {
                 return $w;
@@ -69,6 +85,12 @@ final class ApprovalService
         }
 
         return null;
+    }
+
+    /** Up to what amount a church's or region's own rules apply (0 = they don't). */
+    public static function ownRulesUpTo(): float
+    {
+        return (float) (app(\App\Services\Settings\Settings::class)->system('approvals.own_rules_up_to') ?? 200000);
     }
 
     /** The document's live (pending) request, if any. */
@@ -320,9 +342,17 @@ final class ApprovalService
     {
         $stage->update(['status' => 'blocked', 'blocked_reason' => $why]);
         $this->event($request, 'stage_blocked', ['stage' => $stage->name, 'reason' => $why]);
-        // Whoever looks after the rules: the diocese finance officer(s).
+        // Whoever looks after the rules (A4b): at the place first, else the diocese's.
+        $place = Territory::find($request->territory_id);
         $diocese = Territory::where('territory_type', 'diocese')->orderBy('id')->first();
-        foreach ($diocese ? PlaceRoles::holders($diocese, ['Diocese Finance Officer']) : [] as $u) {
+        $people = $place ? PlaceRoles::withPermission($place, 'accounting.approvalrules.manage') : collect();
+        if ($people->isEmpty() && $diocese) {
+            $people = PlaceRoles::withPermission($diocese, 'accounting.approvalrules.manage');
+        }
+        if ($people->isEmpty() && $diocese) {
+            $people = PlaceRoles::holders($diocese, ['Diocese Finance Officer']);
+        }
+        foreach ($people as $u) {
             $this->notices->send($u, 'blocked', $request, ['stage' => $stage->name]);
         }
     }

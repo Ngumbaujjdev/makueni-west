@@ -160,11 +160,20 @@ final class Inbox
                 'can' => [
                     'decide' => (bool) $turn,
                     'cancel' => $r->status === 'pending' && (int) $r->requested_by === (int) $viewer->id,
-                    'retry' => $active?->status === 'blocked' && AccountingAccess::canManageRules($viewer),
+                    'retry' => $active?->status === 'blocked' && self::canRetry($viewer, $r),
                 ],
             ];
         }
 
         return $out;
+    }
+
+    /** Who may retry a stuck stage: whoever looks after the rules at the request's place, or the diocese's (A4b). */
+    public static function canRetry(?\App\Models\User $user, ApprovalRequest $r): bool
+    {
+        $place = \App\Models\Territory::find($r->territory_id);
+        $diocese = \App\Models\Territory::where('territory_type', 'diocese')->orderBy('id')->first();
+
+        return ($place && AccountingAccess::canManageRules($user, $place)) || ($diocese && AccountingAccess::canManageRules($user, $diocese));
     }
 }

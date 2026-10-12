@@ -15,9 +15,15 @@ class ApprovalWorkflow extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['key', 'name', 'subject_type', 'level', 'applies_when', 'match_priority', 'version', 'is_active', 'created_by', 'updated_by'];
+    protected $fillable = ['key', 'name', 'subject_type', 'level', 'territory_id', 'reach', 'applies_when', 'match_priority', 'version', 'is_active', 'created_by', 'updated_by'];
 
     protected $casts = ['applies_when' => 'array', 'is_active' => 'boolean', 'match_priority' => 'integer', 'version' => 'integer'];
+
+    /** The church or region that owns it (A4b); null = the diocese's standard rule. */
+    public function owner(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Territory::class, 'territory_id');
+    }
 
     public function stages(): HasMany
     {
