@@ -175,6 +175,7 @@ const AccountingAPI = (function () {
     ruleMap: (subject) => request("GET", "/approvals/map", { params: { subject } }),
     ruleTry: (subject, amount) => request("GET", "/approvals/try", { params: { subject, amount } }),
     ruleLive: (days, subject) => request("GET", "/approvals/live", { params: { days, subject } }),
+    ruleMessages: (id) => request("GET", `/approvals/workflows/${id}/messages`),
     approvalPeople: (q) => request("GET", "/approvals/people", { params: { q } }),
     saveWorkflow: (id, body) => request(id ? "PUT" : "POST", id ? `/approvals/workflows/${id}` : "/approvals/workflows", { body }),
     deleteWorkflow: (id) => request("DELETE", `/approvals/workflows/${id}`),

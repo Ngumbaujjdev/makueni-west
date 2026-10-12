@@ -398,6 +398,18 @@ Under `/api/accounting`: `GET|POST requisitions` · `GET requisitions/options` �
     - Which payments: document cards; "From KES … to KES …" with quick bands and a ruler up to the ceiling.
     - Who signs, in order: per step, a who-picker (a role here / above / anyone who can / named people, all Select2, people searched by name), how many must agree, and time limits under "Time limits, and what happens if…".
     - Errors show at the field they are about.
+- **Rules that read like rules, and what they sent (2026-10-12).**
+  - **Each rule card reads When → Then → Tells:**
+    - When: document, band, where;
+    - Then: the numbered steps, top to bottom, ending in Approved, each with who, hours and who it passes up to;
+    - Tells: bell, plus SMS and email when Settings has them on.
+  - **Open shows the rule in a window,** in three parts:
+    - **The rule.**
+    - **Who is told, and when:** each moment with who and the real wording for an example payment, from `Notices::phrase`, the single source of the notices' wording.
+    - **Messages sent:** the bell notices, SMS and emails for this rule's requests at the place and below, with when, which document, which moment, to whom (name, else a masked number or address), how, and Sent / Failed / Read. It is searchable, filterable by channel or failures, and paged.
+  - **The endpoint** is `GET approvals/workflows/{id}/messages?territory_id=` (rule readers). It returns `tells`, `items`, `counts` and `channels`. `approvals/workflows` adds `notify`.
+  - **Approval SMS and emails now carry `message_logs.meta = {request_id, event, user_id}`.** Older ones are matched by the document number in them.
+  - **The assistant panel** has no orb.
 
 ### A4 addendum - handing over, and who it went to (2026-10-10)
 - **"Away? Hand over"** offers only people **at the same place** who take part in approvals there, and at the place **just above** only the roles the active rules pass work up to (e.g. the Regional Overseer) or who can authorise payments there - never a pastor of another church who sits at the diocese. Each shows role and place. Saving checks the same, and a hand-over to someone no longer allowed at a request's place is ignored when the request is assigned.

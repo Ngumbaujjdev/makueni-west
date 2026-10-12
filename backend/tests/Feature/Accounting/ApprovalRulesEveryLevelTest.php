@@ -149,6 +149,44 @@ class ApprovalRulesEveryLevelTest extends TestCase
         $this->assertSame(collect($one['rows'])->pluck('key')->all(), collect($all['rows'])->pluck('key')->all(), 'the lanes stay the vouchers\'');
     }
 
+    public function test_a_rule_shows_who_it_tells_and_the_messages_it_sent(): void
+    {
+        $rule = ApprovalWorkflow::where('name', 'Church - any amount')->firstOrFail();
+        \App\Models\ApprovalStage::where('workflow_id', $rule->id)->update(['sla_hours' => 48]);
+        $this->authoriser->forceFill(['phone' => '0712 345 678'])->save();
+        $ask = function ($place, string $month) use ($rule) {
+            $run = \App\Models\PayrollRun::create(['territory_id' => $place->id, 'month' => $month, 'status' => 'submitted']);
+
+            return [$run, ApprovalRequest::create(['subject_type' => 'payroll_run', 'subject_id' => $run->id, 'territory_id' => $place->id, 'requested_by' => $this->treasurer->id,
+                'workflow_id' => $rule->id, 'workflow_name' => $rule->name, 'status' => 'pending', 'context' => ['amount' => 5000]])];
+        };
+        [$run, $req] = $ask($this->myChurch, '2026-05');
+        app(\App\Approval\Services\Notices::class)->send($this->authoriser, 'assigned', $req);
+        // An SMS logged before messages carried their request: found by the document's number.
+        \App\Models\MessageLog::create(['channel' => 'sms', 'kind' => 'approval', 'to' => '+254712345678', 'status' => 'sent', 'territory_id' => $this->myChurch->id,
+            'body' => "Reminder: Payroll {$run->label()}, KES 5,000 (Payroll for {$run->label()}) from {$this->myChurch->name} is still waiting for your approval."]);
+        [, $theirs] = $ask($this->otherChurch, '2026-06');
+        app(\App\Approval\Services\Notices::class)->send($this->authoriser, 'assigned', $theirs);
+
+        Sanctum::actingAs($this->churchRules);
+        $d = $this->getJson("/api/approvals/workflows/{$rule->id}/messages")->assertOk()->json('data');
+        $items = collect($d['items']);
+        $bell = $items->firstWhere('channel', 'bell');
+        $this->assertSame(['assigned', $this->authoriser->full_name, 'unread'], [$bell['event'], $bell['to_name'], $bell['status']]);
+        $sms = $items->where('channel', 'sms');
+        $this->assertEqualsCanonicalizing(['assigned', 'reminder'], $sms->pluck('event')->all(), 'the new SMS by its request, the old one by its number');
+        $this->assertSame([$this->authoriser->full_name], $sms->pluck('to_name')->unique()->values()->all());
+        $this->assertStringContainsString('•••', $sms->first()['to_masked']);
+        $this->assertSame(1, $d['counts']['requests'], "another church's messages never show");
+        $this->assertTrue($items->every(fn ($i) => $i['document']['id'] === $run->id));
+        $this->assertEquals(['request_id' => $req->id, 'event' => 'assigned', 'user_id' => $this->authoriser->id], \App\Models\MessageLog::where('kind', 'approval')->whereNotNull('meta')->first()->meta);
+        $tells = collect($d['tells']);
+        $this->assertSame('When it reaches Pastor', $tells->first()['title']);
+        $this->assertSame('After 48h without a decision', $tells->firstWhere('moment', 'reminder')['title']);
+        $this->assertStringContainsString('waits for your approval', $tells->first()['sms']);
+        $this->assertSame('The person who asked', $tells->firstWhere('moment', 'approved')['to']);
+    }
+
     private function assignment(\App\Models\Territory $place, User $approver, string $status, \DateTimeInterface $opened, ?\DateTimeInterface $due = null): \App\Models\ApprovalAssignment
     {
         $run = \App\Models\PayrollRun::create(['territory_id' => $place->id, 'month' => '2026-0'.random_int(1, 9), 'status' => 'submitted']);

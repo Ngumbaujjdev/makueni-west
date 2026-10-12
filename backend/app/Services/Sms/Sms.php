@@ -187,7 +187,7 @@ final class Sms
                 'channel' => 'sms', 'to' => $to, 'status' => $status, 'provider_ref' => $ref, 'error' => $error,
                 'territory_id' => $log['territory_id'] ?? null, 'sent_by' => $log['sent_by'] ?? null,
                 'kind' => $log['kind'] ?? null, 'via' => $log['via'] ?? null, 'from' => $log['from'] ?? null,
-                'body' => $log['body'] ?? null, 'body_type' => 'text',
+                'body' => $log['body'] ?? null, 'body_type' => 'text', 'meta' => $log['meta'] ?? null,
             ])->id;
         } catch (\Throwable) {
             // no table yet - the send still counts

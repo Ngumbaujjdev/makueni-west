@@ -59,7 +59,8 @@ final class PlaceMessenger
      * @param  string[]  $secrets  text to mask in the stored copy (a temporary password, a code)
      * @return array{ok: bool, status: string, error: ?string, via: string, log_id: ?int}
      */
-    public function email(Territory $place, string $to, string $subject, string $html, string $kind, array $secrets = [], ?User $by = null): array
+    /** @param  array  $meta  what the message is about, e.g. {request_id, event} for an approval notice */
+    public function email(Territory $place, string $to, string $subject, string $html, string $kind, array $secrets = [], ?User $by = null, array $meta = []): array
     {
         $c = $this->channels($place);
         $own = $c['email']['via'] === 'own';
@@ -103,7 +104,7 @@ final class PlaceMessenger
             'channel' => 'mail', 'kind' => $kind, 'via' => $c['email']['via'], 'to' => $to,
             'from' => "{$fromName} <{$fromAddress}>", 'reply_to' => $c['reply_to'], 'subject' => $subject,
             'body' => MessageLog::mask($html, $secrets), 'body_type' => 'html',
-            'status' => $status, 'error' => $error, 'territory_id' => $place->id, 'sent_by' => $by?->id,
+            'status' => $status, 'error' => $error, 'territory_id' => $place->id, 'sent_by' => $by?->id, 'meta' => $meta ?: null,
         ]);
 
         return ['ok' => $status !== 'failed', 'status' => $status, 'error' => $error, 'via' => $c['email']['via'], 'log_id' => $log?->id];
@@ -114,7 +115,7 @@ final class PlaceMessenger
      * @param  bool  $signed  add the place's SMS signature (not when sending a logged message again)
      * @return array{ok: bool, status: string, error: ?string, via: string, log_id: ?int}
      */
-    public function sms(Territory $place, string $to, string $text, string $kind, array $secrets = [], ?User $by = null, bool $signed = true): array
+    public function sms(Territory $place, string $to, string $text, string $kind, array $secrets = [], ?User $by = null, bool $signed = true, array $meta = []): array
     {
         $c = $this->channels($place);
         $own = $c['sms']['via'] === 'own';
@@ -129,7 +130,7 @@ final class PlaceMessenger
         $message = $signed && $c['sms_signature'] ? "{$text}\n- {$c['sms_signature']}" : $text;
 
         $result = $this->sms->sendWith($account, $to, $message, [
-            'territory_id' => $place->id, 'sent_by' => $by?->id, 'via' => $c['sms']['via'], 'kind' => $kind, 'secrets' => $secrets,
+            'territory_id' => $place->id, 'sent_by' => $by?->id, 'via' => $c['sms']['via'], 'kind' => $kind, 'secrets' => $secrets, 'meta' => $meta ?: null,
         ]);
 
         return ['ok' => $result['ok'], 'status' => $result['status'], 'error' => $result['error'], 'via' => $c['sms']['via'], 'log_id' => $result['log_id']];

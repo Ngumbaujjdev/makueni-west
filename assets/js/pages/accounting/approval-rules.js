@@ -11,6 +11,8 @@
  *     is now
  *   - Next steps, Detected, and the assistant panel ("Who would sign
  *     75,000?", what we found, an amount box)
+ *   - each rule reads When -> Then -> Tells; opening one shows who it tells
+ *     and when, and the messages it has sent (bell, SMS, email)
  *   - Rules: who signs which amounts, then our own, from above, the
  *     diocese's standard and the places' own - with the editor
  * The Filter covers all documents by default; the amount map and the amount
@@ -197,7 +199,6 @@
         : `<div class="ap-ask-label">Ask about what we found</div>
            ${map.questions.length ? map.questions.slice(0, 2).map((q) => `<a class="ap-ask" href="${q.type ? A.link("record.php", { type: q.type, id: q.id }) : `${CTX.baseUrl}/approvals.php`}"><i class="ri-sparkling-2-fill"></i><span>${esc(q.text)}</span><i class="ri-arrow-right-line"></i></a>`).join("") : `<button type="button" class="ap-ask" data-try="75000"><i class="ri-sparkling-2-fill"></i><span>Who would sign KES 75,000 here?</span><i class="ri-arrow-right-line"></i></button><button type="button" class="ap-ask" data-explain><i class="ri-sparkling-2-fill"></i><span>What does the map show?</span><i class="ri-arrow-right-line"></i></button>`}`;
     $("apTry").innerHTML = `<div class="ap-assist">
-      <div class="ap-orb"></div>
       <h3 class="ap-assist-title">Welcome${name ? `, ${esc(name)}` : ""}<br>What can I help with today?</h3>
       <div class="ap-assist-chips">
         <button type="button" class="ap-chip is-btn" data-try="75000"><i class="ri-price-tag-3-line"></i>Who signs 75,000?</button>
@@ -254,13 +255,112 @@
       </div></div></section>`;
   }
 
+  const DOC_ICON = { "*": "ri-stack-line", payment_voucher: "ri-file-list-3-line", requisition: "ri-hand-coin-line", payroll_run: "ri-team-line" };
+  const OWNER = { own: "Our own rule", above: "Set up above for us", standard: "The diocese's standard rule", below: "A place's own rule" };
+  const whoOf = (s) => s.steps.map((st) => (st.people?.length ? st.people.map((p) => p.name).join(", ") : st.label || "")).join(" or ");
+  const whereOf = (w) => (w.owner ? (w.reach === "below" ? `${w.owner.name}'s churches` : w.owner.name) : LEVEL[w.level || ""]);
+  /** ① Pastor -> ② Committee -> Approved */
+  const flow = (w) =>
+    `<div class="ap-flow">${w.stages
+      .map((s, i) => `<div class="ap-flow-step"><span class="ap-path-n">${i + 1}</span><div class="min-w-0"><b>${esc(s.name)}</b><small>${esc(whoOf(s))}${s.type === "all" ? " · all of them" : s.type === "quorum" ? ` · any ${s.quorum}` : ""}</small>${s.sla_hours || s.escalate_label ? `<small class="ap-flow-meta"><i class="ri-time-line"></i>${s.sla_hours ? `${s.sla_hours}h` : ""}${s.escalate_label ? `${s.sla_hours ? " · " : ""}then ${esc(s.escalate_label)}` : ""}</small>` : ""}</div></div><i class="ri-arrow-right-line ap-flow-arrow" aria-hidden="true"></i>`)
+      .join("")}<div class="ap-flow-step is-end"><span class="ap-flow-done"><i class="ri-check-line"></i></span><b>Approved</b></div></div>`;
+  const CHANNELS = [["bell", "ri-notification-3-line", "Bell"], ["sms", "ri-message-2-line", "SMS"], ["email", "ri-mail-line", "Email"]];
+  const tellsChips = () => CHANNELS.map(([k, icon, label]) => { const on = k === "bell" || meta.notify?.[k]; return `<span class="ap-tell${on ? "" : " is-off"}" title="${label}${on ? "" : " - switched off in Settings"}"><i class="${icon}"></i>${label}</span>`; }).join("");
+  const whenThen = (w) => `
+      <div class="ap-cond"><span class="ap-cond-k">When</span><div class="ap-cond-v"><span class="soft-chip soft-primary"><i class="${DOC_ICON[w.subject_type] || "ri-file-line"}"></i>${esc(w.subject_label)}</span><span class="soft-chip soft-success"><i class="ri-money-dollar-circle-line"></i>${esc(band(w))}</span><span class="soft-chip soft-purple"><i class="ri-map-pin-line"></i>${esc(whereOf(w))}</span></div></div>
+      <div class="ap-cond"><span class="ap-cond-k">Then</span><div class="ap-cond-v">${flow(w)}</div></div>
+      <div class="ap-cond"><span class="ap-cond-k">Tells</span><div class="ap-cond-v">${tellsChips()}</div></div>`;
+
   function ruleCard(w) {
-    const who = (s) => s.steps.map((st) => (st.people?.length ? st.people.map((p) => p.name).join(", ") : st.label || "")).join(" or ");
-    return `<div class="ap-rule${w.is_active ? "" : " is-off"}">
-      <div class="ap-rule-head"><div class="min-w-0"><div class="ap-rule-name">${esc(w.name)}</div><div class="ap-rule-sub">${esc(w.subject_label)} · ${esc(band(w))} · ${esc(LEVEL[w.level || ""])}${w.reach === "below" ? " · and its churches" : ""}${w.is_active ? "" : " · switched off"}</div></div>
-        ${w.editable ? `<div class="d-flex gap-1 flex-shrink-0"><button type="button" class="ap-chip is-btn" data-edit="${w.id}"><i class="ri-edit-line"></i>Change</button><button type="button" class="ap-chip is-btn is-danger" data-del="${w.id}" aria-label="Remove ${esc(w.name)}"><i class="ri-delete-bin-line"></i></button></div>` : '<span class="ap-chip"><i class="ri-eye-line"></i>See only</span>'}</div>
-      <ol class="ap-path">${w.stages.map((s, i) => `<li><span class="ap-path-n">${i + 1}</span><div><b>${esc(s.name)}</b><div class="ap-path-who">${esc(who(s))}${s.type === "all" ? " - everyone" : s.type === "quorum" ? ` - any ${s.quorum}` : ""}${s.sla_hours ? ` · ${s.sla_hours}h to decide` : ""}${s.escalate_label ? ` · then ${esc(s.escalate_label)}` : ""}</div></div></li>`).join("")}</ol>
+    return `<div class="ap-rule${w.is_active ? "" : " is-off"}" data-open="${w.id}" role="button" tabindex="0" aria-label="Open ${esc(w.name)}">
+      <div class="ap-rule-head"><div class="min-w-0"><div class="ap-rule-name">${esc(w.name)}</div><div class="ap-rule-sub">${esc(OWNER[w.group] || "")}</div></div><span class="badge ${w.is_active ? "bg-success" : "bg-secondary"}">${w.is_active ? "In use" : "Off"}</span></div>
+      ${whenThen(w)}
+      <div class="ap-rule-foot"><button type="button" class="btn btn-sm btn-icon btn-primary" data-open="${w.id}" aria-label="Open ${esc(w.name)}" title="Open"><i class="ri-eye-line"></i></button>${w.editable ? `<button type="button" class="btn btn-sm btn-icon btn-warning" data-edit="${w.id}" aria-label="Change ${esc(w.name)}" title="Change"><i class="ri-edit-line"></i></button><button type="button" class="btn btn-sm btn-icon btn-danger" data-del="${w.id}" aria-label="Remove ${esc(w.name)}" title="Remove"><i class="ri-delete-bin-line"></i></button>` : ""}</div>
     </div>`;
+  }
+
+  // ------------------------------------------------------------ a rule opened: who it tells, and what it has sent
+
+  const MOMENT = {
+    assigned: ["ri-user-received-line", "primary"], reminder: ["ri-alarm-line", "warning"], escalated: ["ri-arrow-up-circle-line", "purple"], blocked: ["ri-error-warning-line", "danger"],
+    approved: ["ri-checkbox-circle-line", "success"], rejected: ["ri-close-circle-line", "danger"], returned: ["ri-arrow-go-back-line", "warning"], cancelled: ["ri-forbid-line", "secondary"],
+  };
+  const STATE = { sent: ["Sent", "success"], logged: ["Logged", "secondary"], failed: ["Failed", "danger"], read: ["Read", "success"], unread: ["Not read yet", "warning"] };
+  async function openRule(id) {
+    const w = meta.items.find((x) => x.id === id);
+    if (!w) return;
+    $("ruleView")?.remove();
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      `<div class="modal fade app-modal acc-modal" id="ruleView" tabindex="-1" aria-labelledby="rvTitle"><div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable modal-fullscreen-sm-down"><div class="modal-content">
+        <div class="modal-header"><span class="app-modal-icon"><i class="ri-git-branch-line"></i></span><div class="flex-fill min-w-0"><h5 class="modal-title" id="rvTitle">${esc(w.name)}</h5><div class="app-modal-subtitle">${esc(OWNER[w.group] || "")} · ${w.is_active ? "in use" : "switched off"}</div></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+        <div class="modal-body">
+          <section class="app-modal-part"><div class="app-modal-part-head"><i class="ri-git-branch-line"></i>The rule</div><div class="ap-rule is-flat">${whenThen(w)}</div></section>
+          <div id="rvBody"><section class="app-modal-part"><div class="placeholder-glow"><span class="placeholder col-12 mb-2" style="height:3rem"></span><span class="placeholder col-12" style="height:8rem"></span></div></section></div>
+        </div>
+        <div class="modal-footer">${w.editable ? `<button type="button" class="btn btn-warning" data-edit="${w.id}"><i class="ri-edit-line me-1"></i>Change</button>` : ""}<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Close</button></div>
+      </div></div></div>`,
+    );
+    const el = $("ruleView");
+    el.addEventListener("hidden.bs.modal", () => {
+      const p = new URLSearchParams(window.location.search);
+      ["rmq", "rmpill", "rmsort"].forEach((k) => p.delete(k));
+      history.replaceState(null, "", `${window.location.pathname}${p.toString() ? `?${p}` : ""}`);
+      el.remove();
+    });
+    el.querySelector("[data-edit]")?.addEventListener("click", () => {
+      bootstrap.Modal.getInstance(el)?.hide();
+      editor(w);
+    });
+    bootstrap.Modal.getOrCreateInstance(el).show();
+    const r = await API.ruleMessages(id);
+    if (!r.ok) return ($("rvBody").innerHTML = A.errorBox(r.message));
+    const d = r.data;
+    const ch = (channels) => CHANNELS.filter(([k]) => channels[k]).map(([, icon, label]) => `<span class="ap-tell"><i class="${icon}"></i>${label}</span>`).join("");
+    const tells = d.tells
+      .map((t) => {
+        const [icon, colour] = MOMENT[t.moment] || MOMENT.assigned;
+        return `<li class="ap-tells-item"><span class="ap-tells-icon bg-${colour} text-white"><i class="${icon}"></i></span><div class="min-w-0 flex-fill">
+          <div class="ap-tells-head"><b>${esc(t.title)}</b><span class="ap-tells-ch">${ch(d.channels)}</span></div>
+          <div class="ap-tells-to"><i class="ri-user-line"></i>${esc(t.to || "-")}</div>
+          <div class="ap-quote"><i class="ri-chat-quote-line"></i><span>${esc(t.sms)}</span></div></div></li>`;
+      })
+      .join("");
+    const c = d.counts;
+    $("rvBody").innerHTML = `
+      <section class="app-modal-part"><div class="app-modal-part-head"><i class="ri-notification-badge-line"></i>Who is told, and when<small>Example wording for a payment this rule covers</small></div><ol class="ap-tells">${tells}</ol></section>
+      <section class="app-modal-part"><div class="app-modal-part-head"><i class="ri-mail-send-line"></i>Messages sent<small>${c.requests} ${c.requests === 1 ? "request" : "requests"} under this rule</small></div>
+        <div class="d-flex flex-wrap gap-2 mb-3"><span class="soft-chip soft-primary"><i class="ri-notification-3-line"></i>Bell ${c.bell}</span><span class="soft-chip soft-success"><i class="ri-message-2-line"></i>SMS ${c.sms}</span><span class="soft-chip soft-purple"><i class="ri-mail-line"></i>Email ${c.email}</span><span class="soft-chip soft-warning"><i class="ri-team-line"></i>${c.people} ${c.people === 1 ? "person" : "people"}</span>${c.failed ? `<span class="badge bg-danger"><i class="ri-error-warning-line me-1"></i>${c.failed} failed</span>` : ""}</div>
+        <div class="table-responsive"><table class="table text-nowrap ap-msg-table" id="rvTable"><thead><tr><th>When</th><th>Document</th><th>What</th><th>To</th><th>How</th></tr></thead><tbody></tbody></table></div></section>`;
+    A.tableKit({
+      tableId: "rvTable",
+      prefix: "rm",
+      items: d.items,
+      noun: "messages",
+      search: "Search a name, document or message...",
+      pageLength: 10,
+      pills: [
+        { key: "sms", label: "SMS", icon: "ri-message-2-line", color: "success", test: (i) => i.channel === "sms" },
+        { key: "email", label: "Email", icon: "ri-mail-line", color: "purple", test: (i) => i.channel === "email" },
+        { key: "bell", label: "Bell", icon: "ri-notification-3-line", color: "primary", test: (i) => i.channel === "bell" },
+        { key: "failed", label: "Failed", icon: "ri-error-warning-line", color: "danger", test: (i) => i.status === "failed" },
+      ],
+      sorts: [{ key: "new", label: "Newest first", order: [[0, "desc"]] }, { key: "old", label: "Oldest first", order: [[0, "asc"]] }],
+      empty: A.empty("ri-mail-send-line", "Nothing sent under this rule yet", "When a payment follows this rule, every message it sends shows here."),
+      rowHtml: (i) => {
+        const [icon, colour] = MOMENT[i.event] || ["ri-notification-3-line", "secondary"];
+        const [state, sc] = STATE[i.status] || [i.status, "secondary"];
+        const [, chIcon, chLabel] = CHANNELS.find(([k]) => k === i.channel) || CHANNELS[0];
+        const doc = i.document;
+        return `<tr data-pills="${i.channel}${i.status === "failed" ? " failed" : ""}">
+          <td data-order="${esc(i.at)}">${A.dateChip(i.at)} <small class="ap-rule-sub">${new Date(i.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</small></td>
+          <td>${doc?.type ? `<a href="${A.link("record.php", { type: doc.type, id: doc.id })}" class="fw-semibold">${esc(doc.label)}</a>` : esc(doc?.label || "-")}</td>
+          <td><span class="badge bg-${colour}"><i class="${icon} me-1"></i>${esc(i.event_label)}</span></td>
+          <td>${i.to_name ? A.person(i.to_name) : `<span class="ap-rule-sub">${esc(i.to_masked || "-")}</span>`}</td>
+          <td title="${esc(i.text)}"><span class="ap-tell"><i class="${chIcon}"></i>${chLabel}</span> <span class="soft-chip soft-${sc}">${esc(state)}</span></td>
+        </tr>`;
+      },
+    });
   }
 
   function rules() {
@@ -711,11 +811,20 @@
       if (e.target.closest("[data-explain]")) return (explain = true), (tried = null), assistant();
       if (e.target.closest("[data-clear]")) return (explain = false), (tried = null), assistant(), tab === "rules" && rules();
       const ed = e.target.closest("[data-edit]");
-      if (ed) return editor(meta.items.find((x) => x.id === Number(ed.dataset.edit)));
+      if (ed && !ed.closest("#ruleView")) return editor(meta.items.find((x) => x.id === Number(ed.dataset.edit)));
       const del = e.target.closest("[data-del]");
-      if (del && confirm("Remove this rule? Requests already waiting keep it.")) {
+      if (del) {
+        if (!confirm("Remove this rule? Requests already waiting keep it.")) return;
         const r = await API.deleteWorkflow(Number(del.dataset.del));
-        r.ok ? (Toast.success(r.message), load()) : Toast.error(r.message);
+        return r.ok ? (Toast.success(r.message), load()) : Toast.error(r.message);
+      }
+      const op = e.target.closest("[data-open]");
+      if (op && !e.target.closest(".modal")) return openRule(Number(op.dataset.open));
+    });
+    document.addEventListener("keydown", (e) => {
+      if ((e.key === "Enter" || e.key === " ") && e.target.matches(".ap-rule[data-open]")) {
+        e.preventDefault();
+        openRule(Number(e.target.dataset.open));
       }
     });
     document.addEventListener("submit", (e) => {
