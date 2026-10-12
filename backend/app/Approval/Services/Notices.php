@@ -35,7 +35,7 @@ final class Notices
             } catch (\Throwable $e) {
                 report($e);
             }
-            SendApprovalNotice::dispatch($user->id, $request->id, $title, $body, $sms, $url);
+            SendApprovalNotice::dispatch($user->id, $request->id, $title, $body, $sms, $url, $event);
         });
     }
 
@@ -43,11 +43,27 @@ final class Notices
     public function words(string $event, ApprovalRequest $request, array $extra = []): array
     {
         $s = $request->subject->approvalSummary();
-        $what = "{$s['label']} {$s['number']}";
-        $money = 'KES '.number_format((float) $s['amount'], 0);
-        $place = $request->territory?->name ?? 'your place';
-        $title = $s['title'] ? mb_strimwidth($s['title'], 0, 60, '...') : '';
-        $why = isset($extra['comment']) && $extra['comment'] !== '' ? ' - "'.mb_strimwidth($extra['comment'], 0, 80, '...').'"' : '';
+
+        return self::phrase($event, [
+            'what' => "{$s['label']} {$s['number']}",
+            'money' => 'KES '.number_format((float) $s['amount'], 0),
+            'place' => $request->territory?->name ?? 'your place',
+            'title' => $s['title'] ? mb_strimwidth($s['title'], 0, 60, '...') : '',
+            'why' => isset($extra['comment']) && $extra['comment'] !== '' ? ' - "'.mb_strimwidth($extra['comment'], 0, 80, '...').'"' : '',
+            'stage' => $extra['stage'] ?? null,
+        ]);
+    }
+
+    /**
+     * The wording of each notice from its parts {what, money, place, title, why, stage} - one
+     * place for it, used for the real notices and for the samples on a rule's page.
+     *
+     * @return array{0: string, 1: string, 2: string} [bell title, bell body, SMS text]
+     */
+    public static function phrase(string $event, array $p): array
+    {
+        ['what' => $what, 'money' => $money, 'place' => $place, 'title' => $title] = $p;
+        $why = $p['why'] ?? '';
 
         return match ($event) {
             'assigned' => ["Approve: {$what}", "{$money} for {$title}, from {$place}", "{$what}: {$money} ({$title}) from {$place} waits for your approval."],
@@ -57,9 +73,33 @@ final class Notices
             'rejected' => ["Rejected: {$what}", "{$money} for {$title} was rejected{$why}", "Your {$what} ({$money}) was rejected{$why}."],
             'returned' => ["Sent back: {$what}", "{$money} for {$title} needs changes{$why}", "Your {$what} ({$money}) was sent back for changes{$why}."],
             'cancelled' => ["Cancelled: {$what}", "{$money} for {$title} no longer needs your approval", "{$what} ({$money}) was cancelled - no approval needed."],
-            'blocked' => ["Nobody to approve {$what}", 'No one holds the role for "'.($extra['stage'] ?? 'a stage').'" - set it up in Approval rules', "{$what} from {$place} is stuck: nobody to approve \"".($extra['stage'] ?? '').'".'],
+            'blocked' => ["Nobody to approve {$what}", 'No one holds the role for "'.($p['stage'] ?? 'a stage').'" - set it up in Approval rules', "{$what} from {$place} is stuck: nobody to approve \"".($p['stage'] ?? '').'".'],
             default => [$what, $title, $what],
         };
+    }
+
+    /** Which notice a sent message was, from its opening words (for messages logged before they carried it). */
+    public static function eventOf(string $text): ?string
+    {
+        $t = trim(strip_tags($text));
+        foreach ([
+            'assigned' => ['/^Approve: /', '/ waits for your approval\./'],
+            'reminder' => ['/^Still waiting: /', '/^Reminder: /'],
+            'escalated' => ['/^Passed to you: /', '/ was not approved in time/'],
+            'blocked' => ['/^Nobody to approve /', '/ is stuck: nobody to approve/'],
+            'approved' => ['/^Approved: /', '/^Your .* was approved\./'],
+            'rejected' => ['/^Rejected: /', '/^Your .* was rejected/'],
+            'returned' => ['/^Sent back: /', '/^Your .* was sent back for changes/'],
+            'cancelled' => ['/^Cancelled: /', '/ was cancelled - no approval needed/'],
+        ] as $event => $patterns) {
+            foreach ($patterns as $re) {
+                if (preg_match($re, $t)) {
+                    return $event;
+                }
+            }
+        }
+
+        return null;
     }
 
     /** The Approvals page at the level the person works at (their primary role's place). */

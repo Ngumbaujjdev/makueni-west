@@ -880,6 +880,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('workflows', [$ap, 'workflows']);
         Route::get('map', [$ap, 'map']);
         Route::get('live', [$ap, 'live']);
+        Route::get('workflows/{id}/messages', [$ap, 'ruleMessages'])->whereNumber('id');
         Route::get('try', [$ap, 'try']);
         Route::get('people', [$ap, 'people']);
         Route::post('workflows', [$ap, 'saveWorkflow']);

@@ -7,6 +7,7 @@ use App\Approval\Services\ApprovalService;
 use App\Approval\Services\Handover;
 use App\Approval\Services\Inbox;
 use App\Approval\Services\RuleMap;
+use App\Approval\Services\RuleMessages;
 use App\Approval\Services\WorkflowBuilder;
 use App\Models\ApprovalDelegation;
 use App\Models\ApprovalRequest;
@@ -245,7 +246,24 @@ class ApprovalController extends AccountingBase
             'roles' => Role::whereIn('territory_level', ['church', 'region', 'diocese'])->orderBy('territory_level')->orderBy('name')->get(['name', 'territory_level'])->map(fn ($r) => ['name' => $r->name, 'level' => $r->territory_level])->values(),
             'permissions' => collect(WorkflowBuilder::PERMISSIONS)->map(fn ($l, $k) => ['key' => $k, 'label' => 'Anyone who can '.$l])->values(),
             'resolvers' => array_keys(Registry::TYPES),
+            'notify' => app(RuleMessages::class)->channels(),
         ]);
+    }
+
+    /** GET /approvals/workflows/{id}/messages?territory_id= - who a rule tells and when, and what it has sent here and below. */
+    public function ruleMessages(Request $request, int $id): JsonResponse
+    {
+        $place = $this->rulesPlace($request);
+        if ($place instanceof JsonResponse) {
+            return $place;
+        }
+        $w = ApprovalWorkflow::with(['stages.steps', 'owner'])->find($id);
+        if (! $w) {
+            return $this->notFound('That rule is gone.');
+        }
+        $rule = $this->builder->present($w);
+
+        return $this->ok(app(RuleMessages::class)->for($w, $rule, $place) + ['updated_at' => $w->updated_at?->toIso8601String()]);
     }
 
     /** GET /approvals/map?territory_id=&subject= - who signs what here: the lane map, next steps, what we found. */

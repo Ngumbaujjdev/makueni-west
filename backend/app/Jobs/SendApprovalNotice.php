@@ -26,7 +26,7 @@ class SendApprovalNotice implements ShouldQueue
 
     public array $backoff = [10, 30, 60];
 
-    public function __construct(public int $userId, public int $requestId, public string $title, public string $body, public string $sms, public string $url) {}
+    public function __construct(public int $userId, public int $requestId, public string $title, public string $body, public string $sms, public string $url, public string $event = '') {}
 
     public function handle(PlaceMessenger $messenger, Settings $settings): void
     {
@@ -36,13 +36,15 @@ class SendApprovalNotice implements ShouldQueue
             return;
         }
         $link = config('app.frontend_url').$this->url;
+        // Kept on the message log, so a rule's page can show what it sent (A4b).
+        $meta = ['request_id' => $request->id, 'event' => $this->event, 'user_id' => $user->id];
         $phone = Phone::kenyaMobile($user->phone);
         if ($settings->system('approvals.notify_sms') && $phone && ! Phone::isDemo($phone)) {
-            $messenger->sms($request->territory, $phone, "{$this->sms} Open: {$link}", 'approval');
+            $messenger->sms($request->territory, $phone, "{$this->sms} Open: {$link}", 'approval', meta: $meta);
         }
         if ($settings->system('approvals.notify_email') && filter_var($user->email, FILTER_VALIDATE_EMAIL) && ! str_ends_with($user->email, '.test')) {
             $html = '<p>Hello '.e($user->firstname).',</p><p><strong>'.e($this->title).'</strong><br>'.e($this->body).'</p><p><a href="'.e($link).'">Open it</a></p>';
-            $messenger->email($request->territory, $user->email, $this->title, $html, 'approval');
+            $messenger->email($request->territory, $user->email, $this->title, $html, 'approval', meta: $meta);
         }
     }
 }

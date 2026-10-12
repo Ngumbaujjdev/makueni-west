@@ -377,7 +377,7 @@ final class RuleMap
     }
 
     /** A request's document as people name it (PV-73, Payroll October 2026), and its record page type. @return array{0: string, 1: ?string} */
-    private function docLabel(ApprovalRequest $r): array
+    public function docLabel(ApprovalRequest $r): array
     {
         $type = ['payment_voucher' => 'voucher', 'requisition' => 'requisition', 'payroll_run' => 'payroll'][$r->subject_type] ?? null;
         $doc = $r->subject_type && class_exists($cls = \Illuminate\Database\Eloquent\Relations\Relation::getMorphedModel($r->subject_type) ?? '') ? $cls::find($r->subject_id) : null;
