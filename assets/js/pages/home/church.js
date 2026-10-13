@@ -24,6 +24,70 @@
   const TODAY = iso(new Date());
   const YEAR = new Date().getFullYear();
   const link = (path) => `${CTX.church}/${path}`;
+  const at = (s) => new Date(`${String(s).slice(0, 10)}T12:00:00`);
+  const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+  // --------------------------------------------------------------------------
+  // The period (the filter bar): from/to as YYYY-MM-DD, kept in the URL so a
+  // refresh or a shared link keeps it. This month by default - a church works
+  // month by month (giving, the monthly report, the treasurer's close).
+  // --------------------------------------------------------------------------
+  const PICKS = {
+    week: ["This week", "this week", "last week"],
+    month: ["This month", "this month", null],
+    last_month: ["Last month", "last month", null],
+    quarter: ["This quarter", "this quarter", "last quarter"],
+    year: ["This year", "this year", "the year before"],
+    twelve: ["Last 12 months", "in 12 months", "the 12 months before"],
+  };
+  function pickRange(key) {
+    const n = new Date();
+    const y = n.getFullYear();
+    const m = n.getMonth();
+    const end = (yy, mm) => new Date(yy, mm + 1, 0);
+    if (key === "week") {
+      const mon = new Date(n);
+      mon.setDate(n.getDate() - ((n.getDay() + 6) % 7));
+      const sun = new Date(mon);
+      sun.setDate(mon.getDate() + 6);
+      return [iso(mon), iso(sun)];
+    }
+    if (key === "last_month") return [iso(new Date(y, m - 1, 1)), iso(end(y, m - 1))];
+    if (key === "quarter") return [iso(new Date(y, m - (m % 3), 1)), iso(end(y, m - (m % 3) + 2))];
+    if (key === "year") return [`${y}-01-01`, `${y}-12-31`];
+    if (key === "twelve") return [iso(new Date(y, m - 11, 1)), iso(end(y, m))];
+    return [iso(new Date(y, m, 1)), iso(end(y, m))];
+  }
+  const PERIOD = (() => {
+    const q = new URLSearchParams(window.location.search);
+    const f = q.get("from");
+    const t = q.get("to");
+    if (/^\d{4}-\d{2}-\d{2}$/.test(f || "") && /^\d{4}-\d{2}-\d{2}$/.test(t || "") && f <= t) {
+      const pick = Object.keys(PICKS).find((k) => pickRange(k).join() === `${f},${t}`) || null;
+      return { from: f, to: t, pick };
+    }
+    const [from, to] = pickRange("month");
+    return { from, to, pick: "month" };
+  })();
+  const inPeriod = (d) => d && String(d).slice(0, 10) >= PERIOD.from && String(d).slice(0, 10) <= PERIOD.to;
+  /** "this month", "last month", "in the period" - for the card labels. */
+  const periodWord = () => (PERIOD.pick ? PICKS[PERIOD.pick][1] : "in the period");
+  /** What the change is measured against: "vs September", "vs last quarter", "vs the period before". */
+  function previousWord() {
+    const p = PERIOD.pick;
+    if (p === "month" || p === "last_month") {
+      const d = at(PERIOD.from);
+      return `vs ${MONTHS[(d.getMonth() + 11) % 12]}`;
+    }
+    return p ? `vs ${PICKS[p][2]}` : "vs the period before";
+  }
+  function periodLength() {
+    const days = Math.round((at(PERIOD.to) - at(PERIOD.from)) / 86400000) + 1;
+    const w = Math.floor(days / 7);
+    const d = days % 7;
+    if (days < 7) return `${days} day${days === 1 ? "" : "s"}`;
+    return [w ? `${w} week${w === 1 ? "" : "s"}` : "", d ? `${d} day${d === 1 ? "" : "s"}` : ""].filter(Boolean).join(", ");
+  }
 
   // --------------------------------------------------------------------------
   // One fetch helper, like MembersAPI: the acting role goes with every call
@@ -67,10 +131,11 @@
     const pill = `<span class="badge bg-${color} text-white mx-1">${esc(delta.text)}</span>`;
     return `<span class="fs-12 mb-0">${word}${pill}${esc(caption)}</span>`;
   }
-  function kpi(id, value, line) {
+  function kpi(id, value, line, label = null) {
     const card = $(id);
     card.querySelector('[data-kpi="value"]').innerHTML = value;
     card.querySelector('[data-kpi="delta"]').innerHTML = line;
+    if (label) card.querySelector('[data-kpi="label"]').textContent = label;
   }
   const kpiFail = (id, r, who) => kpi(id, "-", `<span class="fs-12">${r.status === 403 ? `Not part of your role - ${esc(who)}` : "Couldn't load"}</span>`);
 
@@ -99,10 +164,11 @@
       return;
     }
     const d = r.data;
-    const prev = d.last_month.label.split(" ")[0];
-    const monthLine = (now, before) => (now || before ? deltaLine(UI.periodDelta(now, before || null, {}), before ? `vs ${prev}` : "Nothing last month to compare") : `<span class="fs-12 mb-0">Nothing recorded yet this month</span>`);
-    kpi("kpiIn", money(d.month.in), monthLine(d.month.in, d.last_month.in));
-    kpi("kpiOut", money(d.month.out), monthLine(d.month.out, d.last_month.out));
+    const per = d.period || d.month;
+    const prv = d.previous || d.last_month;
+    const line = (now, before) => (now || before ? deltaLine(UI.periodDelta(now, before || null, {}), before ? previousWord() : "Nothing before it to compare") : `<span class="fs-12 mb-0">Nothing recorded ${esc(periodWord())}</span>`);
+    kpi("kpiIn", money(per.in), line(per.in, prv.in), `Given ${periodWord()}`);
+    kpi("kpiOut", money(per.out), line(per.out, prv.out), `Spent ${periodWord()}`);
 
     // Latest money - the template's Recent Orders list.
     const held = (d.cash || []).reduce((s, a) => s + Number(a.balance || 0), 0);
@@ -143,6 +209,7 @@
     earnings(d.monthly);
   }
 
+  let earningsChart = null;
   /** The template's Earnings chart (assets/js/ecommerce-dashboard.js): money in by month, this month solid. */
   function earnings(m) {
     if (!m?.labels?.length || typeof ApexCharts === "undefined") return;
@@ -151,10 +218,17 @@
       return;
     }
     const rgb = getComputedStyle(document.documentElement).getPropertyValue("--primary-rgb").trim() || "44, 164, 191";
-    const last = m.labels.length - 1;
-    const colors = m.labels.map((_, i) => (i === last ? `rgb(${rgb})` : `rgba(${rgb}, 0.3)`));
+    // The months inside the chosen period are solid, the rest soft.
+    const solid = m.labels.map((l) => {
+      const [mon, yr] = String(l).split(" ");
+      const start = new Date(Number(yr), MONTHS.findIndex((x) => x.startsWith(mon)), 1);
+      const end = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+      return iso(start) <= PERIOD.to && iso(end) >= PERIOD.from;
+    });
+    const colors = solid.map((on) => (on ? `rgb(${rgb})` : `rgba(${rgb}, 0.3)`));
     $("earnings").innerHTML = "";
-    new ApexCharts($("earnings"), {
+    if (earningsChart) earningsChart.destroy();
+    earningsChart = new ApexCharts($("earnings"), {
       series: [{ name: "Money in", data: m.in }],
       chart: { height: 200, type: "bar", toolbar: { show: false }, fontFamily: "Inter, sans-serif" },
       grid: { borderColor: "#f1f1f1", strokeDashArray: 3 },
@@ -168,7 +242,8 @@
         custom: ({ dataPointIndex: i }) =>
           `<div class="home-tip"><strong>${esc(m.labels[i])}</strong><span class="text-success">In ${money(m.in[i])}</span><span class="text-danger">Out ${money(m.out?.[i] || 0)}</span></div>`,
       },
-    }).render();
+    });
+    earningsChart.render();
   }
 
   /** Staff: one line under the money chart. */
@@ -187,26 +262,28 @@
     if (!r.ok) {
       kpiFail("kpiSunday", r, "attendance is recorded by the pastor");
       $("whoHead").innerHTML = failNote(r, "attendance is recorded by the pastor");
-      return;
-    }
-    const d = r.data;
-    const weeks = d.sunday?.weekly || [];
-    const lastW = weeks[weeks.length - 1];
-    const prevW = weeks[weeks.length - 2];
-    if (lastW) {
-      kpi("kpiSunday", `${num(lastW.total)} <small class="fs-12 fw-normal text-muted">people</small>`, deltaLine(prevW ? UI.periodDelta(lastW.total, prevW.total) : null, prevW ? `vs ${day(prevW.date, { day: "numeric", month: "short" })}` : `on ${day(lastW.date, { day: "numeric", month: "short" })}`));
-    } else {
-      kpi("kpiSunday", "-", CTX.can.attendance ? `<a href="${link("attendance/new.php")}" class="btn btn-sm btn-primary btn-wave mt-1"><i class="ri-calendar-check-line me-1"></i>Record a Sunday</a>` : `<span class="fs-12">No Sunday recorded yet</span>`);
-    }
-
-    // Who comes - the template's Top Countries: a headline, then a row per gathering.
-    const s = d.summary || {};
-    if (!s.sunday_average) {
-      $("whoHead").innerHTML = note("No services recorded yet.", { icon: "ri-calendar-check-line", action: { href: link("attendance/new.php"), text: "Record attendance" } });
       $("whoList").innerHTML = "";
       return;
     }
-    $("whoHead").innerHTML = `<div><h4 class="mb-0 lh-1">${num(s.sunday_average)}</h4></div><div><span class="badge bg-primary text-white mx-1">${s.coverage?.percentage ?? 0}% of Sundays recorded</span><span class="text-muted fs-11">Sunday average, last 12 months</span></div>`;
+    const d = r.data;
+    const s = d.summary || {};
+    const weeks = d.sunday?.weekly || [];
+    const lastW = weeks[weeks.length - 1];
+    if (s.sunday_average) {
+      const sub = lastW ? ` · last ${num(lastW.total)} on ${day(lastW.date, { day: "numeric", month: "short" })}` : "";
+      const delta = UI.periodDelta(s.sunday_average, s.previous_sunday_average ?? null);
+      kpi("kpiSunday", `${num(s.sunday_average)} <small class="fs-12 fw-normal text-muted">people</small>`, delta ? deltaLine(delta, `${previousWord()}${sub}`) : `<span class="fs-12 mb-0">${esc(`${weeks.length} Sunday${weeks.length === 1 ? "" : "s"} recorded${sub}`)}</span>`, `Sunday average ${periodWord()}`);
+    } else {
+      kpi("kpiSunday", "-", CTX.can.attendance ? `<a href="${link("attendance/new.php")}" class="btn btn-sm btn-primary btn-wave mt-1"><i class="ri-calendar-check-line me-1"></i>Record a Sunday</a>` : `<span class="fs-12">No Sunday recorded ${esc(periodWord())}</span>`, `Sunday average ${periodWord()}`);
+    }
+
+    // Who comes - the template's Top Countries: a headline, then a row per gathering.
+    if (!s.sunday_average) {
+      $("whoHead").innerHTML = note(`No services recorded ${periodWord()}.`, { icon: "ri-calendar-check-line", action: CTX.can.attendance ? { href: link("attendance/new.php"), text: "Record attendance" } : null });
+      $("whoList").innerHTML = "";
+      return;
+    }
+    $("whoHead").innerHTML = `<div><h4 class="mb-0 lh-1">${num(s.sunday_average)}</h4></div><div class="ms-2"><span class="badge bg-primary text-white">${s.coverage?.percentage ?? 0}% of Sundays recorded</span><span class="d-block text-muted fs-11 mt-1">Sunday average ${esc(periodWord())}</span></div>`;
     const months = d.sunday.months || [];
     const trend = months.length > 1 ? Math.sign((months[months.length - 1].average || 0) - (months[months.length - 2].average || 0)) : 0;
     const arrow = (t) => (t > 0 ? '<i class="ti ti-trending-up fs-16 text-success"></i>' : t < 0 ? '<i class="ti ti-trending-down fs-16 text-danger"></i>' : '<i class="ri-subtract-line fs-16 text-primary"></i>');
@@ -217,7 +294,7 @@
         .filter((g) => g.average)
         .sort((a, b) => b.average - a.average)
         .slice(0, 4)
-        .map((g, i) => ({ name: g.name, icon: g.icon || "ri-group-line", color: COLORS[i], mid: `<span class="fs-11 text-muted text-nowrap">${num(g.times)} times</span>`, value: g.average })),
+        .map((g, i) => ({ name: g.name, icon: g.icon || "ri-group-line", color: COLORS[i], mid: `<span class="fs-11 text-muted text-nowrap">${g.times === 1 ? "once" : `${num(g.times)} times`}</span>`, value: g.average })),
     ];
     $("whoList").innerHTML = rows
       .map(
@@ -236,14 +313,51 @@
       .join("");
   }
 
+  /** Who comes, the rest of the card: who sits in the pews, and the last 8 Sundays (always the last year, not the period). */
+  function renderPews(r) {
+    const box = $("whoExtra");
+    if (!r.ok) return (box.innerHTML = "");
+    const comp = (r.data.sunday?.composition || []).filter((c) => c.average);
+    const weeks = (r.data.sunday?.weekly || []).slice(-8);
+    if (!comp.length && weeks.length < 2) return (box.innerHTML = "");
+    const total = comp.reduce((t, c) => t + Number(c.average), 0) || 1;
+    const COLORS = { adults_count: "primary", youth_count: "purple", children_male_count: "success", children_female_count: "pink" };
+    const bar = comp.length
+      ? `<div class="home-pews">
+          <div class="home-mini-title">Who sits in the pews <span>an average Sunday</span></div>
+          <div class="home-pews-bar">${comp.map((c) => `<span class="bg-${COLORS[c.key] || "secondary"}" style="width:${(c.average / total) * 100}%" title="${esc(c.label)} ${num(c.average)}"></span>`).join("")}</div>
+          <div class="home-pews-legend">${comp.map((c) => `<span><i class="bg-${COLORS[c.key] || "secondary"}"></i>${esc(c.label)} <b>${num(c.average)}</b></span>`).join("")}</div>
+        </div>`
+      : "";
+    box.innerHTML = `${bar}${weeks.length > 1 ? '<div class="home-mini-title mt-3">Last 8 Sundays <span id="pewsBest"></span></div><div id="pewsChart"></div>' : ""}`;
+    if (weeks.length > 1 && typeof ApexCharts !== "undefined") {
+      const best = weeks.reduce((b, w) => (w.total > b.total ? w : b), weeks[0]);
+      $("pewsBest").textContent = `best ${num(best.total)} on ${day(best.date, { day: "numeric", month: "short" })}`;
+      const rgb = getComputedStyle(document.documentElement).getPropertyValue("--success-rgb").trim() || "38, 191, 148";
+      new ApexCharts($("pewsChart"), {
+        series: [{ name: "People", data: weeks.map((w) => w.total) }],
+        chart: { type: "bar", height: 90, sparkline: { enabled: true } },
+        colors: weeks.map((w) => (w === best ? `rgb(${rgb})` : `rgba(${rgb}, 0.45)`)),
+        plotOptions: { bar: { columnWidth: "55%", distributed: true, borderRadius: 4 } },
+        tooltip: { custom: ({ dataPointIndex: i }) => `<div class="home-tip"><strong>${esc(day(weeks[i].date, { day: "numeric", month: "short" }))}</strong><span>${num(weeks[i].total)} people</span></div>` },
+      }).render();
+    }
+  }
+
   function renderMembers(r) {
     if (!r.ok) return kpiFail("kpiMembers", r, "the register is kept by the pastor");
     const d = r.data;
     if (!d.active) return kpi("kpiMembers", "0", d.can?.manage ? `<a href="${link("members/new.php")}" class="btn btn-sm btn-primary btn-wave mt-1"><i class="ri-user-add-line me-1"></i>Add the first member</a>` : `<span class="fs-12">No members yet</span>`);
-    const joined = Number(d.new_this_month || 0);
+    // The joins series is the last 12 months, ending this month: add up the months the period touches.
+    const n = new Date();
+    const joined = (d.joins || []).reduce((t, v, i) => {
+      const start = new Date(n.getFullYear(), n.getMonth() - (d.joins.length - 1) + i, 1);
+      const end = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+      return iso(start) <= PERIOD.to && iso(end) >= PERIOD.from ? t + Number(v || 0) : t;
+    }, 0);
     const line = joined
-      ? `<span class="fs-12 mb-0">Joined<span class="badge bg-success text-white mx-1">+${num(joined)}</span>this month</span>`
-      : `<span class="fs-12 mb-0">${num(d.baptised)} baptised · none new this month</span>`;
+      ? `<span class="fs-12 mb-0">Joined<span class="badge bg-success text-white mx-1">+${num(joined)}</span>${esc(periodWord())}</span>`
+      : `<span class="fs-12 mb-0">${num(d.baptised)} baptised · none new ${esc(periodWord())}</span>`;
     kpi("kpiMembers", num(d.active), line);
   }
 
@@ -425,16 +539,46 @@
   // This week - the template's Top Customers
   // --------------------------------------------------------------------------
   const KIND_LABELS = { service: "Service", meeting: "Meeting", event: "Event", session: "Initiative", booking: "Room booking", due: "Due", conference: "Conference", fasting_prayer: "Fasting & prayer", deadline: "Deadline", holiday: "Holiday", celebration: "Celebration", other: "Date" };
+  const week = { items: [], day: null };
   function renderWeek(r) {
     const list = $("weekList");
-    if (!r.ok) return (list.innerHTML = `<li>${failNote(r, "the calendar is kept by the pastor")}</li>`);
-    const items = (r.data || []).filter((x) => String(x.start).slice(0, 10) >= TODAY).sort((a, b) => String(a.start).localeCompare(String(b.start)));
-    if (!items.length) return (list.innerHTML = `<li>${note("Nothing on the calendar for the rest of the week.", { icon: "ri-calendar-line", action: { href: link("calendar/?add=1"), text: "Add a date" } })}</li>`);
-    const shown = items.slice(0, 6);
+    if (!r.ok) {
+      $("weekStrip").innerHTML = "";
+      return (list.innerHTML = `<li>${failNote(r, "the calendar is kept by the pastor")}</li>`);
+    }
+    week.items = (r.data || []).sort((a, b) => String(a.start).localeCompare(String(b.start)));
+    // Mon-Sun tiles: the day, a dot per thing on it, today solid; a click shows only that day.
+    const { from } = weekBounds();
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = at(from);
+      d.setDate(d.getDate() + i);
+      return iso(d);
+    });
+    $("weekStrip").innerHTML = days
+      .map((d) => {
+        const n = week.items.filter((x) => String(x.start).slice(0, 10) === d).length;
+        const dt = at(d);
+        return `<button type="button" class="home-week-day${d === TODAY ? " is-today" : ""}${d < TODAY ? " is-past" : ""}" data-day="${d}" aria-pressed="false"><small>${dt.toLocaleDateString("en-GB", { weekday: "short" })}</small><strong>${dt.getDate()}</strong><span class="home-week-dots">${n ? `<b>${num(n)}</b>` : "<i></i>"}</span></button>`;
+      })
+      .join("");
+    drawWeek();
+  }
+  function drawWeek() {
+    const list = $("weekList");
+    document.querySelectorAll("#weekStrip .home-week-day").forEach((b) => {
+      b.classList.toggle("is-on", b.dataset.day === week.day);
+      b.setAttribute("aria-pressed", String(b.dataset.day === week.day));
+    });
+    const items = week.day ? week.items.filter((x) => String(x.start).slice(0, 10) === week.day) : week.items.filter((x) => String(x.start).slice(0, 10) >= TODAY);
+    if (!items.length) {
+      list.innerHTML = `<li>${note(week.day ? `Nothing on ${day(week.day, { weekday: "long", day: "numeric", month: "short" })}.` : "Nothing on the calendar for the rest of the week.", { icon: "ri-calendar-line", action: { href: link("calendar/?add=1"), text: "Add a date" } })}</li>`;
+      return;
+    }
+    const shown = items.slice(0, 8);
     list.innerHTML = shown
       .map((x, i) => {
         const time = x.all_day ? "All day" : String(x.start).slice(11, 16);
-        const weekday = new Date(`${String(x.start).slice(0, 10)}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short" });
+        const weekday = at(x.start).toLocaleDateString("en-GB", { weekday: "short" });
         return `
         <li class="${i === shown.length - 1 ? "mb-0" : "mb-3"}">
           <a href="${link("calendar/")}">
@@ -452,7 +596,7 @@
         </li>`;
       })
       .join("");
-    if (items.length > shown.length) list.insertAdjacentHTML("beforeend", `<li class="mt-3"><a href="${link("calendar/")}" class="fs-12 fw-semibold text-primary">${num(items.length - shown.length)} more this week<i class="ri-arrow-right-line ms-1"></i></a></li>`);
+    if (items.length > shown.length) list.insertAdjacentHTML("beforeend", `<li class="mt-3"><a href="${link("calendar/")}" class="fs-12 fw-semibold text-primary">${num(items.length - shown.length)} more${week.day ? " that day" : " this week"}<i class="ri-arrow-right-line ms-1"></i></a></li>`);
   }
 
   // --------------------------------------------------------------------------
@@ -559,74 +703,98 @@
   // Recent activity - My Profile's timeline (crm-recent-activity
   // budget-timeline), built from what the cards above already loaded.
   // --------------------------------------------------------------------------
+  const activity = { items: [], kind: "all" };
   function renderActivity(R) {
     const items = [];
-    const add = (date, icon, color, text, sub, href) => date && String(date).slice(0, 10) <= TODAY && items.push({ date: String(date), icon, color, text, sub, href });
-    if (R.acc.ok) {
+    const add = (o) => o.date && String(o.date).slice(0, 10) <= TODAY && inPeriod(o.date) && items.push({ ...o, date: String(o.date) });
+    if (R.acc?.ok) {
+      const docs = R.acc.data.period?.latest || R.acc.data.latest || [];
       // At most three money items, so attendance, reports and visitors show too.
-      (R.acc.data.latest || []).slice(0, 3).forEach((j) => {
+      docs.slice(0, 3).forEach((j) => {
         const who = j.party_name || j.narration || "";
-        if (j.doc_type === "receipt") add(j.posted_at || j.date, "ri-arrow-left-down-line", "success", `${money(j.amount)} received${who ? ` from ${who}` : ""}`, `${j.type_label}${j.method_label ? ` · ${j.method_label}` : ""}`, link("accounting/documents.php"));
-        else if (j.doc_type === "payment" || j.doc_type === "bill" || j.doc_type === "payroll") add(j.posted_at || j.date, "ri-arrow-right-up-line", "danger", `${money(j.amount)} paid${who ? ` to ${who}` : ""}`, `${j.type_label}${j.method_label ? ` · ${j.method_label}` : ""}`, link("accounting/documents.php"));
-        else add(j.posted_at || j.date, "ri-arrow-left-right-line", "primary", `${money(j.amount)} moved between our accounts`, j.type_label, link("accounting/documents.php"));
+        const dir = { receipt: "in", payment: "out", bill: "out", payroll: "out" }[j.doc_type];
+        add({
+          date: j.posted_at || j.date,
+          kind: "money",
+          icon: dir === "in" ? "ri-arrow-left-down-line" : dir === "out" ? "ri-arrow-right-up-line" : "ri-arrow-left-right-line",
+          color: dir === "in" ? "success" : dir === "out" ? "danger" : "primary",
+          text: dir === "in" ? `Received${who ? ` from ${who}` : ""}` : dir === "out" ? `Paid${who ? ` to ${who}` : ""}` : "Moved between our accounts",
+          sub: `${j.type_label}${j.method_label ? ` · ${j.method_label}` : ""}`,
+          amount: j.amount,
+          dir,
+          href: link("accounting/documents.php"),
+        });
       });
     }
-    if (R.att.ok) (R.att.data.sunday?.weekly || []).slice(-3).forEach((w) => add(w.date, "ri-group-line", "info", `Sunday service: ${num(w.total)} people came`, `${num(w.adults_count)} adults · ${num(w.youth_count)} youth · ${num((w.children_male_count || 0) + (w.children_female_count || 0))} children`, link("attendance/services.php")));
-    if (R.mr.ok)
+    if (R.att?.ok)
+      (R.att.data.sunday?.weekly || []).slice(-3).forEach((w) =>
+        add({ date: w.date, kind: "people", icon: "ri-group-line", color: "info", tag: "Sunday", text: `${num(w.total)} people at the Sunday service`, sub: `${num(w.adults_count)} adults · ${num(w.youth_count)} youth · ${num((w.children_male_count || 0) + (w.children_female_count || 0))} children`, href: link("attendance/services.php") })
+      );
+    if (R.mr?.ok)
       (R.mr.data.months || []).forEach((m) => {
-        if (m.seen_at) add(m.seen_at, "ri-eye-line", "success", `${m.label} report seen by the region`, m.comments ? `${num(m.comments)} comments` : "Monthly report", reportUrl(m));
-        if (m.sent_at) add(m.sent_at, "ri-send-plane-line", "primary", `${m.label} report sent`, m.on_time === false ? "Sent late" : "Sent on time", reportUrl(m));
+        if (m.seen_at) add({ date: m.seen_at, kind: "reports", icon: "ri-eye-line", color: "success", tag: "Report", text: `${m.label} report seen by the region`, sub: m.comments ? `${num(m.comments)} comments` : "Monthly report", href: reportUrl(m) });
+        if (m.sent_at) add({ date: m.sent_at, kind: "reports", icon: "ri-send-plane-line", color: "primary", tag: "Report", text: `${m.label} report sent`, sub: m.on_time === false ? "Sent late" : "Sent on time", href: reportUrl(m) });
       });
-    if (R.vis.ok) (R.vis.data.due || []).forEach((v) => add(v.first_visit_on, "ri-user-heart-line", "pink", `${v.name} visited for the first time`, v.area || "Visitor", `${link("visitors/visitor.php")}?id=${v.id}`));
-    if (R.care.ok)
+    if (R.vis?.ok) (R.vis.data.due || []).forEach((v) => add({ date: v.first_visit_on, kind: "people", icon: "ri-user-heart-line", color: "pink", tag: "Visitor", text: `${v.name} visited for the first time`, sub: v.area || "Visitor", href: `${link("visitors/visitor.php")}?id=${v.id}` }));
+    if (R.care?.ok)
       (R.care.data.needs || []).forEach((n) => {
-        if (n.type === "hospital") add(n.on, "ri-hospital-line", "danger", `${n.who} was admitted${n.hospital ? ` to ${n.hospital}` : ""}`, "Pastoral care", `${link("pastoral-care/case.php")}?id=${n.id}`);
+        if (n.type === "hospital") add({ date: n.on, kind: "people", icon: "ri-hospital-line", color: "danger", tag: "Care", text: `${n.who} was admitted${n.hospital ? ` to ${n.hospital}` : ""}`, sub: "Pastoral care", href: `${link("pastoral-care/case.php")}?id=${n.id}` });
       });
-    R.acts.filter((r) => r.ok).flatMap((r) => r.data || []).forEach((a) => {
-      if (a.status === "completed") add(a.ends_at || a.starts_at, "ri-calendar-check-line", "purple", `${a.title} was held`, a.totals?.came ? `${num(a.totals.came)} came` : a.type_label || "Event", `${link(a.kind === "initiative" ? "initiatives/initiative.php" : "events/event.php")}?id=${a.id}`);
-    });
-
+    (R.acts || [])
+      .filter((r) => r.ok)
+      .flatMap((r) => r.data || [])
+      .forEach((a) => {
+        if (a.status === "completed") add({ date: a.ends_at || a.starts_at, kind: "people", icon: "ri-calendar-check-line", color: "purple", tag: a.kind === "initiative" ? "Initiative" : "Event", text: `${a.title} was held`, sub: a.totals?.came ? `${num(a.totals.came)} came` : a.type_label || "Event", href: `${link(a.kind === "initiative" ? "initiatives/initiative.php" : "events/event.php")}?id=${a.id}` });
+      });
+    activity.items = items.sort((a, b) => b.date.localeCompare(a.date));
+    drawActivity();
+  }
+  function drawActivity() {
     const box = $("activityList");
-    items.sort((a, b) => b.date.localeCompare(a.date));
-    const shown = items.slice(0, 6);
+    document.querySelectorAll("#activityPills [data-kind]").forEach((b) => {
+      b.classList.toggle("btn-primary", b.dataset.kind === activity.kind);
+      b.classList.toggle("btn-light", b.dataset.kind !== activity.kind);
+    });
+    const shown = activity.items.filter((it) => activity.kind === "all" || it.kind === activity.kind).slice(0, 6);
     if (!shown.length) {
-      box.innerHTML = note("Nothing has happened here yet - as money, attendance, visitors and reports come in, they show up on this timeline.", { icon: "ri-git-commit-line" });
+      box.innerHTML = note(activity.items.length ? "Nothing of that kind in this period." : `Nothing recorded ${periodWord()} - as money, attendance, visitors and reports come in, they show up here.`, { icon: "ri-git-commit-line" });
       return;
     }
     const groups = [];
     shown.forEach((it) => {
-      const label = A.since(it.date);
-      if (!groups.length || groups[groups.length - 1].label !== label) groups.push({ label, items: [] });
+      const key = it.date.slice(0, 10);
+      if (!groups.length || groups[groups.length - 1].key !== key) groups.push({ key, items: [] });
       groups[groups.length - 1].items.push(it);
     });
+    const yesterday = iso(new Date(Date.now() - 86400000));
     box.innerHTML = groups
-      .map(
-        (g) => `
-      <div class="budget-timeline-day">${esc(g.label)}</div>
-      <ul class="list-unstyled mb-3 crm-recent-activity budget-timeline">
+      .map((g) => {
+        const d = at(g.key);
+        const when = g.key === TODAY ? "Today" : g.key === yesterday ? "Yesterday" : A.since(g.key);
+        return `
+      <div class="home-tl-day">
+        <span class="home-tl-date${g.key === TODAY || g.key === yesterday ? " is-recent" : ""}"><strong>${d.getDate()}</strong><small>${d.toLocaleDateString("en-GB", { month: "short" })}</small></span>
+        <span class="home-tl-when"><b>${esc(d.toLocaleDateString("en-GB", { weekday: "long" }))}</b>${esc(when)}</span>
+      </div>
+      <ul class="list-unstyled home-tl">
         ${g.items
-          .map(
-            (it) => `
-          <li class="crm-recent-activity-content" style="--tl-rgb: var(--${it.color}-rgb)">
-            <a href="${it.href}" class="budget-timeline-link">
-              <div class="d-flex align-items-start gap-3">
-                <span class="avatar avatar-xs avatar-rounded bg-${it.color} text-white flex-shrink-0"><i class="${it.icon}"></i></span>
-                <div class="crm-timeline-content min-w-0">
-                  <span class="d-block fw-semibold budget-timeline-text">${esc(it.text)}</span>
-                  <span class="d-block fs-12">${esc(it.sub || "")}</span>
-                </div>
-                <span class="budget-timeline-time">${esc(day(it.date, { day: "numeric", month: "short" }))}</span>
-              </div>
+          .map((it) => {
+            const time = /T\d{2}:\d{2}/.test(it.date) ? new Date(it.date).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "";
+            const right = it.amount != null ? `<span class="home-tl-amount ${it.dir === "in" ? "text-success" : it.dir === "out" ? "text-danger" : "text-dark"}">${it.dir === "in" ? "+" : it.dir === "out" ? "-" : ""}${money(it.amount)}</span>` : "";
+            const chip = time ? `<span class="badge bg-${it.color} ${textOn(it.color)}"><i class="ri-time-line me-1"></i>${time}</span>` : it.tag ? `<span class="badge bg-${it.color} ${textOn(it.color)}">${esc(it.tag)}</span>` : "";
+            return `
+          <li>
+            <a href="${it.href}" class="home-tl-item">
+              <span class="home-tl-dot bg-${it.color} text-white"><i class="${it.icon}"></i></span>
+              <span class="home-tl-text"><strong>${esc(it.text)}</strong><small>${esc(it.sub || "")}</small></span>
+              <span class="home-tl-side">${right}${chip}</span>
             </a>
-          </li>`
-          )
+          </li>`;
+          })
           .join("")}
-      </ul>`
-      )
+      </ul>`;
+      })
       .join("");
-    const c = $("activityCount");
-    c.textContent = `Last ${shown.length}`;
-    c.hidden = false;
   }
 
   // --------------------------------------------------------------------------
@@ -638,7 +806,7 @@
     const steps = [
       R.acc.ok && { icon: "ri-bank-line", color: "primary", title: "Set up your books", text: "Cash, bank and M-Pesa, and what each held at the start", done: !!(acc.latest?.length || held), can: acc.can?.setup || acc.can?.accounts, who: "the treasurer", href: link("accounting/start.php"), btn: "Start here" },
       R.people.ok && { icon: "ri-contacts-book-2-line", color: "purple", title: "Add your members", text: "The church's own register - only your leaders see names", done: R.people.data.active > 0, can: R.people.data.can?.manage, who: "the pastor", href: link("members/new.php"), btn: "Add members" },
-      R.att.ok && { icon: "ri-calendar-check-line", color: "success", title: "Record a Sunday", text: "Who came - adults, youth and children", done: (R.att.data.sunday?.weekly || []).length > 0, can: CTX.can.attendance, who: "the pastor", href: link("attendance/new.php"), btn: "Record" },
+      R.att12.ok && { icon: "ri-calendar-check-line", color: "success", title: "Record a Sunday", text: "Who came - adults, youth and children", done: (R.att12.data.sunday?.weekly || []).length > 0, can: CTX.can.attendance, who: "the pastor", href: link("attendance/new.php"), btn: "Record" },
       R.bud.ok && { icon: "ri-pie-chart-2-line", color: "warning", title: `Make the ${YEAR} budget`, text: "What you plan to receive and spend", done: [...(R.bud.data.lines?.in || []), ...(R.bud.data.lines?.out || [])].some((l) => l.planned), can: !R.bud.data.view_only, who: "the treasurer", href: link("budget/form.php"), btn: "Make it" },
       R.week.ok && { icon: "ri-time-line", color: "info", title: "Set your service times", text: "Sundays and midweek services on the calendar", done: (R.week.data || []).some((x) => x.kind === "service"), can: CTX.can.settings, who: "the pastor", href: link("settings/?section=servicetimes"), btn: "Set times" },
       { icon: "ri-calendar-event-line", color: "pink", title: "Plan an event", text: "A fellowship, a harambee, a revival week", done: R.acts.some((r) => r.ok && (r.data || []).length), can: CTX.can.events, who: "the pastor", href: link("events/new.php"), btn: "Plan one" },
@@ -673,41 +841,129 @@
     sunday.setDate(monday.getDate() + 6);
     return { from: iso(monday), to: iso(sunday) };
   }
+  const ym = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  /** What every card has loaded - the timeline and the setup card read it. */
+  const R = {};
+  let picker = null;
+
+  /** The filter bar: the period's words, its length, the Quick picks label, and the URL. */
+  function showPeriod() {
+    const f = at(PERIOD.from);
+    const t = at(PERIOD.to);
+    const fmt = (d, year) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(year ? { year: "numeric" } : {}) });
+    $("periodText").textContent = `${fmt(f, f.getFullYear() !== t.getFullYear())} - ${fmt(t, true)}`;
+    $("periodLength").textContent = periodLength();
+    $("periodPickLabel").textContent = PERIOD.pick ? PICKS[PERIOD.pick][0] : "Custom dates";
+    document.querySelectorAll("#periodPicks [data-pick]").forEach((a) => a.classList.toggle("active", a.dataset.pick === PERIOD.pick));
+    const q = new URLSearchParams(window.location.search);
+    if (PERIOD.pick === "month") {
+      q.delete("from");
+      q.delete("to");
+    } else {
+      q.set("from", PERIOD.from);
+      q.set("to", PERIOD.to);
+    }
+    history.replaceState(null, "", `${window.location.pathname}${q.toString() ? `?${q}` : ""}`);
+    if (picker) picker.setDate([PERIOD.from, PERIOD.to], false);
+  }
+  function setPeriod(from, to, pick = undefined) {
+    PERIOD.from = from;
+    PERIOD.to = to;
+    PERIOD.pick = pick !== undefined ? pick : Object.keys(PICKS).find((k) => pickRange(k).join() === `${from},${to}`) || null;
+    showPeriod();
+    loadPeriod();
+  }
+
+  /** The cards the period changes: money, Sundays, members joined, Who comes, the budget and reports year, the timeline. */
+  function loadPeriod() {
+    ["kpiIn", "kpiOut", "kpiSunday", "kpiMembers"].forEach((id) => ($(id).querySelector('[data-kpi="value"]').innerHTML = '<span class="skel skel-line" style="width: 7rem"></span>'));
+    const year = Number(PERIOD.to.slice(0, 4));
+    const P = {
+      acc: api("accounting/overview", { from: PERIOD.from, to: PERIOD.to }),
+      att: api("attendance-reports/analytics", { territory_id: CTX.place.id, from: PERIOD.from.slice(0, 7), to: PERIOD.to.slice(0, 7) }),
+      bud: api("budgets/dashboard", { year }),
+      mr: api("monthly-reports", { year }),
+    };
+    P.acc.then((r) => renderMoney((R.acc = r)));
+    P.att.then((r) => renderAttendance((R.att = r)));
+    P.bud.then((r) => renderBudget((R.bud = r)));
+    P.mr.then((r) => renderReports((R.mr = r)));
+    R.peopleP.then(renderMembers);
+    return Promise.all([...Object.values(P), R.staticP]).then(() => renderActivity(R));
+  }
+
+  function wireFilter() {
+    // The live clock, as on the Kusoya Help Desk.
+    const tick = () => {
+      const n = new Date();
+      $("clockTime").textContent = n.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" });
+      $("clockDay").textContent = n.toLocaleDateString("en-GB", { weekday: "long" });
+      $("clockDate").textContent = n.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+    };
+    tick();
+    setInterval(tick, 1000);
+    if (typeof flatpickr !== "undefined") {
+      picker = flatpickr($("periodInput"), {
+        mode: "range",
+        dateFormat: "Y-m-d",
+        altInput: true,
+        altFormat: "j M Y",
+        altInputClass: "home-range-input",
+        defaultDate: [PERIOD.from, PERIOD.to],
+        onClose: (sel) => {
+          if (sel.length === 2) setPeriod(iso(sel[0]), iso(sel[1]));
+          else picker.setDate([PERIOD.from, PERIOD.to], false);
+        },
+      });
+    }
+    $("periodClear").addEventListener("click", () => setPeriod(...pickRange("month"), "month"));
+    $("periodPicks").addEventListener("click", (e) => {
+      const a = e.target.closest("[data-pick]");
+      if (a) setPeriod(...pickRange(a.dataset.pick), a.dataset.pick);
+    });
+    $("activityPills").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-kind]");
+      if (!b) return;
+      activity.kind = b.dataset.kind;
+      drawActivity();
+    });
+    $("weekStrip").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-day]");
+      if (!b) return;
+      week.day = week.day === b.dataset.day ? null : b.dataset.day;
+      drawWeek();
+    });
+  }
+
   function init() {
     wireReports();
+    wireFilter();
+    showPeriod();
     const now = new Date();
-    const yearAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-    const ym = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
-    const P = {
-      acc: api("accounting/overview"),
-      att: api("attendance-reports/analytics", { territory_id: CTX.place.id, from: ym(yearAgo), to: ym(now) }),
+    // What the period doesn't change: the next event, what needs attention, this week, the last year of Sundays.
+    const S = {
       people: api("people/overview"),
       acts: Promise.all([api("activities", { kind: "event", scope: "own" }), api("activities", { kind: "initiative", scope: "own" })]),
       vis: api("visitors/overview"),
       care: api("care/overview"),
       hosp: api("care/hospital"),
-      bud: api("budgets/dashboard", { year: YEAR }),
       week: api("calendar/events", weekBounds()),
-      mr: api("monthly-reports", { year: YEAR }),
+      att12: api("attendance-reports/analytics", { territory_id: CTX.place.id, from: ym(new Date(now.getFullYear(), now.getMonth() - 11, 1)), to: ym(now) }),
     };
-    P.acc.then(renderMoney);
+    R.peopleP = S.people;
+    S.people.then((r) => (R.people = r));
+    S.acts.then((r) => renderNext((R.acts = r)));
+    S.vis.then((r) => renderVisitors((R.vis = r)));
+    Promise.all([S.care, S.hosp]).then(([c, h]) => renderCare((R.care = c), (R.hosp = h)));
+    S.week.then((r) => renderWeek((R.week = r)));
+    S.att12.then((r) => renderPews((R.att12 = r)));
     if (CTX.staff) api("hr/dashboard", { year: YEAR }).then(renderStaff);
-    P.att.then(renderAttendance);
-    P.people.then(renderMembers);
-    P.acts.then(renderNext);
     api("approvals", { tab: "waiting" }).then(renderApprovals);
-    P.vis.then(renderVisitors);
-    Promise.all([P.care, P.hosp]).then(([c, h]) => renderCare(c, h));
-    P.bud.then(renderBudget);
-    P.week.then(renderWeek);
-    P.mr.then(renderReports);
-    // The timeline and the setup card need everything above.
-    Promise.all(Object.values(P)).then((values) => {
-      const R = Object.fromEntries(Object.keys(P).map((k, i) => [k, values[i]]));
-      renderActivity(R);
-      renderStart(R);
-    });
+    R.staticP = Promise.all(Object.values(S));
+
+    // The setup card needs everything once.
+    loadPeriod().then(() => renderStart(R));
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

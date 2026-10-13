@@ -70,6 +70,7 @@ $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
     <link id="style" href="<?= SITE_URL ?>/assets/libs/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
 
     <!-- Style Css -->
+    <link href="<?= SITE_URL ?>/assets/libs/flatpickr/flatpickr.min.css" rel="stylesheet" />
     <link href="<?= $v('assets/css/styles.min.css') ?>" rel="stylesheet" />
 
     <!-- Icons Css -->
@@ -103,6 +104,35 @@ $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
             <div class="container-fluid home-dash">
                 <?php include __DIR__ . '/../../includes/page-header.php' ?>
 
+                <!-- The period filter (added, after the Kusoya Help Desk header): a live clock, the chosen period, the range -->
+                <div class="home-filter mb-4">
+                    <div class="home-filter-card home-clock">
+                        <span class="avatar avatar-lg avatar-rounded bg-primary text-white"><i class="ri-time-line fs-22"></i></span>
+                        <div><strong id="clockTime">--:--</strong><span id="clockDay"></span><small id="clockDate"></small></div>
+                    </div>
+                    <div class="home-filter-card home-period">
+                        <span class="avatar avatar-md avatar-rounded bg-purple text-white"><i class="ri-calendar-2-line fs-18"></i></span>
+                        <div><small>Selected period</small><strong id="periodText"></strong></div>
+                        <span class="home-period-split"></span>
+                        <div class="text-end"><small>Duration</small><strong id="periodLength"></strong></div>
+                    </div>
+                    <div class="home-range">
+                        <div class="home-range-field">
+                            <i class="ri-calendar-event-line"></i>
+                            <input type="text" id="periodInput" placeholder="Choose dates" aria-label="Choose the period" readonly />
+                            <button type="button" id="periodClear" aria-label="Back to this month" title="Back to this month"><i class="ri-close-line"></i></button>
+                        </div>
+                        <div class="dropdown">
+                            <button type="button" class="btn btn-primary btn-wave home-range-btn" data-bs-toggle="dropdown" aria-expanded="false"><i class="ri-equalizer-line me-1"></i><span id="periodPickLabel">This month</span><i class="ri-arrow-down-s-line ms-1"></i></button>
+                            <ul class="dropdown-menu dropdown-menu-end" id="periodPicks">
+                                <?php foreach (['week' => 'This week', 'month' => 'This month', 'last_month' => 'Last month', 'quarter' => 'This quarter', 'year' => 'This year', 'twelve' => 'Last 12 months'] as $key => $text) { ?>
+                                <li><a class="dropdown-item" href="javascript:void(0);" data-pick="<?= $key ?>"><?= $text ?></a></li>
+                                <?php } ?>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
                 <?php if ($quick) { ?>
                 <!-- Quick actions (added - the template has none) -->
                 <div class="d-flex flex-wrap gap-2 mb-4 home-quick">
@@ -133,7 +163,7 @@ $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
                             $kpis = [
                                 ['kpiIn', 'Given this month', 'primary', 'ri-hand-heart-line'],
                                 ['kpiOut', 'Spent this month', 'secondary', 'ri-wallet-3-line'],
-                                ['kpiSunday', 'Last Sunday', 'success', 'ri-group-line'],
+                                ['kpiSunday', 'Sunday average', 'success', 'ri-group-line'],
                                 ['kpiMembers', 'Members', 'warning', 'ri-contacts-book-2-line'],
                             ];
                             foreach ($kpis as [$id, $label, $color, $icon]) { ?>
@@ -148,7 +178,7 @@ $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
                                                 </span>
                                             </div>
                                             <div class="col-xxl-9 col-xl-10 col-lg-9 col-md-9 col-sm-8 col-8 px-0">
-                                                <div class="mb-2"><?= $label ?></div>
+                                                <div class="mb-2" data-kpi="label"><?= $label ?></div>
                                                 <div class="text-muted mb-1 fs-12">
                                                     <span class="text-dark fw-semibold fs-20 lh-1 vertical-bottom" data-kpi="value">
                                                         <span class="skel skel-line" style="width: 7rem"></span>
@@ -170,7 +200,7 @@ $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
                                         <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/35.png"
                                             class="card-img-top" alt="" />
                                         <div class="card-img-overlay d-flex flex-column p-4 text-fixed-white">
-                                            <p class="mb-1 op-7 fs-12" id="nextKind">Coming up</p>
+                                            <p class="mb-1 op-7 fs-12"><span id="nextKind">Coming up</span></p>
                                             <h6 class="fw-semibold mb-4 text-fixed-white" id="nextTitle">
                                                 <span class="skel skel-line" style="width: 10rem"></span>
                                             </h6>
@@ -198,7 +228,7 @@ $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
                                 <!-- Latest money: the template's Recent Orders -->
                                 <div class="card custom-card flex-fill">
                                     <div class="card-header justify-content-between">
-                                        <div class="card-title">Latest money</div>
+                                        <div class="card-title">Latest money <span class="badge bg-dark text-white home-now" title="Live - the period filter does not change this">Now</span></div>
                                         <div class="dropdown">
                                             <a aria-label="More" href="javascript:void(0);"
                                                 class="btn btn-icon btn-sm btn-light" data-bs-toggle="dropdown">
@@ -222,7 +252,7 @@ $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
                                 <!-- Needs attention: the template's Orders tabs -->
                                 <div class="card custom-card">
                                     <div class="card-header justify-content-between d-sm-flex d-block">
-                                        <div class="card-title">Needs attention</div>
+                                        <div class="card-title">Needs attention <span class="badge bg-dark text-white home-now" title="Live - the period filter does not change this">Now</span></div>
                                         <div>
                                             <ul class="nav nav-tabs justify-content-end nav-tabs-header mb-0 d-sm-flex d-block mt-sm-0 mt-2"
                                                 role="tablist">
@@ -264,7 +294,11 @@ $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
                                 <div class="card custom-card">
                                     <div class="card-header justify-content-between">
                                         <div class="card-title">Recent activity</div>
-                                        <span class="badge bg-primary text-white" id="activityCount" hidden></span>
+                                        <div class="home-tl-pills" id="activityPills">
+                                            <?php foreach (['all' => 'All', 'money' => 'Money', 'people' => 'People', 'reports' => 'Reports'] as $key => $text) { ?>
+                                            <button type="button" class="btn btn-sm <?= $key === 'all' ? 'btn-primary' : 'btn-light' ?>" data-kind="<?= $key ?>"><?= $text ?></button>
+                                            <?php } ?>
+                                        </div>
                                     </div>
                                     <div class="card-body home-activity" id="activityList"><?= $skel ?></div>
                                 </div>
@@ -354,6 +388,7 @@ $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
                                             <span class="skel skel-line" style="width: 8rem"></span>
                                         </div>
                                         <ul class="mb-0 pt-3 list-unstyled" id="whoList"></ul>
+                                        <div id="whoExtra"></div>
                                     </div>
                                 </div>
                             </div>
@@ -361,7 +396,7 @@ $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
                                 <!-- This week: the template's Top Customers -->
                                 <div class="card custom-card flex-fill">
                                     <div class="card-header justify-content-between">
-                                        <div class="card-title">This week</div>
+                                        <div class="card-title">This week <span class="badge bg-dark text-white home-now" title="Live - the period filter does not change this">Now</span></div>
                                         <div class="dropdown">
                                             <a href="javascript:void(0);" class="p-2 fs-12 text-muted"
                                                 data-bs-toggle="dropdown">
@@ -376,6 +411,7 @@ $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
                                         </div>
                                     </div>
                                     <div class="card-body">
+                                        <div class="home-week-strip" id="weekStrip"></div>
                                         <ul class="list-unstyled mb-0" id="weekList">
                                             <li><?= $skel ?></li>
                                         </ul>
@@ -479,6 +515,7 @@ $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
     <script src="<?= $v('assets/js/utils/toast.js') ?>"></script>
     <script src="<?= $v('assets/js/pages/demographics/ui-helpers.js') ?>"></script>
     <script src="<?= $v('assets/js/pages/accounting/ui.js') ?>"></script>
+    <script src="<?= SITE_URL ?>/assets/libs/flatpickr/flatpickr.min.js"></script>
     <script src="<?= $v('assets/js/pages/home/church.js') ?>"></script>
 </body>
 
