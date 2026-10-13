@@ -45,7 +45,31 @@ class BooksController extends AccountingBase
         $vouchers = PaymentVoucher::where('territory_id', $place->id)->whereIn('status', ['prepared', 'authorised', 'rejected'])
             ->selectRaw('status, COUNT(*) AS n, SUM(amount) AS total')->groupBy('status')->get()->keyBy('status');
 
-        return $this->ok([
+        // A chosen period (the church home's filter): its money in and out, and the same length just before it.
+        $period = [];
+        if ($request->filled('from') || $request->filled('to')) {
+            $request->validate([
+                'from' => ['required', 'date_format:Y-m-d'],
+                'to' => ['required', 'date_format:Y-m-d', 'after_or_equal:from'],
+            ]);
+            $start = CarbonImmutable::parse($request->input('from'));
+            $end = CarbonImmutable::parse($request->input('to'));
+            if ($start->diffInDays($end) > 731) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['to' => ['Choose a period of two years or less.']]);
+            }
+            $days = (int) $start->diffInDays($end) + 1;
+            $before = [$start->subDays($days), $start->subDay()];
+            $period = [
+                'period' => ['from' => $start->toDateString(), 'to' => $end->toDateString()] + $this->books->inOut($place, $start->toDateString(), $end->toDateString()) + [
+                    // The period's own latest documents, for the home timeline.
+                    'latest' => Journal::with(['poster', 'media'])->where('territory_id', $place->id)->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+                        ->orderByDesc('date')->orderByDesc('id')->limit(8)->get()->map(fn ($j) => $this->books->presentJournal($j))->all(),
+                ],
+                'previous' => ['from' => $before[0]->toDateString(), 'to' => $before[1]->toDateString()] + $this->books->inOut($place, $before[0]->toDateString(), $before[1]->toDateString()),
+            ];
+        }
+
+        return $this->ok($period + [
             'place' => $this->placeInfo($place),
             'can' => AccountingAccess::abilities($request->user(), $place),
             'cash' => $this->books->cashPosition($place),

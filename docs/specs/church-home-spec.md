@@ -37,6 +37,29 @@ None. No backend change: every card reads an endpoint its module already has.
 
   It shows the newest 6, grouped by day.
 
+**Round 3: the period filter (2026-10-13).** A bar on top, after the Kusoya Help Desk header:
+- a live clock;
+- the selected period and its duration;
+- a date-range field (flatpickr, ✕ back to the default), plus Quick picks: This week, This month, Last month, This quarter, This year, Last 12 months.
+
+**Default: This month.** The period is kept in the URL (`?from&to`).
+
+The period changes:
+- **Given / Spent:** `accounting/overview?from&to` returns `period` and `previous`, the same length just before. `period.latest` holds the period's documents.
+- **Sunday average:** from attendance analytics for the period's months.
+- **Members joined:** from the monthly `joins` series.
+- **Who comes.**
+- **The chart:** months inside the period are solid.
+- **The budget and reports year.**
+- **Recent activity.**
+
+Next event, Latest money, Needs attention and This week stay live and carry a "Now" pill.
+
+Also added in round 3:
+- **Recent activity redesign:** a date block per day (today and yesterday in teal), icons on a dashed rail, amounts on the right, time or kind chips, and All / Money / People / Reports pills.
+- **Who comes:** a "Who sits in the pews" bar and the last 8 Sundays.
+- **This week:** a Mon-Sun strip that filters by day, and up to 8 items.
+
 **Round 2 rules (2026-10-13):**
 - **Pills:** no pale pills on this page; every pill is solid.
 - **Tabs:** a hovered tab turns teal with white text.
