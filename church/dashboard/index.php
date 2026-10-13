@@ -26,6 +26,12 @@ $homeCtx = [
     'place' => ['id' => (int) ($currentRole['territory_id'] ?? 0), 'name' => $currentRole['territory']['name'] ?? $currentRole['territory_name'] ?? ''],
     // Staff pay shows as one line under the money chart - only for a role that sees Staff.
     'staff' => $can('church.hr.staff.read') || $can('church.hr.dashboard.read') || $can('church.hr.staff.manage') || $can('church.hr.setup.manage'),
+    // Who may do each "Get your church started" step (the rest come from each module's own answer).
+    'can' => [
+        'attendance' => $can('attendancemanagement.serviceattendance.create'),
+        'events' => $can('church.events.events.manage'),
+        'settings' => $can('church.settings.hub.overview.read'),
+    ],
 ];
 // Things to do from here - each only for a role that can do it.
 $quick = array_filter([
@@ -106,6 +112,18 @@ $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
                 </div>
                 <?php } ?>
 
+                <!-- Get your church started (added): only while something isn't set up yet -->
+                <div class="card custom-card home-start" id="startCard" hidden>
+                    <div class="card-header justify-content-between flex-wrap gap-2">
+                        <div class="card-title d-flex align-items-center gap-2"><span class="avatar avatar-sm avatar-rounded bg-primary text-white"><i class="ri-rocket-line"></i></span>Get your church started</div>
+                        <span class="badge bg-success text-white" id="startCount"></span>
+                    </div>
+                    <div class="card-body">
+                        <div class="progress progress-sm mb-3"><div class="progress-bar bg-success" id="startBar" style="width: 0%"></div></div>
+                        <div class="row g-3" id="startSteps"></div>
+                    </div>
+                </div>
+
                 <!-- Start::row-1 -->
                 <div class="row">
                     <div class="col-xxl-6 col-xl-12">
@@ -119,8 +137,8 @@ $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
                                 ['kpiMembers', 'Members', 'warning', 'ri-contacts-book-2-line'],
                             ];
                             foreach ($kpis as [$id, $label, $color, $icon]) { ?>
-                            <div class="col-lg-6 col-sm-6 col-md-6 col-xl-6">
-                                <div class="card custom-card" id="<?= $id ?>">
+                            <div class="col-lg-6 col-sm-6 col-md-6 col-xl-6 d-flex">
+                                <div class="card custom-card flex-fill" id="<?= $id ?>">
                                     <div class="card-body">
                                         <div class="row">
                                             <div
@@ -145,9 +163,9 @@ $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
                                 </div>
                             </div>
                             <?php } ?>
-                            <div class="col-xxl-6 col-xl-6 col-lg-6 col-md-6">
+                            <div class="col-xxl-6 col-xl-6 col-lg-6 col-md-6 d-flex">
                                 <!-- Next big day: the template's sale card -->
-                                <div class="card custom-card overflow-hidden" id="nextCard">
+                                <div class="card custom-card overflow-hidden flex-fill" id="nextCard">
                                     <div class="ecommerce-sale-image">
                                         <img src="<?= SITE_URL ?>/assets/images/ecommerce/png/35.png"
                                             class="card-img-top" alt="" />
@@ -176,9 +194,9 @@ $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-xxl-6 col-xl-6 col-lg-6 col-md-6">
+                            <div class="col-xxl-6 col-xl-6 col-lg-6 col-md-6 d-flex">
                                 <!-- Latest money: the template's Recent Orders -->
-                                <div class="card custom-card">
+                                <div class="card custom-card flex-fill">
                                     <div class="card-header justify-content-between">
                                         <div class="card-title">Latest money</div>
                                         <div class="dropdown">
@@ -239,6 +257,16 @@ $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
                                             <?php } ?>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-12">
+                                <!-- Recent activity (added): what happened lately, as My Profile's timeline -->
+                                <div class="card custom-card">
+                                    <div class="card-header justify-content-between">
+                                        <div class="card-title">Recent activity</div>
+                                        <span class="badge bg-primary text-white" id="activityCount" hidden></span>
+                                    </div>
+                                    <div class="card-body home-activity" id="activityList"><?= $skel ?></div>
                                 </div>
                             </div>
                         </div>
@@ -304,9 +332,9 @@ $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-xl-6">
+                            <div class="col-xl-6 d-flex">
                                 <!-- Who comes: the template's Top Countries By Sales -->
-                                <div class="card custom-card">
+                                <div class="card custom-card flex-fill">
                                     <div class="card-header justify-content-between">
                                         <div class="card-title">Who comes</div>
                                         <div class="dropdown">
@@ -329,9 +357,9 @@ $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-xl-6">
+                            <div class="col-xl-6 d-flex">
                                 <!-- This week: the template's Top Customers -->
-                                <div class="card custom-card">
+                                <div class="card custom-card flex-fill">
                                     <div class="card-header justify-content-between">
                                         <div class="card-title">This week</div>
                                         <div class="dropdown">
@@ -386,8 +414,9 @@ $v = fn ($path) => SITE_URL . "/{$path}" . assetVersion($path);
                                 </div>
                             </div>
                             <div class="card-body">
+                                <div class="home-report-strip" id="reportSummary"></div>
                                 <div class="table-responsive">
-                                    <table class="table text-nowrap table-bordered">
+                                    <table class="table text-nowrap table-hover home-report-table mb-0">
                                         <thead>
                                             <tr>
                                                 <th scope="col">Month</th>

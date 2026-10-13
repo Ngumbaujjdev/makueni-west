@@ -24,7 +24,25 @@ None. No backend change: every card reads an endpoint its module already has.
 | Top Customers | This week: services, events, bookings and dues from today to Sunday | `calendar/events?from&to` |
 | Products Overview | Monthly reports this year, with working search, Sort By and pages (6 a page) | `monthly-reports?year` |
 
-**Added:** quick action buttons under the title. Each shows only to a role that can do it: Write a receipt, Record attendance, Add member, Record visitors, Write our report.
+**Added:**
+- **Quick action buttons** under the title. Each shows only to a role that can do it: Write a receipt, Record attendance, Add member, Record visitors, Write our report.
+- **Get your church started** (round 2). Shown only while a step isn't done: books, members, a Sunday recorded, this year's budget, service times, an event. There's a progress bar; each step has a solid button for a role that can do it, or says who does it.
+- **Recent activity** (round 2). My Profile's timeline (`crm-recent-activity budget-timeline`), built from what the cards already loaded:
+  - up to 3 money items;
+  - Sundays recorded;
+  - reports sent and seen;
+  - first-time visitors;
+  - hospital admissions;
+  - events held.
+
+  It shows the newest 6, grouped by day.
+
+**Round 2 rules (2026-10-13):**
+- **Pills:** no pale pills on this page; every pill is solid.
+- **Tabs:** a hovered tab turns teal with white text.
+- **Equal heights:** cards side by side stretch to the same height, so the two columns end level.
+- **Empty cards:** they offer a solid button, not a text link.
+- **Monthly reports table:** a strip of four figures (Sent, On time, Late, Comments) and what's next, a status-coloured month tile, due dates with "in N days" or "N days late", and solid status pills.
 
 ## Permission rules
 

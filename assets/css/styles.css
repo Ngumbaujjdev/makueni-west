@@ -40481,3 +40481,25 @@ a.acc-chain-item:hover, button.acc-chain-item:hover { border-color: rgba(var(--p
 .home-dash .active-tab td { padding-inline: .75rem; }
 .home-dash .active-tab td:first-child { max-width: 15rem; }
 .home-dash .active-tab td:first-child p { overflow: hidden; text-overflow: ellipsis; }
+/* Round 2 (2026-10-13): tabs go teal with white text on hover; setup steps; the reports strip and month tiles. */
+.home-dash .nav-tabs-header .nav-link:hover,
+.home-dash .nav-tabs-header .nav-link:focus-visible { background: rgb(var(--primary-rgb)) !important; color: #fff !important; }
+.home-dash .nav-tabs-header .nav-link:hover .home-tab-badge,
+.home-dash .nav-tabs-header .nav-link.active .home-tab-badge { background: #fff !important; color: rgb(var(--primary-rgb)) !important; }
+.home-note { align-items: center; flex-wrap: wrap; }
+.home-start-step { display: flex; align-items: center; gap: .75rem; height: 100%; padding: .85rem 1rem; border: 1px solid var(--default-border); border-radius: .75rem; background: var(--custom-white); }
+.home-start-step strong { display: block; color: var(--v2-heading); font-size: .9rem; }
+.home-start-step small { display: block; color: var(--default-text-color); font-size: .78rem; }
+.home-start-step.is-done { background: rgba(var(--success-rgb), .06); border-color: rgba(var(--success-rgb), .35); }
+.home-report-strip { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.home-report-figs { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+.home-report-fig { display: flex; align-items: center; gap: .6rem; }
+.home-report-fig strong { display: block; font-size: 1.15rem; line-height: 1.1; color: var(--v2-heading); }
+.home-report-fig small { display: block; font-size: .75rem; color: var(--default-text-color); }
+.home-report-next { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; color: var(--v2-heading); font-size: .85rem; }
+.home-report-table td { vertical-align: middle; border-bottom: 1px solid var(--default-border); }
+.home-report-table tbody tr:last-child td { border-bottom: 0; }
+.home-month-tile { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border-radius: .6rem; line-height: 1.05; flex-shrink: 0; }
+.home-month-tile strong { font-size: .85rem; }
+.home-month-tile small { font-size: .62rem; opacity: .9; }
+.home-dash .row > .d-flex > .card { width: 100%; }

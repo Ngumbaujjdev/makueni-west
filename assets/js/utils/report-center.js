@@ -653,6 +653,13 @@ const ReportCenter = (function () {
     if (report.inputs.includes("gathering_type") && state.params.gathering_type_id) body.gathering_type_id = state.params.gathering_type_id;
     if (report.inputs.includes("account")) body.account_id = state.params.account_id;
     if (report.inputs.includes("record")) body.record_id = state.params.record_id;
+    // One event, one monthly report, or the month of the monthly status - without these the API can't tell which.
+    if (report.inputs.includes("activity")) body.activity_id = state.params.activity_id;
+    if (report.inputs.includes("monthly_report")) body.report_id = state.params.report_id;
+    if (report.inputs.includes("report_month")) {
+      body.year = state.params.year;
+      body.month = state.params.month;
+    }
     if (report.inputs.includes("dates") && state.params.date_from && state.params.date_to) {
       body.date_from = state.params.date_from;
       body.date_to = state.params.date_to;
