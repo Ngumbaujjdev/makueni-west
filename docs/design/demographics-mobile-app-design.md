@@ -1,6 +1,8 @@
 # Demographics Mobile PWA — Design Reference
 
-**Status: reference only. Not being built now.** Saved here verbatim (the original Claude Design prompt) because it's a rich, concrete product spec — real field lists, a real approval workflow, real screen flows across all four roles — that's directly useful for designing the Demographics *backend* now, even though the actual PWA build is deferred to later. See `../ROADMAP.md` for how this feeds into current priorities.
+**Status (2026-10-13): being built** as its own repo, `Ngumbaujjdev/makueni-west-app`. The final exported design lives in that repo's `design/` and wins over this prompt where they differ; see `../ROADMAP.md` → 9 and `../specs/mobile-app-spec.md`. The original note follows.
+
+**Original status: reference only. Not being built now.** Saved here verbatim (the original Claude Design prompt) because it's a rich, concrete product spec — real field lists, a real approval workflow, real screen flows across all four roles — that's directly useful for designing the Demographics *backend* now, even though the actual PWA build is deferred to later. See `../ROADMAP.md` for how this feeds into current priorities.
 
 ## Why this matters now, even though the PWA itself isn't being built
 
