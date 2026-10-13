@@ -189,6 +189,7 @@ class LedgerTest extends TestCase
         Sanctum::actingAs($this->treasurer);
         $data = $this->getJson("/api/accounting/overview?from={$y}-01-01&to={$y}-01-31")->assertOk()->json('data');
         $this->assertEquals(1250, $data['period']['in']);
+        $this->assertCount(2, $data['period']['latest'], 'only the documents inside the period');
         $this->assertSame(($y - 1).'-12-01', $data['previous']['from'], 'the period before is the same length, just before');
         $this->assertSame(($y - 1).'-12-31', $data['previous']['to']);
         $this->assertEquals(700, $data['previous']['in']);

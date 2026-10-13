@@ -60,7 +60,11 @@ class BooksController extends AccountingBase
             $days = (int) $start->diffInDays($end) + 1;
             $before = [$start->subDays($days), $start->subDay()];
             $period = [
-                'period' => ['from' => $start->toDateString(), 'to' => $end->toDateString()] + $this->books->inOut($place, $start->toDateString(), $end->toDateString()),
+                'period' => ['from' => $start->toDateString(), 'to' => $end->toDateString()] + $this->books->inOut($place, $start->toDateString(), $end->toDateString()) + [
+                    // The period's own latest documents, for the home timeline.
+                    'latest' => Journal::with(['poster', 'media'])->where('territory_id', $place->id)->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+                        ->orderByDesc('date')->orderByDesc('id')->limit(8)->get()->map(fn ($j) => $this->books->presentJournal($j))->all(),
+                ],
                 'previous' => ['from' => $before[0]->toDateString(), 'to' => $before[1]->toDateString()] + $this->books->inOut($place, $before[0]->toDateString(), $before[1]->toDateString()),
             ];
         }
