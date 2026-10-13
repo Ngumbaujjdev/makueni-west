@@ -177,4 +177,25 @@ class LedgerTest extends TestCase
         $this->assertTrue($tb['balanced']);
         $this->assertEquals(1850, $tb['debit']);
     }
+
+    public function test_the_overview_can_total_a_chosen_period_and_the_one_before_it(): void
+    {
+        $y = now()->year;
+        $this->receive(1000, null, "{$y}-01-10");
+        $this->receive(250, null, "{$y}-01-25");
+        $this->receive(400, null, "{$y}-02-10");
+        $this->receive(700, null, ($y - 1).'-12-15');
+
+        Sanctum::actingAs($this->treasurer);
+        $data = $this->getJson("/api/accounting/overview?from={$y}-01-01&to={$y}-01-31")->assertOk()->json('data');
+        $this->assertEquals(1250, $data['period']['in']);
+        $this->assertSame(($y - 1).'-12-01', $data['previous']['from'], 'the period before is the same length, just before');
+        $this->assertSame(($y - 1).'-12-31', $data['previous']['to']);
+        $this->assertEquals(700, $data['previous']['in']);
+        $this->assertArrayHasKey('month', $data, 'the usual keys stay');
+
+        $this->assertArrayNotHasKey('period', $this->getJson('/api/accounting/overview')->json('data'), 'no period unless asked');
+        $this->getJson("/api/accounting/overview?from={$y}-02-01&to={$y}-01-01")->assertStatus(422);
+        $this->getJson('/api/accounting/overview?from=2020-01-01&to='.$y.'-01-01')->assertStatus(422);
+    }
 }
