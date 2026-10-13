@@ -40457,3 +40457,27 @@ a.acc-chain-item:hover, button.acc-chain-item:hover { border-color: rgba(var(--p
 .acc-start-live i { animation: acc-start-blink 2s ease-in-out infinite; }
 @keyframes acc-start-blink { 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .acc-start-dot.is-new > span, .acc-start-live i { animation: none; } }
+
+/* ==========================================================================
+   Church home (church/dashboard/, docs/specs/church-home-spec.md, 2026-10-13)
+   The YNEX Ecommerce dashboard's cards, kept as they are, with the church's
+   real figures - only the few pieces the template doesn't have are here.
+   ========================================================================== */
+.home-dash .min-w-0 { min-width: 0; }
+.home-kpi-tile { display: inline-grid; place-items: center; }
+.home-kpi-tile i { font-size: 1.5rem; line-height: 1; }
+.home-quick-btn { display: inline-flex; align-items: center; border: 1px solid var(--default-border); background: var(--custom-white); color: var(--v2-heading); font-weight: 600; }
+.home-quick-btn:hover { border-color: rgb(var(--primary-rgb)); color: rgb(var(--primary-rgb)); }
+.home-note { display: flex; align-items: flex-start; gap: .5rem; color: var(--v2-heading); font-size: .85rem; white-space: normal; }
+.home-note > i { color: rgb(var(--primary-rgb)); font-size: 1.05rem; line-height: 1.2; }
+.home-dash .top-country-name { width: auto; }
+.home-dash .ecommerce-sale-image img { object-fit: cover; }
+.home-dash .ecommerce-bankoffer-details { opacity: 1; }
+.home-staff-line { display: flex; flex-wrap: wrap; align-items: center; gap: .15rem; margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--default-border); color: var(--v2-heading); font-size: .85rem; }
+.home-tip { display: flex; flex-direction: column; gap: .15rem; padding: .5rem .7rem; font-size: .78rem; }
+.home-tab-count:empty { display: none; }
+.home-dash .nav-tabs-header .nav-link { white-space: nowrap; }
+.home-dash .active-tab td { vertical-align: middle; }
+.home-dash .active-tab td { padding-inline: .75rem; }
+.home-dash .active-tab td:first-child { max-width: 15rem; }
+.home-dash .active-tab td:first-child p { overflow: hidden; text-overflow: ellipsis; }
