@@ -89,14 +89,30 @@ The five empty church modules, rebuilt in phases (`docs/specs/people-and-care-sp
 
 Names and phone numbers stay with the church, as the original Final Documentation said ("Diocese never sees names"). The region and diocese get totals pages only.
 
+## 9. Mobile app (PWA) - planned (2026-10-13)
+The phone app is its own repo, `Ngumbaujjdev/makueni-west-app` (`/Applications/MAMP/htdocs/makueni-west-app`). Its design (33 screens, Claude Design) is in that repo's `design/`, and its plan is `docs/IMPLEMENTATION_PLAN.md` there.
+
+- **Stack:** plain PHP + JS, installable, with offline drafts for counting forms. It uses this API with a Sanctum token.
+- **Phases:**
+  - P0 plan and repo
+  - P1 shell and PWA
+  - P2 static screens
+  - P3 sign-in
+  - P4 pastor screens
+  - P5 overseer screens
+  - P6 offline
+  - P7 phone extras (approvals, push, chat, calendar, giving)
+  - P8 go-live
+- **Backend work for it:** `docs/specs/mobile-app-spec.md` (M1-M12): diocese code and phone sign-in, an `app` token, CORS, `app/home`, compliance, review notes, comparisons, idempotency keys and web push. Each is built here before the app screen that needs it.
+
 ## Deferred, not forgotten
 
 - **Public `APP_URL` before real email goes out (2026-10-08).** Emails a place sends (`emails/place-message.blade.php`) show the CCI mark from `{APP_URL}/assets/images/logos/email-mark.png`, so `APP_URL` must be the public API address in production. With `localhost`, the logo shows in Settings previews but not in a real inbox.
 
-- **Mobile PWA** (`docs/design/demographics-mobile-app-design.md`) — a real, detailed design for a native-feeling mobile app covering Demographics (and, later, Financial/Tithe) across all four roles. Confirmed as a real future build, explicitly **not started now** — kept as a design reference so the Demographics backend (item 1) is built compatible with it (field names, workflow) without committing to building the PWA itself yet.
+- ~~**Mobile PWA**~~ - **started 2026-10-13** as its own repo; see section 9.
 
 ## Explicitly not planned
 
-- No rewrite of the *existing desktop* frontend to a JS framework (Vue/React/Inertia) — the original scope docs specified Vue, but the decision (see root `CLAUDE.md`) is to keep finishing the current PHP-include + fetch pattern for the desktop admin pages, not chase the old spec's tech choice. (The mobile PWA above is a separate, later, explicitly-deferred effort — not a contradiction of this.)
+- No rewrite of the *existing desktop* frontend to a JS framework (Vue/React/Inertia) — the original scope docs specified Vue, but the decision (see root `CLAUDE.md`) is to keep finishing the current PHP-include + fetch pattern for the desktop admin pages, not chase the old spec's tech choice. (The mobile PWA in section 9 is a separate app in its own repo - not a contradiction of this.)
 - No splitting `backend/` into its own repo yet — documented as the eventual intent, not scheduled.
 - ~~No individual member/congregant registry~~ - **reversed 2026-10-08** by the user: a church-private register is planned (section 8). Demographics itself stays aggregate counts.
