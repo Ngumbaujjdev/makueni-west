@@ -52,8 +52,8 @@
 
   /** A calm line in place of a card's content: an icon, the words, maybe one action. */
   function note(text, { icon = "ri-information-line", action = null } = {}) {
-    const a = action ? ` <a href="${action.href}" class="fw-semibold text-primary text-nowrap">${esc(action.text)}<i class="ri-arrow-right-line ms-1"></i></a>` : "";
-    return `<div class="home-note"><i class="${icon}"></i><span>${esc(text)}${a}</span></div>`;
+    const a = action ? `<a href="${action.href}" class="btn btn-sm btn-primary btn-wave text-nowrap">${esc(action.text)}<i class="ri-arrow-right-line ms-1"></i></a>` : "";
+    return `<div class="home-note"><i class="${icon}"></i><span class="flex-fill">${esc(text)}</span>${a}</div>`;
   }
   /** Why a card is empty: not this role's part (403), or the API didn't answer. */
   const failNote = (r, who) => (r.status === 403 ? note(`Not part of your role - ${who}.`, { icon: "ri-lock-2-line" }) : note("Couldn't load this just now - refresh to try again.", { icon: "ri-wifi-off-line" }));
@@ -135,7 +135,7 @@
 
     // Money this year - the template's Earnings: three figures, then the bars.
     const share = (top, total) => (top && total ? `${esc(top.name)} ${Math.round((top.total / total) * 100)}%` : "");
-    const stat = (value, badge, color) => `<span class="mt-1 fs-16 fw-semibold">${money(value)}</span>${badge ? `<span class="soft-chip soft-${color} ms-2">${badge}</span>` : ""}`;
+    const stat = (value, badge, color) => `<span class="mt-1 fs-16 fw-semibold">${money(value)}</span>${badge ? `<span class="badge bg-${color} ${textOn(color)} ms-2">${badge}</span>` : ""}`;
     const cells = $("moneyStats").querySelectorAll("[data-stat]");
     cells[0].innerHTML = stat(d.year.in, share(d.top_income?.[0], d.year.in), "success");
     cells[1].innerHTML = stat(d.year.out, share(d.top_expense?.[0], d.year.out), "danger");
@@ -196,7 +196,7 @@
     if (lastW) {
       kpi("kpiSunday", `${num(lastW.total)} <small class="fs-12 fw-normal text-muted">people</small>`, deltaLine(prevW ? UI.periodDelta(lastW.total, prevW.total) : null, prevW ? `vs ${day(prevW.date, { day: "numeric", month: "short" })}` : `on ${day(lastW.date, { day: "numeric", month: "short" })}`));
     } else {
-      kpi("kpiSunday", "-", `<span class="fs-12">No Sunday recorded yet</span>`);
+      kpi("kpiSunday", "-", CTX.can.attendance ? `<a href="${link("attendance/new.php")}" class="btn btn-sm btn-primary btn-wave mt-1"><i class="ri-calendar-check-line me-1"></i>Record a Sunday</a>` : `<span class="fs-12">No Sunday recorded yet</span>`);
     }
 
     // Who comes - the template's Top Countries: a headline, then a row per gathering.
@@ -206,7 +206,7 @@
       $("whoList").innerHTML = "";
       return;
     }
-    $("whoHead").innerHTML = `<div><h4 class="mb-0 lh-1">${num(s.sunday_average)}</h4></div><div><span class="soft-chip soft-primary mx-1">${s.coverage?.percentage ?? 0}% of Sundays recorded</span><span class="text-muted fs-11">Sunday average, last 12 months</span></div>`;
+    $("whoHead").innerHTML = `<div><h4 class="mb-0 lh-1">${num(s.sunday_average)}</h4></div><div><span class="badge bg-primary text-white mx-1">${s.coverage?.percentage ?? 0}% of Sundays recorded</span><span class="text-muted fs-11">Sunday average, last 12 months</span></div>`;
     const months = d.sunday.months || [];
     const trend = months.length > 1 ? Math.sign((months[months.length - 1].average || 0) - (months[months.length - 2].average || 0)) : 0;
     const arrow = (t) => (t > 0 ? '<i class="ti ti-trending-up fs-16 text-success"></i>' : t < 0 ? '<i class="ti ti-trending-down fs-16 text-danger"></i>' : '<i class="ri-subtract-line fs-16 text-primary"></i>');
@@ -239,7 +239,7 @@
   function renderMembers(r) {
     if (!r.ok) return kpiFail("kpiMembers", r, "the register is kept by the pastor");
     const d = r.data;
-    if (!d.active) return kpi("kpiMembers", "0", `<span class="fs-12"><a href="${link("members/new.php")}" class="text-primary fw-semibold">Add the first member</a></span>`);
+    if (!d.active) return kpi("kpiMembers", "0", d.can?.manage ? `<a href="${link("members/new.php")}" class="btn btn-sm btn-primary btn-wave mt-1"><i class="ri-user-add-line me-1"></i>Add the first member</a>` : `<span class="fs-12">No members yet</span>`);
     const joined = Number(d.new_this_month || 0);
     const line = joined
       ? `<span class="fs-12 mb-0">Joined<span class="badge bg-success text-white mx-1">+${num(joined)}</span>this month</span>`
@@ -305,7 +305,7 @@
       <td><a aria-label="Open" href="${href}"><span class="orders-arrow"><i class="ri-arrow-right-s-line fs-18"></i></span></a></td>
     </tr>`;
   const emptyRow = (html) => `<tr><td class="p-3 border-0">${html}</td></tr>`;
-  const count = (id, n) => ($(id).innerHTML = n ? `<span class="soft-chip soft-danger ms-1">${num(n)}</span>` : "");
+  const count = (id, n) => ($(id).innerHTML = n ? `<span class="badge rounded-pill bg-danger text-white ms-1 home-tab-badge">${num(n)}</span>` : "");
   const dueText = (iso, late) => `<span class="${late ? "text-danger fw-semibold" : ""}">${late ? '<i class="ri-time-line me-1"></i>' : ""}${esc(day(iso, { day: "numeric", month: "short" }))}</span>`;
   const iconTile = (icon, color) => `<span class="avatar avatar-md avatar-rounded bg-${color}-transparent text-${color}"><i class="${icon} fs-18"></i></span>`;
 
@@ -464,23 +464,34 @@
     sent: ["Sent", "primary", "ri-send-plane-line"],
     draft: ["Draft", "warning", "ri-edit-line"],
     late: ["Late", "danger", "ri-time-line"],
-    due: ["Due", "info", "ri-alarm-line"],
-    not_started: ["Not started", "light", "ri-time-line"],
-    not_tracked: ["Not tracked", "light", "ri-subtract-line"],
+    due: ["Due soon", "info", "ri-alarm-line"],
+    not_started: ["Not started", "secondary", "ri-hourglass-line"],
+    not_tracked: ["Not tracked", "dark", "ri-subtract-line"],
   };
   const reportState = (m) => (m.late && !m.sent_at ? "late" : m.status === "not_started" && m.due_in_days != null && m.due_in_days <= 10 ? "due" : REPORT[m.status] ? m.status : "not_tracked");
   const ORDER = { late: 0, due: 1, draft: 2, not_started: 3, sent: 4, seen: 5, not_tracked: 6 };
   const PER_PAGE = 6;
   const reports = { all: [], q: "", sort: "new", page: 1, can: {} };
+  const pillOn = (c) => (c === "secondary" || c === "warning" ? "text-dark" : "text-white");
+  const reportUrl = (m) => `${link("monthly-reports/report.php")}?year=${m.year}&month=${m.month}`;
 
   function renderReports(r) {
     if (!r.ok) {
+      $("reportSummary").innerHTML = "";
       $("reportRows").innerHTML = `<tr><td colspan="6">${failNote(r, "monthly reports are written by the pastor")}</td></tr>`;
       $("reportShowing").innerHTML = "Showing 0 Entries";
       return;
     }
     reports.all = (r.data.months || []).map((m) => ({ ...m, state: reportState(m) }));
     reports.can = r.data.can || {};
+    // The strip on top: four solid figures, then what's next.
+    const f = r.data.figures || {};
+    const fig = (n, label, icon, color) => `<div class="home-report-fig"><span class="avatar avatar-sm avatar-rounded bg-${color} ${pillOn(color)}"><i class="${icon}"></i></span><div><strong>${num(n)}</strong><small>${label}</small></div></div>`;
+    const next = f.next;
+    const nextHtml = next
+      ? `<div class="home-report-next"><span>Next: <strong>${esc(next.label)}</strong> · due ${esc(day(next.due_on, { day: "numeric", month: "short" }))}${next.due_in_days != null ? ` <span class="badge bg-${next.due_in_days < 0 ? "danger" : next.due_in_days <= 7 ? "warning" : "info"} ${next.due_in_days <= 7 && next.due_in_days >= 0 ? "text-dark" : "text-white"} ms-1">${next.due_in_days < 0 ? `${Math.abs(next.due_in_days)} days late` : next.due_in_days === 0 ? "today" : `in ${next.due_in_days} days`}</span>` : ""}</span><a href="${reportUrl(next)}" class="btn btn-sm btn-primary btn-wave"><i class="ri-edit-line me-1"></i>${reports.can.write ? "Write it" : "Open"}</a></div>`
+      : "";
+    $("reportSummary").innerHTML = `<div class="home-report-figs">${fig(f.sent, "Sent", "ri-send-plane-line", "primary")}${fig(f.on_time, "On time", "ri-checkbox-circle-line", "success")}${fig(f.late, "Late", "ri-time-line", "danger")}${fig(f.comments, "Comments", "ri-chat-3-line", "purple")}</div>${nextHtml}`;
     drawReports();
   }
   function drawReports() {
@@ -494,22 +505,28 @@
       ? shown
           .map((m) => {
             const [label, color, icon] = REPORT[m.state];
-            const current = m.month === new Date().getMonth() + 1;
-            const pill = color === "light" ? `<span class="soft-chip soft-secondary"><i class="${icon}"></i>${label}</span>` : `<span class="badge bg-${color} ${textOn(color)}"><i class="${icon} me-1"></i>${label}</span>`;
-            const open = m.status === "not_tracked" ? "" : `<a href="${link("monthly-reports/report.php")}?year=${m.year}&month=${m.month}" class="btn btn-sm ${m.state === "late" || m.state === "draft" || m.state === "due" ? "btn-primary" : "btn-light"}">${m.state === "late" || m.state === "draft" || m.state === "due" ? (reports.can.write ? "Write" : "Open") : "Open"}</a>`;
+            const todo = ["late", "draft", "due"].includes(m.state);
+            const when =
+              m.sent_at || m.status === "not_tracked" || m.due_in_days == null
+                ? ""
+                : `<small class="d-block ${m.due_in_days < 0 ? "text-danger fw-semibold" : "text-muted"}">${m.due_in_days < 0 ? `${Math.abs(m.due_in_days)} days late` : m.due_in_days === 0 ? "Due today" : `in ${m.due_in_days} days`}</small>`;
+            const action =
+              m.status === "not_tracked"
+                ? `<span class="text-muted fs-12">Before reports</span>`
+                : `<a href="${reportUrl(m)}" class="btn btn-sm ${todo ? "btn-primary" : "btn-outline-primary"} btn-wave">${todo ? `<i class="ri-edit-line me-1"></i>${reports.can.write ? "Write" : "Open"}` : `<i class="ri-eye-line me-1"></i>${m.sent_at ? "View" : "Open"}`}</a>`;
             return `
           <tr>
             <td>
-              <div class="d-flex align-items-center">
-                <div class="me-2 lh-1"><span class="avatar avatar-sm avatar-rounded ${current ? "bg-primary text-white" : "bg-light text-dark"} fw-semibold fs-11">${esc(m.short)}</span></div>
-                <div class="fs-14">${esc(m.label)}</div>
+              <div class="d-flex align-items-center gap-2">
+                <span class="home-month-tile bg-${color} ${pillOn(color)}"><strong>${esc(m.short)}</strong><small>${m.year}</small></span>
+                <div><span class="fw-semibold">${esc(m.label)}</span><small class="d-block text-muted">${esc(REPORT[m.state][0] === "Not tracked" ? "Before monthly reports began" : "Monthly report")}</small></div>
               </div>
             </td>
-            <td>${esc(day(m.due_on))}</td>
-            <td>${pill}</td>
-            <td>${m.sent_at ? esc(day(m.sent_at)) : "-"}</td>
-            <td>${m.comments ? `<i class="ri-chat-3-line me-1 text-primary"></i>${num(m.comments)}` : "-"}</td>
-            <td class="text-end">${open}</td>
+            <td><span class="acc-date"><i class="ri-calendar-line"></i>${esc(day(m.due_on))}</span>${when}</td>
+            <td><span class="badge bg-${color} ${pillOn(color)}"><i class="${icon} me-1"></i>${label}</span></td>
+            <td>${m.sent_at ? `<span class="acc-date"><i class="ri-send-plane-line"></i>${esc(day(m.sent_at))}</span>` : '<span class="text-muted">-</span>'}</td>
+            <td>${m.comments ? `<span class="badge rounded-pill bg-purple text-white"><i class="ri-chat-3-line me-1"></i>${num(m.comments)}</span>` : '<span class="text-muted">-</span>'}</td>
+            <td class="text-end">${action}</td>
           </tr>`;
           })
           .join("")
@@ -539,6 +556,113 @@
   }
 
   // --------------------------------------------------------------------------
+  // Recent activity - My Profile's timeline (crm-recent-activity
+  // budget-timeline), built from what the cards above already loaded.
+  // --------------------------------------------------------------------------
+  function renderActivity(R) {
+    const items = [];
+    const add = (date, icon, color, text, sub, href) => date && String(date).slice(0, 10) <= TODAY && items.push({ date: String(date), icon, color, text, sub, href });
+    if (R.acc.ok) {
+      // At most three money items, so attendance, reports and visitors show too.
+      (R.acc.data.latest || []).slice(0, 3).forEach((j) => {
+        const who = j.party_name || j.narration || "";
+        if (j.doc_type === "receipt") add(j.posted_at || j.date, "ri-arrow-left-down-line", "success", `${money(j.amount)} received${who ? ` from ${who}` : ""}`, `${j.type_label}${j.method_label ? ` · ${j.method_label}` : ""}`, link("accounting/documents.php"));
+        else if (j.doc_type === "payment" || j.doc_type === "bill" || j.doc_type === "payroll") add(j.posted_at || j.date, "ri-arrow-right-up-line", "danger", `${money(j.amount)} paid${who ? ` to ${who}` : ""}`, `${j.type_label}${j.method_label ? ` · ${j.method_label}` : ""}`, link("accounting/documents.php"));
+        else add(j.posted_at || j.date, "ri-arrow-left-right-line", "primary", `${money(j.amount)} moved between our accounts`, j.type_label, link("accounting/documents.php"));
+      });
+    }
+    if (R.att.ok) (R.att.data.sunday?.weekly || []).slice(-3).forEach((w) => add(w.date, "ri-group-line", "info", `Sunday service: ${num(w.total)} people came`, `${num(w.adults_count)} adults · ${num(w.youth_count)} youth · ${num((w.children_male_count || 0) + (w.children_female_count || 0))} children`, link("attendance/services.php")));
+    if (R.mr.ok)
+      (R.mr.data.months || []).forEach((m) => {
+        if (m.seen_at) add(m.seen_at, "ri-eye-line", "success", `${m.label} report seen by the region`, m.comments ? `${num(m.comments)} comments` : "Monthly report", reportUrl(m));
+        if (m.sent_at) add(m.sent_at, "ri-send-plane-line", "primary", `${m.label} report sent`, m.on_time === false ? "Sent late" : "Sent on time", reportUrl(m));
+      });
+    if (R.vis.ok) (R.vis.data.due || []).forEach((v) => add(v.first_visit_on, "ri-user-heart-line", "pink", `${v.name} visited for the first time`, v.area || "Visitor", `${link("visitors/visitor.php")}?id=${v.id}`));
+    if (R.care.ok)
+      (R.care.data.needs || []).forEach((n) => {
+        if (n.type === "hospital") add(n.on, "ri-hospital-line", "danger", `${n.who} was admitted${n.hospital ? ` to ${n.hospital}` : ""}`, "Pastoral care", `${link("pastoral-care/case.php")}?id=${n.id}`);
+      });
+    R.acts.filter((r) => r.ok).flatMap((r) => r.data || []).forEach((a) => {
+      if (a.status === "completed") add(a.ends_at || a.starts_at, "ri-calendar-check-line", "purple", `${a.title} was held`, a.totals?.came ? `${num(a.totals.came)} came` : a.type_label || "Event", `${link(a.kind === "initiative" ? "initiatives/initiative.php" : "events/event.php")}?id=${a.id}`);
+    });
+
+    const box = $("activityList");
+    items.sort((a, b) => b.date.localeCompare(a.date));
+    const shown = items.slice(0, 6);
+    if (!shown.length) {
+      box.innerHTML = note("Nothing has happened here yet - as money, attendance, visitors and reports come in, they show up on this timeline.", { icon: "ri-git-commit-line" });
+      return;
+    }
+    const groups = [];
+    shown.forEach((it) => {
+      const label = A.since(it.date);
+      if (!groups.length || groups[groups.length - 1].label !== label) groups.push({ label, items: [] });
+      groups[groups.length - 1].items.push(it);
+    });
+    box.innerHTML = groups
+      .map(
+        (g) => `
+      <div class="budget-timeline-day">${esc(g.label)}</div>
+      <ul class="list-unstyled mb-3 crm-recent-activity budget-timeline">
+        ${g.items
+          .map(
+            (it) => `
+          <li class="crm-recent-activity-content" style="--tl-rgb: var(--${it.color}-rgb)">
+            <a href="${it.href}" class="budget-timeline-link">
+              <div class="d-flex align-items-start gap-3">
+                <span class="avatar avatar-xs avatar-rounded bg-${it.color} text-white flex-shrink-0"><i class="${it.icon}"></i></span>
+                <div class="crm-timeline-content min-w-0">
+                  <span class="d-block fw-semibold budget-timeline-text">${esc(it.text)}</span>
+                  <span class="d-block fs-12">${esc(it.sub || "")}</span>
+                </div>
+                <span class="budget-timeline-time">${esc(day(it.date, { day: "numeric", month: "short" }))}</span>
+              </div>
+            </a>
+          </li>`
+          )
+          .join("")}
+      </ul>`
+      )
+      .join("");
+    const c = $("activityCount");
+    c.textContent = `Last ${shown.length}`;
+    c.hidden = false;
+  }
+
+  // --------------------------------------------------------------------------
+  // Get your church started - shown only while something isn't set up yet.
+  // --------------------------------------------------------------------------
+  function renderStart(R) {
+    const acc = R.acc.ok ? R.acc.data : null;
+    const held = acc ? (acc.cash || []).reduce((s, a) => s + Number(a.balance || 0), 0) : 0;
+    const steps = [
+      R.acc.ok && { icon: "ri-bank-line", color: "primary", title: "Set up your books", text: "Cash, bank and M-Pesa, and what each held at the start", done: !!(acc.latest?.length || held), can: acc.can?.setup || acc.can?.accounts, who: "the treasurer", href: link("accounting/start.php"), btn: "Start here" },
+      R.people.ok && { icon: "ri-contacts-book-2-line", color: "purple", title: "Add your members", text: "The church's own register - only your leaders see names", done: R.people.data.active > 0, can: R.people.data.can?.manage, who: "the pastor", href: link("members/new.php"), btn: "Add members" },
+      R.att.ok && { icon: "ri-calendar-check-line", color: "success", title: "Record a Sunday", text: "Who came - adults, youth and children", done: (R.att.data.sunday?.weekly || []).length > 0, can: CTX.can.attendance, who: "the pastor", href: link("attendance/new.php"), btn: "Record" },
+      R.bud.ok && { icon: "ri-pie-chart-2-line", color: "warning", title: `Make the ${YEAR} budget`, text: "What you plan to receive and spend", done: [...(R.bud.data.lines?.in || []), ...(R.bud.data.lines?.out || [])].some((l) => l.planned), can: !R.bud.data.view_only, who: "the treasurer", href: link("budget/form.php"), btn: "Make it" },
+      R.week.ok && { icon: "ri-time-line", color: "info", title: "Set your service times", text: "Sundays and midweek services on the calendar", done: (R.week.data || []).some((x) => x.kind === "service"), can: CTX.can.settings, who: "the pastor", href: link("settings/?section=servicetimes"), btn: "Set times" },
+      { icon: "ri-calendar-event-line", color: "pink", title: "Plan an event", text: "A fellowship, a harambee, a revival week", done: R.acts.some((r) => r.ok && (r.data || []).length), can: CTX.can.events, who: "the pastor", href: link("events/new.php"), btn: "Plan one" },
+    ].filter(Boolean);
+    const done = steps.filter((x) => x.done).length;
+    if (!steps.length || done === steps.length) return;
+    $("startCount").textContent = `${done} of ${steps.length} done`;
+    $("startBar").style.width = `${Math.round((done / steps.length) * 100)}%`;
+    $("startSteps").innerHTML = steps
+      .map(
+        (x) => `
+      <div class="col-xxl-4 col-md-6">
+        <div class="home-start-step${x.done ? " is-done" : ""}">
+          <span class="avatar avatar-md avatar-rounded bg-${x.done ? "success" : x.color} ${x.done || !["warning", "secondary"].includes(x.color) ? "text-white" : "text-dark"} flex-shrink-0"><i class="${x.done ? "ri-check-line" : x.icon}"></i></span>
+          <div class="flex-fill min-w-0"><strong>${esc(x.title)}</strong><small>${esc(x.done ? "Done" : x.text)}</small></div>
+          ${x.done ? '<span class="badge bg-success text-white">Done</span>' : x.can ? `<a href="${x.href}" class="btn btn-sm btn-primary btn-wave text-nowrap">${esc(x.btn)}</a>` : `<span class="fs-12 text-muted text-nowrap">${esc(x.who)} does this</span>`}
+        </div>
+      </div>`
+      )
+      .join("");
+    $("startCard").hidden = false;
+  }
+
+  // --------------------------------------------------------------------------
   // Start: every card asks at once and fills in as its answer comes.
   // --------------------------------------------------------------------------
   function weekBounds() {
@@ -555,17 +679,35 @@
     const yearAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
     const ym = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
-    api("accounting/overview").then(renderMoney);
+    const P = {
+      acc: api("accounting/overview"),
+      att: api("attendance-reports/analytics", { territory_id: CTX.place.id, from: ym(yearAgo), to: ym(now) }),
+      people: api("people/overview"),
+      acts: Promise.all([api("activities", { kind: "event", scope: "own" }), api("activities", { kind: "initiative", scope: "own" })]),
+      vis: api("visitors/overview"),
+      care: api("care/overview"),
+      hosp: api("care/hospital"),
+      bud: api("budgets/dashboard", { year: YEAR }),
+      week: api("calendar/events", weekBounds()),
+      mr: api("monthly-reports", { year: YEAR }),
+    };
+    P.acc.then(renderMoney);
     if (CTX.staff) api("hr/dashboard", { year: YEAR }).then(renderStaff);
-    api("attendance-reports/analytics", { territory_id: CTX.place.id, from: ym(yearAgo), to: ym(now) }).then(renderAttendance);
-    api("people/overview").then(renderMembers);
-    Promise.all([api("activities", { kind: "event", scope: "own" }), api("activities", { kind: "initiative", scope: "own" })]).then(renderNext);
+    P.att.then(renderAttendance);
+    P.people.then(renderMembers);
+    P.acts.then(renderNext);
     api("approvals", { tab: "waiting" }).then(renderApprovals);
-    api("visitors/overview").then(renderVisitors);
-    Promise.all([api("care/overview"), api("care/hospital")]).then(([c, h]) => renderCare(c, h));
-    api("budgets/dashboard", { year: YEAR }).then(renderBudget);
-    api("calendar/events", weekBounds()).then(renderWeek);
-    api("monthly-reports", { year: YEAR }).then(renderReports);
+    P.vis.then(renderVisitors);
+    Promise.all([P.care, P.hosp]).then(([c, h]) => renderCare(c, h));
+    P.bud.then(renderBudget);
+    P.week.then(renderWeek);
+    P.mr.then(renderReports);
+    // The timeline and the setup card need everything above.
+    Promise.all(Object.values(P)).then((values) => {
+      const R = Object.fromEntries(Object.keys(P).map((k, i) => [k, values[i]]));
+      renderActivity(R);
+      renderStart(R);
+    });
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
