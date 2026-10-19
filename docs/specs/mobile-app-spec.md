@@ -1,6 +1,6 @@
 # Mobile App (PWA) Spec: what the API adds for the phone app
 
-**Status: M1-M4 built (2026-10-19, P3); the rest planned.** The app itself is a separate repo, `Ngumbaujjdev/makueni-west-app` (`/Applications/MAMP/htdocs/makueni-west-app`). Its plan, screen map and gap analysis are in that repo's `docs/`. This spec lists only the **backend** changes the app needs. Each one is built here in its own PR, before the app screen that uses it.
+**Status: M1-M4 built (P3), M5 for churches and M6-M7 built (P4), 2026-10-19; the rest planned.** The app itself is a separate repo, `Ngumbaujjdev/makueni-west-app` (`/Applications/MAMP/htdocs/makueni-west-app`). Its plan, screen map and gap analysis are in that repo's `docs/`. This spec lists only the **backend** changes the app needs. Each one is built here in its own PR, before the app screen that uses it.
 
 The app uses the existing API for almost everything: demographics, attendance, people, visitors, activities, messages, monthly reports, budgets, accounting, remittances with M-Pesa, approvals, notifications, chat and calendar. The additions below cover only what it cannot do today. **Nothing is faked on the phone:** a missing piece is added here first.
 
@@ -11,8 +11,8 @@ The app uses the existing API for almost everything: demographics, attendance, p
 | M3 | A named `app` token, and `auth/me` | P3 |
 | M4 | CORS for the app's origin | P3 / P8 |
 | M5 | `GET app/home`: one summary per role | P4 / P5 |
-| M6 | Service counts: men / women and converts (**if the user agrees**) | P4 |
-| M7 | Church event types: crusade (and conference, **if agreed**) | P4 |
+| M6 | Service counts: men / women and converts (agreed 2026-10-19) | P4 |
+| M7 | Church event types: crusade and conference (agreed 2026-10-19; the app reads types from the API) | P4 |
 | M8 | Reporting compliance for the places below | P5 |
 | M9 | Review notes on a demographics submission | P5 |
 | M10 | Comparison of the places below | P5 |
@@ -22,8 +22,8 @@ The app uses the existing API for almost everything: demographics, attendance, p
 ## Data Model
 
 - **M3:** no table. Tokens are Sanctum personal access tokens named `app` (the web's stay `Api-Access`).
-- **M6, if agreed:** `church_attendance_records` gains `men_count`, `women_count`, `converts_count` (all nullable, unsigned int). When `men_count` and `women_count` are given, `adults_count` = their sum. Old rows are untouched.
-- **M7:** `Activity::TYPES['church']` gains `crusade` (and `conference` if agreed). No migration.
+- **M6:** `church_attendance_records` gains `men_count`, `women_count`, `converts_count` (all nullable, unsigned int). When `men_count` and `women_count` are given, `adults_count` = their sum. Old rows are untouched.
+- **M7:** `Activity::TYPES['church']` gains `crusade` and `conference`. No migration. The app lists whatever `activities/overview` returns in `types`, so later additions need no app change.
 - **M11:** `idempotency_keys`: `id`, `key` (uuid), `user_id`, `route`, `status_code`, `response_body` (json), `created_at`. Unique on (`key`, `user_id`). Rows older than 7 days are pruned daily.
 - **M12:** `push_subscriptions`: `id`, `user_id`, `endpoint` (unique), `p256dh`, `auth`, `user_agent`, `last_used_at`, timestamps. VAPID keys are kept encrypted in Settings (system), like the other provider keys.
 
@@ -36,7 +36,8 @@ Every response uses the existing envelope (`successResponse` / `errorResponse`).
 | `POST auth/login` (M1, M2, M3) | `identifier` (email, username **or phone**), `password`, `diocese_code?`, `client?` (`app`) | As today. With `client=app`, the token is named `app`, and the person's other `app` tokens are revoked | Public, throttled |
 | `POST auth/login-code` (M1, M3) | `employee_code`, `diocese_code?`, `client?` | As above | Public, throttled 10/min |
 | `GET auth/me` (M3) | — | `{user, territorial_roles, current_role, permissions}` for the token and `X-Assignment-Id` | Token |
-| `GET app/home` (M5) | `X-Assignment-Id` | Per place type:<br>• **Church:** members and change; this month's youth, baptisms and income; the monthly report's state and due date; what is due to send up.<br>• **Subregion / region / diocese:** members, reporting % (M8), KPIs, late places, the latest submissions | Token, the role's own place |
+| `GET app/home` (M5) | `X-Assignment-Id` | Per place type:<br>• **Church (built):** `{place, members {total, change, period} (latest approved demographics), latest {youth, baptisms, conversions}, report (MonthlyReports::state: last month until sent, then this month), money {in, out, share {owed, status, to}} (only with accounting read)}`.<br>• **Subregion / region / diocese:** members, reporting % (M8), KPIs, late places, the latest submissions | Token, the role's own place |
+| `GET app/demographics` (P4) | — | `{place, mode (monthly\|half_yearly\|yearly), periods: [{label, year, fiscal_year_id, fiscal_month_id, fiscal_semi_annual_id, record}], history: [approved records, newest first]}`: this year's and last year's periods in the church's own cadence, each with what is recorded | Token, the acting role's church |
 | `GET app/compliance` (M8) | `territory_id?`, `year`, `month` | `{due, sent, late, percent, places: [{id, name, state, sent_at}]}` | Places the role oversees |
 | `GET demographics/{id}` (M9) | — | Adds `notes: [{field, text, change_percent}]`: the existing `buildValidationWarnings` plus month-on-month changes over 25 % | As today |
 | `GET app/compare` (M10) | `territory_id?`, `period` (month / quarter / year) | `{places: [{id, name, members, growth_percent, youth_share, baptisms}], fastest: [...], declining: [...]}` | Places the role oversees |
@@ -80,8 +81,8 @@ Every response uses the existing envelope (`successResponse` / `errorResponse`).
   - for each place type, `app/home` returns the documented keys;
   - a church role never sees another church's figures;
   - a subregion's figures equal the sum of its churches.
-- [ ] **M6** (if agreed): men + women saved gives adults = their sum; old records still read.
-- [ ] **M7:** a church can create a `crusade` event.
+- [x] **M6:** men + women saved gives adults = their sum; the web's adults-only update still works.
+- [x] **M7:** `crusade` and `conference` are church event types.
 - [ ] **M8:** with 4 churches and 3 reports sent, `percent` is 75 and the late church is listed.
 - [ ] **M9:** a submission with youth up 40 % on last month carries a note for `youth_count`.
 - [ ] **M10:** places are ranked by growth, and a role cannot compare places outside its own.

@@ -168,6 +168,10 @@ class AttendanceController extends Controller
             'youth_count' => 'nullable|integer|min:0',
             'children_male_count' => 'nullable|integer|min:0',
             'children_female_count' => 'nullable|integer|min:0',
+            // The phone app's form (mobile-app-spec M6): adults as men + women, and converts.
+            'men_count' => 'nullable|integer|min:0',
+            'women_count' => 'nullable|integer|min:0',
+            'converts_count' => 'nullable|integer|min:0',
             'notes' => 'nullable|string',
         ]);
 
@@ -180,7 +184,7 @@ class AttendanceController extends Controller
             ], 422);
         }
 
-        $data = $validator->validated();
+        $data = $this->adultsFromMenAndWomen($validator->validated());
         // A count left empty is nobody in that group (the columns can't be null).
         foreach (self::COUNTS as $field) {
             $data[$field] = (int) ($data[$field] ?? 0);
@@ -312,6 +316,10 @@ class AttendanceController extends Controller
             'youth_count' => 'nullable|integer|min:0',
             'children_male_count' => 'nullable|integer|min:0',
             'children_female_count' => 'nullable|integer|min:0',
+            // The phone app's form (mobile-app-spec M6): adults as men + women, and converts.
+            'men_count' => 'nullable|integer|min:0',
+            'women_count' => 'nullable|integer|min:0',
+            'converts_count' => 'nullable|integer|min:0',
             'notes' => 'nullable|string',
         ]);
 
@@ -324,7 +332,7 @@ class AttendanceController extends Controller
             ], 422);
         }
 
-        $data = $validator->validated();
+        $data = $this->adultsFromMenAndWomen($validator->validated());
 
         foreach (self::COUNTS as $field) {
             if (array_key_exists($field, $data)) {
@@ -505,5 +513,15 @@ class AttendanceController extends Controller
         return $user->activeAssignments()
             ->where('territory_id', $territoryId)
             ->exists();
+    }
+
+    /** When men and women are counted (the phone app), adults is their sum. */
+    private function adultsFromMenAndWomen(array $data): array
+    {
+        if (array_key_exists('men_count', $data) || array_key_exists('women_count', $data)) {
+            $data['adults_count'] = (int) ($data['men_count'] ?? 0) + (int) ($data['women_count'] ?? 0);
+        }
+
+        return $data;
     }
 }
