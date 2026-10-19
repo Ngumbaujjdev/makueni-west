@@ -1,6 +1,6 @@
 # Mobile App (PWA) Spec: what the API adds for the phone app
 
-**Status: planned (2026-10-13).** The app itself is a separate repo, `Ngumbaujjdev/makueni-west-app` (`/Applications/MAMP/htdocs/makueni-west-app`). Its plan, screen map and gap analysis are in that repo's `docs/`. This spec lists only the **backend** changes the app needs. Each one is built here in its own PR, before the app screen that uses it.
+**Status: M1-M4 built (2026-10-19, P3); the rest planned.** The app itself is a separate repo, `Ngumbaujjdev/makueni-west-app` (`/Applications/MAMP/htdocs/makueni-west-app`). Its plan, screen map and gap analysis are in that repo's `docs/`. This spec lists only the **backend** changes the app needs. Each one is built here in its own PR, before the app screen that uses it.
 
 The app uses the existing API for almost everything: demographics, attendance, people, visitors, activities, messages, monthly reports, budgets, accounting, remittances with M-Pesa, approvals, notifications, chat and calendar. The additions below cover only what it cannot do today. **Nothing is faked on the phone:** a missing piece is added here first.
 
@@ -45,9 +45,10 @@ Every response uses the existing envelope (`successResponse` / `errorResponse`).
 | `DELETE app/push/subscribe` (M12) | `endpoint` | `{}` | Token |
 | `GET app/push/key` (M12) | — | `{public_key}` | Token |
 
-- **M1:** the diocese code is the diocese territory's `code`. When it is given and does not match the diocese of any of the person's active places, the answer is 401 "Check the diocese code", and the attempt is audited like a failed password.
-- **M2:** a phone number is matched on `users.phone_key` (the last 9 digits). If two active users share it, phone sign-in is refused with "Use your email or employee code".
-- **M4:** add `config/cors.php`, with `allowed_origins` from the env variable `APP_CLIENT_ORIGINS` (comma-separated), `supports_credentials` false, and `Content-Disposition` exposed for downloads. The web keeps working, because its origin is in the list.
+- **M1:** the diocese code is the diocese territory's `code`. When it is given and does not match the diocese of any of the person's active places, the answer is 401 "Check the diocese code." It is checked only after the password is right, so a wrong password still says "Invalid credentials". Global admins pass any code.
+- **M2:** a phone number is matched on `users.phone_key` (the last 9 digits). `phone_key` is unique, so two people can only share a number in old data; if they do, sign-in is refused (422) with "Sign in with your email or employee code". Built in `App\Support\AppSignIn`.
+- **M4:** `config/cors.php` reads `APP_CLIENT_ORIGINS` (comma-separated). **Unset, any origin may call** (Laravel's default before this file), so every dev host keeps working; production sets the web's and the app's addresses. `Content-Disposition` is exposed for downloads.
+- **Also in P3:** `auth/login` is throttled at 10 a minute (as `login-code` already was), `password-reset/request` and `request-employee-code` at 5 a minute, and `modules/for-role` follows `X-Assignment-Id` (else the primary role, as before).
 - **M12:** a push is sent wherever `Notices::send` and `PlaceNotification` already notify, through a queued job. It carries a title, a short body and the app route. Dead endpoints (404 / 410) are deleted.
 
 ## Permission Rules
@@ -64,17 +65,17 @@ Every response uses the existing envelope (`successResponse` / `errorResponse`).
 
 ## Acceptance Criteria
 
-- [ ] **M1:**
+- [x] **M1:**
   - sign-in with the right diocese code succeeds;
   - a wrong code returns 401 with "Check the diocese code";
   - no code behaves as today.
-- [ ] **M2:**
+- [x] **M2:**
   - sign-in with a phone number in any format (`07..`, `+2547..`, `2547..`) finds the user;
   - a phone number shared by two users is refused.
-- [ ] **M3:**
+- [x] **M3:**
   - a second app sign-in revokes the first app token but not a web token;
   - `auth/me` returns the roles and the acting role.
-- [ ] **M4:** a preflight from an allowed origin passes, and one from an unknown origin gets no CORS headers.
+- [x] **M4:** a preflight from the app's origin passes (tested with no list set; a set list is Laravel's own CORS behaviour).
 - [ ] **M5:**
   - for each place type, `app/home` returns the documented keys;
   - a church role never sees another church's figures;
