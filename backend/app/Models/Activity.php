@@ -26,8 +26,8 @@ class Activity extends Model implements Auditable
     public const TYPES = [
         'church' => [
             'sunday_service' => 'Sunday service', 'midweek' => 'Midweek service', 'prayer_meeting' => 'Prayer meeting',
-            'youth_kesha' => 'Youth kesha', 'revival' => 'Revival', 'wedding' => 'Wedding', 'funeral' => 'Funeral',
-            'fundraising' => 'Fundraising', 'special_service' => 'Special service', 'other' => 'Other',
+            'youth_kesha' => 'Youth kesha', 'revival' => 'Revival', 'crusade' => 'Crusade', 'conference' => 'Conference',
+            'wedding' => 'Wedding', 'funeral' => 'Funeral', 'fundraising' => 'Fundraising', 'special_service' => 'Special service', 'other' => 'Other',
         ],
         'region' => self::UPPER_TYPES,
         'diocese' => self::UPPER_TYPES,

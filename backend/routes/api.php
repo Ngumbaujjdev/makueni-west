@@ -391,6 +391,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('audit', [SettingsAuditController::class, 'index']);
     });
 
+    // The phone app (makueni-west-app; docs/specs/mobile-app-spec.md): one call per
+    // screen where the web needs several. The acting role (X-Assignment-Id) decides the place.
+    Route::prefix('app')->group(function () {
+        Route::get('home', [\App\Http\Controllers\Api\App\ChurchAppController::class, 'home']);
+        Route::get('demographics', [\App\Http\Controllers\Api\App\ChurchAppController::class, 'demographics']);
+    });
+
     // Authentication Routes
     Route::prefix('auth')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
