@@ -22,6 +22,7 @@
             <exclude>tests/Feature/Facilities</exclude>
             <exclude>tests/Feature/Accounting</exclude>
             <exclude>tests/Feature/HR</exclude>
+            <exclude>tests/Feature/Mobile</exclude>
         </testsuite>
         <testsuite name="Diocese">
             <directory>tests/Feature/Diocese</directory>
@@ -58,6 +59,9 @@
         </testsuite>
         <testsuite name="HR">
             <directory>tests/Feature/HR</directory>
+        </testsuite>
+        <testsuite name="Mobile">
+            <directory>tests/Feature/Mobile</directory>
         </testsuite>
     </testsuites>
     <source>
