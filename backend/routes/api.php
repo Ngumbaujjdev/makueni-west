@@ -98,16 +98,16 @@ Route::prefix('payments/daraja/{key}')->middleware('throttle:600,1')->group(func
 });
 
 Route::prefix('auth')->group(function () {
-    Route::post('login', [AuthController::class, 'login']);
+    Route::post('login', [AuthController::class, 'login'])->middleware('throttle:10,1');
     Route::post('login-code', [AuthController::class, 'loginWithCode'])->middleware('throttle:10,1');
     Route::post('force-password-change', [AuthController::class, 'forcePasswordChange']);
 });
 // PUBLIC ROUTES (No Authentication Required)
 Route::prefix('password-reset')->group(function () {
-    Route::post('request', [PasswordResetController::class, 'requestPasswordReset']);                    // Request password reset via email
+    Route::post('request', [PasswordResetController::class, 'requestPasswordReset'])->middleware('throttle:5,1');                    // Request password reset via email
     Route::post('verify-token', [PasswordResetController::class, 'verifyResetToken']);                  // Verify reset token validity
     Route::post('reset-with-token', [PasswordResetController::class, 'resetPasswordWithToken']);        // Reset password using token
-    Route::post('request-employee-code', [PasswordResetController::class, 'requestEmployeeCodeReset']); // Request new employee code via email
+    Route::post('request-employee-code', [PasswordResetController::class, 'requestEmployeeCodeReset'])->middleware('throttle:5,1'); // Request new employee code via email
 });
 // support ticket submission (public)
 Route::post('support-tickets', [App\Http\Controllers\Api\SupportTicketController::class, 'store']);
@@ -395,6 +395,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('auth')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
         Route::post('switch-role', [AuthController::class, 'switchRole']);
+        Route::get('me', [AuthController::class, 'me']);                       // the phone app rebuilds its session (mobile-app-spec M3)
         Route::put('profile', [AuthController::class, 'profileChange']);
         Route::post('profile/photo', [ProfilePhotoController::class, 'store'])->middleware('throttle:20,1');
         Route::delete('profile/photo', [ProfilePhotoController::class, 'destroy']);

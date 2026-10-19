@@ -188,11 +188,9 @@ class ModuleController extends Controller
         try {
             $user = $request->user();
 
-            // Get the user's PRIMARY assignment
-            $primaryAssignment = $user->activeAssignments()
-                ->where('assignment_type', 'primary')
-                ->with(['territory', 'role'])
-                ->first();
+            // The acting role (X-Assignment-Id), else the PRIMARY assignment - so a
+            // person who switches role sees that role's modules (the phone app does).
+            $primaryAssignment = \App\Support\BudgetAccess::assignment($user);
 
             if (! $primaryAssignment) {
                 return errorResponse('No primary assignment found for user. Please contact your administrator.', 404);

@@ -7,6 +7,8 @@ use App\Jobs\SendPasswordChangedNotification;
 use App\Jobs\SendSupportEmail;
 use App\Models\User;
 use App\Rules\UniquePhone;
+use App\Support\AppSignIn;
+use App\Support\BudgetAccess;
 use App\Support\PasswordPolicy;
 use App\Support\Phone;
 use Illuminate\Http\Request;
@@ -28,16 +30,19 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'identifier' => 'required|string',
             'password' => 'required|string',
+            'diocese_code' => 'nullable|string|max:100',
+            'client' => 'nullable|string|in:web,app',
         ]);
 
         if ($validator->fails()) {
             return validationErrorResponse($validator->errors());
         }
 
-        // Find user by email or username
-        $user = User::where('email', $request->identifier)
-            ->orWhere('username', $request->identifier)
-            ->first();
+        // Email, username or (the phone app) a phone number - AppSignIn.
+        $user = AppSignIn::find($request->identifier, $ambiguous);
+        if ($ambiguous) {
+            return errorResponse('That phone number is on more than one account. Sign in with your email or employee code.', 422);
+        }
 
         if (! $user) {
             return errorResponse('Invalid credentials', 401);
@@ -74,8 +79,12 @@ class AuthController extends Controller
             return errorResponse('Invalid credentials', 401);
         }
 
-        // Create access token
-        $accessToken = $user->createToken('Api-Access')->plainTextToken;
+        if (! AppSignIn::dioceseMatches($user, $request->diocese_code)) {
+            return errorResponse('Check the diocese code.', 401);
+        }
+
+        // Create access token (the phone app's replaces its last one)
+        $accessToken = AppSignIn::token($user, $request->client);
 
         // Get territorial data
         $territorialRoles = $this->getUserTerritorialRoles($user);
@@ -502,6 +511,8 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'employee_code' => 'required|string|size:6',
+            'diocese_code' => 'nullable|string|max:100',
+            'client' => 'nullable|string|in:web,app',
         ]);
 
         if ($validator->fails()) {
@@ -519,8 +530,12 @@ class AuthController extends Controller
             return errorResponse('Account is inactive. Please contact administrator.', 403);
         }
 
+        if (! AppSignIn::dioceseMatches($user, $request->diocese_code)) {
+            return errorResponse('Check the diocese code.', 401);
+        }
+
         // Create access token directly (no password or OTP needed)
-        $accessToken = $user->createToken('Api-Access')->plainTextToken;
+        $accessToken = AppSignIn::token($user, $request->client);
 
         // Get territorial data
         $territorialRoles = $this->getUserTerritorialRoles($user);
@@ -642,6 +657,40 @@ class AuthController extends Controller
 
             return serverErrorResponse('Failed to send support request', $e->getMessage());
         }
+    }
+
+    /**
+     * Who is signed in, in which role (docs/specs/mobile-app-spec.md, M3): the
+     * phone app rebuilds its session from this when it opens. The acting role
+     * is the one in X-Assignment-Id, else the primary - as every other endpoint.
+     */
+    public function me(Request $request)
+    {
+        $user = $request->user();
+        $acting = BudgetAccess::assignment($user);
+
+        return successResponse('Signed in', [
+            'user' => $user->load(['activeAssignments.role', 'activeAssignments.territory']),
+            'territorial_roles' => $this->getUserTerritorialRoles($user),
+            'current_role' => $acting ? $this->roleOf($acting) : $this->getDefaultRole($user),
+            'permissions' => $this->getUserPermissions($user, $acting?->id),
+        ]);
+    }
+
+    /** The current_role shape for one assignment (as getDefaultRole gives it). */
+    private function roleOf($assignment): array
+    {
+        $type = $assignment->territory->territory_type->value;
+
+        return [
+            'assignment_id' => $assignment->id,
+            'role_name' => $assignment->role->name,
+            'territory_id' => $assignment->territory->id,
+            'territory_name' => $assignment->territory->name,
+            'territory_type' => $type,
+            'territory_scope' => $type,
+            'territory' => ['id' => $assignment->territory->id, 'name' => $assignment->territory->name, 'territory_type' => $type],
+        ];
     }
 
     /**
