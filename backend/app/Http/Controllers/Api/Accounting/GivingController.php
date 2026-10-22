@@ -55,6 +55,8 @@ class GivingController extends AccountingBase
                 'diocese_paybill' => $this->settings()->system('paybill.shortcode'),
                 'accounts' => app(GivingPurposes::class)->ownFor($place)->map(fn ($p) => ['purpose' => $p->key, 'label' => $p->label, 'account' => $p->suffix])->values(),
             ],
+            // Exactly what the public giving page shows under "Pay by M-Pesa" (number, till or paybill, every account) - the phone app shows this.
+            'paybill' => $this->giving->page($place)['paybill'],
             'purposes' => app(GivingPurposes::class)->present(app(GivingPurposes::class)->all()),
             'gifts' => $gifts->map(fn ($g) => [
                 'id' => $g->id, 'reference' => $g->reference, 'amount' => (float) $g->amount, 'purpose' => $g->purpose, 'purpose_label' => GivingPurposes::label($g->purpose, $g->purpose),

@@ -217,6 +217,7 @@ class GivingTest extends TestCase
         $this->getJson('/api/accounting/gateways')->assertForbidden();
         $this->getJson('/api/accounting/giving')->assertOk()->assertJsonPath('data.code', 'SHR027')->assertJsonPath('data.paystack.channel.status', 'active');
         $this->assertStringEndsWith('/give.php?c=SHR027', $this->getJson('/api/accounting/giving')->json('data.link'));
+        $this->assertSame($this->getJson('/api/give/SHR027')->json('data.paybill'), $this->getJson('/api/accounting/giving')->json('data.paybill'), 'the phone shows the public page\'s M-Pesa card');
         Sanctum::actingAs($this->dfo);
         $this->getJson('/api/accounting/gateways')->assertOk()->assertJsonPath('data.ready', true);
     }

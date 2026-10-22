@@ -721,7 +721,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('journal-vouchers', [$books, 'journalVoucher']);
         Route::post('opening-balances', [$books, 'openingBalances']);
         Route::get('payment-vouchers', [$pvs, 'index']);
-        Route::post('payment-vouchers', [$pvs, 'store']);
+        Route::post('payment-vouchers', [$pvs, 'store'])->middleware(\App\Http\Middleware\Idempotent::class);
         Route::get('payment-vouchers/{id}', [$pvs, 'show'])->whereNumber('id');
         Route::put('payment-vouchers/{id}', [$pvs, 'update'])->whereNumber('id');
         Route::post('payment-vouchers/{id}/authorise', [$pvs, 'authorise'])->whereNumber('id');
@@ -769,7 +769,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         $col = \App\Http\Controllers\Api\Accounting\CollectionController::class;
         Route::get('collections', [$col, 'index']);
         Route::get('collections/options', [$col, 'options']);
-        Route::post('collections', [$col, 'store']);
+        Route::post('collections', [$col, 'store'])->middleware(\App\Http\Middleware\Idempotent::class);
         Route::get('collections/{id}', [$col, 'show'])->whereNumber('id');
         Route::put('collections/{id}', [$col, 'update'])->whereNumber('id');
         Route::delete('collections/{id}', [$col, 'destroy'])->whereNumber('id');
@@ -820,10 +820,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('remittances/options', [$rem, 'options']);
         Route::get('remittances/board', [$rem, 'board']);
         Route::get('remittances/statement', [$rem, 'statement']);
-        Route::post('remittances', [$rem, 'store']);
+        Route::post('remittances', [$rem, 'store'])->middleware(\App\Http\Middleware\Idempotent::class);
         Route::get('remittances/{id}', [$rem, 'show'])->whereNumber('id');
         Route::post('remittances/{id}/confirm', [$rem, 'confirm'])->whereNumber('id');
-        Route::post('remittances/{id}/mpesa', [$rem, 'payMpesa'])->whereNumber('id');
+        Route::post('remittances/{id}/mpesa', [$rem, 'payMpesa'])->whereNumber('id')->middleware(\App\Http\Middleware\Idempotent::class);
         Route::post('remittances/{id}/unconfirm', [$rem, 'unconfirm'])->whereNumber('id');
         Route::post('remittances/{id}/query', [$rem, 'query'])->whereNumber('id');
         Route::post('remittances/{id}/answer', [$rem, 'answer'])->whereNumber('id');

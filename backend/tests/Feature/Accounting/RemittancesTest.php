@@ -123,6 +123,32 @@ class RemittancesTest extends TestCase
         $this->assertTrue($ledger->trialBalance($this->myChurch)['balanced']);
     }
 
+    public function test_a_share_waiting_to_be_paid_shows_and_its_months_cannot_be_sent_again(): void
+    {
+        Sanctum::actingAs($this->treasurer);
+        $body = ['kind' => 'share', 'budget_deduction_id' => $this->share->id, 'pay_from_account_id' => $this->cash()->id, 'lines' => [['month' => $this->month(1), 'amount' => 5000]]];
+        $this->postJson('/api/accounting/remittances', $body)->assertCreated();
+
+        $owing = $this->getJson('/api/accounting/remittances')->json('data.owing.0');
+        $this->assertEquals(5000, collect($owing['months'])->firstWhere('month', $this->month(1))['waiting']);
+        $this->assertEquals(5000, $owing['waiting']);
+        $this->assertEquals(8000, $owing['owed'], 'owed still counts only paid shares');
+
+        $this->postJson('/api/accounting/remittances', $body)->assertStatus(422)->assertJsonPath('errors', fn ($e) => str_contains(json_encode($e), 'waiting to be paid'));
+        $this->postJson('/api/accounting/remittances', ['lines' => [['month' => $this->month(2), 'amount' => 3000]]] + $body)->assertCreated();
+        $this->assertSame(2, Remittance::where('status', 'waiting')->count());
+    }
+
+    public function test_a_double_tap_on_the_phone_makes_one_share(): void
+    {
+        Sanctum::actingAs($this->treasurer);
+        $body = ['kind' => 'share', 'budget_deduction_id' => $this->share->id, 'pay_from_account_id' => $this->cash()->id, 'lines' => [['month' => $this->month(1), 'amount' => 5000]]];
+        $first = $this->postJson('/api/accounting/remittances', $body, ['Idempotency-Key' => 'tap-1'])->assertCreated()->json('data.id');
+        $again = $this->postJson('/api/accounting/remittances', $body, ['Idempotency-Key' => 'tap-1'])->assertCreated()->assertHeader('Idempotent-Replay', 'true')->json('data.id');
+        $this->assertSame($first, $again);
+        $this->assertSame(1, Remittance::count());
+    }
+
     public function test_added_together_at_the_diocese_the_share_is_counted_once(): void
     {
         $r = $this->sendAndPay();

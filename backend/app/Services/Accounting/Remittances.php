@@ -145,7 +145,28 @@ final class Remittances
         return $out;
     }
 
-    /** "What we owe": each rule by month - due, sent, confirmed, owed. */
+    /**
+     * Shares already made but not paid yet (their voucher is waiting), per rule and
+     * month - shown beside "owed" so the same months aren't sent twice.
+     *
+     * @return array<int, array<string, float>> rule => month => amount
+     */
+    public function waitingByMonth(int $placeId, int $year): array
+    {
+        $rows = RemittanceLine::query()->join('remittances', 'remittances.id', '=', 'remittance_lines.remittance_id')
+            ->where('remittances.from_territory_id', $placeId)->where('remittances.kind', 'share')
+            ->where('remittances.status', 'waiting')->where('remittance_lines.month', 'like', "{$year}-%")
+            ->selectRaw('remittances.budget_deduction_id as rule, remittance_lines.month, SUM(remittance_lines.amount) as amount')
+            ->groupBy('rule', 'remittance_lines.month')->get();
+        $out = [];
+        foreach ($rows as $r) {
+            $out[(int) $r->rule][$r->month] = round((float) $r->amount, 2);
+        }
+
+        return $out;
+    }
+
+    /** "What we owe": each rule by month - due, sent, confirmed, owed, and waiting (made, not paid yet). */
     public function owing(Territory $place, int $year): array
     {
         $rules = $this->rulesOwed($place);
@@ -155,13 +176,14 @@ final class Remittances
         $received = $this->received([$place->id], $rules->flatMap(fn ($d) => $this->basisAccounts($d))->unique()->values()->all(), $year)[$place->id] ?? [];
         $sent = $this->sentByMonth([$place->id], $year)[$place->id] ?? [];
         $from = $this->booksFrom([$place->id])[$place->id] ?? null;
+        $waiting = $this->waitingByMonth($place->id, $year);
 
-        return $rules->map(function (BudgetDeduction $d) use ($received, $sent, $year, $from) {
+        return $rules->map(function (BudgetDeduction $d) use ($received, $sent, $waiting, $year, $from) {
             $due = $this->dueFor($d, $received, $year, $from);
             $months = [];
             foreach ($due as $m => $amount) {
                 $s = $sent[$d->id][$m] ?? ['sent' => 0, 'confirmed' => 0];
-                $months[] = ['month' => $m, 'due' => $amount, 'sent' => $s['sent'], 'confirmed' => $s['confirmed'], 'owed' => round(max($amount - $s['sent'], 0), 2)];
+                $months[] = ['month' => $m, 'due' => $amount, 'sent' => $s['sent'], 'confirmed' => $s['confirmed'], 'owed' => round(max($amount - $s['sent'], 0), 2), 'waiting' => $waiting[$d->id][$m] ?? 0.0];
             }
             $owner = Territory::find($d->territory_id);
 
@@ -176,6 +198,7 @@ final class Remittances
                 'sent' => round(array_sum(array_column($months, 'sent')), 2),
                 'confirmed' => round(array_sum(array_column($months, 'confirmed')), 2),
                 'owed' => round(array_sum(array_column($months, 'owed')), 2),
+                'waiting' => round(array_sum(array_column($months, 'waiting')), 2),
             ];
         })->values()->all();
     }
@@ -203,6 +226,7 @@ final class Remittances
         $year = (int) substr((string) ($data['lines'][0]['month'] ?? now()->format('Y-m')), 0, 4);
         $owing = collect($this->owing($place, $year))->firstWhere('id', $d->id);
         $byMonth = collect($owing['months'] ?? [])->keyBy('month');
+        $label = fn ($m) => CarbonImmutable::createFromFormat('Y-m-d', "{$m}-01")->format('M Y');
         $lines = [];
         foreach ($data['lines'] ?? [] as $i => $l) {
             $m = (string) ($l['month'] ?? '');
@@ -216,6 +240,16 @@ final class Remittances
             if ($amount <= 0) {
                 continue;
             }
+            // A share already waiting for the month: only what is still owed beside it may be
+            // sent (a shilling over, for rounding up to whole shillings), so a second tap or a
+            // second person can't send the same month twice.
+            $waiting = (float) ($byMonth[$m]['waiting'] ?? 0);
+            if ($waiting > 0) {
+                $left = max((float) ($byMonth[$m]['owed'] ?? 0) - $waiting, 0);
+                if ($amount > $left + 1) {
+                    throw ValidationException::withMessages(["lines.{$i}.month" => [$label($m).' already has '.number_format($waiting, 2).' waiting to be paid'.($left > 0 ? ' - only '.number_format($left, 2).' more is owed.' : ' - pay that one, or have it refused, first.')]]);
+                }
+            }
             $lines[$m] = ['month' => $m, 'amount' => round(($lines[$m]['amount'] ?? 0) + $amount, 2), 'due' => $byMonth[$m]['due'] ?? null];
         }
         if (! $lines) {
@@ -223,7 +257,6 @@ final class Remittances
         }
         ksort($lines);
         $account = $this->chart->forBudgetLine($d->budgetLine);
-        $label = fn ($m) => CarbonImmutable::createFromFormat('Y-m-d', "{$m}-01")->format('M Y');
         $months = array_keys($lines);
         $span = count($months) === 1 ? $label($months[0]) : $label($months[0]).' to '.$label(end($months));
 
