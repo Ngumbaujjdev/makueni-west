@@ -154,6 +154,10 @@ final class Settings
         $chain = $this->chain($place);
         $cards = [];
         foreach (SettingsRegistry::fields($section) as $key => $field) {
+            // Kept by the system itself (e.g. the push keys), never shown on the Settings screen.
+            if ($field['system'] ?? false) {
+                continue;
+            }
             // A place's own setting (not inherited) means nothing at a level that can't set it.
             if ($field['inherits'] === false && ! in_array($level, $field['levels'], true)) {
                 continue;

@@ -282,6 +282,7 @@ class Chats
         $msg->setRelation('user', $me);
         $this->emit(new ChatMessageSent($chat->id, $this->present($msg)));
         $this->touchMembers($chat);
+        $this->pushToOthers($chat, $me, $body);
 
         return $msg;
     }
@@ -299,6 +300,25 @@ class Chats
     }
 
     // ------------------------------------------------------------------ helpers
+
+    /**
+     * A push to the other members' phones (mobile-app-spec M12) - chat makes no
+     * bell notice, so it pushes itself. Nobody subscribed means nothing is queued.
+     */
+    private function pushToOthers(Chat $chat, User $me, string $body): void
+    {
+        $others = ChatMember::where('chat_id', $chat->id)->whereNull('left_at')->where('user_id', '!=', $me->id)->pluck('user_id')->all();
+        if (! $others || ! \App\Models\PushSubscription::whereIn('user_id', $others)->exists()) {
+            return;
+        }
+        $who = trim($me->firstname.' '.$me->lastname);
+        \App\Jobs\SendWebPush::dispatch(array_map('intval', $others), [
+            'title' => $chat->type === 'group' ? ($chat->name ?: 'Group chat').' · '.$who : $who,
+            'body' => mb_strimwidth($body, 0, 180, '…'),
+            'url' => '/chat?c='.$chat->id,
+            'kind' => 'chat',
+        ]);
+    }
 
     /**
      * Broadcast, but never let the live server stop a chat: if Reverb is down

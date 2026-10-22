@@ -504,6 +504,12 @@ return [
         'paybill.initiator_password' => ['section' => 'paybill', 'card' => 'Checking payments with Safaricom', 'label' => 'Operator password', 'type' => 'secret', 'secret' => true, 'rules' => ['nullable', 'string', 'max:200'], 'default' => null, 'levels' => ['diocese'], 'help' => 'Only when no security credential is given. Safaricom makes it expire every 90 days.'],
         'paybill.pull_number' => ['section' => 'paybill', 'card' => 'Checking payments with Safaricom', 'label' => 'Paybill\'s nominated phone (for fetching payments)', 'rules' => ['nullable', 'regex:/^(\\+?254|0)?[17]\\d{8}$/'], 'default' => null, 'levels' => ['diocese'], 'help' => 'The phone in the paybill\'s Safaricom records. Fetching payments (Pull) needs Safaricom\'s approval on the live paybill.'],
 
+        // The phone app's push notifications (docs/specs/mobile-app-spec.md, M12). Made once by
+        // `php artisan app:push-keys`; the public key goes to phones, the private one signs each push.
+        // `system`: kept by the system, not shown on the Settings screen - a new pair would silence every phone.
+        'push.vapid_public' => ['section' => 'communication', 'card' => 'Phone app notifications', 'label' => 'Push public key', 'rules' => ['nullable', 'string', 'max:200'], 'default' => null, 'levels' => ['diocese'], 'system' => true],
+        'push.vapid_private' => ['section' => 'communication', 'card' => 'Phone app notifications', 'label' => 'Push private key', 'type' => 'secret', 'secret' => true, 'rules' => ['nullable', 'string', 'max:200'], 'default' => null, 'levels' => ['diocese'], 'system' => true],
+
         // Online giving (A10) - read by App\Services\Payments\Paystack and App\Services\Accounting\Giving.
         'giving.paystack_mode' => ['section' => 'giving', 'card' => 'Paystack', 'label' => 'Paystack', 'type' => 'select', 'options' => ['test' => 'Test - no real money', 'live' => 'Live - real money'], 'rules' => ['required'], 'default' => 'test', 'levels' => ['diocese'], 'used_by' => 'The giving page'],
         'giving.paystack_secret' => ['section' => 'giving', 'card' => 'Paystack', 'label' => 'Secret key', 'type' => 'secret', 'secret' => true, 'rules' => ['nullable', 'string', 'max:200', 'regex:/^sk_(test|live)_/'], 'default' => null, 'levels' => ['diocese'], 'help' => 'From Paystack, Settings, API keys. It also checks every webhook - set Paystack\'s webhook to this system\'s /api/payments/paystack/webhook.'],

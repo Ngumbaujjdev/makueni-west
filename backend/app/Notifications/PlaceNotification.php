@@ -40,7 +40,11 @@ class PlaceNotification extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database'];
+        // The bell always; the person's phones too, when they turned push on in the app.
+        $push = $notifiable instanceof \App\Models\User
+            && \App\Models\PushSubscription::where('user_id', $notifiable->id)->exists();
+
+        return $push ? ['database', \App\Notifications\Channels\WebPushChannel::class] : ['database'];
     }
 
     public function toArray(object $notifiable): array
