@@ -439,7 +439,11 @@ class DemographicsController extends Controller
             ], 403);
         }
 
-        if ($demographic->status !== 'submitted') {
+        // Submissions are approved on sending (see submit()), so an overseer can
+        // still flag one or ask for changes afterwards, and approve a flagged one
+        // again (docs/specs/mobile-app-spec.md, M9; the user's choice, 2026-10-19).
+        $from = ['approved' => ['submitted', 'flagged'], 'flagged' => ['submitted', 'approved'], 'changes_requested' => ['submitted', 'approved', 'flagged']][$newStatus] ?? ['submitted'];
+        if (! in_array($demographic->status, $from, true)) {
             return response()->json([
                 'success' => false,
                 'status' => 422,

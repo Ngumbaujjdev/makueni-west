@@ -30,6 +30,11 @@ class ChurchAppController extends Controller
     /** GET /app/home - members, this month, the monthly report due and the share owed. */
     public function home(Request $request): JsonResponse
     {
+        // A subregion, region or diocese role gets its own home (OverseerAppController).
+        $acting = \App\Support\BudgetAccess::assignment($request->user())?->territory;
+        if (! $acting || $acting->territory_type !== \App\Enums\TerritoryType::CHURCH) {
+            return app(OverseerAppController::class)->home($request);
+        }
         $church = $this->church($request);
         if ($church instanceof JsonResponse) {
             return $church;
@@ -104,7 +109,14 @@ class ChurchAppController extends Controller
             }
         }
 
-        $history = $rows->filter(fn ($r) => $r->status === 'approved')
+        // History in the church's current cadence only: a church that moved from
+        // monthly to half-yearly would otherwise compare a month with a half-year.
+        $inMode = fn ($r) => match ($mode) {
+            'monthly' => (bool) $r->fiscal_month_id,
+            'half_yearly' => (bool) $r->fiscal_semi_annual_id,
+            default => ! $r->fiscal_month_id && ! $r->fiscal_semi_annual_id,
+        };
+        $history = $rows->filter(fn ($r) => $r->status === 'approved' && $inMode($r))
             ->sortByDesc(fn ($r) => sprintf('%04d-%02d-%02d', $r->fiscalYear?->year, $r->fiscalSemiAnnual?->number ?? 0, $r->fiscalMonth?->number ?? 0))
             ->values()->take(24)->map(fn ($r) => $this->present($r));
 

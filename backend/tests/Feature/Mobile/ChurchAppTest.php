@@ -60,10 +60,11 @@ class ChurchAppTest extends TestCase
             ->assertJsonPath('data.money', null);   // no accounting rights in this world
     }
 
-    public function test_home_is_only_for_a_church_role(): void
+    public function test_an_overseer_gets_the_overseer_home_and_not_a_churchs(): void
     {
         Sanctum::actingAs($this->overseer);
-        $this->getJson('/api/app/home')->assertJsonPath('success', false)->assertJsonPath('status', 403);
+        $this->getJson('/api/app/home')->assertJsonPath('success', true)->assertJsonPath('data.place.level', 'region');
+        $this->getJson('/api/app/demographics')->assertJsonPath('status', 403);
     }
 
     public function test_home_never_shows_another_churchs_figures(): void
@@ -137,5 +138,16 @@ class ChurchAppTest extends TestCase
     {
         $this->assertArrayHasKey('crusade', Activity::TYPES['church']);
         $this->assertArrayHasKey('conference', Activity::TYPES['church']);
+    }
+
+    public function test_history_follows_the_churchs_current_cadence(): void
+    {
+        $h1 = $this->year->semiAnnuals()->where('number', 1)->first();
+        $this->counts(100, 'approved', ['fiscal_semi_annual_id' => $h1->id]);
+        $this->counts(90, 'approved', ['fiscal_month_id' => FiscalMonth::where('number', 3)->value('id')]);
+
+        Sanctum::actingAs($this->pastor);   // half-yearly by default
+        $labels = collect($this->getJson('/api/app/demographics')->json('data.history'))->pluck('total_members')->all();
+        $this->assertSame([100], $labels);
     }
 }
