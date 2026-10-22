@@ -1,6 +1,6 @@
 # Mobile App (PWA) Spec: what the API adds for the phone app
 
-**Status: M1-M12 built (P3-P7, 2026-10-19 to 23).** The app itself is a separate repo, `Ngumbaujjdev/makueni-west-app` (`/Applications/MAMP/htdocs/makueni-west-app`). Its plan, screen map and gap analysis are in that repo's `docs/`. This spec lists only the **backend** changes the app needs. Each one is built here in its own PR, before the app screen that uses it.
+**Status: M1-M13 built (P3-P7, 2026-10-19 to 23).** The app itself is a separate repo, `Ngumbaujjdev/makueni-west-app` (`/Applications/MAMP/htdocs/makueni-west-app`). Its plan, screen map and gap analysis are in that repo's `docs/`. This spec lists only the **backend** changes the app needs. Each one is built here in its own PR, before the app screen that uses it.
 
 The app uses the existing API for almost everything: demographics, attendance, people, visitors, activities, messages, monthly reports, budgets, accounting, remittances with M-Pesa, approvals, notifications, chat and calendar. The additions below cover only what it cannot do today. **Nothing is faked on the phone:** a missing piece is added here first.
 
@@ -18,6 +18,7 @@ The app uses the existing API for almost everything: demographics, attendance, p
 | M10 | Comparison of the places below | P5 |
 | M11 | Idempotency keys on counting POSTs | P6 |
 | M12 | Web push | P7 |
+| M13 | Money from the phone: shares not sent twice, once-only money saves, the giving page's M-Pesa card | P7 fixes |
 
 ## Data Model
 
@@ -25,6 +26,11 @@ The app uses the existing API for almost everything: demographics, attendance, p
 - **M6:** `church_attendance_records` gains `men_count`, `women_count`, `converts_count` (all nullable, unsigned int). When `men_count` and `women_count` are given, `adults_count` = their sum. Old rows are untouched.
 - **M7:** `Activity::TYPES['church']` gains `crusade` and `conference`. No migration. The app lists whatever `activities/overview` returns in `types`, so later additions need no app change.
 - **M11 (built):** `idempotency_keys`: `id`, `key` (≤64), `user_id`, `method`, `route`, `status_code`, `response_body`, `created_at`. Unique on (`key`, `user_id`). Rows older than 7 days are pruned daily (`idempotency-keys:prune`). Middleware `App\Http\Middleware\Idempotent` on `POST/PUT attendance`, `POST/PUT demographics`, `POST visitors/batch`: a repeat key replays the first answer (header `Idempotent-Replay: true`); only successful answers are kept; no header means no change.
+- **M13 (built, 2026-10-23):** no table.
+  - `GET accounting/remittances` → each `owing` rule and month gains `waiting`: shares already made but not paid yet.
+  - `POST accounting/remittances` refuses a month whose amount goes more than a shilling beyond what is owed less what is waiting. So a second tap or a second person can't send the same month twice, while a whole-shilling resend of a share with cents still can.
+  - `Idempotent` is added to `POST accounting/collections`, `POST accounting/payment-vouchers`, `POST accounting/remittances` and `POST accounting/remittances/{id}/mpesa`.
+  - `GET accounting/giving` gains `paybill`: exactly the public giving page's M-Pesa card (own paybill/till or the diocese paybill, every account number).
 - **M12 (built):** `push_subscriptions`: `id`, `user_id`, `endpoint` (unique), `p256dh`, `auth`, `user_agent`, `last_used_at`, timestamps. VAPID keys are diocese settings `push.vapid_public` / `push.vapid_private` (the private one encrypted), marked `system` so they never show on the Settings screen; `php artisan app:push-keys` makes them once and never replaces them. Library: `minishlink/web-push`.
 
 ## API Contract
