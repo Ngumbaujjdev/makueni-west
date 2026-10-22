@@ -399,6 +399,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('places', [\App\Http\Controllers\Api\App\OverseerAppController::class, 'places']);
         Route::get('review/{church}', [\App\Http\Controllers\Api\App\OverseerAppController::class, 'review'])->whereNumber('church');
         Route::get('compare', [\App\Http\Controllers\Api\App\OverseerAppController::class, 'compare']);
+        Route::get('push/key', [\App\Http\Controllers\Api\App\PushController::class, 'key']);
+        Route::post('push/subscribe', [\App\Http\Controllers\Api\App\PushController::class, 'subscribe'])->middleware('throttle:20,1');
+        Route::delete('push/subscribe', [\App\Http\Controllers\Api\App\PushController::class, 'unsubscribe']);
+        Route::get('giving/qr', [\App\Http\Controllers\Api\App\PushController::class, 'givingQr']);
     });
 
     // Authentication Routes

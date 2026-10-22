@@ -24,6 +24,7 @@
         "laravel/telescope": "^5.15",
         "laravel/tinker": "^2.10.1",
         "maatwebsite/excel": "^3.1",
+        "minishlink/web-push": "^11.0",
         "owen-it/laravel-auditing": "^14.0",
         "pragmarx/google2fa-laravel": "^2.3",
         "predis/predis": "^3.2",
