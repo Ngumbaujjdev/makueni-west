@@ -1,6 +1,6 @@
 # Mobile App (PWA) Spec: what the API adds for the phone app
 
-**Status: M1-M4 built (P3), M5 for churches and M6-M7 built (P4), 2026-10-19; the rest planned.** The app itself is a separate repo, `Ngumbaujjdev/makueni-west-app` (`/Applications/MAMP/htdocs/makueni-west-app`). Its plan, screen map and gap analysis are in that repo's `docs/`. This spec lists only the **backend** changes the app needs. Each one is built here in its own PR, before the app screen that uses it.
+**Status: M1-M10 built (P3-P5, 2026-10-19 to 22); M11-M12 planned.** The app itself is a separate repo, `Ngumbaujjdev/makueni-west-app` (`/Applications/MAMP/htdocs/makueni-west-app`). Its plan, screen map and gap analysis are in that repo's `docs/`. This spec lists only the **backend** changes the app needs. Each one is built here in its own PR, before the app screen that uses it.
 
 The app uses the existing API for almost everything: demographics, attendance, people, visitors, activities, messages, monthly reports, budgets, accounting, remittances with M-Pesa, approvals, notifications, chat and calendar. The additions below cover only what it cannot do today. **Nothing is faked on the phone:** a missing piece is added here first.
 
@@ -36,11 +36,11 @@ Every response uses the existing envelope (`successResponse` / `errorResponse`).
 | `POST auth/login` (M1, M2, M3) | `identifier` (email, username **or phone**), `password`, `diocese_code?`, `client?` (`app`) | As today. With `client=app`, the token is named `app`, and the person's other `app` tokens are revoked | Public, throttled |
 | `POST auth/login-code` (M1, M3) | `employee_code`, `diocese_code?`, `client?` | As above | Public, throttled 10/min |
 | `GET auth/me` (M3) | — | `{user, territorial_roles, current_role, permissions}` for the token and `X-Assignment-Id` | Token |
-| `GET app/home` (M5) | `X-Assignment-Id` | Per place type:<br>• **Church (built):** `{place, members {total, change, period} (latest approved demographics), latest {youth, baptisms, conversions}, report (MonthlyReports::state: last month until sent, then this month), money {in, out, share {owed, status, to}} (only with accounting read)}`.<br>• **Subregion / region / diocese:** members, reporting % (M8), KPIs, late places, the latest submissions | Token, the role's own place |
+| `GET app/home` (M5) | `X-Assignment-Id` | Per place type:<br>• **Church (built):** `{place, members {total, change, period} (latest approved demographics), latest {youth, baptisms, conversions}, report (MonthlyReports::state: last month until sent, then this month), money {in, out, share {owed, status, to}} (only with accounting read)}`.<br>• **Subregion / region / diocese (built, `OverseerAppController`):** `{place, churches, totals {members, youth, baptisms, conversions, women, men, sunday_school, reporting}, growth {now, then, percent}, reporting {sent, due, late, percent, month} (M8), groups [{id, name, type, churches, members, reporting, growth}], late [{id, name, pastor, due_on}], recent [{church, label, members, at}]}`. Groups are the subregions/regions below that hold churches, plus the churches directly under the place - or the churches themselves when there are no such groups. | Token, the role's own place |
 | `GET app/demographics` (P4) | — | `{place, mode (monthly\|half_yearly\|yearly), periods: [{label, year, fiscal_year_id, fiscal_month_id, fiscal_semi_annual_id, record}], history: [approved records, newest first]}`: this year's and last year's periods in the church's own cadence, each with what is recorded | Token, the acting role's church |
-| `GET app/compliance` (M8) | `territory_id?`, `year`, `month` | `{due, sent, late, percent, places: [{id, name, state, sent_at}]}` | Places the role oversees |
-| `GET demographics/{id}` (M9) | — | Adds `notes: [{field, text, change_percent}]`: the existing `buildValidationWarnings` plus month-on-month changes over 25 % | As today |
-| `GET app/compare` (M10) | `territory_id?`, `period` (month / quarter / year) | `{places: [{id, name, members, growth_percent, youth_share, baptisms}], fastest: [...], declining: [...]}` | Places the role oversees |
+| `GET app/places?group=` (M8) | `group?` (a subregion/region id below; another place is refused) | `{place, month, items: [{id, name, code, group, pastor, members, change, latest {label, status, at}, report (MonthlyReports::state for last month)}]}`. Compliance is inside `app/home` | Places the role oversees |
+| `GET app/review/{church}` (M9) | — | `{church {id, name, pastor}, record {id, label, status, review_notes}, previous_label, lines [{key, label, value, previous, change, percent}], notes [text], can {approve, flag, request_changes}}`. Notes: a membership group over the total, or a change of more than 25 %. `demographics/{id}/flag` and `request-changes` now accept an approved record, and `approve` a flagged one (submissions stay auto-approved) | A church below the acting role; actions need the subregion review permissions |
+| `GET app/compare?period=month\|quarter\|year` (M10) | `period` | `{place, period, totals, growth, rows [{id, name, type, churches, members, youth, youth_share, baptisms, conversions, growth, reporting}], fastest, declining, trend [12 × {month, label, members}], forecast [3 × {month, label, members}]}`. A record counts from the start of its period; the forecast is a least-squares line through the trend | Places the role oversees |
 | Header `Idempotency-Key` (M11) | On `POST attendance`, `POST demographics`, `PUT demographics/{id}`, `POST visitors/batch` | A repeat with the same key and user returns the first stored response and changes nothing | As the route |
 | `POST app/push/subscribe` (M12) | `endpoint`, `keys.p256dh`, `keys.auth` | `{id}` | Token |
 | `DELETE app/push/subscribe` (M12) | `endpoint` | `{}` | Token |
@@ -55,7 +55,7 @@ Every response uses the existing envelope (`successResponse` / `errorResponse`).
 ## Permission Rules
 
 - Nothing in the app gives more access than the web. Every route above is gated by the same `PlaceAccess` and permission checks as the web endpoint whose data it gathers. `app/home` never returns what that role could not read on the web.
-- `app/home`, `app/compliance` and `app/compare` follow the acting role (`X-Assignment-Id`):
+- `app/home`, `app/places`, `app/review` and `app/compare` follow the acting role (`X-Assignment-Id`):
   - a church sees only itself;
   - a subregion sees its churches;
   - a region sees its subregions and churches;
@@ -77,15 +77,15 @@ Every response uses the existing envelope (`successResponse` / `errorResponse`).
   - a second app sign-in revokes the first app token but not a web token;
   - `auth/me` returns the roles and the acting role.
 - [x] **M4:** a preflight from the app's origin passes (tested with no list set; a set list is Laravel's own CORS behaviour).
-- [ ] **M5:**
+- [x] **M5:**
   - for each place type, `app/home` returns the documented keys;
   - a church role never sees another church's figures;
   - a subregion's figures equal the sum of its churches.
 - [x] **M6:** men + women saved gives adults = their sum; the web's adults-only update still works.
 - [x] **M7:** `crusade` and `conference` are church event types.
-- [ ] **M8:** with 4 churches and 3 reports sent, `percent` is 75 and the late church is listed.
-- [ ] **M9:** a submission with youth up 40 % on last month carries a note for `youth_count`.
-- [ ] **M10:** places are ranked by growth, and a role cannot compare places outside its own.
+- [x] **M8:** with 4 churches and 3 reports sent, `percent` is 75 and the late church is listed.
+- [x] **M9:** a submission with youth up 40 % on last month carries a note for `youth_count`.
+- [x] **M10:** places are ranked by growth, and a role cannot compare places outside its own.
 - [ ] **M11:**
   - the same `Idempotency-Key` twice creates one attendance record and returns the same body;
   - another user's same key creates a separate record.

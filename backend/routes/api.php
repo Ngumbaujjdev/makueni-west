@@ -396,6 +396,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('app')->group(function () {
         Route::get('home', [\App\Http\Controllers\Api\App\ChurchAppController::class, 'home']);
         Route::get('demographics', [\App\Http\Controllers\Api\App\ChurchAppController::class, 'demographics']);
+        Route::get('places', [\App\Http\Controllers\Api\App\OverseerAppController::class, 'places']);
+        Route::get('review/{church}', [\App\Http\Controllers\Api\App\OverseerAppController::class, 'review'])->whereNumber('church');
+        Route::get('compare', [\App\Http\Controllers\Api\App\OverseerAppController::class, 'compare']);
     });
 
     // Authentication Routes
