@@ -1,6 +1,6 @@
 # Mobile App (PWA) Spec: what the API adds for the phone app
 
-**Status: M1-M11 built (P3-P6, 2026-10-19 to 22); M12 planned.** The app itself is a separate repo, `Ngumbaujjdev/makueni-west-app` (`/Applications/MAMP/htdocs/makueni-west-app`). Its plan, screen map and gap analysis are in that repo's `docs/`. This spec lists only the **backend** changes the app needs. Each one is built here in its own PR, before the app screen that uses it.
+**Status: M1-M12 built (P3-P7, 2026-10-19 to 23).** The app itself is a separate repo, `Ngumbaujjdev/makueni-west-app` (`/Applications/MAMP/htdocs/makueni-west-app`). Its plan, screen map and gap analysis are in that repo's `docs/`. This spec lists only the **backend** changes the app needs. Each one is built here in its own PR, before the app screen that uses it.
 
 The app uses the existing API for almost everything: demographics, attendance, people, visitors, activities, messages, monthly reports, budgets, accounting, remittances with M-Pesa, approvals, notifications, chat and calendar. The additions below cover only what it cannot do today. **Nothing is faked on the phone:** a missing piece is added here first.
 
@@ -25,7 +25,7 @@ The app uses the existing API for almost everything: demographics, attendance, p
 - **M6:** `church_attendance_records` gains `men_count`, `women_count`, `converts_count` (all nullable, unsigned int). When `men_count` and `women_count` are given, `adults_count` = their sum. Old rows are untouched.
 - **M7:** `Activity::TYPES['church']` gains `crusade` and `conference`. No migration. The app lists whatever `activities/overview` returns in `types`, so later additions need no app change.
 - **M11 (built):** `idempotency_keys`: `id`, `key` (≤64), `user_id`, `method`, `route`, `status_code`, `response_body`, `created_at`. Unique on (`key`, `user_id`). Rows older than 7 days are pruned daily (`idempotency-keys:prune`). Middleware `App\Http\Middleware\Idempotent` on `POST/PUT attendance`, `POST/PUT demographics`, `POST visitors/batch`: a repeat key replays the first answer (header `Idempotent-Replay: true`); only successful answers are kept; no header means no change.
-- **M12:** `push_subscriptions`: `id`, `user_id`, `endpoint` (unique), `p256dh`, `auth`, `user_agent`, `last_used_at`, timestamps. VAPID keys are kept encrypted in Settings (system), like the other provider keys.
+- **M12 (built):** `push_subscriptions`: `id`, `user_id`, `endpoint` (unique), `p256dh`, `auth`, `user_agent`, `last_used_at`, timestamps. VAPID keys are diocese settings `push.vapid_public` / `push.vapid_private` (the private one encrypted), marked `system` so they never show on the Settings screen; `php artisan app:push-keys` makes them once and never replaces them. Library: `minishlink/web-push`.
 
 ## API Contract
 
@@ -50,7 +50,7 @@ Every response uses the existing envelope (`successResponse` / `errorResponse`).
 - **M2:** a phone number is matched on `users.phone_key` (the last 9 digits). `phone_key` is unique, so two people can only share a number in old data; if they do, sign-in is refused (422) with "Sign in with your email or employee code". Built in `App\Support\AppSignIn`.
 - **M4:** `config/cors.php` reads `APP_CLIENT_ORIGINS` (comma-separated). **Unset, any origin may call** (Laravel's default before this file), so every dev host keeps working; production sets the web's and the app's addresses. `Content-Disposition` is exposed for downloads.
 - **Also in P3:** `auth/login` is throttled at 10 a minute (as `login-code` already was), `password-reset/request` and `request-employee-code` at 5 a minute, and `modules/for-role` follows `X-Assignment-Id` (else the primary role, as before).
-- **M12:** a push is sent wherever `Notices::send` and `PlaceNotification` already notify, through a queued job. It carries a title, a short body and the app route. Dead endpoints (404 / 410) are deleted.
+- **M12 (built):** `PlaceNotification::via()` adds `WebPushChannel` for people with a subscription, so every bell notice also pushes; chat messages push to the other members (`Chats::send`), never the sender. The queued `SendWebPush` job sends `{title, body, url, kind}` through `App\Services\Push\PushSender` and forgets endpoints that answer 404/410. Also `GET app/giving/qr`: an SVG QR of the church's giving link, for roles that read the books.
 
 ## Permission Rules
 
@@ -89,7 +89,7 @@ Every response uses the existing envelope (`successResponse` / `errorResponse`).
 - [x] **M11:**
   - the same `Idempotency-Key` twice creates one attendance record and returns the same body;
   - another user's same key creates a separate record.
-- [ ] **M12:**
+- [x] **M12:**
   - subscribing stores the endpoint once;
   - an assigned approval queues a push to the approver;
   - a 410 from the push service deletes the subscription.
