@@ -295,7 +295,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('visitors/check', [VisitorsController::class, 'check']);
     Route::get('visitors/insights', [VisitorsController::class, 'insights']);
     Route::get('visitors/totals', [VisitorsController::class, 'totals']);
-    Route::post('visitors/batch', [VisitorsController::class, 'batch']);
+    Route::post('visitors/batch', [VisitorsController::class, 'batch'])->middleware(\App\Http\Middleware\Idempotent::class);
     Route::post('visitors/bulk', [VisitorsController::class, 'bulk']);
     Route::get('visitors', [VisitorsController::class, 'index']);
     Route::get('visitors/{id}', [VisitorsController::class, 'show'])->whereNumber('id');
@@ -903,9 +903,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Demographics (Church-level entry - Phase 3 of the Demographics module plan)
     Route::prefix('demographics')->group(function () {
         Route::get('/', [DemographicsController::class, 'index']);                               // List own church's submissions
-        Route::post('/', [DemographicsController::class, 'store']);                              // Create this month's draft
+        Route::post('/', [DemographicsController::class, 'store'])->middleware(\App\Http\Middleware\Idempotent::class);                              // Create this month's draft
         Route::get('/{demographic}', [DemographicsController::class, 'show']);                   // Get one submission
-        Route::put('/{demographic}', [DemographicsController::class, 'update']);                 // Update a draft/changes_requested submission
+        Route::put('/{demographic}', [DemographicsController::class, 'update'])->middleware(\App\Http\Middleware\Idempotent::class);                 // Update a draft/changes_requested submission
         Route::post('/{demographic}/submit', [DemographicsController::class, 'submit']);         // Submit for Subregion review
 
         // Subregion review actions (Phase 4)
@@ -929,10 +929,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Attendance (Church-level entry - Phase 3 of the Demographics module plan)
     Route::prefix('attendance')->group(function () {
         Route::get('/', [AttendanceController::class, 'index']);                                 // List own church's attendance records
-        Route::post('/', [AttendanceController::class, 'store']);                                // Record one service/event/gathering
+        Route::post('/', [AttendanceController::class, 'store'])->middleware(\App\Http\Middleware\Idempotent::class);                                // Record one service/event/gathering
         Route::get('/{attendance}', [AttendanceController::class, 'show']);                      // One record (record page)
         Route::get('/{attendance}/audits', [AttendanceController::class, 'audits']);             // Who recorded it and every change
-        Route::put('/{attendance}', [AttendanceController::class, 'update']);                    // Update a record (counts, notes, or move its date)
+        Route::put('/{attendance}', [AttendanceController::class, 'update'])->middleware(\App\Http\Middleware\Idempotent::class);                    // Update a record (counts, notes, or move its date)
         Route::delete('/{attendance}', [AttendanceController::class, 'destroy']);                // Delete a record entered by mistake (soft)
         Route::post('/{id}/restore', [AttendanceController::class, 'restore'])->whereNumber('id'); // Undo a delete
     });
