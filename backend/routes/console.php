@@ -23,6 +23,8 @@ Artisan::command('reports:prune', function () {
 })->purpose('Delete report files older than a week');
 
 Schedule::command('reports:prune')->daily();
+// The phone app's resend keys (mobile-app-spec M11) are kept 7 days.
+Schedule::call(fn () => \Illuminate\Support\Facades\DB::table('idempotency_keys')->where('created_at', '<', now()->subDays(7))->delete())->daily()->name('idempotency-keys:prune');
 
 // Message text is kept for the preview for MessageLog::KEEP_BODY_DAYS, then
 // cleared - the row (who, when, status) stays. docs/specs/settings-spec.md, S6c.

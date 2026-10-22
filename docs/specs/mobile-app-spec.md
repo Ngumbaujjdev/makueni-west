@@ -1,6 +1,6 @@
 # Mobile App (PWA) Spec: what the API adds for the phone app
 
-**Status: M1-M10 built (P3-P5, 2026-10-19 to 22); M11-M12 planned.** The app itself is a separate repo, `Ngumbaujjdev/makueni-west-app` (`/Applications/MAMP/htdocs/makueni-west-app`). Its plan, screen map and gap analysis are in that repo's `docs/`. This spec lists only the **backend** changes the app needs. Each one is built here in its own PR, before the app screen that uses it.
+**Status: M1-M11 built (P3-P6, 2026-10-19 to 22); M12 planned.** The app itself is a separate repo, `Ngumbaujjdev/makueni-west-app` (`/Applications/MAMP/htdocs/makueni-west-app`). Its plan, screen map and gap analysis are in that repo's `docs/`. This spec lists only the **backend** changes the app needs. Each one is built here in its own PR, before the app screen that uses it.
 
 The app uses the existing API for almost everything: demographics, attendance, people, visitors, activities, messages, monthly reports, budgets, accounting, remittances with M-Pesa, approvals, notifications, chat and calendar. The additions below cover only what it cannot do today. **Nothing is faked on the phone:** a missing piece is added here first.
 
@@ -24,7 +24,7 @@ The app uses the existing API for almost everything: demographics, attendance, p
 - **M3:** no table. Tokens are Sanctum personal access tokens named `app` (the web's stay `Api-Access`).
 - **M6:** `church_attendance_records` gains `men_count`, `women_count`, `converts_count` (all nullable, unsigned int). When `men_count` and `women_count` are given, `adults_count` = their sum. Old rows are untouched.
 - **M7:** `Activity::TYPES['church']` gains `crusade` and `conference`. No migration. The app lists whatever `activities/overview` returns in `types`, so later additions need no app change.
-- **M11:** `idempotency_keys`: `id`, `key` (uuid), `user_id`, `route`, `status_code`, `response_body` (json), `created_at`. Unique on (`key`, `user_id`). Rows older than 7 days are pruned daily.
+- **M11 (built):** `idempotency_keys`: `id`, `key` (≤64), `user_id`, `method`, `route`, `status_code`, `response_body`, `created_at`. Unique on (`key`, `user_id`). Rows older than 7 days are pruned daily (`idempotency-keys:prune`). Middleware `App\Http\Middleware\Idempotent` on `POST/PUT attendance`, `POST/PUT demographics`, `POST visitors/batch`: a repeat key replays the first answer (header `Idempotent-Replay: true`); only successful answers are kept; no header means no change.
 - **M12:** `push_subscriptions`: `id`, `user_id`, `endpoint` (unique), `p256dh`, `auth`, `user_agent`, `last_used_at`, timestamps. VAPID keys are kept encrypted in Settings (system), like the other provider keys.
 
 ## API Contract
@@ -86,7 +86,7 @@ Every response uses the existing envelope (`successResponse` / `errorResponse`).
 - [x] **M8:** with 4 churches and 3 reports sent, `percent` is 75 and the late church is listed.
 - [x] **M9:** a submission with youth up 40 % on last month carries a note for `youth_count`.
 - [x] **M10:** places are ranked by growth, and a role cannot compare places outside its own.
-- [ ] **M11:**
+- [x] **M11:**
   - the same `Idempotency-Key` twice creates one attendance record and returns the same body;
   - another user's same key creates a separate record.
 - [ ] **M12:**
